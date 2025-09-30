@@ -1,0 +1,16 @@
+[package]
+name = "db"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Salsa database for incremental computation"
+
+[dependencies]
+salsa.workspace = true
+parser = { path = "../parser" }
+ast = { path = "../ast" }
+anyhow.workspace = true
+serde.workspace = true
+sha2.workspace = true

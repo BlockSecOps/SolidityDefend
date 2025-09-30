@@ -1,0 +1,13 @@
+[package]
+name = "metrics"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Performance monitoring and metrics"
+
+[dependencies]
+serde.workspace = true
+once_cell.workspace = true
+tracing.workspace = true

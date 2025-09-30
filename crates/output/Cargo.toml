@@ -1,0 +1,16 @@
+[package]
+name = "output"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Output formatters for SARIF, JSON, and console"
+
+[dependencies]
+detectors = { path = "../detectors" }
+serde.workspace = true
+serde_json.workspace = true
+console.workspace = true
+crossterm.workspace = true
+indicatif.workspace = true

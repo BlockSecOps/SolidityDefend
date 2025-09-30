@@ -1,0 +1,14 @@
+[package]
+name = "fixes"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Automatic fix generation and text replacement"
+
+[dependencies]
+detectors = { path = "../detectors" }
+ast = { path = "../ast" }
+regex.workspace = true
+serde.workspace = true

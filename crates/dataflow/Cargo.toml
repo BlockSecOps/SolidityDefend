@@ -1,0 +1,14 @@
+[package]
+name = "dataflow"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Data flow analysis framework"
+
+[dependencies]
+cfg = { path = "../cfg" }
+ir = { path = "../ir" }
+indexmap.workspace = true
+dashmap.workspace = true

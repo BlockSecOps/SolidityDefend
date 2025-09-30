@@ -1,0 +1,18 @@
+[package]
+name = "detectors"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Vulnerability detection engine"
+
+[dependencies]
+dataflow = { path = "../dataflow" }
+cfg = { path = "../cfg" }
+ir = { path = "../ir" }
+semantic = { path = "../semantic" }
+ast = { path = "../ast" }
+rayon.workspace = true
+serde.workspace = true
+regex.workspace = true

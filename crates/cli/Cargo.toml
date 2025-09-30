@@ -1,0 +1,21 @@
+[package]
+name = "cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Command-line interface and configuration"
+
+[dependencies]
+detectors = { path = "../detectors" }
+output = { path = "../output" }
+fixes = { path = "../fixes" }
+cache = { path = "../cache" }
+clap.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+walkdir.workspace = true
+glob.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
