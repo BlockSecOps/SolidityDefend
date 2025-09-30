@@ -1,0 +1,88 @@
+[workspace]
+members = [
+    "crates/soliditydefend",
+    "crates/parser",
+    "crates/ast",
+    "crates/db",
+    "crates/semantic",
+    "crates/ir",
+    "crates/cfg",
+    "crates/dataflow",
+    "crates/detectors",
+    "crates/output",
+    "crates/fixes",
+    "crates/cli",
+    "crates/lsp",
+    "crates/cache",
+    "crates/metrics",
+]
+
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["SolidityDefend Team"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/soliditydefend/cli"
+homepage = "https://soliditydefend.dev"
+description = "A static analysis security tool for Solidity smart contracts"
+keywords = ["solidity", "security", "static-analysis", "blockchain", "smart-contracts"]
+categories = ["development-tools", "command-line-utilities"]
+rust-version = "1.75.0"
+
+[workspace.dependencies]
+# Core Analysis Libraries
+salsa = "0.16"
+solang-parser = "0.3"
+petgraph = "0.6"
+rayon = "1.8"
+
+# CLI and Interface
+clap = { version = "4.4", features = ["derive", "color", "unicode"] }
+tower-lsp = "0.20"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Memory Management
+bumpalo = { version = "3.14", features = ["allocator-api2"] }
+internment = "0.8"
+
+# Performance and Profiling
+criterion = { version = "0.5", features = ["html_reports"] }
+flamegraph = "0.6"
+
+# Error Handling and Logging
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Utilities
+regex = "1.10"
+once_cell = "1.19"
+indexmap = "2.1"
+dashmap = "5.5"
+walkdir = "2.4"
+glob = "0.3"
+
+# Testing
+proptest = "1.4"
+insta = "1.34"
+
+# Hashing and Content Management
+sha2 = "0.10"
+blake3 = "1.5"
+
+# Terminal and Output
+console = "0.15"
+indicatif = "0.17"
+crossterm = "0.27"
+
+# Development Tools
+cargo-nextest = "0.9"
+
+[workspace.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

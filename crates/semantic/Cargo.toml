@@ -1,0 +1,15 @@
+[package]
+name = "semantic"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Semantic analysis and symbol resolution"
+
+[dependencies]
+ast = { path = "../ast" }
+db = { path = "../db" }
+petgraph.workspace = true
+indexmap.workspace = true
+anyhow.workspace = true

@@ -1,0 +1,39 @@
+[package]
+name = "soliditydefend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "soliditydefend"
+path = "src/main.rs"
+
+[dependencies]
+# Workspace crates
+parser = { path = "../parser" }
+ast = { path = "../ast" }
+db = { path = "../db" }
+semantic = { path = "../semantic" }
+ir = { path = "../ir" }
+cfg = { path = "../cfg" }
+dataflow = { path = "../dataflow" }
+detectors = { path = "../detectors" }
+output = { path = "../output" }
+fixes = { path = "../fixes" }
+cli = { path = "../cli" }
+cache = { path = "../cache" }
+metrics = { path = "../metrics" }
+
+# External dependencies
+clap.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+console.workspace = true

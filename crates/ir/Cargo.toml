@@ -1,0 +1,14 @@
+[package]
+name = "ir"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "SSA-form Intermediate Representation"
+
+[dependencies]
+ast = { path = "../ast" }
+semantic = { path = "../semantic" }
+indexmap.workspace = true
+serde.workspace = true

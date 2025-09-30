@@ -1,0 +1,15 @@
+[package]
+name = "parser"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Solidity parser with arena allocation and error recovery"
+
+[dependencies]
+solang-parser.workspace = true
+bumpalo.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

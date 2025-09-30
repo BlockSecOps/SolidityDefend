@@ -1,0 +1,13 @@
+[package]
+name = "cfg"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Control Flow Graph construction and analysis"
+
+[dependencies]
+ir = { path = "../ir" }
+petgraph.workspace = true
+serde.workspace = true
