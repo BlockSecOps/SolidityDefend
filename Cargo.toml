@@ -46,7 +46,7 @@ serde_json = "1.0"
 serde_yaml = "0.9"
 
 # Memory Management
-bumpalo = { version = "3.14", features = ["allocator-api2"] }
+bumpalo = { version = "3.14", features = ["allocator-api2", "collections"] }
 internment = "0.8"
 
 # Performance and Profiling
