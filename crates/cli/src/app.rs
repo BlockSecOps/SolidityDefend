@@ -1,6 +1,7 @@
 // CLI application structure - implementation pending
 use anyhow::Result;
 
+#[derive(Default)]
 pub struct CliApp;
 
 impl CliApp {

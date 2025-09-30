@@ -1,7 +1,6 @@
 pub mod nodes;
 pub mod visitor;
 
-pub use nodes::*;
 pub use visitor::AstVisitor;
 
 /// Arena-allocated AST module with efficient memory management.

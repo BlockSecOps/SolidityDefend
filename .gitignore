@@ -62,3 +62,4 @@ venv/
 *.temp
 .tmp/
 .temp/
+.claude
