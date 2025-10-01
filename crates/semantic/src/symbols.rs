@@ -642,6 +642,19 @@ impl SymbolTable {
         Some(&self.scopes.get(&scope)?.symbols)
     }
 
+    /// Find all scopes that contain a symbol with the given name
+    pub fn find_scopes_with_symbol(&self, name: &str) -> Vec<Scope> {
+        self.scopes.iter()
+            .filter_map(|(scope, info)| {
+                if info.symbols.contains_key(name) {
+                    Some(*scope)
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
     /// Get all symbols across all scopes
     pub fn get_all_symbols(&self) -> Vec<&Symbol> {
         let mut symbols = Vec::new();

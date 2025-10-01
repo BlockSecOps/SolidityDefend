@@ -45,7 +45,8 @@ impl DominatorTree {
     /// Compute immediate dominators using iterative algorithm
     fn compute_dominators(&mut self, cfg: &ControlFlowGraph) -> Result<()> {
         let entry_block = self.root.unwrap();
-        let blocks: Vec<BlockId> = cfg.basic_blocks().keys().copied().collect();
+        let mut blocks: Vec<BlockId> = cfg.basic_blocks().keys().copied().collect();
+        blocks.sort_by_key(|block| block.0);
 
         // Initialize: entry block dominates itself
         self.idom.insert(entry_block, None);
