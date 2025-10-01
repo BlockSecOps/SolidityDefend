@@ -2,6 +2,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt;
 use petgraph::{Graph, Directed, Direction};
 use petgraph::graph::{NodeIndex, EdgeIndex};
+use petgraph::visit::EdgeRef;
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
@@ -149,6 +150,11 @@ impl ControlFlowGraph {
         }
     }
 
+    /// Get the function name this CFG represents
+    pub fn function_name(&self) -> &str {
+        &self.function_name
+    }
+
     /// Add a basic block to the CFG
     pub fn add_block(&mut self, block_id: BlockId, instructions: Vec<Instruction>) -> NodeIndex {
         let mut node = CfgNode::new(block_id, instructions);
@@ -161,7 +167,7 @@ impl ControlFlowGraph {
                 Instruction::SelfDestruct(_)
             );
             if node.is_exit {
-                self.exit_blocks.push(self.graph.node_count().into());
+                self.exit_blocks.push(petgraph::graph::NodeIndex::new(self.graph.node_count()));
             }
         }
 
@@ -398,15 +404,15 @@ impl ControlFlowGraph {
             // 2. It has exactly one predecessor
             // 3. The predecessor has exactly one successor (this block)
             // 4. It doesn't start with a label that might be a jump target
-            if self.entry_block_id() != Some(*block_id) &&
+            if self.entry_block_id() != Some(block_id) &&
                node.predecessors.len() == 1 &&
                node.successors.len() <= 1 {
 
                 let pred_id = node.predecessors[0];
                 let pred_successors = self.successors(pred_id);
 
-                if pred_successors.len() == 1 && pred_successors[0] == *block_id {
-                    mergeable.push(*block_id);
+                if pred_successors.len() == 1 && pred_successors[0] == block_id {
+                    mergeable.push(block_id);
                 }
             }
         }
@@ -471,7 +477,7 @@ impl ControlFlowGraph {
         // Check that all non-exit blocks have at least one successor
         for (block_id, node) in self.basic_blocks() {
             if !node.is_exit {
-                let succs = self.successors(*block_id);
+                let succs = self.successors(block_id);
                 if succs.is_empty() && !node.has_terminator() {
                     return Err(anyhow!("Non-exit block {} has no successors", block_id));
                 }
@@ -480,7 +486,7 @@ impl ControlFlowGraph {
 
         // Check that terminator instructions match edge structure
         for (block_id, node) in self.basic_blocks() {
-            let successors = self.successors(*block_id);
+            let successors = self.successors(block_id);
 
             if let Some(terminator) = node.terminator() {
                 match terminator {
@@ -546,8 +552,10 @@ impl ControlFlowGraph {
 
         // Add edges
         for edge_ref in self.graph.edge_references() {
-            let source = self.node_to_block[&edge_ref.source()];
-            let target = self.node_to_block[&edge_ref.target()];
+            let source_node = edge_ref.source();
+            let target_node = edge_ref.target();
+            let source = self.node_to_block[&source_node];
+            let target = self.node_to_block[&target_node];
             let edge_data = edge_ref.weight();
 
             let label = match edge_data.edge_type {

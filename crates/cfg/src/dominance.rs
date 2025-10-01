@@ -23,7 +23,7 @@ impl DominatorTree {
     /// Build a dominator tree from a control flow graph
     pub fn build(cfg: &ControlFlowGraph) -> Result<DominatorTree> {
         let mut tree = DominatorTree {
-            cfg_name: cfg.function_name.clone(),
+            cfg_name: cfg.function_name().to_string(),
             idom: HashMap::new(),
             children: HashMap::new(),
             dominance_frontier: HashMap::new(),
@@ -448,7 +448,7 @@ impl PostDominatorTree {
         // For post-dominance, we would need to reverse the CFG
         // For now, this is a placeholder implementation
         let tree = DominatorTree {
-            cfg_name: format!("{}_postdom", cfg.function_name),
+            cfg_name: format!("{}_postdom", cfg.function_name()),
             idom: HashMap::new(),
             children: HashMap::new(),
             dominance_frontier: HashMap::new(),
@@ -530,11 +530,11 @@ impl<'a> DominanceAnalysis<'a> {
 
         // Single-entry regions based on dominance
         for (block_id, _) in self.cfg.basic_blocks() {
-            let dominated_blocks = self.find_dominated_blocks(*block_id);
+            let dominated_blocks = self.find_dominated_blocks(block_id);
 
             if dominated_blocks.len() > 1 {
                 regions.push(ControlFlowRegion {
-                    entry: *block_id,
+                    entry: block_id,
                     blocks: dominated_blocks,
                     region_type: RegionType::SingleEntry,
                 });
@@ -549,8 +549,8 @@ impl<'a> DominanceAnalysis<'a> {
         let mut dominated = Vec::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
-            if self.dom_tree.dominates(dominator, *block_id) {
-                dominated.push(*block_id);
+            if self.dom_tree.dominates(dominator, block_id) {
+                dominated.push(block_id);
             }
         }
 
@@ -570,10 +570,10 @@ impl<'a> DominanceAnalysis<'a> {
             // 2. Y is not post-dominated by X
 
             // Simplified analysis using dominance frontiers
-            let frontier = self.dom_tree.dominance_frontier(*block_id);
+            let frontier = self.dom_tree.dominance_frontier(block_id);
             deps.extend(frontier);
 
-            control_deps.insert(*block_id, deps);
+            control_deps.insert(block_id, deps);
         }
 
         Ok(control_deps)

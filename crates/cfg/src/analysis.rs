@@ -97,7 +97,7 @@ impl<'a> CfgAnalysisEngine<'a> {
         let mut decision_points = 0;
 
         for (block_id, _) in self.cfg.basic_blocks() {
-            let successors = self.cfg.successors(*block_id);
+            let successors = self.cfg.successors(block_id);
             if successors.len() > 1 {
                 decision_points += 1;
             }
@@ -218,7 +218,7 @@ impl<'a> CfgAnalysisEngine<'a> {
 
         for (block_id, node) in self.cfg.basic_blocks() {
             if node.instructions.is_empty() {
-                empty_blocks.push(*block_id);
+                empty_blocks.push(block_id);
             }
         }
 
@@ -230,7 +230,7 @@ impl<'a> CfgAnalysisEngine<'a> {
         let mut redundant = Vec::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
-            let successors = self.cfg.successors(*block_id);
+            let successors = self.cfg.successors(block_id);
 
             // If a block has multiple edges to the same successor, it's redundant
             let mut unique_successors = HashSet::new();
@@ -244,7 +244,7 @@ impl<'a> CfgAnalysisEngine<'a> {
             }
 
             if has_duplicates {
-                redundant.push(*block_id);
+                redundant.push(block_id);
             }
         }
 
