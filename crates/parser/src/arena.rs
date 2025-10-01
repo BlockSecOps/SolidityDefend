@@ -19,7 +19,7 @@ impl<'arena> ArenaParser<'arena> {
     /// Parse Solidity source code into arena-allocated AST
     pub fn parse(&self, source: &str, file_path: &str) -> Result<SourceFile<'arena>, ParseErrors> {
         // Parse using solang-parser
-        let (parse_tree, comments) = match parse(source, Self::DEFAULT_FILE_ID) {
+        let (parse_tree, _comments) = match parse(source, Self::DEFAULT_FILE_ID) {
             Ok((tree, comments)) => (tree, comments),
             Err(errors) => {
                 let mut parse_errors = ParseErrors::new();
@@ -134,10 +134,10 @@ impl<'arena> ArenaParser<'arena> {
                         }
                     }
                 }
-                pt::ContractPart::VariableDefinition(var) => {
+                pt::ContractPart::VariableDefinition(_var) => {
                     // TODO: Convert state variables
                 }
-                pt::ContractPart::EventDefinition(event) => {
+                pt::ContractPart::EventDefinition(_event) => {
                     // TODO: Convert events
                 }
                 // pt::ContractPart::ModifierDefinition(modifier) => {
@@ -187,6 +187,7 @@ impl<'arena> ArenaParser<'arena> {
     }
 
     /// Convert solang identifier to our Identifier
+    #[allow(dead_code)]
     fn convert_identifier(
         &self,
         ident: &pt::Identifier,
@@ -211,6 +212,7 @@ impl<'arena> ArenaParser<'arena> {
     }
 
     /// Convert solang location to our SourceLocation
+    #[allow(dead_code)]
     fn convert_location(&self, loc: &pt::Loc, file_path: &str) -> SourceLocation {
         self.convert_location_with_source(loc, file_path, None)
     }

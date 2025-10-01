@@ -38,7 +38,7 @@ impl<'a> CfgAnalysisEngine<'a> {
         self.loop_analysis = Some(loop_analysis);
 
         // Analyze basic blocks
-        let block_analyzer = BasicBlockAnalyzer::new();
+        let _block_analyzer = BasicBlockAnalyzer::new();
         // For this to work, we'd need to convert from ControlFlowGraph to IrFunction
         // For now, we'll create a placeholder
         let block_info = BasicBlockInfo {

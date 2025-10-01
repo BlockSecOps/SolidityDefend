@@ -5,7 +5,7 @@ use petgraph::visit::{EdgeRef, IntoNodeReferences};
 use anyhow::{Result, anyhow};
 
 use ast::{Contract, InheritanceSpecifier, SourceLocation, ContractType};
-use crate::symbols::{SymbolTable, Scope, Symbol, SymbolKind};
+use crate::symbols::{SymbolTable, Scope};
 
 /// Node data for the inheritance graph
 #[derive(Debug, Clone, PartialEq)]
@@ -252,7 +252,7 @@ impl InheritanceGraph {
     /// Get the linearized inheritance order (C3 linearization) for a contract
     /// This determines the order in which parent contracts are considered for method resolution
     pub fn get_linearized_inheritance(&self, contract_name: &str) -> Result<Vec<String>> {
-        let node_index = self.name_to_node.get(contract_name)
+        let _node_index = self.name_to_node.get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         // Simplified linearization - in practice, should implement C3 linearization
@@ -379,6 +379,7 @@ pub struct InheritanceGraphStats {
 
 /// Builder for constructing inheritance graphs from parsed contracts
 pub struct InheritanceGraphBuilder<'a> {
+    #[allow(dead_code)]
     symbol_table: &'a SymbolTable,
     graph: InheritanceGraph,
 }

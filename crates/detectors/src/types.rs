@@ -1,8 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use anyhow::Result;
-
-use ast::{Contract, Function, Statement, Expression, Modifier};
+use ast::{Contract, Function, Modifier};
 use semantic::SymbolTable;
 // Temporarily disabled due to CFG compilation errors
 // use cfg::ControlFlowGraph;

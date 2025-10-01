@@ -1,7 +1,6 @@
 use std::collections::{HashMap, HashSet};
 use anyhow::{Result, anyhow};
 
-use ast::{Contract, Function, StateVariable, Expression, Identifier, SourceLocation};
 use crate::symbols::{SymbolTable, Scope, Symbol, SymbolKind};
 use crate::types::{TypeResolver, ResolvedType, TypeCompatibility};
 use crate::inheritance::{InheritanceGraph, InheritanceNode};

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::fmt;
 use anyhow::{Result, anyhow};
 
-use ast::{TypeName, ElementaryType, Contract, Function, StateVariable, Parameter, SourceLocation};
-use crate::symbols::{SymbolTable, Scope, Symbol, SymbolKind};
+use ast::{TypeName, ElementaryType, Function, StateVariable, SourceLocation};
+use crate::symbols::{SymbolTable, Scope, SymbolKind};
 
 /// Represents a resolved type in the Solidity type system
 #[derive(Debug, Clone, PartialEq)]

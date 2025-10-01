@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
-use anyhow::{Result, anyhow};
+use std::collections::HashSet;
+use anyhow::Result;
 
-use ir::{IrFunction, BlockId, Instruction, IrValue, ValueId};
+use ir::{IrFunction, BlockId, Instruction};
 use crate::graph::{ControlFlowGraph, EdgeType};
 
 /// Builder for constructing Control Flow Graphs from IR functions
@@ -136,8 +136,8 @@ impl CfgBuilder {
     /// Add fall-through edge for blocks without explicit control flow
     fn add_fall_through_edge(
         &self,
-        cfg: &mut ControlFlowGraph,
-        block_id: BlockId,
+        _cfg: &mut ControlFlowGraph,
+        _block_id: BlockId,
         _basic_block: &ir::BasicBlock
     ) -> Result<()> {
         // For now, we don't add implicit fall-through edges

@@ -3,7 +3,7 @@ use std::any::Any;
 use ast;
 
 use crate::detector::{Detector, DetectorCategory, BaseDetector, AstAnalyzer};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity, Confidence};
+use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
 
 /// Detector for division before multiplication which causes precision loss
 pub struct DivisionOrderDetector {

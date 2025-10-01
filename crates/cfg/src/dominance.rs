@@ -105,8 +105,8 @@ impl DominatorTree {
     /// Intersect two nodes in the dominator tree
     fn intersect(&self, mut b1: BlockId, mut b2: BlockId, blocks: &[BlockId]) -> Result<BlockId> {
         // Get the reverse postorder numbers for comparison
-        let b1_rpo = self.get_reverse_postorder_number(b1, blocks);
-        let b2_rpo = self.get_reverse_postorder_number(b2, blocks);
+        let _b1_rpo = self.get_reverse_postorder_number(b1, blocks);
+        let _b2_rpo = self.get_reverse_postorder_number(b2, blocks);
 
         while b1 != b2 {
             let b1_rpo_current = self.get_reverse_postorder_number(b1, blocks);
