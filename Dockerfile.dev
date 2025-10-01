@@ -1,0 +1,46 @@
+# Development Docker image for SolidityDefend
+FROM rust:1.75-slim-bullseye
+
+# Install system dependencies including development tools
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    git \
+    ca-certificates \
+    curl \
+    vim \
+    less \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional development tools
+RUN cargo install cargo-watch cargo-expand cargo-audit
+
+# Set working directory
+WORKDIR /workspace
+
+# Create non-root user for development
+RUN useradd -m -s /bin/bash developer && \
+    chown -R developer:developer /workspace
+
+# Copy dependency files for caching
+COPY Cargo.toml Cargo.lock ./
+COPY crates/*/Cargo.toml ./crates/*/
+
+# Switch to developer user
+USER developer
+
+# Pre-fetch dependencies
+RUN find crates -name "Cargo.toml" -execdir sh -c 'mkdir -p src && echo "fn main() {}" > src/main.rs' \;
+RUN cargo fetch
+
+# Set up development environment
+ENV RUST_LOG=debug
+ENV RUST_BACKTRACE=1
+
+# Default command starts a shell
+CMD ["/bin/bash"]
+
+# Metadata
+LABEL org.opencontainers.image.title="SolidityDefend Development"
+LABEL org.opencontainers.image.description="Development environment for SolidityDefend"

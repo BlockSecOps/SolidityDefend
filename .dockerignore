@@ -1,0 +1,51 @@
+# Build artifacts
+target/
+Cargo.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# Test files
+tests/fixtures/
+test-output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+*.log
+logs/
+
+# Cache directories
+.cache/
+.cargo/
+node_modules/
+
+# Development artifacts
+.env
+.env.local
+coverage/
+benchmarks/
+
+# CI/CD artifacts
+ci-artifacts/
+build-info.json
