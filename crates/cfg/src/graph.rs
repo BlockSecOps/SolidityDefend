@@ -6,7 +6,7 @@ use petgraph::visit::EdgeRef;
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
-use ir::{BlockId, BasicBlock, IrFunction, Instruction};
+use ir::{BlockId, Instruction};
 
 /// Control Flow Graph using petgraph for efficient graph operations
 #[derive(Debug, Clone)]

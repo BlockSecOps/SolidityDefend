@@ -168,6 +168,7 @@ struct ScopeInfo {
     /// Parent scope (if any)
     parent: Option<Scope>,
     /// Kind of scope
+    #[allow(dead_code)]
     kind: ScopeKind,
     /// Symbols defined in this scope
     symbols: HashMap<String, Symbol>,
@@ -184,6 +185,7 @@ enum ScopeKind {
     Contract,
     Function,
     Block,
+    #[allow(dead_code)]
     Modifier,
 }
 

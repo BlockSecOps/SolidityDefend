@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::any::Any;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use ast;
 
 use crate::detector::{Detector, DetectorCategory, BaseDetector, AstAnalyzer};

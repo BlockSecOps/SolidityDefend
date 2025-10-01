@@ -142,7 +142,7 @@ impl Lowering {
         }
 
         // Create IR function
-        let mut ir_function = IrFunction::new(
+        let ir_function = IrFunction::new(
             function.name.name.to_string(),
             ir_parameters,
             ir_return_types,
@@ -593,7 +593,7 @@ impl Lowering {
                 }
 
                 // Determine function name and type
-                let (func_name, is_external) = match function {
+                let (func_name, _is_external) = match function {
                     Expression::Identifier(id) => (id.name.to_string(), false),
                     Expression::MemberAccess { expression, member, .. } => {
                         // External call: contract.function()
@@ -644,11 +644,11 @@ impl Lowering {
                     ElementaryType::Address => IrType::Address,
                     ElementaryType::Uint(bits) => IrType::Uint(*bits),
                     ElementaryType::Int(bits) => IrType::Int(*bits),
-                    ElementaryType::Fixed(bits, decimals) => {
+                    ElementaryType::Fixed(bits, _decimals) => {
                         // For now, treat as uint
                         IrType::Uint(*bits)
                     }
-                    ElementaryType::Ufixed(bits, decimals) => {
+                    ElementaryType::Ufixed(bits, _decimals) => {
                         // For now, treat as uint
                         IrType::Uint(*bits)
                     }

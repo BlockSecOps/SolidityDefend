@@ -1,6 +1,5 @@
 use std::path::PathBuf;
 use std::collections::HashMap;
-use std::sync::Arc;
 use sha2::{Sha256, Digest};
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
@@ -286,7 +285,7 @@ impl Database {
         total += self.arena.allocated_bytes();
 
         // File registry memory
-        for (file_id, input) in &self.file_registry {
+        for (_file_id, input) in &self.file_registry {
             // SourceFileId overhead
             total += std::mem::size_of::<SourceFileId>();
 
@@ -312,7 +311,7 @@ impl Database {
         total += std::mem::size_of::<HashMap<SourceFileId, SourceFileInput>>();
 
         // Cache memory
-        for (file_id, result) in &self.cache {
+        for (_file_id, result) in &self.cache {
             // Key overhead
             total += std::mem::size_of::<SourceFileId>();
 

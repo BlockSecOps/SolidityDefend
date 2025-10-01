@@ -4,8 +4,6 @@
 /// that are called by the Salsa framework for incremental computation.
 
 use anyhow::Result;
-use std::sync::Arc;
-use ast::SourceFile;
 use crate::database::{Database, SourceFileId};
 
 /// Helper function to extract functions from a database query result

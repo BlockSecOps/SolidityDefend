@@ -271,6 +271,7 @@ impl BaseDetector {
 }
 
 /// Macro to help implement the Detector trait for structs that contain BaseDetector
+#[allow(unused_macros)]
 macro_rules! impl_detector_base {
     ($struct_name:ty) => {
         impl Detector for $struct_name {

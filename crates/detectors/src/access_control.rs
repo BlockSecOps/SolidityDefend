@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity, Confidence};
+use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
 
 /// Detector for missing access control modifiers on critical functions
 pub struct MissingModifiersDetector {

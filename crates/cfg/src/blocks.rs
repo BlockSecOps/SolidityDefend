@@ -6,6 +6,7 @@ use ir::{IrFunction, BlockId, Instruction, BasicBlock};
 /// Basic block identification and analysis utilities
 pub struct BasicBlockAnalyzer {
     /// Options for basic block analysis
+    #[allow(dead_code)]
     options: BasicBlockOptions,
 }
 
@@ -80,7 +81,7 @@ impl BasicBlockAnalyzer {
         leaders.insert(ir_function.entry_block);
 
         // Find targets of branches
-        for (block_id, basic_block) in &ir_function.basic_blocks {
+        for (_block_id, basic_block) in &ir_function.basic_blocks {
             for instruction in &basic_block.instructions {
                 match instruction {
                     Instruction::Branch(target) => {
