@@ -432,6 +432,16 @@ impl SymbolTable {
         }
     }
 
+    /// Add a symbol to the symbol table
+    pub fn add_symbol(&mut self, scope: Scope, symbol: Symbol) -> Result<()> {
+        if let Some(scope_info) = self.scopes.get_mut(&scope) {
+            scope_info.symbols.insert(symbol.name.clone(), symbol);
+            Ok(())
+        } else {
+            Err(anyhow!("Scope {:?} not found", scope))
+        }
+    }
+
     /// Add inheritance relationship between scopes
     pub fn add_inheritance_relationship(&mut self, derived: Scope, base: Scope) {
         if let Some(derived_info) = self.scopes.get_mut(&derived) {
@@ -603,6 +613,35 @@ impl SymbolTable {
         self.scopes.get(&self.global_scope)
             .map(|info| info.symbols.len())
             .unwrap_or(0)
+    }
+
+    /// Lookup symbol in a specific scope
+    pub fn lookup_symbol(&self, scope: Scope, name: &str) -> Option<&Symbol> {
+        self.scopes.get(&scope)?.symbols.get(name)
+    }
+
+    /// Get parent scope of a given scope
+    pub fn get_parent_scope(&self, scope: Scope) -> Option<Scope> {
+        self.scopes.get(&scope)?.parent
+    }
+
+    /// Get all symbols in a specific scope
+    pub fn get_scope_symbols(&self, scope: Scope) -> Option<&HashMap<String, Symbol>> {
+        Some(&self.scopes.get(&scope)?.symbols)
+    }
+
+    /// Get all symbols across all scopes
+    pub fn get_all_symbols(&self) -> Vec<&Symbol> {
+        let mut symbols = Vec::new();
+        for scope_info in self.scopes.values() {
+            symbols.extend(scope_info.symbols.values());
+        }
+        symbols
+    }
+
+    /// Get the global scope
+    pub fn get_global_scope(&self) -> Scope {
+        self.global_scope
     }
 }
 
