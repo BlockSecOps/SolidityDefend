@@ -154,7 +154,7 @@ impl CfgBuilder {
         for (from_block, to_block) in back_edges {
             // This is a simplified implementation
             // In practice, we'd need to update the actual edge data in the graph
-            log::debug!("Identified back edge: {} -> {}", from_block, to_block);
+            tracing::debug!("Identified back edge: {} -> {}", from_block, to_block);
         }
 
         Ok(())
@@ -165,11 +165,11 @@ impl CfgBuilder {
         let unreachable_blocks = cfg.find_unreachable_blocks();
 
         if !unreachable_blocks.is_empty() {
-            log::info!("Eliminating {} unreachable blocks", unreachable_blocks.len());
+            tracing::info!("Eliminating {} unreachable blocks", unreachable_blocks.len());
             // In a real implementation, we would remove these blocks from the graph
             // For now, just log them
             for block_id in unreachable_blocks {
-                log::debug!("Unreachable block: {}", block_id);
+                tracing::debug!("Unreachable block: {}", block_id);
             }
         }
 
@@ -181,11 +181,11 @@ impl CfgBuilder {
         let mergeable_blocks = cfg.find_mergeable_blocks();
 
         if !mergeable_blocks.is_empty() {
-            log::info!("Found {} mergeable blocks", mergeable_blocks.len());
+            tracing::info!("Found {} mergeable blocks", mergeable_blocks.len());
             // In a real implementation, we would merge these blocks
             // For now, just log them
             for block_id in mergeable_blocks {
-                log::debug!("Mergeable block: {}", block_id);
+                tracing::debug!("Mergeable block: {}", block_id);
             }
         }
 
@@ -274,11 +274,11 @@ impl<'a> LoopAnalysis<'a> {
     }
 
     /// Find the innermost loop containing a block
-    pub fn innermost_loop(&self, block_id: BlockId) -> Option<&NaturalLoop> {
+    pub fn innermost_loop(&self, block_id: BlockId) -> Option<NaturalLoop> {
         let natural_loops = self.find_natural_loops();
 
         // Find the loop with the smallest number of blocks that contains this block
-        natural_loops.iter()
+        natural_loops.into_iter()
             .filter(|loop_info| loop_info.blocks.contains(&block_id))
             .min_by_key(|loop_info| loop_info.blocks.len())
     }
@@ -406,9 +406,9 @@ impl<'a> CfgAnalysis<'a> {
 
         // For each unvisited node, find its SCC
         for (block_id, _) in self.cfg.basic_blocks() {
-            if !visited.contains(block_id) {
+            if !visited.contains(&block_id) {
                 let mut component = Vec::new();
-                self.collect_scc(*block_id, &mut visited, &mut component);
+                self.collect_scc(block_id, &mut visited, &mut component);
                 if !component.is_empty() {
                     components.push(component);
                 }
