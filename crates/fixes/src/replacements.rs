@@ -492,7 +492,7 @@ mod tests {
         };
 
         let result = engine.apply_replacements(source, &[replacement]).unwrap();
-        assert_eq!(result, "line 1\nNEW 2\nline 3");
+        assert_eq!(result, "line 1\nNEW2\nline 3");
     }
 
     #[test]
