@@ -116,7 +116,7 @@ impl ParameterConsistencyDetector {
                     let message = format!(
                         "Function '{}' has multiple array parameters ({}) but no length consistency validation",
                         function.name.name,
-                        array_names.join(", ")
+                        array_names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
                     );
 
                     let finding = self.base.create_finding(

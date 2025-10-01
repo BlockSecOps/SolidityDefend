@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::any::Any;
 use std::collections::{HashMap, HashSet};
-use ast;
+use ast::{self, Located};
 
 use crate::detector::{Detector, DetectorCategory, BaseDetector, AstAnalyzer};
 use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
@@ -537,7 +537,7 @@ impl ArrayBoundsDetector {
         match index_expr {
             // Expressions like length, length + 1, etc.
             ast::Expression::MemberAccess { member, .. } => {
-                member.name == "length"
+                return member.name == "length";
             }
             ast::Expression::BinaryOperation { operator, left, right, .. } => {
                 if matches!(operator, ast::BinaryOperator::Add) {
