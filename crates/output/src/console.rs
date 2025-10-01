@@ -6,6 +6,7 @@ use std::io;
 use detectors::types::{Finding, AnalysisContext, Severity};
 
 /// Console output formatter with color support
+#[derive(Debug)]
 pub struct ConsoleFormatter {
     config: ConsoleConfig,
     term: Term,
@@ -64,6 +65,26 @@ impl ConsoleFormatter {
         })
     }
 
+    /// Format findings without context (simplified)
+    pub fn format_simple(&self, findings: &[Finding]) -> Result<String> {
+        let filtered_findings = self.filter_findings_by_level(findings);
+
+        if filtered_findings.is_empty() {
+            return Ok(self.format_no_issues_message());
+        }
+
+        let mut output = Vec::new();
+        output.push(self.format_header(&filtered_findings));
+
+        for finding in &filtered_findings {
+            output.push(self.format_finding_simple(finding)?);
+            output.push(String::new());
+        }
+
+        output.push(self.format_summary(&filtered_findings));
+        Ok(output.join("\n"))
+    }
+
     /// Format findings for console output
     pub fn format_findings(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String> {
         let filtered_findings = self.filter_findings_by_level(findings);
@@ -111,6 +132,46 @@ impl ConsoleFormatter {
         Ok(output)
     }
 
+    /// Format a single finding without context (simplified)
+    fn format_finding_simple(&self, finding: &Finding) -> Result<String> {
+        let mut output = Vec::new();
+
+        let severity_icon = self.get_severity_icon(&finding.severity);
+        let severity_color = self.get_severity_color(&finding.severity);
+
+        let header = if self.should_use_colors() {
+            format!(
+                "{} {} {} {}:{}",
+                style(severity_icon).fg(severity_color),
+                style(&finding.detector_id.0.as_str()).bold(),
+                style(&finding.message).fg(severity_color),
+                style(finding.primary_location.line).dim(),
+                style(finding.primary_location.column).dim()
+            )
+        } else {
+            format!(
+                "{} {} {} {}:{}",
+                severity_icon,
+                finding.detector_id.0.as_str(),
+                finding.message,
+                finding.primary_location.line,
+                finding.primary_location.column
+            )
+        };
+        output.push(header);
+
+        if let Some(description) = finding.metadata.get("description") {
+            let desc_line = if self.should_use_colors() {
+                format!("   {}", style(description).dim())
+            } else {
+                format!("   {}", description)
+            };
+            output.push(desc_line);
+        }
+
+        Ok(output.join("\n"))
+    }
+
     /// Format a single finding
     fn format_finding(&self, finding: &Finding, ctx: &AnalysisContext<'_>) -> Result<String> {
         let mut output = Vec::new();
@@ -123,21 +184,21 @@ impl ConsoleFormatter {
             format!(
                 "{} {} {} {}:{}:{}",
                 style(severity_icon).fg(severity_color),
-                style(&finding.detector_id.as_str()).bold(),
+                style(&finding.detector_id.0.as_str()).bold(),
                 style(&finding.message).fg(severity_color),
                 style(&ctx.file_path).dim(),
-                style(finding.line).dim(),
-                style(finding.column).dim()
+                style(finding.primary_location.line).dim(),
+                style(finding.primary_location.column).dim()
             )
         } else {
             format!(
                 "{} {} {} {}:{}:{}",
                 severity_icon,
-                finding.detector_id.as_str(),
+                finding.detector_id.0.as_str(),
                 finding.message,
                 ctx.file_path,
-                finding.line,
-                finding.column
+                finding.primary_location.line,
+                finding.primary_location.column
             )
         };
 
@@ -145,8 +206,8 @@ impl ConsoleFormatter {
 
         // Code snippet if enabled
         if self.config.show_code_snippets {
-            if let Some(snippet) = self.extract_code_snippet(ctx, finding.line, finding.column, finding.length)? {
-                output.push(self.format_code_snippet(&snippet, finding.line)?);
+            if let Some(snippet) = self.extract_code_snippet(ctx, finding.primary_location.line, finding.primary_location.column, finding.primary_location.length)? {
+                output.push(self.format_code_snippet(&snippet, finding.primary_location.line)?);
             }
         }
 
@@ -158,7 +219,7 @@ impl ConsoleFormatter {
         }
 
         // CWE information if available
-        if let Some(cwe) = finding.cwe {
+        if let Some(&cwe) = finding.cwe_ids.first() {
             let cwe_info = if self.should_use_colors() {
                 format!("   {} {}",
                     style("CWE:").dim(),
@@ -334,7 +395,7 @@ impl ConsoleFormatter {
 
     /// Extract code snippet around the finding
     fn extract_code_snippet(&self, ctx: &AnalysisContext<'_>, line: u32, _column: u32, _length: u32) -> Result<Option<CodeSnippet>> {
-        let lines: Vec<&str> = ctx.source_code.lines().collect();
+        let lines: Vec<&str> = ctx.source.lines().collect();
         let total_lines = lines.len() as u32;
 
         if line == 0 || line > total_lines {

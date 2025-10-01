@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use detectors::types::{Finding, AnalysisContext, Severity};
 
 /// SARIF 2.1.0 compliant output formatter
+#[derive(Debug)]
 pub struct SarifFormatter {
     /// Tool information
     tool_info: ToolInfo,
@@ -214,6 +215,12 @@ pub struct ToolInfo {
     pub information_uri: String,
 }
 
+/// Minimal context for simplified formatting
+#[derive(Debug)]
+struct MinimalContext {
+    pub file_path: String,
+}
+
 impl SarifFormatter {
     /// Create a new SARIF formatter
     pub fn new() -> Result<Self> {
@@ -224,6 +231,39 @@ impl SarifFormatter {
                 information_uri: "https://github.com/soliditydefend/soliditydefend".to_string(),
             },
         })
+    }
+
+    /// Format findings as SARIF report without context (simplified)
+    pub fn format_simple(&self, findings: &[Finding]) -> Result<String> {
+        // Create a minimal context for SARIF output
+        let minimal_ctx = MinimalContext {
+            file_path: "unknown".to_string(),
+        };
+
+        let rules = self.extract_rules_from_findings(findings);
+        let results = self.convert_findings_to_results_simple(findings, &minimal_ctx)?;
+
+        let run = SarifRun {
+            tool: SarifTool {
+                driver: SarifDriver {
+                    name: self.tool_info.name.clone(),
+                    version: self.tool_info.version.clone(),
+                    information_uri: self.tool_info.information_uri.clone(),
+                    rules,
+                },
+            },
+            results,
+            taxonomies: Some(self.create_taxonomies()),
+            baseline_guid: None,
+        };
+
+        let report = SarifReport {
+            schema: "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json".to_string(),
+            version: "2.1.0".to_string(),
+            runs: vec![run],
+        };
+
+        serde_json::to_string_pretty(&report).map_err(|e| e.into())
     }
 
     /// Format findings as SARIF report
@@ -269,10 +309,10 @@ impl SarifFormatter {
                         },
                         replacements: vec![SarifReplacement {
                             deleted_region: SarifRegion {
-                                start_line: finding.line,
-                                start_column: finding.column,
-                                end_line: Some(finding.line),
-                                end_column: Some(finding.column + finding.length),
+                                start_line: finding.primary_location.line,
+                                start_column: finding.primary_location.column,
+                                end_line: Some(finding.primary_location.line),
+                                end_column: Some(finding.primary_location.column + finding.primary_location.length),
                             },
                             inserted_content: SarifMessage {
                                 text: "/* TODO: Apply fix */".to_string(),
@@ -293,7 +333,7 @@ impl SarifFormatter {
 
         // Add code flows for complex vulnerabilities
         for (result, finding) in report.runs[0].results.iter_mut().zip(findings.iter()) {
-            if self.should_include_code_flow(&finding.detector_id.as_str()) {
+            if self.should_include_code_flow(&finding.detector_id.0.as_str()) {
                 let code_flow = self.create_code_flow_for_finding(finding, ctx);
                 result.code_flows = Some(vec![code_flow]);
             }
@@ -337,7 +377,7 @@ impl SarifFormatter {
         let mut rules_map = HashMap::new();
 
         for finding in findings {
-            let rule_id = finding.detector_id.as_str();
+            let rule_id = finding.detector_id.0.as_str();
             if !rules_map.contains_key(rule_id) {
                 let rule = SarifRule {
                     id: rule_id.to_string(),
@@ -364,11 +404,11 @@ impl SarifFormatter {
         rules_map.into_values().collect()
     }
 
-    /// Convert findings to SARIF results
-    fn convert_findings_to_results(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<Vec<SarifResult>> {
+    /// Convert findings to SARIF results (simplified version)
+    fn convert_findings_to_results_simple(&self, findings: &[Finding], ctx: &MinimalContext) -> Result<Vec<SarifResult>> {
         findings.iter().map(|finding| {
             Ok(SarifResult {
-                rule_id: finding.detector_id.as_str().to_string(),
+                rule_id: finding.detector_id.0.as_str().to_string(),
                 message: SarifMessage {
                     text: finding.message.clone(),
                 },
@@ -378,8 +418,8 @@ impl SarifFormatter {
                             uri: ctx.file_path.clone(),
                         },
                         region: SarifRegion {
-                            start_line: finding.line,
-                            start_column: finding.column,
+                            start_line: finding.primary_location.line,
+                            start_column: finding.primary_location.column,
                             end_line: None,
                             end_column: None,
                         },
@@ -390,7 +430,39 @@ impl SarifFormatter {
                 baseline_state: None,
                 fixes: None,
                 code_flows: None,
-                taxa: finding.cwe.map(|cwe| vec![SarifTaxonReference {
+                tags: None,
+                taxa: None,
+            })
+        }).collect()
+    }
+
+    /// Convert findings to SARIF results
+    fn convert_findings_to_results(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<Vec<SarifResult>> {
+        findings.iter().map(|finding| {
+            Ok(SarifResult {
+                rule_id: finding.detector_id.0.as_str().to_string(),
+                message: SarifMessage {
+                    text: finding.message.clone(),
+                },
+                locations: vec![SarifLocation {
+                    physical_location: SarifPhysicalLocation {
+                        artifact_location: SarifArtifactLocation {
+                            uri: ctx.file_path.clone(),
+                        },
+                        region: SarifRegion {
+                            start_line: finding.primary_location.line,
+                            start_column: finding.primary_location.column,
+                            end_line: None,
+                            end_column: None,
+                        },
+                    },
+                    message: None,
+                }],
+                level: self.severity_to_level(&finding.severity),
+                baseline_state: None,
+                fixes: None,
+                code_flows: None,
+                taxa: finding.cwe_ids.first().map(|cwe| vec![SarifTaxonReference {
                     id: format!("CWE-{}", cwe),
                     tool_component: SarifToolComponentReference {
                         name: "CWE".to_string(),
@@ -455,8 +527,8 @@ impl SarifFormatter {
                                     uri: ctx.file_path.clone(),
                                 },
                                 region: SarifRegion {
-                                    start_line: finding.line,
-                                    start_column: finding.column,
+                                    start_line: finding.primary_location.line,
+                                    start_column: finding.primary_location.column,
                                     end_line: None,
                                     end_column: None,
                                 },
@@ -475,8 +547,8 @@ impl SarifFormatter {
     /// Check if two findings are the same (for baseline comparison)
     fn findings_match(&self, f1: &Finding, f2: &Finding) -> bool {
         f1.detector_id == f2.detector_id &&
-        f1.line == f2.line &&
-        f1.column == f2.column &&
+        f1.primary_location.line == f2.primary_location.line &&
+        f1.primary_location.column == f2.primary_location.column &&
         f1.message == f2.message
     }
 

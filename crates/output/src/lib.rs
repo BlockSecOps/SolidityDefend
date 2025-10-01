@@ -2,11 +2,11 @@ pub mod console;
 pub mod json;
 pub mod sarif;
 
-pub use console::{ConsoleFormatter, ConsoleFormatterConfig};
+pub use console::{ConsoleFormatter, ConsoleConfig};
 pub use json::{JsonFormatter, JsonOutputBuilder, JsonError};
-pub use sarif::{SarifFormatter, SarifFormatterConfig};
+pub use sarif::{SarifFormatter, SarifReport};
 
-use detectors::types::Finding;
+use detectors::types::{Finding, AnalysisContext};
 
 /// Unified output formatter that supports multiple formats
 #[derive(Debug)]
@@ -19,7 +19,7 @@ pub enum OutputFormatter {
 impl OutputFormatter {
     /// Create a console formatter
     pub fn console() -> Self {
-        Self::Console(ConsoleFormatter::new())
+        Self::Console(ConsoleFormatter::new(ConsoleConfig::default()).unwrap())
     }
 
     /// Create a JSON formatter
@@ -29,15 +29,24 @@ impl OutputFormatter {
 
     /// Create a SARIF formatter
     pub fn sarif() -> Self {
-        Self::Sarif(SarifFormatter::new())
+        Self::Sarif(SarifFormatter::new().unwrap())
     }
 
     /// Format findings using the selected formatter
-    pub fn format(&self, findings: &[Finding]) -> Result<String, Box<dyn std::error::Error>> {
+    pub fn format(&self, findings: &[Finding]) -> Result<String, anyhow::Error> {
         match self {
-            Self::Console(formatter) => formatter.format(findings).map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
-            Self::Json(formatter) => formatter.format(findings).map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
-            Self::Sarif(formatter) => formatter.format(findings).map_err(|e| Box::new(e) as Box<dyn std::error::Error>),
+            Self::Console(formatter) => formatter.format_simple(findings),
+            Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
+            Self::Sarif(formatter) => formatter.format_simple(findings),
+        }
+    }
+
+    /// Format findings with full context information
+    pub fn format_with_context(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String, anyhow::Error> {
+        match self {
+            Self::Console(formatter) => formatter.format_findings(findings, ctx),
+            Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
+            Self::Sarif(formatter) => formatter.format_findings(findings, ctx).and_then(|report| serde_json::to_string_pretty(&report).map_err(|e| e.into())),
         }
     }
 }
@@ -92,13 +101,13 @@ impl OutputFormatterBuilder {
     pub fn build(self) -> OutputFormatter {
         match self.format_type {
             OutputFormat::Console => {
-                let config = ConsoleFormatterConfig {
-                    use_colors: self.color_output,
-                    show_fix_suggestions: true,
+                let config = ConsoleConfig {
+                    color_mode: if self.color_output { console::ColorMode::Always } else { console::ColorMode::Never },
+                    output_level: console::OutputLevel::All,
                     show_code_snippets: true,
-                    compact_mode: false,
+                    show_fix_suggestions: true,
                 };
-                OutputFormatter::Console(ConsoleFormatter::with_config(config))
+                OutputFormatter::Console(ConsoleFormatter::new(config).unwrap())
             }
             OutputFormat::Json => {
                 let formatter = JsonOutputBuilder::new()
@@ -109,13 +118,7 @@ impl OutputFormatterBuilder {
                 OutputFormatter::Json(formatter)
             }
             OutputFormat::Sarif => {
-                let config = SarifFormatterConfig {
-                    include_fixes: true,
-                    include_code_flows: true,
-                    include_taxonomies: true,
-                    tool_version: env!("CARGO_PKG_VERSION").to_string(),
-                };
-                OutputFormatter::Sarif(SarifFormatter::with_config(config))
+                OutputFormatter::Sarif(SarifFormatter::new().unwrap())
             }
         }
     }

@@ -80,20 +80,14 @@ impl JsonFormatter {
             message: finding.message.clone(),
             severity: JsonSeverity::from(&finding.severity),
             location: JsonLocation {
-                line: finding.line,
-                column: finding.column,
-                length: finding.length,
+                line: finding.primary_location.line as usize,
+                column: finding.primary_location.column as usize,
+                length: finding.primary_location.length as usize,
             },
-            cwe: finding.cwe.map(|c| format!("CWE-{}", c)),
-            fix_suggestion: finding.fix_suggestion.as_ref().map(|f| JsonFixSuggestion {
-                description: f.description.clone(),
-                replacements: f.replacements.iter().map(|r| JsonReplacement {
-                    start_line: r.start_line,
-                    start_column: r.start_column,
-                    end_line: r.end_line,
-                    end_column: r.end_column,
-                    new_text: r.new_text.clone(),
-                }).collect(),
+            cwe: finding.cwe_ids.first().map(|c| format!("CWE-{}", c)),
+            fix_suggestion: finding.fix_suggestion.as_ref().map(|description| JsonFixSuggestion {
+                description: description.clone(),
+                replacements: vec![], // TODO: Extract actual replacements from fix suggestion
             }),
             related_findings: Vec::new(), // TODO: Implement if needed
             code_snippet: None, // TODO: Add code snippet extraction
