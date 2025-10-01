@@ -453,9 +453,11 @@ mod tests {
         let scope = symbol_table.get_global_scope();
         let mut resolver = TypeResolver::new(&symbol_table, scope);
 
-        let base_type = TypeName::Elementary(ElementaryType::Uint(256));
+        // Use a proper arena for memory management instead of Box::leak
+        let arena = ast::AstArena::new();
+        let base_type = arena.alloc(TypeName::Elementary(ElementaryType::Uint(256)));
         let array_type = TypeName::Array {
-            base_type: Box::leak(Box::new(base_type)),
+            base_type,
             length: None,
         };
 

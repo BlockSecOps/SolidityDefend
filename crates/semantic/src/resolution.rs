@@ -204,18 +204,39 @@ impl<'a> NameResolver<'a> {
             .copied()
     }
 
-    /// Check if a symbol is accessible through inheritance
-    fn is_symbol_accessible_from_inheritance(&self, symbol: &Symbol, inheritance_distance: usize) -> bool {
+    /// Check if a symbol is accessible through inheritance based on Solidity visibility rules
+    fn is_symbol_accessible_from_inheritance(&self, symbol: &Symbol, _inheritance_distance: usize) -> bool {
         match symbol.kind {
-            // Private symbols are not accessible through inheritance
+            // Functions and state variables: check actual visibility modifiers
             SymbolKind::StateVariable | SymbolKind::Function => {
-                // In a full implementation, we'd check the visibility modifier
-                // For now, assume symbols are accessible unless explicitly private
-                !symbol.name.starts_with('_') // Simple heuristic
+                match symbol.visibility.as_deref() {
+                    Some("private") => false,  // Private symbols are not accessible through inheritance
+                    Some("internal") => true,  // Internal symbols are accessible through inheritance
+                    Some("public") => true,    // Public symbols are accessible through inheritance
+                    Some("external") => {      // External functions are callable but not accessible in derived contracts
+                        // External functions can be called but not overridden in derived contracts
+                        symbol.kind == SymbolKind::Function
+                    }
+                    None => {
+                        // Default visibility in older Solidity versions:
+                        // - Functions: public
+                        // - State variables: internal
+                        match symbol.kind {
+                            SymbolKind::Function => true,      // Default public
+                            SymbolKind::StateVariable => true, // Default internal
+                            _ => true,
+                        }
+                    }
+                    Some(_) => {
+                        // Unknown visibility modifier - assume accessible for safety
+                        // In a production system, this should log a warning
+                        true
+                    }
+                }
             }
-            // Types are generally accessible
+            // Types are generally accessible through inheritance
             SymbolKind::Struct | SymbolKind::Enum | SymbolKind::Type => true,
-            // Events and modifiers are accessible
+            // Events and modifiers are accessible through inheritance
             SymbolKind::Event | SymbolKind::Modifier => true,
             // Contracts, interfaces, libraries are accessible
             SymbolKind::Contract | SymbolKind::Interface | SymbolKind::Library => true,
@@ -331,7 +352,12 @@ impl<'a> NameResolver<'a> {
         // In practice, this would be much more sophisticated
 
         // For now, just check if the number of arguments matches
-        let param_count = signature.matches(',').count() + 1;
+        // Handle empty signature correctly - empty string means 0 parameters
+        let param_count = if signature.trim().is_empty() {
+            0
+        } else {
+            signature.matches(',').count() + 1
+        };
 
         if param_count == argument_types.len() {
             Ok(TypeCompatibility::ImplicitlyConvertible)

@@ -4,7 +4,19 @@ use anyhow::{Result, anyhow};
 
 use ast::{Contract, Function, SourceLocation, ContractType};
 
-/// Maximum depth for scope traversal to prevent infinite loops in circular parent relationships
+/// Maximum depth for scope traversal to prevent infinite loops in circular parent relationships.
+///
+/// This limit is based on the following rationale:
+/// - Most real-world smart contracts have at most 10-20 nested scopes
+/// - Solidity inheritance chains rarely exceed 20 levels deep
+/// - A limit of 100 provides ample headroom while preventing infinite loops
+/// - Stack overflow typically occurs around 1000+ levels, so 100 is safe
+/// - This can be made configurable if needed for specific use cases
+///
+/// If you encounter legitimate code that exceeds this limit, consider:
+/// 1. Increasing this value after careful analysis
+/// 2. Making it configurable via SymbolTable::with_config()
+/// 3. Refactoring the code to reduce nesting depth
 const MAX_SCOPE_DEPTH: usize = 100;
 
 /// Represents different kinds of symbols in the symbol table

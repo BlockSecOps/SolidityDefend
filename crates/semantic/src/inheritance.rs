@@ -19,8 +19,10 @@ pub struct InheritanceNode {
 /// Edge data representing inheritance relationship
 #[derive(Debug, Clone, PartialEq)]
 pub struct InheritanceEdge {
-    /// Arguments passed to the base constructor (if any)
-    pub constructor_args: Option<Vec<String>>, // Simplified representation
+    /// Information about constructor arguments passed to the base constructor
+    /// - None: No constructor call (inheritance without explicit constructor invocation)
+    /// - Some(count): Number of arguments passed to the constructor
+    pub constructor_arg_count: Option<usize>,
     pub location: SourceLocation,
 }
 
@@ -85,10 +87,9 @@ impl InheritanceGraph {
 
         // Create edge data
         let edge_data = InheritanceEdge {
-            constructor_args: parent_spec.arguments.as_ref().map(|_args| {
-                // Simplified: just note that arguments exist
-                // In a full implementation, we'd parse and store the actual expressions
-                vec!["<constructor_args>".to_string()]
+            constructor_arg_count: parent_spec.arguments.as_ref().map(|args| {
+                // Store the actual number of constructor arguments
+                args.len()
             }),
             location: parent_spec.base.location.clone(),
         };

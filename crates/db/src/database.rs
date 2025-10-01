@@ -173,12 +173,14 @@ pub struct Database {
     cache: HashMap<SourceFileId, Result<Vec<String>, String>>,
 }
 
+/// Helper function to validate file path UTF-8 encoding
+/// This is a standalone function since it doesn't access any instance data
+fn validate_file_path(input: &SourceFileInput) -> Result<&str> {
+    input.path.to_str()
+        .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
+}
+
 impl Database {
-    /// Helper method to validate file path UTF-8 encoding
-    fn validate_file_path<'a>(&self, input: &'a SourceFileInput) -> Result<&'a str> {
-        input.path.to_str()
-            .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
-    }
 
     /// Create a new database instance
     pub fn new() -> Self {
@@ -361,7 +363,7 @@ impl Database {
         // Cache miss - perform actual parsing
         let result = if let Some(input) = self.file_registry.get(&id) {
             // Convert path to string with proper error handling instead of silent fallback
-            let path_str = self.validate_file_path(input)?;
+            let path_str = validate_file_path(input)?;
 
             match self.parser.parse(&self.arena, &input.content, path_str) {
                 Ok(source_file) => {
@@ -400,10 +402,13 @@ impl Database {
 
     /// Get public functions from a source file
     pub fn get_public_functions(&mut self, id: SourceFileId) -> Result<Vec<String>> {
+        // TODO: Implement proper caching for public functions to avoid re-parsing
+        // This method currently re-parses on every call instead of utilizing cached results
+
         // Parse the file to get actual visibility information from AST
         if let Some(input) = self.file_registry.get(&id) {
             // Convert path to string with proper error handling
-            let path_str = self.validate_file_path(input)?;
+            let path_str = validate_file_path(input)?;
 
             match self.parser.parse(&self.arena, &input.content, path_str) {
                 Ok(source_file) => {
