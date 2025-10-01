@@ -17,17 +17,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run cargo check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+        run: cargo check --all-targets --all-features
 
   test:
     name: Test Suite
@@ -36,17 +33,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test --all-targets --all-features
 
   lints:
     name: Lints
@@ -55,25 +49,19 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: rustfmt, clippy
 
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
+
       - name: Run cargo fmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
       - name: Run cargo clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings
 
   security:
     name: Security Audit
@@ -82,23 +70,17 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-audit
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-audit
-          version: latest
+        run: cargo install cargo-audit
 
       - name: Run cargo audit
-        uses: actions-rs/cargo@v1
-        with:
-          command: audit
+        run: cargo audit
 
   coverage:
     name: Code Coverage
@@ -107,29 +89,23 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-tarpaulin
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-tarpaulin
-          version: latest
+        run: cargo install cargo-tarpaulin
 
       - name: Generate code coverage
-        uses: actions-rs/cargo@v1
-        with:
-          command: tarpaulin
-          args: --verbose --all-features --workspace --timeout 120 --out Xml
+        run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
       - name: Upload to codecov.io
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v4
         with:
           fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   benchmarks:
     name: Benchmarks
@@ -138,18 +114,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run benchmarks
-        uses: actions-rs/cargo@v1
-        with:
-          command: bench
-          args: --verbose
+        run: cargo bench --verbose
 
   fuzz:
     name: Fuzz Testing
@@ -158,18 +130,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install nightly toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
+      - name: Install Rust nightly toolchain
+        uses: dtolnay/rust-toolchain@nightly
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Install cargo-fuzz
-        uses: actions-rs/install@v0.1
-        with:
-          crate: cargo-fuzz
-          version: latest
+        run: cargo install cargo-fuzz
 
       - name: Run fuzz tests
         run: |
@@ -189,21 +157,17 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install ${{ matrix.rust }} toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: ${{ matrix.rust }}
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Run cargo build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+        run: cargo build --release
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: soliditydefend-${{ matrix.os }}
           path: target/release/soliditydefend*
@@ -216,18 +180,14 @@ jobs:
       - name: Checkout sources
         uses: actions/checkout@v4
 
-      - name: Install stable toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust cache
+        uses: Swatinem/rust-cache@v2
 
       - name: Build release binary
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release
+        run: cargo build --release
 
       - name: Run integration tests
         run: |
