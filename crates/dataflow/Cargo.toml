@@ -12,3 +12,5 @@ cfg = { path = "../cfg" }
 ir = { path = "../ir" }
 indexmap.workspace = true
 dashmap.workspace = true
+anyhow.workspace = true
+serde.workspace = true

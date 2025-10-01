@@ -1,9 +1,15 @@
+pub mod analysis;
 pub mod defuse;
 pub mod framework;
 pub mod liveness;
 pub mod reaching;
 pub mod taint;
+pub mod reaching_definitions;
+pub mod live_variables;
+pub mod def_use;
 
-/// Data flow analysis framework with taint tracking.
-/// Implementation will be added in T032-T036.
-pub struct Placeholder;
+pub use analysis::*;
+pub use reaching_definitions::*;
+pub use live_variables::*;
+pub use taint::*;
+pub use def_use::*;
