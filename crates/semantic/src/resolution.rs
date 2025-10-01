@@ -263,9 +263,22 @@ impl<'a> NameResolver<'a> {
         if let Some(container_result) = self.resolve_name(container_name)? {
             match container_result.symbol.kind {
                 SymbolKind::Contract | SymbolKind::Interface | SymbolKind::Library => {
-                    // Look for the member in the container's scope
-                    // Since Symbol doesn't have scope, we'll look in current scope for now
-                    return self.resolve_name(member_name);
+                    // Look for the member in any scope that contains it
+                    // This is a simplified approach - in a full implementation,
+                    // we'd maintain proper container-scope associations
+                    let scopes_with_member = self.symbol_table.find_scopes_with_symbol(member_name);
+                    for scope in scopes_with_member {
+                        if let Some(symbol) = self.symbol_table.lookup_symbol(scope, member_name) {
+                            return Ok(Some(ResolutionResult {
+                                symbol: symbol.clone(),
+                                resolution_scope: scope,
+                                resolution_path: vec![container_name.to_string(), member_name.to_string()],
+                                is_inherited: false,
+                                inheritance_distance: 0,
+                            }));
+                        }
+                    }
+                    return Ok(None);
                 }
                 _ => {
                     return Err(anyhow!("'{}' is not a contract, interface, or library", container_name));
