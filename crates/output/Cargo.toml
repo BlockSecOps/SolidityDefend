@@ -14,3 +14,4 @@ serde_json.workspace = true
 console.workspace = true
 crossterm.workspace = true
 indicatif.workspace = true
+anyhow.workspace = true

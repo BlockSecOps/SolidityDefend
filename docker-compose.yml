@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Production SolidityDefend service
+  soliditydefend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ${DOCKER_TARGET:-}
+    image: soliditydefend:${TAG:-latest}
+    container_name: soliditydefend
+    volumes:
+      - ${PWD}:/workspace:ro
+      - soliditydefend-cache:/home/soliditydefend/.cache
+    working_dir: /workspace
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+    user: soliditydefend
+    networks:
+      - soliditydefend-net
+
+  # Development environment
+  soliditydefend-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    image: soliditydefend:dev
+    container_name: soliditydefend-dev
+    volumes:
+      - ${PWD}:/workspace
+      - cargo-cache:/usr/local/cargo
+      - target-cache:/workspace/target
+    working_dir: /workspace
+    environment:
+      - RUST_LOG=debug
+      - RUST_BACKTRACE=1
+    user: developer
+    stdin_open: true
+    tty: true
+    networks:
+      - soliditydefend-net
+
+  # CI/CD build environment
+  soliditydefend-ci:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    image: soliditydefend:ci
+    container_name: soliditydefend-ci
+    volumes:
+      - ${PWD}:/workspace
+      - ci-cache:/workspace/target
+    working_dir: /workspace
+    environment:
+      - CI=true
+      - CARGO_INCREMENTAL=0
+      - RUSTFLAGS=-D warnings
+    command: ["./scripts/ci-build.sh"]
+    networks:
+      - soliditydefend-net
+
+volumes:
+  soliditydefend-cache:
+    driver: local
+  cargo-cache:
+    driver: local
+  target-cache:
+    driver: local
+  ci-cache:
+    driver: local
+
+networks:
+  soliditydefend-net:
+    driver: bridge

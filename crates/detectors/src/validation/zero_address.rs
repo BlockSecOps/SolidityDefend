@@ -321,7 +321,7 @@ impl ZeroAddressDetector {
         let mut findings = Vec::new();
 
         match stmt {
-            ast::Statement::Expression(ast::Expression::Assignment { left, right, location }) => {
+            ast::Statement::Expression(ast::Expression::Assignment { left, right, location, .. }) => {
                 // Check for assignments to address variables without validation
                 if let ast::Expression::Identifier(id) = left {
                     if id.name.to_lowercase().contains("address") ||

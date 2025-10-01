@@ -1,0 +1,579 @@
+# GitLab CI/CD pipeline for SolidityDefend security analysis
+# This template provides comprehensive security scanning for Solidity projects
+
+stages:
+  - security-scan
+  - detailed-analysis
+  - security-report
+  - security-validation
+
+variables:
+  SOLIDITYDEFEND_VERSION: "latest"
+  RUST_LOG: "warn"
+  CARGO_HOME: "${CI_PROJECT_DIR}/.cargo"
+  # Security scan configuration
+  SECURITY_THRESHOLD: "medium"
+  SCAN_MODE: "incremental"
+  BASELINE_FILE: ".soliditydefend/baseline.json"
+
+# Cache configuration for faster builds
+cache:
+  key: "${CI_COMMIT_REF_SLUG}"
+  paths:
+    - .cargo/
+    - target/
+    - .soliditydefend/cache/
+
+# Base configuration for SolidityDefend jobs
+.soliditydefend-base:
+  image: rust:1.70
+  before_script:
+    - apt-get update && apt-get install -y jq git
+    - cargo --version
+    - rustc --version
+    # Install SolidityDefend (in production, download pre-built binary)
+    - cargo build --release --bin soliditydefend
+    - cp target/release/soliditydefend /usr/local/bin/
+    - soliditydefend --version
+
+# Security scan job - fast feedback for all branches
+security-scan:
+  extends: .soliditydefend-base
+  stage: security-scan
+  script:
+    - echo "🔍 Starting SolidityDefend security analysis..."
+
+    # Create scan configuration
+    - |
+      cat > soliditydefend.yml << EOF
+      analysis:
+        severity_threshold: ${SECURITY_THRESHOLD}
+        output_format: 'sarif'
+        include_fix_suggestions: true
+
+      detectors:
+        enabled:
+          - reentrancy
+          - missing-access-control
+          - dangerous-selfdestruct
+          - integer-overflow
+          - division-before-multiplication
+          - missing-zero-address-check
+          - array-bounds-check
+          - state-machine-error
+
+      output:
+        show_code_snippets: true
+        color_output: false
+
+      ci:
+        exit_code_severity: ${SECURITY_THRESHOLD}
+        fail_on_new_findings: true
+        baseline_file: '${BASELINE_FILE}'
+      EOF
+
+    # Determine scan mode based on pipeline type
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = "merge_request_event" ]; then
+        SCAN_MODE="incremental"
+        BASE_REF="origin/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+      elif [ "$CI_PIPELINE_SOURCE" = "schedule" ]; then
+        SCAN_MODE="full"
+      elif [ "$CI_COMMIT_BRANCH" = "$CI_DEFAULT_BRANCH" ]; then
+        SCAN_MODE="baseline"
+      else
+        SCAN_MODE="incremental"
+        BASE_REF="origin/${CI_DEFAULT_BRANCH}"
+      fi
+
+    # Build scan command
+    - SCAN_CMD="soliditydefend --config soliditydefend.yml --format sarif"
+    - |
+      case $SCAN_MODE in
+        incremental)
+          if [ -n "$BASE_REF" ]; then
+            SCAN_CMD="$SCAN_CMD --incremental --base-ref $BASE_REF"
+          else
+            SCAN_CMD="$SCAN_CMD --incremental --base-ref HEAD~1"
+          fi
+          ;;
+        baseline)
+          if [ -f "$BASELINE_FILE" ]; then
+            SCAN_CMD="$SCAN_CMD --baseline $BASELINE_FILE"
+          else
+            SCAN_CMD="$SCAN_CMD --recursive"
+          fi
+          ;;
+        full)
+          SCAN_CMD="$SCAN_CMD --recursive"
+          ;;
+      esac
+
+    # Add target directories and exclusions
+    - SCAN_CMD="$SCAN_CMD contracts/ src/ --exclude test/ --exclude mock/ --exclude scripts/"
+
+    # Create output directory
+    - mkdir -p security-reports
+
+    # Run security scan
+    - |
+      echo "Running: $SCAN_CMD"
+      if $SCAN_CMD --output security-reports/findings.sarif; then
+        echo "✅ No security issues found"
+        echo "SCAN_STATUS=passed" >> scan_results.env
+        echo "FINDINGS_COUNT=0" >> scan_results.env
+        echo "CRITICAL_COUNT=0" >> scan_results.env
+        echo "HIGH_COUNT=0" >> scan_results.env
+      else
+        echo "⚠️ Security issues detected"
+
+        # Extract metrics from SARIF
+        if [ -f security-reports/findings.sarif ]; then
+          FINDINGS_COUNT=$(jq '.runs[0].results | length' security-reports/findings.sarif)
+          CRITICAL_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 9)] | length' security-reports/findings.sarif)
+          HIGH_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 7)] | length' security-reports/findings.sarif)
+
+          echo "Total findings: $FINDINGS_COUNT"
+          echo "Critical: $CRITICAL_COUNT"
+          echo "High: $HIGH_COUNT"
+
+          echo "SCAN_STATUS=failed" >> scan_results.env
+          echo "FINDINGS_COUNT=$FINDINGS_COUNT" >> scan_results.env
+          echo "CRITICAL_COUNT=$CRITICAL_COUNT" >> scan_results.env
+          echo "HIGH_COUNT=$HIGH_COUNT" >> scan_results.env
+
+          # Fail job based on severity threshold
+          exit 1
+        else
+          echo "❌ Scan failed to produce output"
+          exit 1
+        fi
+      fi
+
+  artifacts:
+    reports:
+      sast: security-reports/findings.sarif
+    paths:
+      - security-reports/
+      - scan_results.env
+    expire_in: 30 days
+    when: always
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_COMMIT_TAG
+
+# Detailed analysis for failed scans
+detailed-analysis:
+  extends: .soliditydefend-base
+  stage: detailed-analysis
+  needs:
+    - job: security-scan
+      artifacts: true
+  script:
+    - source scan_results.env
+    - |
+      if [ "$SCAN_STATUS" != "failed" ]; then
+        echo "ℹ️ Skipping detailed analysis - no issues found"
+        exit 0
+      fi
+
+    - echo "🔍 Running detailed security analysis..."
+    - mkdir -p detailed-reports
+
+    # Generate comprehensive console report
+    - |
+      soliditydefend --config soliditydefend.yml --format console \
+        --show-code-snippets --show-fix-suggestions \
+        contracts/ src/ > detailed-reports/console-report.txt || true
+
+    # Generate JSON report with metrics
+    - |
+      soliditydefend --config soliditydefend.yml --format json \
+        --include-metrics --include-statistics \
+        contracts/ src/ > detailed-reports/detailed-findings.json || true
+
+    # Generate fix suggestions
+    - |
+      soliditydefend --config soliditydefend.yml --format json \
+        --fixes-only --confidence-threshold 0.7 \
+        contracts/ src/ > detailed-reports/suggested-fixes.json || true
+
+    # Create summary report
+    - |
+      cat > detailed-reports/summary.md << EOF
+      # Security Analysis Summary
+
+      **Scan Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")
+      **Pipeline:** $CI_PIPELINE_ID
+      **Commit:** $CI_COMMIT_SHA
+      **Branch:** $CI_COMMIT_BRANCH
+
+      ## Results
+      - **Total Findings:** $FINDINGS_COUNT
+      - **Critical:** $CRITICAL_COUNT
+      - **High:** $HIGH_COUNT
+
+      ## Files Analyzed
+      $(find contracts/ src/ -name "*.sol" 2>/dev/null | wc -l) Solidity files
+
+      ## Next Steps
+      1. Review findings in the SARIF report
+      2. Check suggested fixes in \`suggested-fixes.json\`
+      3. Apply fixes and re-run analysis
+      4. Update baseline when issues are resolved
+
+      ---
+      *Generated by SolidityDefend v$(soliditydefend --version)*
+      EOF
+
+  artifacts:
+    paths:
+      - detailed-reports/
+    expire_in: 90 days
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Generate and publish security report
+security-report:
+  image: alpine:latest
+  stage: security-report
+  needs:
+    - job: security-scan
+      artifacts: true
+    - job: detailed-analysis
+      artifacts: true
+      optional: true
+  before_script:
+    - apk add --no-cache jq curl
+  script:
+    - source scan_results.env
+    - echo "📊 Generating security report..."
+
+    # Create GitLab pages report
+    - mkdir -p public
+    - |
+      cat > public/index.html << EOF
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <title>Security Analysis Report</title>
+          <meta charset="utf-8">
+          <style>
+              body { font-family: Arial, sans-serif; margin: 40px; }
+              .header { background: #f8f9fa; padding: 20px; border-radius: 5px; }
+              .metric { display: inline-block; margin: 10px; padding: 15px; border-radius: 5px; }
+              .critical { background: #f8d7da; color: #721c24; }
+              .high { background: #fff3cd; color: #856404; }
+              .medium { background: #cce5ff; color: #004085; }
+              .success { background: #d4edda; color: #155724; }
+              .findings { margin-top: 20px; }
+              .finding { margin: 10px 0; padding: 15px; border-left: 4px solid #ddd; }
+              .finding.critical { border-left-color: #dc3545; }
+              .finding.high { border-left-color: #ffc107; }
+              .finding.medium { border-left-color: #007bff; }
+          </style>
+      </head>
+      <body>
+          <div class="header">
+              <h1>🔒 Security Analysis Report</h1>
+              <p><strong>Date:</strong> $(date)</p>
+              <p><strong>Commit:</strong> $CI_COMMIT_SHA</p>
+              <p><strong>Branch:</strong> $CI_COMMIT_BRANCH</p>
+          </div>
+
+          <div class="metrics">
+      EOF
+
+    # Add metrics based on scan results
+    - |
+      if [ "$SCAN_STATUS" = "passed" ]; then
+        cat >> public/index.html << EOF
+              <div class="metric success">
+                  <h3>✅ No Issues Found</h3>
+                  <p>All security checks passed!</p>
+              </div>
+      EOF
+      else
+        cat >> public/index.html << EOF
+              <div class="metric critical">
+                  <h3>Critical Issues</h3>
+                  <p>$CRITICAL_COUNT</p>
+              </div>
+              <div class="metric high">
+                  <h3>High Severity</h3>
+                  <p>$HIGH_COUNT</p>
+              </div>
+              <div class="metric medium">
+                  <h3>Total Findings</h3>
+                  <p>$FINDINGS_COUNT</p>
+              </div>
+      EOF
+      fi
+
+    # Close HTML
+    - |
+      cat >> public/index.html << EOF
+          </div>
+
+          <div class="findings">
+              <h2>📋 Detailed Findings</h2>
+              <p>Download the <a href="findings.sarif">SARIF report</a> for detailed findings.</p>
+              <p>View the <a href="console-report.txt">console report</a> for human-readable output.</p>
+          </div>
+
+          <div>
+              <h2>🔧 Resources</h2>
+              <ul>
+                  <li><a href="suggested-fixes.json">Suggested Fixes (JSON)</a></li>
+                  <li><a href="detailed-findings.json">Detailed Findings (JSON)</a></li>
+                  <li><a href="summary.md">Analysis Summary</a></li>
+              </ul>
+          </div>
+      </body>
+      </html>
+      EOF
+
+    # Copy reports to public directory
+    - cp security-reports/* public/ 2>/dev/null || true
+    - cp detailed-reports/* public/ 2>/dev/null || true
+
+  artifacts:
+    paths:
+      - public/
+    expire_in: 1 year
+
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+# Update security baseline
+update-baseline:
+  extends: .soliditydefend-base
+  stage: security-validation
+  needs:
+    - job: security-scan
+      artifacts: true
+  script:
+    - echo "🔄 Updating security baseline..."
+    - mkdir -p .soliditydefend
+
+    # Generate new baseline
+    - |
+      soliditydefend --config soliditydefend.yml --format json \
+        --baseline-output .soliditydefend/baseline.json \
+        contracts/ src/ --exclude test/ --exclude mock/
+
+    # Commit baseline if changed
+    - |
+      if ! git diff --quiet .soliditydefend/baseline.json 2>/dev/null; then
+        git config user.name "SolidityDefend Bot"
+        git config user.email "security-bot@${CI_PROJECT_NAMESPACE}.com"
+        git add .soliditydefend/baseline.json
+        git commit -m "chore: update security baseline [skip ci]"
+
+        # Push using project access token
+        git remote set-url origin "https://gitlab-ci-token:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+        git push origin HEAD:${CI_COMMIT_REF_NAME}
+      else
+        echo "Baseline unchanged"
+      fi
+
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      changes:
+        - "contracts/**/*.sol"
+        - "src/**/*.sol"
+
+# Merge request security validation
+mr-security-check:
+  extends: .soliditydefend-base
+  stage: security-validation
+  needs:
+    - job: security-scan
+      artifacts: true
+  script:
+    - source scan_results.env
+    - echo "🔍 Validating merge request security..."
+
+    # Check if any critical issues were introduced
+    - |
+      if [ "$CRITICAL_COUNT" -gt 0 ]; then
+        echo "❌ Merge request blocked: $CRITICAL_COUNT critical security issues found"
+        echo "Please fix critical security issues before merging."
+        exit 1
+      fi
+
+    # Check if too many high severity issues
+    - |
+      if [ "$HIGH_COUNT" -gt 5 ]; then
+        echo "⚠️ Warning: $HIGH_COUNT high severity issues found"
+        echo "Consider fixing high severity issues before merging."
+        # Don't fail for high severity, just warn
+      fi
+
+    - echo "✅ Merge request security validation passed"
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+
+# Release security validation
+release-validation:
+  extends: .soliditydefend-base
+  stage: security-validation
+  script:
+    - echo "🔒 Validating release security..."
+
+    # Run comprehensive security scan for release
+    - |
+      soliditydefend --config soliditydefend.yml \
+        --format json \
+        --severity-threshold critical \
+        --recursive \
+        --include-all-detectors \
+        contracts/ src/ > release-security-report.json
+
+    # Check for critical issues
+    - CRITICAL_COUNT=$(jq '[.findings[] | select(.severity == "critical")] | length' release-security-report.json)
+    - |
+      if [ "$CRITICAL_COUNT" -gt 0 ]; then
+        echo "❌ Release blocked: $CRITICAL_COUNT critical security issues found"
+        jq -r '.findings[] | select(.severity == "critical") | "- \(.detector_id): \(.message)"' release-security-report.json
+        exit 1
+      fi
+
+    # Generate security attestation
+    - |
+      cat > security-attestation.json << EOF
+      {
+        "version": "1.0",
+        "release_tag": "$CI_COMMIT_TAG",
+        "commit_sha": "$CI_COMMIT_SHA",
+        "scan_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+        "tool_version": "$(soliditydefend --version)",
+        "attestation": {
+          "critical_issues": 0,
+          "high_issues": $(jq '[.findings[] | select(.severity == "high")] | length' release-security-report.json),
+          "validation_passed": true,
+          "release_approved": true
+        }
+      }
+      EOF
+
+    - echo "✅ Release security validation passed"
+
+  artifacts:
+    paths:
+      - release-security-report.json
+      - security-attestation.json
+    expire_in: 1 year
+
+  rules:
+    - if: $CI_COMMIT_TAG
+
+# Scheduled comprehensive scan
+nightly-scan:
+  extends: .soliditydefend-base
+  stage: security-scan
+  variables:
+    SCAN_MODE: "full"
+    SECURITY_THRESHOLD: "low"
+  script:
+    - echo "🌙 Running nightly comprehensive security scan..."
+
+    # Run full scan with all detectors
+    - |
+      soliditydefend --config soliditydefend.yml \
+        --format json \
+        --recursive \
+        --include-all-detectors \
+        --severity-threshold low \
+        contracts/ src/ > nightly-scan-results.json
+
+    # Generate trends report
+    - |
+      python3 << 'EOF'
+      import json
+      import os
+      from datetime import datetime
+
+      # Load scan results
+      with open('nightly-scan-results.json', 'r') as f:
+          results = json.load(f)
+
+      findings_by_severity = {}
+      for finding in results.get('findings', []):
+          severity = finding.get('severity', 'unknown')
+          findings_by_severity[severity] = findings_by_severity.get(severity, 0) + 1
+
+      # Create trends report
+      trends = {
+          'scan_date': datetime.utcnow().isoformat(),
+          'commit_sha': os.environ.get('CI_COMMIT_SHA'),
+          'total_findings': len(results.get('findings', [])),
+          'findings_by_severity': findings_by_severity,
+          'files_scanned': len(results.get('scanned_files', []))
+      }
+
+      with open('nightly-trends.json', 'w') as f:
+          json.dump(trends, f, indent=2)
+
+      print(f"📊 Nightly scan completed: {trends['total_findings']} findings")
+      EOF
+
+  artifacts:
+    paths:
+      - nightly-scan-results.json
+      - nightly-trends.json
+    expire_in: 90 days
+
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+
+# Security metrics collection
+collect-metrics:
+  image: alpine:latest
+  stage: security-report
+  needs:
+    - job: security-scan
+      artifacts: true
+  before_script:
+    - apk add --no-cache curl jq
+  script:
+    - source scan_results.env
+    - echo "📈 Collecting security metrics..."
+
+    # Prepare metrics payload
+    - |
+      cat > metrics.json << EOF
+      {
+        "project_id": "$CI_PROJECT_ID",
+        "pipeline_id": "$CI_PIPELINE_ID",
+        "commit_sha": "$CI_COMMIT_SHA",
+        "branch": "$CI_COMMIT_BRANCH",
+        "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+        "scan_status": "$SCAN_STATUS",
+        "findings_count": $FINDINGS_COUNT,
+        "critical_count": $CRITICAL_COUNT,
+        "high_count": $HIGH_COUNT
+      }
+      EOF
+
+    # Send metrics to monitoring system (example)
+    - echo "Metrics collected:"
+    - cat metrics.json
+
+    # In production, send to your monitoring/dashboard API
+    # curl -X POST "$METRICS_ENDPOINT" -H "Content-Type: application/json" -d @metrics.json
+
+  artifacts:
+    paths:
+      - metrics.json
+    expire_in: 30 days
+
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
