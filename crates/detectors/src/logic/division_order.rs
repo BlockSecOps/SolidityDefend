@@ -225,18 +225,18 @@ impl DivisionOrderDetector {
                 // Check update expression in for loop
                 if self.contains_division_before_multiplication(update) {
                     let message = "Division before multiplication in loop update may compound precision loss".to_string();
-                    let mut finding = self.base.create_finding(
+                    let finding = self.base.create_finding_with_severity(
                         ctx,
                         message,
                         location.start().line() as u32,
                         location.start().column() as u32,
                         location.byte_length() as u32,
+                        Severity::High, // Higher severity in loops
                     )
                     .with_cwe(682)
                     .with_fix_suggestion(
                         "Move division outside the loop or use fixed-point arithmetic".to_string()
                     );
-                    finding.severity = Severity::High; // Higher severity in loops
                     findings.push(finding);
                 }
 

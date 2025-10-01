@@ -249,6 +249,25 @@ impl BaseDetector {
             ctx.create_location(line, column, length),
         )
     }
+
+    /// Helper method to create a finding with custom severity
+    pub fn create_finding_with_severity(
+        &self,
+        ctx: &AnalysisContext<'_>,
+        message: String,
+        line: u32,
+        column: u32,
+        length: u32,
+        severity: crate::types::Severity,
+    ) -> Finding {
+        Finding::new(
+            self.id.clone(),
+            severity,
+            crate::types::Confidence::Medium,
+            message,
+            ctx.create_location(line, column, length),
+        )
+    }
 }
 
 /// Macro to help implement the Detector trait for structs that contain BaseDetector
