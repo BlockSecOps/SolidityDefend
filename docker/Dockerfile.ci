@@ -1,0 +1,42 @@
+# CI/CD Dockerfile for SolidityDefend
+FROM rust:1.75-slim
+
+WORKDIR /workspace
+
+# Install CI dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    git \
+    curl \
+    jq \
+    timeout \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust tools for CI
+RUN rustup component add rustfmt clippy
+RUN cargo install cargo-audit cargo-tarpaulin
+
+# Install fuzzing tools
+RUN cargo install cargo-fuzz
+
+# Create CI user
+RUN useradd -r -s /bin/false ci-runner
+
+# Set proper permissions for CI
+RUN mkdir -p /output && \
+    chown ci-runner:ci-runner /output
+
+# Copy and build the project
+COPY . .
+RUN cargo build --release
+
+# Set executable permissions on scripts
+RUN chmod +x scripts/*.sh
+
+# Switch to CI user for security
+USER ci-runner
+
+# Default CI command
+CMD ["scripts/validate.sh"]

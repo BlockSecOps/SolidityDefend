@@ -15,3 +15,5 @@ console.workspace = true
 crossterm.workspace = true
 indicatif.workspace = true
 anyhow.workspace = true
+chrono.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  soliditydefend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: soliditydefend:latest
+    container_name: soliditydefend
+    volumes:
+      - ./contracts:/analysis:ro
+      - ./output:/output
+    working_dir: /analysis
+    command: ["--sarif", "--output", "/output/results.sarif", "/analysis"]
+
+  # Development container with source mounted
+  soliditydefend-dev:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    image: soliditydefend:dev
+    container_name: soliditydefend-dev
+    volumes:
+      - ..:/workspace
+      - cargo-cache:/usr/local/cargo/registry
+      - target-cache:/workspace/target
+    working_dir: /workspace
+    command: ["bash"]
+    stdin_open: true
+    tty: true
+
+  # CI/CD container for automated testing
+  soliditydefend-ci:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ci
+    image: soliditydefend:ci
+    container_name: soliditydefend-ci
+    volumes:
+      - ..:/workspace:ro
+      - ./ci-output:/output
+    working_dir: /workspace
+    command: ["scripts/validate.sh", "--output", "/output"]
+
+volumes:
+  cargo-cache:
+  target-cache:

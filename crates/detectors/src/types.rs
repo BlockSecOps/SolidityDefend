@@ -25,7 +25,7 @@ impl std::fmt::Display for DetectorId {
 }
 
 /// Severity level of a security finding
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Severity {
     /// Informational findings that don't represent security issues
     Info,

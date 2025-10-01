@@ -1,0 +1,38 @@
+# Development Dockerfile for SolidityDefend
+FROM rust:1.75
+
+WORKDIR /workspace
+
+# Install development dependencies
+RUN apt-get update && apt-get install -y \
+    pkg-config \
+    libssl-dev \
+    build-essential \
+    git \
+    curl \
+    vim \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install additional Rust tools
+RUN rustup component add rustfmt clippy
+RUN cargo install cargo-audit cargo-tarpaulin cargo-fuzz
+
+# Install development tools
+RUN cargo install cargo-watch cargo-expand cargo-edit
+
+# Create non-root user for development
+RUN useradd -m -s /bin/bash developer && \
+    usermod -aG sudo developer && \
+    echo "developer ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Switch to development user
+USER developer
+
+# Set up shell
+RUN echo 'alias ll="ls -la"' >> ~/.bashrc && \
+    echo 'alias la="ls -A"' >> ~/.bashrc && \
+    echo 'alias l="ls -CF"' >> ~/.bashrc
+
+# Default command
+CMD ["bash"]
