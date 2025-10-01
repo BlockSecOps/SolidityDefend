@@ -5,7 +5,7 @@ use sha2::{Sha256, Digest};
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
-use ast::{AstArena, SourceFile};
+use ast::{AstArena, SourceFile, Visibility};
 use parser::{Parser, ParseErrors};
 
 /// Source file identifier for Salsa database
@@ -173,7 +173,15 @@ pub struct Database {
     cache: HashMap<SourceFileId, Result<Vec<String>, String>>,
 }
 
+/// Helper function to validate file path UTF-8 encoding
+/// This is a standalone function since it doesn't access any instance data
+fn validate_file_path(input: &SourceFileInput) -> Result<&str> {
+    input.path.to_str()
+        .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
+}
+
 impl Database {
+
     /// Create a new database instance
     pub fn new() -> Self {
         Self {
@@ -355,8 +363,7 @@ impl Database {
         // Cache miss - perform actual parsing
         let result = if let Some(input) = self.file_registry.get(&id) {
             // Convert path to string with proper error handling instead of silent fallback
-            let path_str = input.path.to_str()
-                .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))?;
+            let path_str = validate_file_path(input)?;
 
             match self.parser.parse(&self.arena, &input.content, path_str) {
                 Ok(source_file) => {
@@ -395,9 +402,32 @@ impl Database {
 
     /// Get public functions from a source file
     pub fn get_public_functions(&mut self, id: SourceFileId) -> Result<Vec<String>> {
-        let all_functions = self.get_all_functions(id)?;
-        // Simplified - assume functions not starting with underscore are public
-        Ok(all_functions.into_iter().filter(|name| !name.starts_with('_')).collect())
+        // TODO: Implement proper caching for public functions to avoid re-parsing
+        // This method currently re-parses on every call instead of utilizing cached results
+
+        // Parse the file to get actual visibility information from AST
+        if let Some(input) = self.file_registry.get(&id) {
+            // Convert path to string with proper error handling
+            let path_str = validate_file_path(input)?;
+
+            match self.parser.parse(&self.arena, &input.content, path_str) {
+                Ok(source_file) => {
+                    let mut public_functions = Vec::new();
+                    for contract in &source_file.contracts {
+                        for function in &contract.functions {
+                            // Check actual visibility from AST instead of name patterns
+                            if matches!(function.visibility, Visibility::Public | Visibility::External) {
+                                public_functions.push(function.name.name.to_string());
+                            }
+                        }
+                    }
+                    Ok(public_functions)
+                }
+                Err(errors) => Err(anyhow!("Parse error: {:?}", errors)),
+            }
+        } else {
+            Err(anyhow!("Source file not found"))
+        }
     }
 
     /// Get contract dependencies for a source file
