@@ -63,3 +63,5 @@ venv/
 .tmp/
 .temp/
 .claude
+debug_test
+debug_test*
