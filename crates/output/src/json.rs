@@ -370,27 +370,21 @@ impl Default for JsonOutputBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use detectors::types::{DetectorId, FixSuggestion, TextReplacement};
+    use detectors::types::{DetectorId, Severity, Confidence, SourceLocation};
+    use fixes::{FixSuggestion, TextReplacement};
+    use std::collections::HashMap;
 
     fn create_test_finding() -> Finding {
         Finding {
             detector_id: DetectorId::new("test-detector"),
             message: "Test vulnerability detected".to_string(),
             severity: Severity::High,
-            line: 42,
-            column: 10,
-            length: 15,
-            cwe: Some(123),
-            fix_suggestion: Some(FixSuggestion {
-                description: "Add access control".to_string(),
-                replacements: vec![TextReplacement {
-                    start_line: 42,
-                    start_column: 10,
-                    end_line: 42,
-                    end_column: 25,
-                    new_text: "require(msg.sender == owner); ".to_string(),
-                }],
-            }),
+            confidence: Confidence::High,
+            primary_location: SourceLocation::new("test.sol".to_string(), 42, 10, 15),
+            secondary_locations: Vec::new(),
+            cwe_ids: vec![123],
+            metadata: HashMap::new(),
+            fix_suggestion: Some("Add access control".to_string()),
         }
     }
 
@@ -427,10 +421,11 @@ mod tests {
                 detector_id: DetectorId::new("another-detector"),
                 message: "Another issue".to_string(),
                 severity: Severity::Critical,
-                line: 1,
-                column: 1,
-                length: 5,
-                cwe: None,
+                confidence: Confidence::High,
+                primary_location: SourceLocation::new("test.sol".to_string(), 1, 1, 5),
+                secondary_locations: Vec::new(),
+                cwe_ids: Vec::new(),
+                metadata: HashMap::new(),
                 fix_suggestion: None,
             },
         ];

@@ -489,8 +489,9 @@ mod tests {
         let analysis = LiveVariables::new(&cfg);
 
         // Test block 3: temp = x + y, return temp
-        let (_, instructions3) = cfg.basic_blocks().get(&BlockId(3)).unwrap();
-        let (use_set, def_set) = analysis.compute_use_def(instructions3);
+        let binding = cfg.basic_blocks();
+        let node3 = binding.get(&BlockId(3)).unwrap();
+        let (use_set, def_set) = analysis.compute_use_def(&node3.instructions);
 
         // Should use x and y
         assert!(use_set.contains(&ValueId(1))); // x
@@ -528,8 +529,8 @@ mod tests {
         ]);
 
         cfg.set_entry_block(entry).unwrap();
-        cfg.add_edge(entry, branch1, EdgeType::Conditional).unwrap();
-        cfg.add_edge(entry, branch2, EdgeType::Conditional).unwrap();
+        cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
+        cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
         cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
         cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
 
