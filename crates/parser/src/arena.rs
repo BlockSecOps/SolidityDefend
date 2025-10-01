@@ -1,7 +1,6 @@
 use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType};
 use crate::error::{ParseError, ParseResult, ParseErrors};
 use solang_parser::{pt, parse, diagnostics};
-// Removed unused import
 
 /// Arena-based parser for converting solang AST to our arena-allocated AST
 pub struct ArenaParser<'arena> {
