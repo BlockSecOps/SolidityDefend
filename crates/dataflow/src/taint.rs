@@ -527,7 +527,8 @@ impl<'a> TaintAnalysis<'a> {
     pub fn detect_violations(&self, result: &DataFlowResult<TaintState>) -> Vec<TaintViolation> {
         let mut violations = Vec::new();
 
-        for (block_id, instructions) in self.cfg.basic_blocks() {
+        for (block_id, block_node) in self.cfg.basic_blocks() {
+            let instructions = &block_node.instructions;
             if let Some(block_state) = result.get_exit_state(*block_id) {
                 for (instr_index, instruction) in instructions.iter().enumerate() {
                     if let Some(sink_name) = self.is_sink(instruction) {
@@ -733,14 +734,14 @@ mod tests {
 
         // Block 1: tainted_var = input, clean_var = 42
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Parameter(0), IrValue::Constant(0)), // tainted_var = input
-            Instruction::Add(ValueId(2), IrValue::Constant(42), IrValue::Constant(0)), // clean_var = 42
+            Instruction::Add(ValueId(1), IrValue::Value(ValueId(0)), IrValue::ConstantInt(0)), // tainted_var = input
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(42), IrValue::ConstantInt(0)), // clean_var = 42
         ];
 
         // Block 2: result = tainted_var + clean_var
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Variable(ValueId(2))), // result = tainted + clean
-            Instruction::Return(Some(IrValue::Variable(ValueId(3)))), // return result
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // result = tainted + clean
+            Instruction::Return(Some(IrValue::Value(ValueId(3)))), // return result
         ];
 
         cfg.add_block(block1, instructions1);
