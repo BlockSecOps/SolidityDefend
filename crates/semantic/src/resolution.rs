@@ -348,22 +348,64 @@ impl<'a> NameResolver<'a> {
         signature: &str,
         argument_types: &[ResolvedType],
     ) -> Result<TypeCompatibility> {
-        // Simplified signature parsing
-        // In practice, this would be much more sophisticated
-
-        // For now, just check if the number of arguments matches
-        // Handle empty signature correctly - empty string means 0 parameters
-        let param_count = if signature.trim().is_empty() {
-            0
-        } else {
-            signature.matches(',').count() + 1
-        };
+        // Parse the function signature to extract parameter types
+        let param_count = self.parse_function_signature_parameters(signature)?;
 
         if param_count == argument_types.len() {
+            // For now, only check parameter count
+            // TODO: Implement full type compatibility checking
             Ok(TypeCompatibility::ImplicitlyConvertible)
         } else {
             Ok(TypeCompatibility::Incompatible)
         }
+    }
+
+    /// Parse function signature parameters accounting for nested types
+    /// Examples:
+    /// - "" -> 0 parameters
+    /// - "uint256" -> 1 parameter
+    /// - "uint256,address" -> 2 parameters
+    /// - "mapping(address => uint256),uint256[]" -> 2 parameters
+    /// - "mapping(address => mapping(uint256 => bool)),uint256" -> 2 parameters
+    fn parse_function_signature_parameters(&self, signature: &str) -> Result<usize> {
+        let trimmed = signature.trim();
+        if trimmed.is_empty() {
+            return Ok(0);
+        }
+
+        let mut param_count = 0;
+        let mut depth = 0;
+        let mut in_brackets = 0;
+        let mut current_param_start = 0;
+        let chars: Vec<char> = trimmed.chars().collect();
+
+        for (i, &ch) in chars.iter().enumerate() {
+            match ch {
+                '(' => depth += 1,
+                ')' => depth -= 1,
+                '[' => in_brackets += 1,
+                ']' => in_brackets -= 1,
+                ',' if depth == 0 && in_brackets == 0 => {
+                    // Found a top-level comma - this separates parameters
+                    let param_str = chars[current_param_start..i].iter().collect::<String>();
+                    let param = param_str.trim();
+                    if !param.is_empty() {
+                        param_count += 1;
+                    }
+                    current_param_start = i + 1;
+                }
+                _ => {}
+            }
+        }
+
+        // Count the last parameter (after the last comma, or the only parameter)
+        let last_param_str = chars[current_param_start..].iter().collect::<String>();
+        let last_param = last_param_str.trim();
+        if !last_param.is_empty() {
+            param_count += 1;
+        }
+
+        Ok(param_count)
     }
 
     /// Resolve using directive (e.g., "using LibraryName for Type")
@@ -713,5 +755,111 @@ mod tests {
         assert_eq!(resolved.len(), 5);
         assert_eq!(unresolved.len(), 1);
         assert!(unresolved.contains(&"nonexistent"));
+    }
+
+    #[test]
+    fn test_function_signature_parameter_parsing() {
+        let symbol_table = SymbolTable::new();
+        let inheritance_graph = InheritanceGraph::new();
+        let global_scope = symbol_table.get_global_scope();
+        let resolver = NameResolver::new(&symbol_table, &inheritance_graph, global_scope);
+
+        // Test cases for parameter counting
+        let test_cases = vec![
+            // (signature, expected_param_count, description)
+            ("", 0, "empty signature"),
+            ("   ", 0, "whitespace only signature"),
+            ("uint256", 1, "single simple parameter"),
+            ("uint256,address", 2, "two simple parameters"),
+            ("uint256, address", 2, "two simple parameters with space"),
+            ("uint256 , address", 2, "two simple parameters with spaces"),
+
+            // Complex types with commas inside
+            ("mapping(address => uint256)", 1, "mapping type"),
+            ("mapping(address => uint256),uint256", 2, "mapping and simple type"),
+            ("uint256[],mapping(address => uint256)", 2, "array and mapping"),
+            ("mapping(address => mapping(uint256 => bool))", 1, "nested mapping"),
+            ("mapping(address => mapping(uint256 => bool)),uint256", 2, "nested mapping and simple type"),
+
+            // Array types
+            ("uint256[]", 1, "dynamic array"),
+            ("uint256[10]", 1, "fixed array"),
+            ("uint256[][],address", 2, "nested array and address"),
+            ("mapping(address => uint256[])", 1, "mapping to array"),
+
+            // Complex combinations
+            ("mapping(address => uint256),uint256[],bool", 3, "mapping, array, and bool"),
+            ("mapping(address => mapping(uint256 => bool)),uint256[],address", 3, "complex nested types"),
+            ("uint256,mapping(address => uint256),bool", 3, "simple, mapping, simple"),
+
+            // Edge cases
+            ("mapping(address=>uint256)", 1, "mapping without spaces"),
+            ("uint256  ,  address", 2, "multiple spaces around comma"),
+            ("mapping(address => uint256)  ,  uint256[]", 2, "complex types with spaces"),
+        ];
+
+        for (signature, expected_count, description) in test_cases {
+            let result = resolver.parse_function_signature_parameters(signature);
+            assert!(result.is_ok(), "Failed to parse signature '{}': {:?}", signature, result.err());
+
+            let actual_count = result.unwrap();
+            assert_eq!(
+                actual_count,
+                expected_count,
+                "Parameter count mismatch for '{}' ({}): expected {}, got {}",
+                signature, description, expected_count, actual_count
+            );
+        }
+    }
+
+    #[test]
+    fn test_function_signature_compatibility() {
+        let symbol_table = SymbolTable::new();
+        let inheritance_graph = InheritanceGraph::new();
+        let global_scope = symbol_table.get_global_scope();
+        let resolver = NameResolver::new(&symbol_table, &inheritance_graph, global_scope);
+
+        use crate::types::ResolvedType;
+        use ast::ElementaryType;
+
+        // Test compatibility checking
+        let single_arg = vec![ResolvedType::Elementary(ElementaryType::Uint(256))];
+        let two_args = vec![
+            ResolvedType::Elementary(ElementaryType::Uint(256)),
+            ResolvedType::Elementary(ElementaryType::Address),
+        ];
+
+        // Compatible cases
+        let result = resolver.check_function_signature_compatibility("uint256", &single_arg);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
+
+        let result = resolver.check_function_signature_compatibility("uint256,address", &two_args);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
+
+        let result = resolver.check_function_signature_compatibility("mapping(address => uint256),uint256", &two_args);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
+
+        // Incompatible cases (wrong parameter count)
+        let result = resolver.check_function_signature_compatibility("uint256,address", &single_arg);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::Incompatible);
+
+        let result = resolver.check_function_signature_compatibility("uint256", &two_args);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::Incompatible);
+
+        // Empty signature with no arguments
+        let empty_args: Vec<ResolvedType> = vec![];
+        let result = resolver.check_function_signature_compatibility("", &empty_args);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
+
+        // Empty signature with arguments (incompatible)
+        let result = resolver.check_function_signature_compatibility("", &single_arg);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), TypeCompatibility::Incompatible);
     }
 }
