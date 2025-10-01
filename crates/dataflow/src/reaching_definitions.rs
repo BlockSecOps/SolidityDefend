@@ -177,9 +177,12 @@ impl<'a> ReachingDefinitions<'a> {
 
         for (instr_index, instruction) in instructions.iter().enumerate() {
             if let Some(defined_var) = utils::get_instruction_definition(instruction) {
-                // Kill all previous definitions of this variable
-                let killed_defs = self.kill_definitions(defined_var);
-                kill.extend(killed_defs.clone());
+                // Kill all previous definitions of this variable from OTHER blocks
+                let all_defs = self.kill_definitions(defined_var);
+                let killed_defs: HashSet<DefinitionSite> = all_defs.into_iter()
+                    .filter(|def| def.block_id != block_id)
+                    .collect();
+                kill.extend(killed_defs);
 
                 // Remove any definitions of this variable from gen set
                 gen.retain(|def: &DefinitionSite| def.variable != defined_var);
@@ -483,8 +486,9 @@ mod tests {
         let cfg = create_test_cfg();
         let analysis = ReachingDefinitions::new(&cfg);
 
-        let (block1_instructions, _) = cfg.basic_blocks().get(&BlockId(1)).unwrap();
-        let (gen, kill) = analysis.compute_gen_kill(BlockId(1), block1_instructions);
+        let binding = cfg.basic_blocks();
+        let block1_node = binding.get(&BlockId(1)).unwrap();
+        let (gen, kill) = analysis.compute_gen_kill(BlockId(1), &block1_node.instructions);
 
         // Block 1 should generate 2 definitions
         assert_eq!(gen.len(), 2);
@@ -515,8 +519,8 @@ mod tests {
         ]);
 
         cfg.set_entry_block(entry).unwrap();
-        cfg.add_edge(entry, branch1, EdgeType::Conditional).unwrap();
-        cfg.add_edge(entry, branch2, EdgeType::Conditional).unwrap();
+        cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
+        cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
         cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
         cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
 

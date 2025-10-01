@@ -706,8 +706,8 @@ mod tests {
         ]);
 
         cfg.set_entry_block(entry).unwrap();
-        cfg.add_edge(entry, branch1, EdgeType::Conditional).unwrap();
-        cfg.add_edge(entry, branch2, EdgeType::Conditional).unwrap();
+        cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
+        cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
         cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
         cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
 

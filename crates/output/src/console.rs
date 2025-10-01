@@ -477,28 +477,68 @@ struct CodeSnippet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use detectors::types::DetectorId;
+    use detectors::types::{DetectorId, Severity, Confidence, SourceLocation};
+    use std::collections::HashMap;
 
     fn create_test_finding() -> Finding {
         Finding {
             detector_id: DetectorId::new("test-detector"),
             message: "Test vulnerability".to_string(),
             severity: Severity::High,
-            line: 10,
-            column: 5,
-            length: 15,
-            cwe: Some(476),
+            confidence: Confidence::High,
+            primary_location: SourceLocation::new("test.sol".to_string(), 3, 5, 15),
+            secondary_locations: Vec::new(),
+            cwe_ids: vec![476],
+            metadata: HashMap::new(),
             fix_suggestion: Some("Fix this issue".to_string()),
         }
     }
 
     fn create_test_context() -> AnalysisContext<'static> {
+        use ast::{Contract, ContractType, Identifier, AstArena, SourceLocation as AstSourceLocation, Position};
+        use semantic::SymbolTable;
+        use bumpalo::collections::Vec as BumpVec;
+        use std::path::PathBuf;
+
         let source = "line 1\nline 2\nvulnerable line 10\nline 4\nline 5";
-        AnalysisContext {
-            source_code: source.to_string(),
-            file_path: "test.sol".to_string(),
-            // ... other fields would be properly initialized in real usage
-        }
+        let symbols = SymbolTable::new();
+        let arena = Box::leak(Box::new(AstArena::new()));
+
+        let name = arena.alloc_str("TestContract");
+        let identifier = Identifier {
+            name,
+            location: AstSourceLocation::new(
+                PathBuf::from("test.sol"),
+                Position::new(1, 1, 0),
+                Position::new(1, 12, 11)
+            ),
+        };
+
+        let contract = Contract {
+            name: identifier,
+            contract_type: ContractType::Contract,
+            inheritance: BumpVec::new_in(&arena.bump),
+            using_for_directives: BumpVec::new_in(&arena.bump),
+            state_variables: BumpVec::new_in(&arena.bump),
+            functions: BumpVec::new_in(&arena.bump),
+            modifiers: BumpVec::new_in(&arena.bump),
+            events: BumpVec::new_in(&arena.bump),
+            errors: BumpVec::new_in(&arena.bump),
+            structs: BumpVec::new_in(&arena.bump),
+            enums: BumpVec::new_in(&arena.bump),
+            location: AstSourceLocation::new(
+                PathBuf::from("test.sol"),
+                Position::new(1, 1, 0),
+                Position::new(10, 100, 99)
+            ),
+        };
+
+        AnalysisContext::new(
+            contract,
+            symbols,
+            source.to_string(),
+            "test.sol".to_string(),
+        )
     }
 
     #[test]
@@ -570,7 +610,7 @@ mod tests {
         let output = formatter.format_findings(&[finding], &ctx).unwrap();
 
         assert!(output.contains("vulnerable line 10"));
-        assert!(output.contains("10 ►")); // Highlight marker
+        assert!(output.contains("3 ►")); // Highlight marker
     }
 
     #[test]

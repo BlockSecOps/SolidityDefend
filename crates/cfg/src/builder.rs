@@ -394,7 +394,9 @@ impl<'a> CfgAnalysis<'a> {
         if stats.block_count == 0 {
             0
         } else {
-            stats.edge_count.saturating_sub(stats.block_count).saturating_add(2)
+            // Use signed arithmetic to handle E - N properly, then add 2
+            let complexity = stats.edge_count as i32 - stats.block_count as i32 + 2;
+            complexity.max(1) as usize // Minimum complexity is 1
         }
     }
 
@@ -454,6 +456,11 @@ mod tests {
         let block1 = ir_function.create_block();
         let block2 = ir_function.create_block();
 
+        // Entry block branches to block1
+        ir_function.add_instruction(ir_function.entry_block,
+            Instruction::Branch(block1)
+        ).unwrap();
+
         ir_function.add_instruction(block1,
             Instruction::Branch(block2)
         ).unwrap();
@@ -499,7 +506,7 @@ mod tests {
         assert!(result.is_ok());
 
         let cfg = result.unwrap();
-        assert_eq!(cfg.statistics().block_count, 3); // entry + 2 blocks we added
+        assert_eq!(cfg.statistics().block_count, 3); // entry + block1 + block2
         assert!(cfg.entry_block_id().is_some());
     }
 

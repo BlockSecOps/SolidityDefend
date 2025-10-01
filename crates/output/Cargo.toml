@@ -9,6 +9,10 @@ description = "Output formatters for SARIF, JSON, and console"
 
 [dependencies]
 detectors = { path = "../detectors" }
+ast = { path = "../ast" }
+semantic = { path = "../semantic" }
+fixes = { path = "../fixes" }
+bumpalo = "3.19"
 serde.workspace = true
 serde_json.workspace = true
 console.workspace = true
