@@ -291,11 +291,7 @@ impl Detector for DivisionOrderDetector {
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
-            if let Some(body) = &function.body {
-                for stmt in &body.statements {
-                    findings.extend(self.analyze_statement(stmt, ctx)?);
-                }
-            }
+            findings.extend(self.analyze_function(function, ctx)?);
         }
 
         Ok(findings)
