@@ -5,14 +5,19 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Vulnerability detection engine"
+description = "Security vulnerability detectors for Solidity smart contracts"
 
 [dependencies]
-dataflow = { path = "../dataflow" }
-cfg = { path = "../cfg" }
-ir = { path = "../ir" }
-semantic = { path = "../semantic" }
 ast = { path = "../ast" }
-rayon.workspace = true
+semantic = { path = "../semantic" }
+# Temporarily disabled due to compilation errors
+# cfg = { path = "../cfg" }
+# dataflow = { path = "../dataflow" }
+# ir = { path = "../ir" }
+anyhow.workspace = true
 serde.workspace = true
+indexmap.workspace = true
+rayon.workspace = true
+thiserror = "1.0"
 regex.workspace = true
+log = "0.4"
