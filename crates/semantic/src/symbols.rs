@@ -4,6 +4,9 @@ use anyhow::{Result, anyhow};
 
 use ast::{Contract, Function, SourceLocation, ContractType};
 
+/// Maximum depth for scope traversal to prevent infinite loops in circular parent relationships
+const MAX_SCOPE_DEPTH: usize = 100;
+
 /// Represents different kinds of symbols in the symbol table
 #[derive(Debug, Clone, PartialEq)]
 pub enum SymbolKind {
@@ -463,7 +466,6 @@ impl SymbolTable {
 
     /// Resolve a variable in a scope (with scope chain traversal)
     pub fn resolve_variable(&self, scope: Scope, name: &str) -> Option<&Symbol> {
-        const MAX_SCOPE_DEPTH: usize = 100; // Prevent infinite loops in circular parent relationships
         let mut current_scope = Some(scope);
         let mut depth = 0;
 
@@ -557,7 +559,6 @@ impl SymbolTable {
 
     /// Check if one scope is ancestor of another
     pub fn is_ancestor_scope(&self, ancestor: Scope, descendant: Scope) -> bool {
-        const MAX_SCOPE_DEPTH: usize = 100; // Prevent infinite loops in circular parent relationships
         let mut current = Some(descendant);
         let mut depth = 0;
 

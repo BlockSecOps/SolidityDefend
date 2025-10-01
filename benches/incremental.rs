@@ -4,6 +4,9 @@ use db::{Database, SourceFileId};
 use parser::Parser;
 use ast::AstArena;
 
+/// Maximum expected memory usage for test files in bytes (100MB)
+const MAX_BENCHMARK_MEMORY_USAGE: usize = 100_000_000;
+
 /// Incremental analysis benchmark
 /// Measures the performance benefits of Salsa's incremental computation
 
@@ -337,7 +340,7 @@ fn bench_memory_usage(c: &mut Criterion) {
 
             // Measure memory usage
             let memory_usage = db.get_memory_usage();
-            assert!(memory_usage < 100_000_000); // Should be under 100MB for test files
+            assert!(memory_usage < MAX_BENCHMARK_MEMORY_USAGE); // Should be under limit for test files
         });
     });
 
