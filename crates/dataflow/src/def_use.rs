@@ -397,7 +397,8 @@ impl<'a> DefUseChainBuilder<'a> {
     }
 
     fn collect_definitions_and_uses(&mut self) {
-        for (block_id, instructions) in self.cfg.basic_blocks() {
+        for (block_id, block_node) in self.cfg.basic_blocks() {
+            let instructions = &block_node.instructions;
             for (instr_index, instruction) in instructions.iter().enumerate() {
                 // Collect definitions
                 if let Some(defined_var) = utils::get_instruction_definition(instruction) {
@@ -478,7 +479,7 @@ impl<'a> DefUseChainBuilder<'a> {
                     UseType::Other
                 }
             },
-            Instruction::Branch(condition, _, _) => {
+            Instruction::ConditionalBranch(condition, _, _) => {
                 if utils::extract_variable_id(condition) == Some(variable) {
                     UseType::Conditional
                 } else {
@@ -569,18 +570,18 @@ mod tests {
 
         // Block 1: x = 1, y = 2
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // y = 2
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
         ];
 
         // Block 2: z = x + y
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Variable(ValueId(2))), // z = x + y
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // z = x + y
         ];
 
         // Block 3: return z
         let instructions3 = vec![
-            Instruction::Return(Some(IrValue::Variable(ValueId(3)))), // return z
+            Instruction::Return(Some(IrValue::Value(ValueId(3)))), // return z
         ];
 
         cfg.add_block(block1, instructions1);
@@ -633,9 +634,9 @@ mod tests {
         let block1 = BlockId(1);
 
         let instructions = vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1 (used)
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // y = 2 (dead)
-            Instruction::Return(Some(IrValue::Variable(ValueId(1)))), // return x
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1 (used)
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2 (dead)
+            Instruction::Return(Some(IrValue::Value(ValueId(1)))), // return x
         ];
 
         cfg.add_block(block1, instructions);
@@ -659,7 +660,7 @@ mod tests {
 
         let instructions = vec![
             // Use ValueId(1) without defining it first
-            Instruction::Add(ValueId(2), IrValue::Variable(ValueId(1)), IrValue::Constant(1)),
+            Instruction::Add(ValueId(2), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)),
         ];
 
         cfg.add_block(block1, instructions);
@@ -695,13 +696,13 @@ mod tests {
 
         cfg.add_block(entry, vec![]);
         cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
         ]);
         cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // x = 2 (different ValueId but same logical variable)
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2 (different ValueId but same logical variable)
         ]);
         cfg.add_block(merge, vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Constant(0)), // use x
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(0)), // use x
         ]);
 
         cfg.set_entry_block(entry).unwrap();

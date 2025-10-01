@@ -174,8 +174,9 @@ impl DataFlowEngine {
             iterations += 1;
 
             let block_id = worklist.pop().unwrap();
-            let (block_node, instructions) = cfg.basic_blocks().get(&block_id)
+            let block_node = cfg.basic_blocks().get(&block_id)
                 .ok_or_else(|| anyhow::anyhow!("Block {} not found", block_id.0))?;
+            let instructions = &block_node.instructions;
 
             let old_entry = entry_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
             let old_exit = exit_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
@@ -310,7 +311,7 @@ pub mod utils {
     /// Extract variable ID from an IR value if it's a variable
     pub fn extract_variable_id(value: &IrValue) -> Option<ValueId> {
         match value {
-            IrValue::Variable(id) => Some(*id),
+            IrValue::Value(id) => Some(*id),
             _ => None,
         }
     }
@@ -448,12 +449,12 @@ mod tests {
         let block2 = BlockId(2);
 
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(2)),
-            Instruction::Sub(ValueId(2), IrValue::Variable(ValueId(1)), IrValue::Constant(1)),
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(2)),
+            Instruction::Sub(ValueId(2), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)),
         ];
 
         let instructions2 = vec![
-            Instruction::Mul(ValueId(3), IrValue::Variable(ValueId(2)), IrValue::Constant(2)),
+            Instruction::Mul(ValueId(3), IrValue::Value(ValueId(2)), IrValue::ConstantInt(2)),
         ];
 
         cfg.add_block(block1, instructions1);

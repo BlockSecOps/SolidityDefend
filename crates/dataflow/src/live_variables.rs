@@ -160,7 +160,8 @@ impl<'a> LiveVariables<'a> {
     pub fn find_dead_variables(&self, result: &DataFlowResult<LiveVariablesState>) -> HashSet<ValueId> {
         let mut dead_variables = HashSet::new();
 
-        for (block_id, instructions) in self.cfg.basic_blocks() {
+        for (block_id, block_node) in self.cfg.basic_blocks() {
+            let instructions = &block_node.instructions;
             let exit_live = self.get_live_variables_exit(result, *block_id);
 
             // Check each instruction to see if it defines a variable that is not live after
@@ -418,19 +419,19 @@ mod tests {
 
         // Block 1: x = 1, y = 2
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // y = 2
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
         ];
 
         // Block 2: dead = 42 (dead variable)
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Constant(42), IrValue::Constant(0)), // dead = 42
+            Instruction::Add(ValueId(3), IrValue::ConstantInt(42), IrValue::ConstantInt(0)), // dead = 42
         ];
 
         // Block 3: return x + y
         let instructions3 = vec![
-            Instruction::Add(ValueId(4), IrValue::Variable(ValueId(1)), IrValue::Variable(ValueId(2))), // temp = x + y
-            Instruction::Return(Some(IrValue::Variable(ValueId(4)))), // return temp
+            Instruction::Add(ValueId(4), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // temp = x + y
+            Instruction::Return(Some(IrValue::Value(ValueId(4)))), // return temp
         ];
 
         cfg.add_block(block1, instructions1);
@@ -510,20 +511,20 @@ mod tests {
         let merge = BlockId(3);
 
         cfg.add_block(entry, vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // y = 2
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
         ]);
 
         cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Constant(1)), // use x
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)), // use x
         ]);
 
         cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(4), IrValue::Variable(ValueId(2)), IrValue::Constant(1)), // use y
+            Instruction::Add(ValueId(4), IrValue::Value(ValueId(2)), IrValue::ConstantInt(1)), // use y
         ]);
 
         cfg.add_block(merge, vec![
-            Instruction::Return(Some(IrValue::Constant(0))), // return 0
+            Instruction::Return(Some(IrValue::ConstantInt(0))), // return 0
         ]);
 
         cfg.set_entry_block(entry).unwrap();

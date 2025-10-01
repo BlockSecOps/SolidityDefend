@@ -117,7 +117,8 @@ impl<'a> ReachingDefinitions<'a> {
 
     /// Collect all definition sites in the CFG
     fn collect_definitions(&mut self) {
-        for (block_id, instructions) in self.cfg.basic_blocks() {
+        for (block_id, block_node) in self.cfg.basic_blocks() {
+            let instructions = &block_node.instructions;
             for (instr_index, instruction) in instructions.iter().enumerate() {
                 if let Some(defined_var) = utils::get_instruction_definition(instruction) {
                     let def_site = DefinitionSite {
@@ -227,7 +228,8 @@ impl<'a> ReachingDefinitions<'a> {
     pub fn find_uninitialized_uses(&self, result: &DataFlowResult<ReachingDefinitionsState>) -> Vec<(BlockId, ValueId)> {
         let mut uninitialized = Vec::new();
 
-        for (block_id, instructions) in self.cfg.basic_blocks() {
+        for (block_id, block_node) in self.cfg.basic_blocks() {
+            let instructions = &block_node.instructions;
             let reaching_defs = self.get_reaching_definitions(result, *block_id);
 
             for instruction in instructions {
@@ -408,18 +410,18 @@ mod tests {
 
         // Block 1: x = 1, y = 2
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // y = 2
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
         ];
 
         // Block 2: x = x + 1
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Constant(1)), // x = x + 1
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)), // x = x + 1
         ];
 
         // Block 3: z = x + y
         let instructions3 = vec![
-            Instruction::Add(ValueId(4), IrValue::Variable(ValueId(1)), IrValue::Variable(ValueId(2))), // z = x + y
+            Instruction::Add(ValueId(4), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // z = x + y
         ];
 
         cfg.add_block(block1, instructions1);
@@ -503,13 +505,13 @@ mod tests {
 
         cfg.add_block(entry, vec![]);
         cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(1), IrValue::Constant(1), IrValue::Constant(0)), // x = 1
+            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
         ]);
         cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(2), IrValue::Constant(2), IrValue::Constant(0)), // x = 2
+            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2
         ]);
         cfg.add_block(merge, vec![
-            Instruction::Add(ValueId(3), IrValue::Variable(ValueId(1)), IrValue::Constant(0)), // use x
+            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(0)), // use x
         ]);
 
         cfg.set_entry_block(entry).unwrap();
