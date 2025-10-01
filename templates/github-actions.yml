@@ -1,0 +1,525 @@
+# GitHub Actions workflow for SolidityDefend security analysis
+# This template provides comprehensive CI/CD integration for Solidity security scanning
+
+name: SolidityDefend Security Analysis
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.sol'
+      - '.github/workflows/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '**/*.sol'
+  schedule:
+    # Run daily security scan at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    inputs:
+      scan_mode:
+        description: 'Scan mode (full, incremental, baseline)'
+        required: false
+        default: 'incremental'
+        type: choice
+        options:
+          - full
+          - incremental
+          - baseline
+      severity_threshold:
+        description: 'Minimum severity to fail build'
+        required: false
+        default: 'medium'
+        type: choice
+        options:
+          - low
+          - medium
+          - high
+          - critical
+
+env:
+  SOLIDITYDEFEND_VERSION: 'latest'
+  RUST_LOG: 'warn'
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  checks: write
+
+jobs:
+  # Job 1: Basic security scan with fast feedback
+  security-scan:
+    name: Security Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    outputs:
+      has-findings: ${{ steps.scan.outputs.has-findings }}
+      findings-count: ${{ steps.scan.outputs.findings-count }}
+      critical-count: ${{ steps.scan.outputs.critical-count }}
+      high-count: ${{ steps.scan.outputs.high-count }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for incremental analysis
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          profile: minimal
+          override: true
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Install SolidityDefend
+        run: |
+          # In production, this would download a pre-built binary
+          # For now, build from source (development workflow)
+          cargo build --release --bin soliditydefend
+          sudo cp target/release/soliditydefend /usr/local/bin/
+
+      - name: Setup scan configuration
+        run: |
+          cat > soliditydefend.yml << EOF
+          analysis:
+            severity_threshold: ${{ github.event.inputs.severity_threshold || 'medium' }}
+            output_format: 'sarif'
+            include_fix_suggestions: true
+
+          detectors:
+            enabled:
+              - reentrancy
+              - missing-access-control
+              - dangerous-selfdestruct
+              - integer-overflow
+              - division-before-multiplication
+              - missing-zero-address-check
+              - array-bounds-check
+              - state-machine-error
+
+          output:
+            show_code_snippets: true
+            color_output: false
+
+          ci:
+            exit_code_severity: ${{ github.event.inputs.severity_threshold || 'medium' }}
+            fail_on_new_findings: true
+            baseline_file: '.soliditydefend/baseline.json'
+          EOF
+
+      - name: Cache SolidityDefend analysis results
+        uses: actions/cache@v3
+        with:
+          path: |
+            .soliditydefend/cache/
+            .soliditydefend/baseline.json
+          key: soliditydefend-${{ runner.os }}-${{ hashFiles('**/*.sol') }}
+          restore-keys: |
+            soliditydefend-${{ runner.os }}-
+
+      - name: Run security analysis
+        id: scan
+        run: |
+          set -e
+
+          # Determine scan mode
+          SCAN_MODE="${{ github.event.inputs.scan_mode || 'incremental' }}"
+
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            SCAN_MODE="incremental"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            SCAN_MODE="full"
+          fi
+
+          echo "Running SolidityDefend in $SCAN_MODE mode..."
+
+          # Build command based on scan mode
+          SCAN_CMD="soliditydefend --config soliditydefend.yml --format sarif"
+
+          case $SCAN_MODE in
+            incremental)
+              if [ "${{ github.event_name }}" = "pull_request" ]; then
+                SCAN_CMD="$SCAN_CMD --incremental --base-ref origin/${{ github.base_ref }}"
+              else
+                SCAN_CMD="$SCAN_CMD --incremental --base-ref HEAD~1"
+              fi
+              ;;
+            baseline)
+              SCAN_CMD="$SCAN_CMD --baseline .soliditydefend/baseline.json"
+              ;;
+            full)
+              SCAN_CMD="$SCAN_CMD --recursive"
+              ;;
+          esac
+
+          # Add target directories
+          SCAN_CMD="$SCAN_CMD contracts/ src/ --exclude test/ --exclude mock/"
+
+          # Run scan and capture output
+          mkdir -p reports
+
+          if $SCAN_CMD --output reports/security-findings.sarif; then
+            echo "✅ Security scan completed successfully"
+            echo "has-findings=false" >> $GITHUB_OUTPUT
+            echo "findings-count=0" >> $GITHUB_OUTPUT
+            echo "critical-count=0" >> $GITHUB_OUTPUT
+            echo "high-count=0" >> $GITHUB_OUTPUT
+          else
+            # Parse SARIF to extract metrics
+            if [ -f reports/security-findings.sarif ]; then
+              FINDINGS_COUNT=$(jq '.runs[0].results | length' reports/security-findings.sarif)
+              CRITICAL_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 9)] | length' reports/security-findings.sarif)
+              HIGH_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 7)] | length' reports/security-findings.sarif)
+
+              echo "⚠️ Security issues found: $FINDINGS_COUNT total, $CRITICAL_COUNT critical, $HIGH_COUNT high"
+              echo "has-findings=true" >> $GITHUB_OUTPUT
+              echo "findings-count=$FINDINGS_COUNT" >> $GITHUB_OUTPUT
+              echo "critical-count=$CRITICAL_COUNT" >> $GITHUB_OUTPUT
+              echo "high-count=$HIGH_COUNT" >> $GITHUB_OUTPUT
+
+              # Set job status based on findings
+              exit 1
+            else
+              echo "❌ Scan failed - no output generated"
+              exit 1
+            fi
+          fi
+
+      - name: Upload SARIF results to GitHub Security
+        if: always() && steps.scan.outputs.has-findings == 'true'
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: reports/security-findings.sarif
+          category: soliditydefend
+
+      - name: Upload security report artifacts
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-reports
+          path: |
+            reports/
+            .soliditydefend/
+          retention-days: 30
+
+      - name: Create baseline (on main branch)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          mkdir -p .soliditydefend
+          soliditydefend --config soliditydefend.yml --format json \
+            --baseline-output .soliditydefend/baseline.json \
+            contracts/ src/ --exclude test/ --exclude mock/
+
+          # Commit baseline if it changed
+          if ! git diff --quiet .soliditydefend/baseline.json; then
+            git config user.name "SolidityDefend Bot"
+            git config user.email "bot@soliditydefend.dev"
+            git add .soliditydefend/baseline.json
+            git commit -m "chore: update security baseline"
+            git push
+          fi
+
+  # Job 2: Detailed analysis and reporting
+  detailed-analysis:
+    name: Detailed Security Analysis
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: always() && needs.security-scan.outputs.has-findings == 'true'
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download security reports
+        uses: actions/download-artifact@v3
+        with:
+          name: security-reports
+          path: ./
+
+      - name: Install SolidityDefend
+        run: |
+          # Install SolidityDefend (same as previous job)
+          cargo build --release --bin soliditydefend
+          sudo cp target/release/soliditydefend /usr/local/bin/
+
+      - name: Generate detailed reports
+        run: |
+          mkdir -p detailed-reports
+
+          # Generate console report with code snippets
+          soliditydefend --config soliditydefend.yml --format console \
+            --show-code-snippets --show-fix-suggestions \
+            contracts/ src/ > detailed-reports/console-report.txt
+
+          # Generate JSON report for further processing
+          soliditydefend --config soliditydefend.yml --format json \
+            --include-metrics --include-statistics \
+            contracts/ src/ > detailed-reports/detailed-findings.json
+
+          # Generate fix suggestions report
+          soliditydefend --config soliditydefend.yml --format json \
+            --fixes-only --confidence-threshold 0.7 \
+            contracts/ src/ > detailed-reports/suggested-fixes.json
+
+      - name: Analyze trends
+        run: |
+          # Compare with previous runs to show trends
+          python3 << 'EOF'
+          import json
+          import os
+
+          # Load current findings
+          with open('detailed-reports/detailed-findings.json', 'r') as f:
+              current = json.load(f)
+
+          # Load baseline if available
+          baseline_path = '.soliditydefend/baseline.json'
+          if os.path.exists(baseline_path):
+              with open(baseline_path, 'r') as f:
+                  baseline = json.load(f)
+
+              current_count = len(current.get('findings', []))
+              baseline_count = len(baseline.get('findings', []))
+
+              print(f"📊 Trend Analysis:")
+              print(f"Current findings: {current_count}")
+              print(f"Baseline findings: {baseline_count}")
+              print(f"Change: {current_count - baseline_count:+d}")
+
+              # Write trends to file
+              with open('detailed-reports/trends.json', 'w') as f:
+                  json.dump({
+                      'current_count': current_count,
+                      'baseline_count': baseline_count,
+                      'change': current_count - baseline_count,
+                      'improvement': current_count < baseline_count
+                  }, f, indent=2)
+          EOF
+
+      - name: Upload detailed reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: detailed-security-analysis
+          path: detailed-reports/
+          retention-days: 90
+
+  # Job 3: PR commenting and feedback
+  pr-feedback:
+    name: PR Security Feedback
+    runs-on: ubuntu-latest
+    needs: [security-scan, detailed-analysis]
+    if: github.event_name == 'pull_request' && always()
+
+    steps:
+      - name: Download security reports
+        if: needs.security-scan.outputs.has-findings == 'true'
+        uses: actions/download-artifact@v3
+        with:
+          name: security-reports
+          path: ./
+
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+
+            const hasFindings = '${{ needs.security-scan.outputs.has-findings }}' === 'true';
+            const findingsCount = '${{ needs.security-scan.outputs.findings-count }}';
+            const criticalCount = '${{ needs.security-scan.outputs.critical-count }}';
+            const highCount = '${{ needs.security-scan.outputs.high-count }}';
+
+            let comment = '## 🔒 SolidityDefend Security Analysis\n\n';
+
+            if (!hasFindings) {
+              comment += '✅ **No security issues found!**\n\n';
+              comment += 'This PR introduces no new security vulnerabilities.\n';
+            } else {
+              comment += `⚠️ **Security issues detected:**\n\n`;
+              comment += `- **Total findings:** ${findingsCount}\n`;
+              if (criticalCount > 0) comment += `- **Critical:** ${criticalCount} 🔴\n`;
+              if (highCount > 0) comment += `- **High:** ${highCount} 🟠\n`;
+              comment += '\n';
+
+              comment += '### 📋 Summary\n\n';
+
+              if (fs.existsSync('reports/security-findings.sarif')) {
+                const sarif = JSON.parse(fs.readFileSync('reports/security-findings.sarif', 'utf8'));
+
+                // Group findings by file
+                const fileFindings = {};
+                for (const result of sarif.runs[0].results || []) {
+                  const file = result.locations[0]?.physicalLocation?.artifactLocation?.uri || 'unknown';
+                  if (!fileFindings[file]) fileFindings[file] = [];
+                  fileFindings[file].push(result);
+                }
+
+                for (const [file, findings] of Object.entries(fileFindings)) {
+                  comment += `**${file}:**\n`;
+                  for (const finding of findings.slice(0, 5)) { // Limit to 5 per file
+                    const severity = finding.properties?.['security-severity'] >= 7 ? '🔴' :
+                                   finding.properties?.['security-severity'] >= 5 ? '🟠' : '🟡';
+                    comment += `- ${severity} ${finding.ruleId}: ${finding.message.text}\n`;
+                  }
+                  if (findings.length > 5) {
+                    comment += `- ... and ${findings.length - 5} more\n`;
+                  }
+                  comment += '\n';
+                }
+              }
+
+              comment += '### 🔧 Next Steps\n\n';
+              comment += '1. Review the security findings above\n';
+              comment += '2. Check the detailed SARIF report in the Security tab\n';
+              comment += '3. Apply suggested fixes where appropriate\n';
+              comment += '4. Re-run the analysis after making changes\n\n';
+
+              comment += '💡 **Tip:** Download the detailed analysis artifacts for more information and fix suggestions.\n';
+            }
+
+            comment += '\n---\n';
+            comment += '*Generated by [SolidityDefend](https://github.com/soliditydefend/soliditydefend) security analysis*';
+
+            // Find existing comment to update
+            const comments = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+
+            const existingComment = comments.data.find(c =>
+              c.body.includes('SolidityDefend Security Analysis')
+            );
+
+            if (existingComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existingComment.id,
+                body: comment
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+            }
+
+  # Job 4: Security dashboard update
+  update-dashboard:
+    name: Update Security Dashboard
+    runs-on: ubuntu-latest
+    needs: security-scan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - name: Update security metrics
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This would integrate with your security dashboard API
+            // Example: send metrics to monitoring system
+
+            const metrics = {
+              timestamp: new Date().toISOString(),
+              findings_count: '${{ needs.security-scan.outputs.findings-count }}',
+              critical_count: '${{ needs.security-scan.outputs.critical-count }}',
+              high_count: '${{ needs.security-scan.outputs.high-count }}',
+              commit_sha: context.sha,
+              repository: context.repo.repo
+            };
+
+            console.log('Security metrics:', JSON.stringify(metrics, null, 2));
+
+            // Here you would send to your dashboard/monitoring system
+            // await fetch('https://your-dashboard.com/api/security-metrics', {
+            //   method: 'POST',
+            //   body: JSON.stringify(metrics),
+            //   headers: { 'Content-Type': 'application/json' }
+            // });
+
+  # Job 5: Release security validation
+  release-validation:
+    name: Release Security Validation
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install SolidityDefend
+        run: |
+          cargo build --release --bin soliditydefend
+          sudo cp target/release/soliditydefend /usr/local/bin/
+
+      - name: Comprehensive security validation
+        run: |
+          echo "🔍 Running comprehensive security validation for release..."
+
+          # Run full analysis with strict settings
+          soliditydefend --config soliditydefend.yml \
+            --format json \
+            --severity-threshold critical \
+            --recursive \
+            --include-all-detectors \
+            contracts/ src/ > release-security-report.json
+
+          # Validate no critical issues
+          CRITICAL_COUNT=$(jq '[.findings[] | select(.severity == "critical")] | length' release-security-report.json)
+
+          if [ "$CRITICAL_COUNT" -gt 0 ]; then
+            echo "❌ Release blocked: $CRITICAL_COUNT critical security issues found"
+            jq -r '.findings[] | select(.severity == "critical") | "- \(.detector_id): \(.message)"' release-security-report.json
+            exit 1
+          else
+            echo "✅ Release security validation passed"
+          fi
+
+      - name: Generate security attestation
+        run: |
+          # Generate security attestation for the release
+          cat > security-attestation.json << EOF
+          {
+            "version": "1.0",
+            "release_tag": "${GITHUB_REF#refs/tags/}",
+            "commit_sha": "$GITHUB_SHA",
+            "scan_timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "tool_version": "$(soliditydefend --version)",
+            "attestation": {
+              "critical_issues": 0,
+              "high_issues": $(jq '[.findings[] | select(.severity == "high")] | length' release-security-report.json),
+              "validation_passed": true
+            }
+          }
+          EOF
+
+      - name: Upload release security report
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-security-validation
+          path: |
+            release-security-report.json
+            security-attestation.json
+          retention-days: 365
