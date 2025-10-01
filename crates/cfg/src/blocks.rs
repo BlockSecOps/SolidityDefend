@@ -468,13 +468,13 @@ impl BlockAnalysis {
     /// Check if this block is compute-intensive
     pub fn is_compute_intensive(&self) -> bool {
         let mix = self.operation_mix();
-        mix.arithmetic_percent > 50.0
+        mix.arithmetic_percent >= 50.0
     }
 
     /// Check if this block is memory-intensive
     pub fn is_memory_intensive(&self) -> bool {
         let mix = self.operation_mix();
-        mix.memory_percent > 30.0
+        mix.memory_percent >= 30.0
     }
 }
 

@@ -177,9 +177,12 @@ impl<'a> ReachingDefinitions<'a> {
 
         for (instr_index, instruction) in instructions.iter().enumerate() {
             if let Some(defined_var) = utils::get_instruction_definition(instruction) {
-                // Kill all previous definitions of this variable
-                let killed_defs = self.kill_definitions(defined_var);
-                kill.extend(killed_defs.clone());
+                // Kill all previous definitions of this variable from OTHER blocks
+                let all_defs = self.kill_definitions(defined_var);
+                let killed_defs: HashSet<DefinitionSite> = all_defs.into_iter()
+                    .filter(|def| def.block_id != block_id)
+                    .collect();
+                kill.extend(killed_defs);
 
                 // Remove any definitions of this variable from gen set
                 gen.retain(|def: &DefinitionSite| def.variable != defined_var);
