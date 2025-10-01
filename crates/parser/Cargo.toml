@@ -8,6 +8,7 @@ repository.workspace = true
 description = "Solidity parser with arena allocation and error recovery"
 
 [dependencies]
+ast = { path = "../ast" }
 solang-parser.workspace = true
 bumpalo.workspace = true
 anyhow.workspace = true
