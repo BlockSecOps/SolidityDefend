@@ -8,6 +8,9 @@ pub struct ArenaParser<'arena> {
 }
 
 impl<'arena> ArenaParser<'arena> {
+    /// Default file ID used by solang-parser for single file parsing
+    const DEFAULT_FILE_ID: usize = 0;
+
     /// Create a new arena parser
     pub fn new(arena: &'arena AstArena) -> Self {
         Self { arena }
@@ -16,7 +19,7 @@ impl<'arena> ArenaParser<'arena> {
     /// Parse Solidity source code into arena-allocated AST
     pub fn parse(&self, source: &str, file_path: &str) -> Result<SourceFile<'arena>, ParseErrors> {
         // Parse using solang-parser
-        let (parse_tree, comments) = match parse(source, 0) {
+        let (parse_tree, comments) = match parse(source, Self::DEFAULT_FILE_ID) {
             Ok((tree, comments)) => (tree, comments),
             Err(errors) => {
                 let mut parse_errors = ParseErrors::new();
@@ -109,14 +112,14 @@ impl<'arena> ArenaParser<'arena> {
         file_path: &str,
     ) -> ParseResult<Contract<'arena>> {
         let name = match &contract.name {
-            Some(name) => self.convert_identifier(name, source, file_path)?,
+            Some(name) => self.convert_identifier_with_source(name, source, file_path)?,
             None => {
-                let location = self.convert_location(&contract.loc, file_path);
+                let location = self.convert_location_with_source(&contract.loc, file_path, Some(source));
                 Identifier::new(self.arena.alloc_str(""), location)
             }
         };
         let contract_type = self.convert_contract_type(&contract.ty);
-        let location = self.convert_location(&contract.loc, file_path);
+        let location = self.convert_location_with_source(&contract.loc, file_path, Some(source));
 
         let mut ast_contract = Contract::new(self.arena, name, contract_type, location);
 
@@ -167,15 +170,15 @@ impl<'arena> ArenaParser<'arena> {
         file_path: &str,
     ) -> ParseResult<Function<'arena>> {
         let name = match &func.name {
-            Some(name) => self.convert_identifier(name, source, file_path)?,
+            Some(name) => self.convert_identifier_with_source(name, source, file_path)?,
             None => {
                 // Anonymous function (constructor, fallback, etc.)
-                let location = self.convert_location(&func.loc, file_path);
+                let location = self.convert_location_with_source(&func.loc, file_path, Some(source));
                 Identifier::new(self.arena.alloc_str(""), location)
             }
         };
 
-        let location = self.convert_location(&func.loc, file_path);
+        let location = self.convert_location_with_source(&func.loc, file_path, Some(source));
         let function = Function::new(self.arena, name, location);
 
         // TODO: Convert function parameters, body, etc.
@@ -195,13 +198,38 @@ impl<'arena> ArenaParser<'arena> {
         Ok(Identifier::new(name, location))
     }
 
+    /// Convert solang identifier to our Identifier with source for position calculation
+    fn convert_identifier_with_source(
+        &self,
+        ident: &pt::Identifier,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<Identifier<'arena>> {
+        let name = self.arena.alloc_str(&ident.name);
+        let location = self.convert_location_with_source(&ident.loc, file_path, Some(source));
+        Ok(Identifier::new(name, location))
+    }
+
     /// Convert solang location to our SourceLocation
     fn convert_location(&self, loc: &pt::Loc, file_path: &str) -> SourceLocation {
+        self.convert_location_with_source(loc, file_path, None)
+    }
+
+    /// Convert solang location to our SourceLocation with optional source for position calculation
+    fn convert_location_with_source(&self, loc: &pt::Loc, file_path: &str, source: Option<&str>) -> SourceLocation {
         match loc {
             pt::Loc::File(_file_no, start, end) => {
-                // For now, ignore file_no and use the provided file_path
-                let start_pos = Position::new(1, 1, *start);
-                let end_pos = Position::new(1, 1, *end);
+                // Calculate actual line/column positions from byte offsets if source is available
+                let (start_pos, end_pos) = if let Some(src) = source {
+                    let start_pos = Position::from_offset(src, *start);
+                    let end_pos = Position::from_offset(src, *end);
+                    (start_pos, end_pos)
+                } else {
+                    // Fallback to offset-only positions if source is not available
+                    let start_pos = Position::new(1, 1, *start);
+                    let end_pos = Position::new(1, 1, *end);
+                    (start_pos, end_pos)
+                };
                 SourceLocation::new(file_path.into(), start_pos, end_pos)
             }
             pt::Loc::CommandLine => {

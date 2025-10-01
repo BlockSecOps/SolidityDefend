@@ -18,6 +18,8 @@ pub struct Parser {
 }
 
 impl Parser {
+    /// Default file ID used by solang-parser for single file parsing
+    const DEFAULT_FILE_ID: usize = 0;
     /// Create a new parser with default settings
     pub fn new() -> Self {
         Self {
@@ -120,7 +122,7 @@ impl Parser {
     /// Check if a string contains valid Solidity syntax (lightweight validation)
     pub fn validate_syntax(&self, source: &str) -> Result<(), ParseErrors> {
         // Use solang-parser directly for validation without arena allocation
-        match solang_parser::parse(source, 0) {
+        match solang_parser::parse(source, Self::DEFAULT_FILE_ID) {
             Ok(_) => Ok(()),
             Err(errors) => {
                 let mut parse_errors = ParseErrors::new();

@@ -250,7 +250,7 @@ impl SourceLocation {
     /// Get context lines around this location
     pub fn context_lines(&self, source: &str, context: usize) -> Vec<String> {
         let lines: Vec<&str> = source.lines().collect();
-        let start_line = self.start.line.saturating_sub(context + 1);
+        let start_line = self.start.line.saturating_sub(1).saturating_sub(context);
         let end_line = (self.end.line + context).min(lines.len());
 
         lines[start_line..end_line]
