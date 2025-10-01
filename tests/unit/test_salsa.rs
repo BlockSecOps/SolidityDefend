@@ -42,9 +42,10 @@ fn test_incremental_parsing() {
     "#;
 
     let file_id = db.add_source_file(file_path, initial_source);
-    let initial_ast = db.parse_source_file(file_id);
-    assert!(initial_ast.is_ok());
-    assert_eq!(initial_ast.unwrap().contracts.len(), 1);
+    let initial_functions = db.parse_source_file(file_id);
+    assert!(initial_functions.is_ok());
+    // Contract has no functions, so should return empty Vec
+    assert_eq!(initial_functions.unwrap().len(), 0);
 
     // Update content and verify incremental parse
     let updated_source = r#"
@@ -55,9 +56,10 @@ fn test_incremental_parsing() {
     "#;
 
     db.update_source_file(file_id, updated_source);
-    let updated_ast = db.parse_source_file(file_id);
-    assert!(updated_ast.is_ok());
-    assert_eq!(updated_ast.unwrap().contracts.len(), 1);
+    let updated_functions = db.parse_source_file(file_id);
+    assert!(updated_functions.is_ok());
+    // Contract still has no functions, so should return empty Vec
+    assert_eq!(updated_functions.unwrap().len(), 0);
 }
 
 #[test]
@@ -125,8 +127,11 @@ fn test_multi_file_database() {
     assert!(result1.is_ok());
     assert!(result2.is_ok());
 
-    assert_eq!(result1.unwrap().contracts[0].name.name, "Contract1");
-    assert_eq!(result2.unwrap().contracts[0].name.name, "Contract2");
+    // Both contracts have no functions, so should return empty vectors
+    let functions1 = result1.unwrap();
+    let functions2 = result2.unwrap();
+    assert_eq!(functions1.len(), 0);
+    assert_eq!(functions2.len(), 0);
 }
 
 #[test]

@@ -235,21 +235,74 @@ impl Database {
     }
 
     /// Get estimated memory usage in bytes
+    /// Note: This is an approximation including data structure overhead
     pub fn get_memory_usage(&self) -> usize {
-        // Rough estimation based on stored data
         let mut total = 0;
 
-        // Arena memory
+        // Arena memory (actual allocated bytes)
         total += self.arena.allocated_bytes();
 
-        // File registry
-        for input in self.file_registry.values() {
-            total += input.content.len();
+        // File registry memory
+        for (file_id, input) in &self.file_registry {
+            // SourceFileId overhead
+            total += std::mem::size_of::<SourceFileId>();
+
+            // SourceFileInput struct overhead
+            total += std::mem::size_of::<SourceFileInput>();
+
+            // PathBuf memory (includes String backing)
             total += input.path.as_os_str().len();
+            total += std::mem::size_of::<std::path::PathBuf>();
+
+            // Content String memory
+            total += input.content.capacity(); // Use capacity, not len for accurate memory
+            total += std::mem::size_of::<String>();
+
+            // Content hash String memory
+            total += input.content_hash.capacity();
+            total += std::mem::size_of::<String>();
         }
 
+        // HashMap overhead for file_registry
+        // HashMap has overhead per entry plus table capacity
+        total += self.file_registry.capacity() * std::mem::size_of::<(SourceFileId, SourceFileInput)>();
+        total += std::mem::size_of::<HashMap<SourceFileId, SourceFileInput>>();
+
         // Cache memory
-        total += self.cache.len() * 1024; // Rough estimate per cached item
+        for (file_id, result) in &self.cache {
+            // Key overhead
+            total += std::mem::size_of::<SourceFileId>();
+
+            // Value overhead depends on success/error
+            match result {
+                Ok(functions) => {
+                    total += std::mem::size_of::<Result<Vec<String>, String>>();
+                    total += functions.capacity() * std::mem::size_of::<String>();
+                    for function_name in functions {
+                        total += function_name.capacity();
+                        total += std::mem::size_of::<String>();
+                    }
+                }
+                Err(error_msg) => {
+                    total += std::mem::size_of::<Result<Vec<String>, String>>();
+                    total += error_msg.capacity();
+                    total += std::mem::size_of::<String>();
+                }
+            }
+        }
+
+        // HashMap overhead for cache
+        total += self.cache.capacity() * std::mem::size_of::<(SourceFileId, Result<Vec<String>, String>)>();
+        total += std::mem::size_of::<HashMap<SourceFileId, Result<Vec<String>, String>>>();
+
+        // Performance metrics overhead
+        total += std::mem::size_of::<PerformanceMetrics>();
+
+        // Parser overhead
+        total += std::mem::size_of::<Parser>();
+
+        // Base struct overhead
+        total += std::mem::size_of::<Database>();
 
         total
     }
@@ -312,9 +365,27 @@ impl Database {
 
             // Simple dependency analysis - look for import statements
             for line in input.content.lines() {
-                if line.trim().starts_with("import") {
-                    // In practice, would resolve import paths to file IDs
-                    // For now, return empty dependencies
+                let trimmed = line.trim();
+                if trimmed.starts_with("import") {
+                    // Extract import path from various import formats:
+                    // import "./path/file.sol";
+                    // import "path/file.sol";
+                    // import {Symbol} from "./path.sol";
+
+                    if let Some(path) = self.extract_import_path(trimmed) {
+                        // Find matching file in registry by path
+                        for (file_id, file_input) in &self.file_registry {
+                            if let Some(file_path_str) = file_input.path.to_str() {
+                                // Match by filename or relative path
+                                if file_path_str.ends_with(&path) ||
+                                   file_path_str == path ||
+                                   self.paths_match(&path, file_path_str) {
+                                    dependencies.push(*file_id);
+                                    break;
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
@@ -322,6 +393,32 @@ impl Database {
         } else {
             Err(anyhow!("Source file not found"))
         }
+    }
+
+    /// Extract import path from import statement
+    fn extract_import_path(&self, import_line: &str) -> Option<String> {
+        // Handle different import formats
+        if let Some(start) = import_line.find('"') {
+            if let Some(end) = import_line[start + 1..].find('"') {
+                let path = &import_line[start + 1..start + 1 + end];
+                // Normalize path - remove leading "./"
+                let normalized = if path.starts_with("./") {
+                    &path[2..]
+                } else {
+                    path
+                };
+                return Some(normalized.to_string());
+            }
+        }
+        None
+    }
+
+    /// Check if two paths refer to the same file
+    fn paths_match(&self, import_path: &str, file_path: &str) -> bool {
+        // Simple path matching - in practice would need more sophisticated resolution
+        let import_file = import_path.split('/').last().unwrap_or(import_path);
+        let file_name = file_path.split('/').last().unwrap_or(file_path);
+        import_file == file_name
     }
 
     /// Get source file input by ID (for internal use)

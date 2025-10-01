@@ -210,14 +210,40 @@ impl SymbolTable {
 
     /// Add built-in Solidity types to global scope
     fn add_builtin_types(&mut self) {
-        let builtin_types = [
-            "uint", "uint8", "uint16", "uint32", "uint64", "uint128", "uint256",
-            "int", "int8", "int16", "int32", "int64", "int128", "int256",
-            "address", "bool", "string", "bytes", "bytes1", "bytes2", "bytes4",
-            "bytes8", "bytes16", "bytes32", "mapping", "array", "function",
+        // Generate all unsigned integer types from uint8 to uint256 in steps of 8 bits
+        let mut uint_types = vec!["uint".to_string()];
+        for bits in (8..=256).step_by(8) {
+            uint_types.push(format!("uint{}", bits));
+        }
+
+        // Generate all signed integer types from int8 to int256 in steps of 8 bits
+        let mut int_types = vec!["int".to_string()];
+        for bits in (8..=256).step_by(8) {
+            int_types.push(format!("int{}", bits));
+        }
+
+        // Generate all fixed-size byte types from bytes1 to bytes32
+        let mut bytes_types = vec!["bytes".to_string()];
+        for size in 1..=32 {
+            bytes_types.push(format!("bytes{}", size));
+        }
+
+        // Other built-in types
+        let other_types = [
+            "address", "bool", "string", "mapping", "array", "function",
         ];
 
-        for type_name in &builtin_types {
+        // Add all types to symbol table
+        for type_name in &uint_types {
+            self.add_builtin_symbol(type_name, SymbolKind::Type);
+        }
+        for type_name in &int_types {
+            self.add_builtin_symbol(type_name, SymbolKind::Type);
+        }
+        for type_name in &bytes_types {
+            self.add_builtin_symbol(type_name, SymbolKind::Type);
+        }
+        for type_name in &other_types {
             self.add_builtin_symbol(type_name, SymbolKind::Type);
         }
     }
