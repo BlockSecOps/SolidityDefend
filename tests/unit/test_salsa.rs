@@ -26,7 +26,7 @@ fn test_source_file_input() {
     let file_id = db.add_source_file(file_path, source_content);
     assert_eq!(db.source_file_count(), 1);
     assert_eq!(db.get_source_content(file_id), source_content);
-    assert_eq!(db.get_source_path(file_id), file_path);
+    assert_eq!(db.get_source_path(file_id).unwrap(), file_path);
 }
 
 #[test]

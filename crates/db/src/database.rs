@@ -132,13 +132,45 @@ impl PerformanceMetrics {
 /// Simplified database implementation for incremental computation
 /// Note: This is a simplified version without full Salsa integration for now
 /// Full Salsa integration will be added in later phases when we resolve lifetime issues
+///
+/// # Arena Lifecycle and Memory Management
+///
+/// The `arena` field uses bump allocation via `AstArena` for efficient memory management
+/// of parsed AST nodes. The arena has the following lifecycle characteristics:
+///
+/// - **Lifetime**: The arena lives for the entire lifetime of the Database instance
+/// - **Allocation**: All AST nodes are allocated in the arena with lifetime 'arena
+/// - **References**: AST node references (like `&'arena str`) are valid as long as the Database exists
+/// - **Memory Growth**: The arena only grows - memory is never freed until the Database is dropped
+/// - **Thread Safety**: The arena is not thread-safe and requires exclusive access for parsing
+///
+/// ## Current Limitation with AST Storage
+///
+/// Currently, we extract data (like function names) from AST nodes and store them as owned Strings
+/// in the cache rather than storing references to arena-allocated AST nodes. This is because:
+///
+/// 1. Storing `&'arena str` references would require lifetime parameters throughout the cache system
+/// 2. The cache would become tied to the arena lifetime, making the API more complex
+/// 3. Future Salsa integration may require different lifetime management approaches
+///
+/// ## Future Improvements
+///
+/// Consider these approaches for better memory efficiency:
+/// - String interning for commonly used identifiers
+/// - Separate short-lived arenas for temporary parsing operations
+/// - Integration with Salsa's built-in memory management once lifetime issues are resolved
 pub struct Database {
+    /// Bump allocator arena for AST node storage. All parsed AST nodes are allocated here
+    /// and remain valid for the lifetime of this Database instance.
     arena: AstArena,
     parser: Parser,
     file_counter: usize,
     file_registry: HashMap<SourceFileId, SourceFileInput>,
     performance_metrics: PerformanceMetrics,
-    cache: HashMap<SourceFileId, Result<Vec<String>, String>>, // Simple caching for now
+    /// Simple cache storing extracted data as owned Strings rather than arena references.
+    /// This avoids lifetime complications but creates allocation overhead.
+    /// TODO: Consider more structured cache with better key/value system for complex queries.
+    cache: HashMap<SourceFileId, Result<Vec<String>, String>>,
 }
 
 impl Database {
@@ -188,10 +220,13 @@ impl Database {
     }
 
     /// Get source file path
-    pub fn get_source_path(&self, id: SourceFileId) -> &str {
-        self.file_registry.get(&id)
-            .map(|input| input.path.to_str().unwrap_or(""))
-            .unwrap_or("")
+    /// Returns an error if the file ID is not found or path contains invalid UTF-8
+    pub fn get_source_path(&self, id: SourceFileId) -> Result<&str> {
+        let input = self.file_registry.get(&id)
+            .ok_or_else(|| anyhow!("Source file with ID {} not found", id))?;
+
+        input.path.to_str()
+            .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
     }
 
     /// Check if database is empty
@@ -319,11 +354,18 @@ impl Database {
 
         // Cache miss - perform actual parsing
         let result = if let Some(input) = self.file_registry.get(&id) {
-            match self.parser.parse(&self.arena, &input.content, input.path.to_str().unwrap_or("")) {
+            // Convert path to string with proper error handling instead of silent fallback
+            let path_str = input.path.to_str()
+                .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))?;
+
+            match self.parser.parse(&self.arena, &input.content, path_str) {
                 Ok(source_file) => {
                     let mut function_names = Vec::new();
                     for contract in &source_file.contracts {
                         for function in &contract.functions {
+                            // Note: This creates String allocations for each function name.
+                            // TODO: Consider using string interning or lifetime-parameterized storage
+                            // to avoid repeated allocations when the same functions are parsed multiple times.
                             function_names.push(function.name.name.to_string());
                         }
                     }

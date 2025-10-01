@@ -463,9 +463,16 @@ impl SymbolTable {
 
     /// Resolve a variable in a scope (with scope chain traversal)
     pub fn resolve_variable(&self, scope: Scope, name: &str) -> Option<&Symbol> {
+        const MAX_SCOPE_DEPTH: usize = 100; // Prevent infinite loops in circular parent relationships
         let mut current_scope = Some(scope);
+        let mut depth = 0;
 
         while let Some(scope_id) = current_scope {
+            if depth >= MAX_SCOPE_DEPTH {
+                // Prevent infinite loop - likely circular parent relationship
+                break;
+            }
+
             if let Some(scope_info) = self.scopes.get(&scope_id) {
                 if let Some(symbol) = scope_info.symbols.get(name) {
                     if matches!(symbol.kind, SymbolKind::StateVariable | SymbolKind::LocalVariable | SymbolKind::Parameter) {
@@ -473,6 +480,7 @@ impl SymbolTable {
                     }
                 }
                 current_scope = scope_info.parent;
+                depth += 1;
             } else {
                 break;
             }
@@ -483,6 +491,18 @@ impl SymbolTable {
 
     /// Resolve inherited symbol from base contracts
     pub fn resolve_inherited_symbol(&self, scope: Scope, name: &str) -> Option<&Symbol> {
+        let mut visited = std::collections::HashSet::new();
+        self.resolve_inherited_symbol_impl(scope, name, &mut visited)
+    }
+
+    /// Internal implementation with cycle detection
+    fn resolve_inherited_symbol_impl(&self, scope: Scope, name: &str, visited: &mut std::collections::HashSet<Scope>) -> Option<&Symbol> {
+        // Prevent infinite recursion in circular inheritance
+        if visited.contains(&scope) {
+            return None;
+        }
+        visited.insert(scope);
+
         if let Some(scope_info) = self.scopes.get(&scope) {
             for &inherited_scope in &scope_info.inherited_scopes {
                 if let Some(inherited_info) = self.scopes.get(&inherited_scope) {
@@ -490,8 +510,8 @@ impl SymbolTable {
                         return Some(symbol);
                     }
                 }
-                // Recursively check inherited scopes
-                if let Some(symbol) = self.resolve_inherited_symbol(inherited_scope, name) {
+                // Recursively check inherited scopes with cycle detection
+                if let Some(symbol) = self.resolve_inherited_symbol_impl(inherited_scope, name, visited) {
                     return Some(symbol);
                 }
             }
@@ -537,13 +557,21 @@ impl SymbolTable {
 
     /// Check if one scope is ancestor of another
     pub fn is_ancestor_scope(&self, ancestor: Scope, descendant: Scope) -> bool {
+        const MAX_SCOPE_DEPTH: usize = 100; // Prevent infinite loops in circular parent relationships
         let mut current = Some(descendant);
+        let mut depth = 0;
 
         while let Some(scope_id) = current {
+            if depth >= MAX_SCOPE_DEPTH {
+                // Prevent infinite loop - likely circular parent relationship
+                return false;
+            }
+
             if scope_id == ancestor {
                 return true;
             }
             current = self.scopes.get(&scope_id).and_then(|info| info.parent);
+            depth += 1;
         }
 
         false
