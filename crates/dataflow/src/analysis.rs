@@ -139,28 +139,28 @@ impl DataFlowEngine {
         // Set boundary conditions
         match direction {
             DataFlowDirection::Forward => {
-                let entry_block = cfg.entry_block();
+                let entry_block = cfg.entry_block_id().unwrap_or_else(|| panic!("CFG must have an entry block"));
                 entry_states.insert(entry_block, analysis.boundary_state());
 
                 // Initialize all other blocks with initial state
                 for (block_id, _) in cfg.basic_blocks() {
-                    if *block_id != entry_block {
-                        entry_states.insert(*block_id, analysis.initial_state());
+                    if block_id != entry_block {
+                        entry_states.insert(block_id, analysis.initial_state());
                     }
-                    exit_states.insert(*block_id, analysis.initial_state());
+                    exit_states.insert(block_id, analysis.initial_state());
                 }
             },
             DataFlowDirection::Backward => {
-                for exit_block in cfg.exit_blocks() {
+                for exit_block in cfg.exit_block_ids() {
                     exit_states.insert(exit_block, analysis.boundary_state());
                 }
 
                 // Initialize all other blocks with initial state
                 for (block_id, _) in cfg.basic_blocks() {
-                    if !cfg.exit_blocks().contains(block_id) {
-                        exit_states.insert(*block_id, analysis.initial_state());
+                    if !cfg.exit_block_ids().contains(&block_id) {
+                        exit_states.insert(block_id, analysis.initial_state());
                     }
-                    entry_states.insert(*block_id, analysis.initial_state());
+                    entry_states.insert(block_id, analysis.initial_state());
                 }
             }
         }
@@ -174,7 +174,8 @@ impl DataFlowEngine {
             iterations += 1;
 
             let block_id = worklist.pop().unwrap();
-            let block_node = cfg.basic_blocks().get(&block_id)
+            let basic_blocks = cfg.basic_blocks();
+            let block_node = basic_blocks.get(&block_id)
                 .ok_or_else(|| anyhow::anyhow!("Block {} not found", block_id.0))?;
             let instructions = &block_node.instructions;
 
@@ -345,7 +346,10 @@ pub mod utils {
                     uses.insert(id);
                 }
             },
-            Instruction::Branch(condition, _, _) => {
+            Instruction::Branch(_) => {
+                // Unconditional branch - no variables used
+            },
+            Instruction::ConditionalBranch(condition, _, _) => {
                 if let Some(id) = extract_variable_id(condition) {
                     uses.insert(id);
                 }

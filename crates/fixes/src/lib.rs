@@ -6,6 +6,7 @@ pub use replacements::ReplacementEngine;
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Arc;
 use detectors::types::{Finding, AnalysisContext};
 
 /// A text replacement operation for fixing code
@@ -43,7 +44,7 @@ pub struct FixSuggestion {
 /// Engine for generating and applying automatic fixes
 pub struct FixEngine {
     /// Registered fix generators by detector ID
-    generators: HashMap<String, Box<dyn FixGenerator>>,
+    generators: HashMap<String, Arc<dyn FixGenerator>>,
 }
 
 /// Trait for generating fixes for specific types of vulnerabilities
@@ -75,14 +76,17 @@ impl FixEngine {
 
     /// Register a fix generator
     pub fn register_generator<G: FixGenerator + 'static>(&mut self, generator: G) {
-        for detector_id in generator.supported_detectors() {
-            self.generators.insert(detector_id, Box::new(generator));
+        let detector_ids = generator.supported_detectors();
+        let arc_generator = Arc::new(generator);
+
+        for detector_id in detector_ids {
+            self.generators.insert(detector_id, arc_generator.clone());
         }
     }
 
     /// Generate fix suggestions for a finding
     pub fn generate_fixes(&self, finding: &Finding, ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
-        let detector_id = finding.detector_id.as_str();
+        let detector_id = finding.detector_id.0.as_str();
 
         if let Some(generator) = self.generators.get(detector_id) {
             let mut fixes = generator.generate_fixes(finding, ctx)?;
@@ -151,18 +155,18 @@ impl FixEngine {
     /// Generate a generic fix suggestion when no specific generator is available
     fn generate_generic_fix(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
-            id: format!("generic-fix-{}", finding.detector_id.as_str()),
-            description: format!("Review and fix {} vulnerability", finding.detector_id.as_str()),
+            id: format!("generic-fix-{}", finding.detector_id.0.as_str()),
+            description: format!("Review and fix {} vulnerability", finding.detector_id.0.as_str()),
             explanation: format!(
                 "This {} vulnerability requires manual review. {}",
-                finding.detector_id.as_str(),
+                finding.detector_id.0.as_str(),
                 finding.fix_suggestion.as_deref().unwrap_or("Consider the security implications and implement appropriate safeguards.")
             ),
             confidence: 0.3, // Low confidence for generic fixes
             replacements: Vec::new(), // No automatic replacements for generic fixes
             metadata: HashMap::from([
                 ("type".to_string(), "manual-review".to_string()),
-                ("detector".to_string(), finding.detector_id.as_str().to_string()),
+                ("detector".to_string(), finding.detector_id.0.as_str().to_string()),
             ]),
         };
 
@@ -172,7 +176,7 @@ impl FixEngine {
     /// Apply text replacements to source code
     fn apply_replacements(&self, source: &str, replacements: &[TextReplacement]) -> Result<String> {
         let lines: Vec<&str> = source.lines().collect();
-        let mut result_lines = lines.clone();
+        let mut result_lines: Vec<String> = lines.iter().map(|s| s.to_string()).collect();
 
         // Apply replacements in reverse order to avoid offset issues
         for replacement in replacements {
@@ -185,7 +189,7 @@ impl FixEngine {
 
             if start_line_idx == end_line_idx {
                 // Single line replacement
-                let line = result_lines[start_line_idx];
+                let line = &result_lines[start_line_idx];
                 let start_col = (replacement.start_column as usize).saturating_sub(1);
                 let end_col = (replacement.end_column as usize).saturating_sub(1);
 
@@ -196,12 +200,12 @@ impl FixEngine {
                         replacement.replacement_text,
                         &line[end_col..]
                     );
-                    result_lines[start_line_idx] = Box::leak(new_line.into_boxed_str());
+                    result_lines[start_line_idx] = new_line;
                 }
             } else {
                 // Multi-line replacement
-                let start_line = result_lines[start_line_idx];
-                let end_line = result_lines[end_line_idx];
+                let start_line = &result_lines[start_line_idx];
+                let end_line = &result_lines[end_line_idx];
                 let start_col = (replacement.start_column as usize).saturating_sub(1);
                 let end_col = (replacement.end_column as usize).saturating_sub(1);
 
@@ -214,7 +218,7 @@ impl FixEngine {
                     );
 
                     // Replace the range with a single line
-                    result_lines.splice(start_line_idx..=end_line_idx, vec![Box::leak(new_line.into_boxed_str())]);
+                    result_lines.splice(start_line_idx..=end_line_idx, vec![new_line]);
                 }
             }
         }

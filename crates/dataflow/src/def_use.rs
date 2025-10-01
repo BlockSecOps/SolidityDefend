@@ -403,7 +403,7 @@ impl<'a> DefUseChainBuilder<'a> {
                 // Collect definitions
                 if let Some(defined_var) = utils::get_instruction_definition(instruction) {
                     let def_site = DefinitionSite {
-                        block_id: *block_id,
+                        block_id: block_id,
                         instruction_index: instr_index,
                         variable: defined_var,
                         instruction_type: self.classify_definition(instruction),
@@ -421,7 +421,7 @@ impl<'a> DefUseChainBuilder<'a> {
                 let used_vars = utils::get_instruction_uses(instruction);
                 for used_var in used_vars {
                     let use_site = UseSite {
-                        block_id: *block_id,
+                        block_id: block_id,
                         instruction_index: instr_index,
                         variable: used_var,
                         use_type: self.classify_use(instruction, used_var),

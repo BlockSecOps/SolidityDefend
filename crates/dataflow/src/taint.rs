@@ -160,7 +160,7 @@ pub struct TaintViolation {
 }
 
 /// Severity levels for taint violations
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TaintViolationSeverity {
     Low,
     Medium,
@@ -529,7 +529,7 @@ impl<'a> TaintAnalysis<'a> {
 
         for (block_id, block_node) in self.cfg.basic_blocks() {
             let instructions = &block_node.instructions;
-            if let Some(block_state) = result.get_exit_state(*block_id) {
+            if let Some(block_state) = result.get_exit_state(block_id) {
                 for (instr_index, instruction) in instructions.iter().enumerate() {
                     if let Some(sink_name) = self.is_sink(instruction) {
                         // Check if any used variables are tainted
@@ -542,7 +542,7 @@ impl<'a> TaintAnalysis<'a> {
                                             source: source.clone(),
                                             sink: sink_name.clone(),
                                             tainted_variable: used_var,
-                                            block_id: *block_id,
+                                            block_id: block_id,
                                             severity: self.assess_severity(&sink_name, taint_info),
                                             taint_path: taint_info.taint_path.clone().unwrap_or_default(),
                                             confidence: taint_info.confidence,

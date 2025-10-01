@@ -162,7 +162,7 @@ impl<'a> LiveVariables<'a> {
 
         for (block_id, block_node) in self.cfg.basic_blocks() {
             let instructions = &block_node.instructions;
-            let exit_live = self.get_live_variables_exit(result, *block_id);
+            let exit_live = self.get_live_variables_exit(result, block_id);
 
             // Check each instruction to see if it defines a variable that is not live after
             for (instr_index, instruction) in instructions.iter().enumerate() {
@@ -206,7 +206,7 @@ impl<'a> LiveVariables<'a> {
 
         // Find potentially uninitialized variables
         let mut potentially_uninitialized = HashSet::new();
-        let entry_block = self.cfg.entry_block();
+        let entry_block = self.cfg.entry_block_id().unwrap_or_else(|| panic!("CFG must have an entry block"));
         let entry_live = self.get_live_variables_entry(&result, entry_block);
 
         for var in &entry_live {
@@ -216,7 +216,7 @@ impl<'a> LiveVariables<'a> {
 
         // Find variables live at exit
         let mut exit_live = HashSet::new();
-        for exit_block in self.cfg.exit_blocks() {
+        for exit_block in self.cfg.exit_block_ids() {
             let block_exit_live = self.get_live_variables_exit(&result, exit_block);
             exit_live.extend(block_exit_live);
         }
@@ -249,8 +249,8 @@ impl<'a> LiveVariables<'a> {
         // Per-block analysis
         report.push_str("\nPer-Block Analysis:\n");
         for (block_id, _) in self.cfg.basic_blocks() {
-            let entry_live = self.get_live_variables_entry(result, *block_id);
-            let exit_live = self.get_live_variables_exit(result, *block_id);
+            let entry_live = self.get_live_variables_entry(result, block_id);
+            let exit_live = self.get_live_variables_exit(result, block_id);
 
             report.push_str(&format!("Block {}:\n", block_id.0));
             report.push_str(&format!("  Entry live: {:?}\n", entry_live));
@@ -287,8 +287,8 @@ impl<'a> LiveVariables<'a> {
         let mut pressure = HashMap::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
-            let live_count = self.get_live_variables_exit(result, *block_id).len();
-            pressure.insert(*block_id, live_count);
+            let live_count = self.get_live_variables_exit(result, block_id).len();
+            pressure.insert(block_id, live_count);
         }
 
         pressure
@@ -299,7 +299,7 @@ impl<'a> LiveVariables<'a> {
         let mut interference = HashMap::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
-            let live_vars = self.get_live_variables_exit(result, *block_id);
+            let live_vars = self.get_live_variables_exit(result, block_id);
 
             // Every pair of live variables interferes
             for var1 in &live_vars {

@@ -122,7 +122,7 @@ impl<'a> ReachingDefinitions<'a> {
             for (instr_index, instruction) in instructions.iter().enumerate() {
                 if let Some(defined_var) = utils::get_instruction_definition(instruction) {
                     let def_site = DefinitionSite {
-                        block_id: *block_id,
+                        block_id: block_id,
                         instruction_index: instr_index,
                         variable: defined_var,
                         instruction_type: self.classify_definition(instruction),
@@ -230,7 +230,7 @@ impl<'a> ReachingDefinitions<'a> {
 
         for (block_id, block_node) in self.cfg.basic_blocks() {
             let instructions = &block_node.instructions;
-            let reaching_defs = self.get_reaching_definitions(result, *block_id);
+            let reaching_defs = self.get_reaching_definitions(result, block_id);
 
             for instruction in instructions {
                 let used_vars = utils::get_instruction_uses(instruction);
@@ -240,7 +240,7 @@ impl<'a> ReachingDefinitions<'a> {
                         .any(|def| def.variable == var);
 
                     if !has_reaching_def {
-                        uninitialized.push((*block_id, var));
+                        uninitialized.push((block_id, var));
                     }
                 }
             }
@@ -265,7 +265,7 @@ impl<'a> ReachingDefinitions<'a> {
         // Per-block analysis
         report.push_str("\nPer-Block Analysis:\n");
         for (block_id, _) in self.cfg.basic_blocks() {
-            let reaching_defs = self.get_reaching_definitions(result, *block_id);
+            let reaching_defs = self.get_reaching_definitions(result, block_id);
             report.push_str(&format!("Block {}: {} reaching definitions\n",
                 block_id.0, reaching_defs.len()));
 
