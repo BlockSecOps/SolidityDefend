@@ -200,7 +200,7 @@ impl Finding {
 /// Analysis context provided to detectors
 pub struct AnalysisContext<'arena> {
     /// The contract being analyzed
-    pub contract: Contract<'arena>,
+    pub contract: &'arena Contract<'arena>,
     /// Symbol table with semantic information
     pub symbols: SymbolTable,
     /// Control flow graph for each function (temporarily disabled)
@@ -217,7 +217,7 @@ pub struct AnalysisContext<'arena> {
 
 impl<'arena> AnalysisContext<'arena> {
     pub fn new(
-        contract: Contract<'arena>,
+        contract: &'arena Contract<'arena>,
         symbols: SymbolTable,
         source: String,
         file_path: String,

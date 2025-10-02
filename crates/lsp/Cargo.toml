@@ -8,10 +8,12 @@ repository.workspace = true
 description = "Language Server Protocol implementation"
 
 [dependencies]
+ast = { path = "../ast" }
 detectors = { path = "../detectors" }
 fixes = { path = "../fixes" }
 cache = { path = "../cache" }
 parser = { path = "../parser" }
+semantic = { path = "../semantic" }
 tower-lsp.workspace = true
 serde.workspace = true
 serde_json.workspace = true

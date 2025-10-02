@@ -271,7 +271,7 @@ impl CliApp {
         }
 
         let contract = &source_file.contracts[0]; // Use first contract
-        let ctx = AnalysisContext::new(contract.clone(), dummy_symbols, content, file_path.to_string());
+        let ctx = AnalysisContext::new(contract, dummy_symbols, content, file_path.to_string());
 
         // Run detectors
         let mut config = RegistryConfig::default();

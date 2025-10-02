@@ -96,21 +96,42 @@ impl SolidityDefendLanguageServer {
     }
 
     /// Analyze a document and return findings
-    async fn analyze_document(&self, uri: &Url, _content: &str) -> Result<Vec<Finding>> {
-        // TODO: Implement proper parsing and analysis integration
-        // For now, return empty findings to get the LSP server compiling
+    async fn analyze_document(&self, uri: &Url, content: &str) -> Result<Vec<Finding>> {
+        use ast::AstArena;
+        use parser::Parser;
+        use detectors::types::AnalysisContext;
+        use semantic::symbols::SymbolTable;
+
+        // Create arena and parser
+        let arena = AstArena::new();
+        let parser = Parser::new();
+
+        // Parse the document
+        let file_path = uri.path();
+        let source_file = parser.parse(&arena, content, file_path)
+            .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))?;
+
+        // Skip analysis if no contracts found
+        if source_file.contracts.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Analyze each contract
+        let mut all_findings = Vec::new();
+        for contract in &source_file.contracts {
+            let symbols = SymbolTable::new();
+            let ctx = AnalysisContext::new(contract, symbols, content.to_string(), file_path.to_string());
+
+            // Run detectors
+            let result = self.detector_registry.run_analysis(&ctx)?;
+            all_findings.extend(result.findings);
+        }
 
         self.client
-            .log_message(MessageType::INFO, format!("Analysis requested for {}", uri))
+            .log_message(MessageType::INFO, format!("Analysis completed for {} with {} findings", uri, all_findings.len()))
             .await;
 
-        // Placeholder: in a real implementation, we would:
-        // 1. Parse the Solidity source code using the parser crate
-        // 2. Create an AnalysisContext with proper contract and symbol information
-        // 3. Run the detector registry on the analysis context
-        // 4. Return the findings
-
-        Ok(vec![])
+        Ok(all_findings)
     }
 
     /// Convert findings to LSP diagnostics
