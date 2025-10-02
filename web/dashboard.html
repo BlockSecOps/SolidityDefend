@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolidityDefend - Security Analysis Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .severity-critical { @apply border-red-500 bg-red-50; }
+        .severity-high { @apply border-orange-500 bg-orange-50; }
+        .severity-medium { @apply border-yellow-500 bg-yellow-50; }
+        .severity-low { @apply border-green-500 bg-green-50; }
+        .severity-info { @apply border-blue-500 bg-blue-50; }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { @apply bg-green-500; }
+        .status-analyzing { @apply bg-yellow-500; animation: pulse 2s infinite; }
+        .status-completed { @apply bg-blue-500; }
+        .status-error { @apply bg-red-500; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .metric-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+
+        .finding-item {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .finding-item:hover {
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .progress-ring {
+            transform: rotate(-90deg);
+        }
+        .progress-ring-circle {
+            transition: stroke-dasharray 0.35s;
+            transform-origin: 50% 50%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <svg class="w-8 h-8" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <h1 class="text-2xl font-bold">SolidityDefend</h1>
+                    </div>
+                    <span class="text-sm opacity-80">Security Analysis Dashboard</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-2">
+                        <span id="connection-status" class="status-dot status-active"></span>
+                        <span class="text-sm">Connected</span>
+                    </div>
+                    <button id="refresh-btn" class="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-md transition-colors">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-6 py-8">
+        <!-- Top Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="card rounded-lg p-6 metric-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Sessions</p>
+                        <p id="total-sessions" class="text-3xl font-bold text-gray-900">0</p>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-lg p-6 metric-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Total Findings</p>
+                        <p id="total-findings" class="text-3xl font-bold text-gray-900">0</p>
+                    </div>
+                    <div class="bg-red-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-lg p-6 metric-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Active Sessions</p>
+                        <p id="active-sessions" class="text-3xl font-bold text-gray-900">0</p>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card rounded-lg p-6 metric-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-600">Risk Score</p>
+                        <p id="avg-risk-score" class="text-3xl font-bold text-gray-900">0</p>
+                    </div>
+                    <div class="bg-yellow-100 p-3 rounded-full">
+                        <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Column: Sessions and Analysis -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Session Management -->
+                <div class="card rounded-lg p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-xl font-semibold text-gray-900">Analysis Sessions</h2>
+                        <button id="new-session-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors">
+                            New Session
+                        </button>
+                    </div>
+
+                    <div id="sessions-list" class="space-y-4">
+                        <!-- Sessions will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Quick Analysis -->
+                <div class="card rounded-lg p-6">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-6">Quick Analysis</h2>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Paste Solidity Code</label>
+                            <textarea id="code-input" class="w-full h-32 p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="pragma solidity ^0.8.0;
+
+contract Example {
+    // Your code here
+}"></textarea>
+                        </div>
+
+                        <button id="analyze-code-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-md transition-colors">
+                            Analyze Code
+                        </button>
+                    </div>
+
+                    <div id="quick-analysis-results" class="mt-6 hidden">
+                        <!-- Results will appear here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Charts and Recent Findings -->
+            <div class="space-y-6">
+                <!-- Severity Distribution Chart -->
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Severity Distribution</h3>
+                    <div class="relative">
+                        <canvas id="severity-chart" width="300" height="300"></canvas>
+                    </div>
+                </div>
+
+                <!-- Recent Findings -->
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Recent Findings</h3>
+                    <div id="recent-findings" class="space-y-3 max-h-96 overflow-y-auto">
+                        <!-- Recent findings will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Real-time Status -->
+                <div class="card rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">System Status</h3>
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">WebSocket</span>
+                            <span id="websocket-status" class="text-green-600 text-sm font-medium">Connected</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Analysis Engine</span>
+                            <span id="engine-status" class="text-green-600 text-sm font-medium">Ready</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm text-gray-600">Last Update</span>
+                            <span id="last-update" class="text-gray-600 text-sm">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- New Session Modal -->
+    <div id="new-session-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Create New Session</h3>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Session Name</label>
+                    <input id="session-name" type="text" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="My Project Analysis">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Project Path</label>
+                    <input id="project-path" type="text" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" placeholder="/path/to/project">
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 mt-6">
+                <button id="cancel-session-btn" class="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors">Cancel</button>
+                <button id="create-session-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md transition-colors">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Finding Detail Modal -->
+    <div id="finding-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 w-full max-w-2xl mx-4 max-h-96 overflow-y-auto">
+            <div class="flex justify-between items-start mb-4">
+                <h3 id="finding-title" class="text-lg font-semibold text-gray-900"></h3>
+                <button id="close-finding-modal" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                    </svg>
+                </button>
+            </div>
+
+            <div id="finding-details" class="space-y-4">
+                <!-- Finding details will be populated here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dashboard JavaScript
+        class SolidityDefendDashboard {
+            constructor() {
+                this.websocket = null;
+                this.sessions = new Map();
+                this.severityChart = null;
+                this.initializeWebSocket();
+                this.initializeEventListeners();
+                this.initializeCharts();
+                this.loadInitialData();
+            }
+
+            initializeWebSocket() {
+                const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+
+                this.websocket = new WebSocket(wsUrl);
+
+                this.websocket.onopen = () => {
+                    console.log('WebSocket connected');
+                    this.updateConnectionStatus(true);
+                };
+
+                this.websocket.onmessage = (event) => {
+                    const message = JSON.parse(event.data);
+                    this.handleWebSocketMessage(message);
+                };
+
+                this.websocket.onclose = () => {
+                    console.log('WebSocket disconnected');
+                    this.updateConnectionStatus(false);
+                    // Reconnect after 3 seconds
+                    setTimeout(() => this.initializeWebSocket(), 3000);
+                };
+
+                this.websocket.onerror = (error) => {
+                    console.error('WebSocket error:', error);
+                    this.updateConnectionStatus(false);
+                };
+            }
+
+            handleWebSocketMessage(message) {
+                switch (message.message_type) {
+                    case 'SessionUpdate':
+                        this.handleSessionUpdate(message);
+                        break;
+                    case 'AnalysisProgress':
+                        this.handleAnalysisProgress(message);
+                        break;
+                    case 'NewFinding':
+                        this.handleNewFinding(message);
+                        break;
+                    case 'StatusUpdate':
+                        this.handleStatusUpdate(message);
+                        break;
+                }
+
+                document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
+            }
+
+            updateConnectionStatus(connected) {
+                const statusDot = document.getElementById('connection-status');
+                const statusText = statusDot.nextElementSibling;
+
+                if (connected) {
+                    statusDot.className = 'status-dot status-active';
+                    statusText.textContent = 'Connected';
+                    document.getElementById('websocket-status').textContent = 'Connected';
+                    document.getElementById('websocket-status').className = 'text-green-600 text-sm font-medium';
+                } else {
+                    statusDot.className = 'status-dot status-error';
+                    statusText.textContent = 'Disconnected';
+                    document.getElementById('websocket-status').textContent = 'Disconnected';
+                    document.getElementById('websocket-status').className = 'text-red-600 text-sm font-medium';
+                }
+            }
+
+            initializeEventListeners() {
+                // New session modal
+                document.getElementById('new-session-btn').addEventListener('click', () => {
+                    document.getElementById('new-session-modal').classList.remove('hidden');
+                });
+
+                document.getElementById('cancel-session-btn').addEventListener('click', () => {
+                    document.getElementById('new-session-modal').classList.add('hidden');
+                });
+
+                document.getElementById('create-session-btn').addEventListener('click', () => {
+                    this.createNewSession();
+                });
+
+                // Quick analysis
+                document.getElementById('analyze-code-btn').addEventListener('click', () => {
+                    this.analyzeCode();
+                });
+
+                // Finding modal
+                document.getElementById('close-finding-modal').addEventListener('click', () => {
+                    document.getElementById('finding-modal').classList.add('hidden');
+                });
+
+                // Refresh button
+                document.getElementById('refresh-btn').addEventListener('click', () => {
+                    this.loadInitialData();
+                });
+            }
+
+            initializeCharts() {
+                const ctx = document.getElementById('severity-chart').getContext('2d');
+                this.severityChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Critical', 'High', 'Medium', 'Low', 'Info'],
+                        datasets: [{
+                            data: [0, 0, 0, 0, 0],
+                            backgroundColor: [
+                                '#dc3545',
+                                '#fd7e14',
+                                '#ffc107',
+                                '#28a745',
+                                '#17a2b8'
+                            ],
+                            borderWidth: 2,
+                            borderColor: '#fff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom'
+                            }
+                        }
+                    }
+                });
+            }
+
+            async loadInitialData() {
+                try {
+                    const [sessionsResponse, metricsResponse] = await Promise.all([
+                        fetch('/api/sessions'),
+                        fetch('/api/metrics')
+                    ]);
+
+                    const sessionsData = await sessionsResponse.json();
+                    const metricsData = await metricsResponse.json();
+
+                    if (sessionsData.success) {
+                        this.updateSessions(sessionsData.data);
+                    }
+
+                    if (metricsData.success) {
+                        this.updateMetrics(metricsData.data);
+                    }
+                } catch (error) {
+                    console.error('Failed to load initial data:', error);
+                }
+            }
+
+            updateSessions(sessions) {
+                this.sessions.clear();
+                sessions.forEach(session => {
+                    this.sessions.set(session.id, session);
+                });
+                this.renderSessions();
+            }
+
+            renderSessions() {
+                const container = document.getElementById('sessions-list');
+                container.innerHTML = '';
+
+                if (this.sessions.size === 0) {
+                    container.innerHTML = '<p class="text-gray-500 text-center py-8">No sessions yet. Create your first analysis session!</p>';
+                    return;
+                }
+
+                this.sessions.forEach(session => {
+                    const sessionElement = this.createSessionElement(session);
+                    container.appendChild(sessionElement);
+                });
+            }
+
+            createSessionElement(session) {
+                const div = document.createElement('div');
+                div.className = 'border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors';
+
+                const statusClass = this.getStatusClass(session.status);
+                const statusText = this.getStatusText(session.status);
+
+                div.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <span class="status-dot ${statusClass}"></span>
+                            <div>
+                                <h3 class="font-medium text-gray-900">${session.name}</h3>
+                                <p class="text-sm text-gray-500">${session.project_path}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500">${statusText}</span>
+                            ${this.canAnalyze(session) ?
+                                `<button onclick="dashboard.analyzeSession('${session.id}')" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm transition-colors">Analyze</button>` :
+                                ''
+                            }
+                        </div>
+                    </div>
+                    ${session.analysis_results.length > 0 ? `
+                        <div class="mt-3 pt-3 border-t border-gray-100">
+                            <div class="text-sm text-gray-600">
+                                Findings: ${session.analysis_results.reduce((sum, result) => sum + result.findings.length, 0)}
+                                | Risk Score: ${session.analysis_results[session.analysis_results.length - 1]?.risk_score.toFixed(1) || 'N/A'}
+                            </div>
+                        </div>
+                    ` : ''}
+                `;
+
+                return div;
+            }
+
+            getStatusClass(status) {
+                if (typeof status === 'string') {
+                    return `status-${status.toLowerCase()}`;
+                }
+                if (status.Active !== undefined) return 'status-active';
+                if (status.Analyzing !== undefined) return 'status-analyzing';
+                if (status.Completed !== undefined) return 'status-completed';
+                if (status.Error !== undefined) return 'status-error';
+                return 'status-active';
+            }
+
+            getStatusText(status) {
+                if (typeof status === 'string') {
+                    return status;
+                }
+                if (status.Active !== undefined) return 'Active';
+                if (status.Analyzing !== undefined) return 'Analyzing...';
+                if (status.Completed !== undefined) return 'Completed';
+                if (status.Error !== undefined) return 'Error';
+                return 'Unknown';
+            }
+
+            canAnalyze(session) {
+                const status = this.getStatusText(session.status);
+                return status === 'Active' || status === 'Completed';
+            }
+
+            updateMetrics(metrics) {
+                document.getElementById('total-sessions').textContent = metrics.total_sessions;
+                document.getElementById('total-findings').textContent = metrics.total_findings;
+                document.getElementById('active-sessions').textContent = metrics.active_sessions;
+
+                // Update chart
+                const severityData = [
+                    metrics.severity_breakdown.critical || 0,
+                    metrics.severity_breakdown.high || 0,
+                    metrics.severity_breakdown.medium || 0,
+                    metrics.severity_breakdown.low || 0,
+                    metrics.severity_breakdown.info || 0
+                ];
+
+                this.severityChart.data.datasets[0].data = severityData;
+                this.severityChart.update();
+            }
+
+            async createNewSession() {
+                const name = document.getElementById('session-name').value;
+                const projectPath = document.getElementById('project-path').value;
+
+                if (!name || !projectPath) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+
+                try {
+                    const response = await fetch('/api/sessions', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            name: name,
+                            project_path: projectPath
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        document.getElementById('new-session-modal').classList.add('hidden');
+                        document.getElementById('session-name').value = '';
+                        document.getElementById('project-path').value = '';
+                        // Session will be updated via WebSocket
+                    } else {
+                        alert('Failed to create session: ' + data.error);
+                    }
+                } catch (error) {
+                    alert('Failed to create session: ' + error.message);
+                }
+            }
+
+            async analyzeSession(sessionId) {
+                try {
+                    const response = await fetch(`/api/sessions/${sessionId}/analyze`, {
+                        method: 'POST'
+                    });
+
+                    const data = await response.json();
+
+                    if (!data.success) {
+                        alert('Failed to start analysis: ' + data.error);
+                    }
+                    // Progress will be updated via WebSocket
+                } catch (error) {
+                    alert('Failed to start analysis: ' + error.message);
+                }
+            }
+
+            async analyzeCode() {
+                const code = document.getElementById('code-input').value;
+
+                if (!code.trim()) {
+                    alert('Please enter some Solidity code to analyze');
+                    return;
+                }
+
+                const btn = document.getElementById('analyze-code-btn');
+                btn.disabled = true;
+                btn.textContent = 'Analyzing...';
+
+                try {
+                    const response = await fetch('/api/analyze/code', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            code: code,
+                            filename: 'quick-analysis.sol'
+                        })
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        this.displayQuickAnalysisResults(data.data);
+                    } else {
+                        alert('Analysis failed: ' + data.error);
+                    }
+                } catch (error) {
+                    alert('Analysis failed: ' + error.message);
+                } finally {
+                    btn.disabled = false;
+                    btn.textContent = 'Analyze Code';
+                }
+            }
+
+            displayQuickAnalysisResults(findings) {
+                const container = document.getElementById('quick-analysis-results');
+                container.classList.remove('hidden');
+
+                if (findings.length === 0) {
+                    container.innerHTML = '<div class="bg-green-50 border border-green-200 rounded-lg p-4"><p class="text-green-800">No security issues found! ✅</p></div>';
+                    return;
+                }
+
+                container.innerHTML = `
+                    <h4 class="font-medium text-gray-900 mb-3">Analysis Results (${findings.length} findings)</h4>
+                    <div class="space-y-3">
+                        ${findings.map(finding => this.createFindingElement(finding)).join('')}
+                    </div>
+                `;
+            }
+
+            createFindingElement(finding) {
+                const severityClass = `severity-${finding.severity.toLowerCase()}`;
+                return `
+                    <div class="finding-item border-l-4 p-3 rounded-r-lg ${severityClass}" onclick="dashboard.showFindingDetails('${finding.id}')">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h5 class="font-medium text-gray-900">${finding.title}</h5>
+                                <p class="text-sm text-gray-600 mt-1">${finding.description}</p>
+                                <div class="flex items-center space-x-4 mt-2 text-xs text-gray-500">
+                                    <span>Line ${finding.line}</span>
+                                    <span>Confidence: ${Math.round(finding.confidence * 100)}%</span>
+                                    <span class="capitalize">${finding.detector}</span>
+                                </div>
+                            </div>
+                            <span class="text-xs font-medium px-2 py-1 rounded ${severityClass} capitalize">${finding.severity.toLowerCase()}</span>
+                        </div>
+                    </div>
+                `;
+            }
+
+            showFindingDetails(findingId) {
+                // Implementation for showing finding details in modal
+                document.getElementById('finding-modal').classList.remove('hidden');
+            }
+
+            handleSessionUpdate(message) {
+                this.loadInitialData(); // Reload sessions
+            }
+
+            handleAnalysisProgress(message) {
+                // Update progress for specific session
+                console.log('Analysis progress:', message);
+            }
+
+            handleNewFinding(message) {
+                // Add finding to recent findings
+                this.addRecentFinding(message.data);
+            }
+
+            handleStatusUpdate(message) {
+                // Update overall dashboard status
+                this.updateMetrics(message.data);
+            }
+
+            addRecentFinding(finding) {
+                const container = document.getElementById('recent-findings');
+                const findingElement = document.createElement('div');
+                findingElement.innerHTML = this.createFindingElement(finding);
+
+                container.insertBefore(findingElement.firstElementChild, container.firstChild);
+
+                // Keep only the 10 most recent findings
+                while (container.children.length > 10) {
+                    container.removeChild(container.lastChild);
+                }
+            }
+        }
+
+        // Initialize dashboard
+        const dashboard = new SolidityDefendDashboard();
+    </script>
+</body>
+</html>

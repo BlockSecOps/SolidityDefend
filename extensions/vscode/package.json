@@ -1,0 +1,249 @@
+{
+  "name": "soliditydefend",
+  "displayName": "SolidityDefend",
+  "description": "Advanced security analysis for Solidity smart contracts with real-time vulnerability detection",
+  "version": "1.0.0",
+  "publisher": "SolidityDefend",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SolidityOps/SolidityDefend"
+  },
+  "bugs": {
+    "url": "https://github.com/SolidityOps/SolidityDefend/issues"
+  },
+  "homepage": "https://soliditydefend.dev",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Linters",
+    "Other"
+  ],
+  "keywords": [
+    "solidity",
+    "security",
+    "smart contracts",
+    "blockchain",
+    "defi",
+    "vulnerability",
+    "static analysis"
+  ],
+  "activationEvents": [
+    "onLanguage:solidity"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "solidity",
+        "aliases": ["Solidity", "solidity"],
+        "extensions": [".sol"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "solidity",
+        "scopeName": "source.solidity",
+        "path": "./syntaxes/solidity.tmGrammar.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "soliditydefend.analyzeFile",
+        "title": "Analyze Current File",
+        "category": "SolidityDefend",
+        "icon": "$(shield)"
+      },
+      {
+        "command": "soliditydefend.analyzeWorkspace",
+        "title": "Analyze Workspace",
+        "category": "SolidityDefend",
+        "icon": "$(folder-library)"
+      },
+      {
+        "command": "soliditydefend.showDashboard",
+        "title": "Open Security Dashboard",
+        "category": "SolidityDefend",
+        "icon": "$(dashboard)"
+      },
+      {
+        "command": "soliditydefend.clearDiagnostics",
+        "title": "Clear Diagnostics",
+        "category": "SolidityDefend",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "soliditydefend.quickFix",
+        "title": "Apply Quick Fix",
+        "category": "SolidityDefend"
+      },
+      {
+        "command": "soliditydefend.showVulnerabilityDetails",
+        "title": "Show Vulnerability Details",
+        "category": "SolidityDefend"
+      },
+      {
+        "command": "soliditydefend.exportReport",
+        "title": "Export Security Report",
+        "category": "SolidityDefend",
+        "icon": "$(export)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "when": "resourceExtname == .sol",
+          "command": "soliditydefend.analyzeFile",
+          "group": "soliditydefend@1"
+        },
+        {
+          "when": "resourceExtname == .sol",
+          "command": "soliditydefend.quickFix",
+          "group": "soliditydefend@2"
+        }
+      ],
+      "explorer/context": [
+        {
+          "when": "resourceExtname == .sol",
+          "command": "soliditydefend.analyzeFile",
+          "group": "soliditydefend@1"
+        }
+      ],
+      "editor/title": [
+        {
+          "when": "resourceExtname == .sol",
+          "command": "soliditydefend.analyzeFile",
+          "group": "navigation@1"
+        },
+        {
+          "when": "resourceExtname == .sol",
+          "command": "soliditydefend.showDashboard",
+          "group": "navigation@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SolidityDefend",
+      "properties": {
+        "soliditydefend.enableRealTimeAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable real-time security analysis as you type"
+        },
+        "soliditydefend.analysisDelay": {
+          "type": "number",
+          "default": 500,
+          "description": "Delay in milliseconds before triggering analysis after changes"
+        },
+        "soliditydefend.severityThreshold": {
+          "type": "string",
+          "enum": ["Info", "Low", "Medium", "High", "Critical"],
+          "default": "Low",
+          "description": "Minimum severity level to show diagnostics"
+        },
+        "soliditydefend.enableInlineSuggestions": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show inline security suggestions and quick fixes"
+        },
+        "soliditydefend.enableDefiAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable advanced DeFi-specific vulnerability detection"
+        },
+        "soliditydefend.enableCrossContractAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable cross-contract interaction analysis"
+        },
+        "soliditydefend.enableTaintAnalysis": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable advanced taint analysis for data flow tracking"
+        },
+        "soliditydefend.maxAnalysisTime": {
+          "type": "number",
+          "default": 10000,
+          "description": "Maximum time in milliseconds for analysis before timeout"
+        },
+        "soliditydefend.showProgressNotifications": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show progress notifications during analysis"
+        },
+        "soliditydefend.autoFixOnSave": {
+          "type": "boolean",
+          "default": false,
+          "description": "Automatically apply available fixes when saving files"
+        }
+      }
+    },
+    "problemMatchers": [
+      {
+        "name": "soliditydefend",
+        "owner": "soliditydefend",
+        "fileLocation": ["relative", "${workspaceFolder}"],
+        "pattern": {
+          "regexp": "^(.*):(\\d+):(\\d+):\\s+(warning|error):\\s+(.*)$",
+          "file": 1,
+          "line": 2,
+          "column": 3,
+          "severity": 4,
+          "message": 5
+        }
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "soliditydefend.securityView",
+          "name": "Security Issues",
+          "when": "soliditydefend.hasFindings"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "soliditydefend",
+          "title": "SolidityDefend",
+          "icon": "$(shield)"
+        }
+      ]
+    },
+    "snippets": [
+      {
+        "language": "solidity",
+        "path": "./snippets/security-patterns.json"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js",
+    "package": "vsce package",
+    "publish": "vsce publish"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.70.0",
+    "@types/node": "16.x",
+    "@typescript-eslint/eslint-plugin": "^5.31.0",
+    "@typescript-eslint/parser": "^5.31.0",
+    "eslint": "^8.20.0",
+    "typescript": "^4.7.4",
+    "@vscode/test-electron": "^2.1.5",
+    "@vscode/vsce": "^2.15.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^8.0.2",
+    "axios": "^1.6.0",
+    "ws": "^8.14.0"
+  }
+}
