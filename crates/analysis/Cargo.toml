@@ -17,3 +17,7 @@ indexmap.workspace = true
 serde.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+parser = { path = "../parser" }
+chrono = "0.4"
