@@ -209,7 +209,7 @@ impl PerformanceBenchmarker {
 
         // Run SolidityDefend analysis
         let output = Command::new(binary_path)
-            .args(&["--sarif", "--quiet"])
+            .args(&["--format", "json", "--quiet"])
             .arg(file_path)
             .output()
             .await?;
@@ -218,47 +218,48 @@ impl PerformanceBenchmarker {
             return Ok(Vec::new());
         }
 
-        // Parse SARIF output to extract vulnerabilities
-        self.parse_sarif_vulnerabilities(&output.stdout, file_path)
+        // Parse JSON output to extract vulnerabilities
+        self.parse_json_vulnerabilities(&output.stdout, file_path)
     }
 
-    /// Parse SARIF output to extract vulnerability findings
-    fn parse_sarif_vulnerabilities(
+    /// Parse JSON output to extract vulnerability findings
+    fn parse_json_vulnerabilities(
         &self,
-        sarif_bytes: &[u8],
+        json_bytes: &[u8],
         file_path: &Path,
     ) -> Result<Vec<VulnerabilityFinding>, Box<dyn std::error::Error>> {
-        let sarif_str = String::from_utf8_lossy(sarif_bytes);
+        let json_str = String::from_utf8_lossy(json_bytes);
         let mut vulnerabilities = Vec::new();
 
-        if let Ok(sarif) = serde_json::from_str::<serde_json::Value>(&sarif_str) {
-            if let Some(runs) = sarif["runs"].as_array() {
-                for run in runs {
-                    if let Some(results) = run["results"].as_array() {
-                        for (i, result) in results.iter().enumerate() {
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_str) {
+            if let Some(findings) = json["findings"].as_array() {
+                for (i, finding) in findings.iter().enumerate() {
                             let vuln = VulnerabilityFinding {
                                 id: format!("{}_{}", file_path.display(), i),
-                                vulnerability_type: result["ruleId"]
+                                vulnerability_type: finding["rule_id"]
                                     .as_str()
                                     .unwrap_or("unknown")
                                     .to_string(),
-                                severity: "medium".to_string(), // Default severity
-                                description: result["message"]["text"]
+                                severity: finding["severity"]
+                                    .as_str()
+                                    .unwrap_or("medium")
+                                    .to_string(),
+                                description: finding["message"]
                                     .as_str()
                                     .unwrap_or("Vulnerability detected")
                                     .to_string(),
                                 file_path: file_path.to_path_buf(),
-                                line_number: result["locations"][0]["physicalLocation"]["region"]["startLine"]
+                                line_number: finding["location"]["line"]
                                     .as_u64()
                                     .unwrap_or(1) as usize,
                                 column_number: Some(
-                                    result["locations"][0]["physicalLocation"]["region"]["startColumn"]
+                                    finding["location"]["column"]
                                         .as_u64()
                                         .unwrap_or(1) as usize
                                 ),
                                 code_snippet: "".to_string(), // Would be extracted from file
                                 confidence: 0.8, // Default confidence
-                                rule_id: result["ruleId"]
+                                rule_id: finding["rule_id"]
                                     .as_str()
                                     .unwrap_or("unknown")
                                     .to_string(),

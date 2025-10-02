@@ -96,13 +96,11 @@ Available Detectors:
 **Available Formats:**
 - `console` - Human-readable colored output (default)
 - `json` - Machine-readable JSON format
-- `sarif` - SARIF 2.1.0 format for security tools
 
 **Examples:**
 ```bash
 soliditydefend -f console contract.sol     # Default
 soliditydefend -f json contract.sol        # JSON output
-soliditydefend -f sarif contract.sol       # SARIF format
 ```
 
 ### Output Destination
@@ -115,7 +113,6 @@ soliditydefend -f sarif contract.sol       # SARIF format
 ```bash
 soliditydefend -o results.txt contract.sol           # Console to file
 soliditydefend -f json -o results.json contract.sol  # JSON to file
-soliditydefend -f sarif -o results.sarif contract.sol # SARIF to file
 ```
 
 ## Filtering Options
@@ -259,8 +256,6 @@ soliditydefend -f json contract.sol
 # JSON output to file
 soliditydefend -f json -o analysis.json contract.sol
 
-# SARIF output for security tools
-soliditydefend -f sarif -o security.sarif contracts/
 ```
 
 ### Severity Filtering Examples
@@ -302,7 +297,7 @@ CLICOLOR_FORCE=1 soliditydefend contract.sol | less -R
 
 ```bash
 # GitHub Actions / GitLab CI
-soliditydefend -f sarif -o security.sarif contracts/
+soliditydefend -f json -o security.json contracts/
 
 # Jenkins pipeline
 soliditydefend -f json -o security-report.json contracts/
@@ -358,7 +353,6 @@ echo "🔍 Running SolidityDefend analysis..."
 # Generate all formats
 soliditydefend -f console "$FILES" > "$OUTPUT_DIR/report.txt"
 soliditydefend -f json "$FILES" > "$OUTPUT_DIR/report.json"
-soliditydefend -f sarif "$FILES" > "$OUTPUT_DIR/report.sarif"
 
 # Check results
 CRITICAL=$(jq '.summary.by_severity.critical // 0' "$OUTPUT_DIR/report.json")
@@ -388,7 +382,7 @@ fi
 ```bash
 # Error: Invalid format
 soliditydefend -f xml contract.sol
-# Error: unknown variant `xml`, expected one of `console`, `json`, `sarif`
+# Error: unknown variant `xml`, expected one of `console`, `json`
 
 # Error: Invalid severity
 soliditydefend -s extreme contract.sol

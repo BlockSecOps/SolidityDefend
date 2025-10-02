@@ -22,8 +22,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 
 🔧 **Multiple Output Formats**
 - Console output with color coding and code snippets
-- SARIF 2.1.0 compliant output for CI/CD integration
-- JSON output for programmatic processing
+- JSON output for programmatic processing and CI/CD integration
 - Rich formatting with fix suggestions
 
 🛠️ **Developer Experience**
@@ -61,7 +60,6 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 ✅ **Output & Integration (95% Complete)**
 - ✅ Console formatter with color support and code snippets (11/11 tests passing)
 - ✅ JSON output formatter with structured data
-- ✅ SARIF 2.1.0 compliant formatter for industry standards
 - ✅ Full CLI interface with file analysis workflows
 - ⚠️ Language Server Protocol (framework implemented, needs completion)
 
@@ -82,7 +80,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 ### ✅ **What Works**
 - Complete parsing and AST generation for Solidity files
 - Full symbol resolution and type checking
-- All output formatters (console, JSON, SARIF)
+- All output formatters (console, JSON)
 - Command-line interface with all basic features
 - Detector framework and registry system
 - Comprehensive test infrastructure with 150+ tests including:
@@ -162,9 +160,6 @@ cargo build --release
 
 # JSON output for CI/CD
 ./target/release/soliditydefend -f json -o results.json contract.sol
-
-# SARIF output for security tools
-./target/release/soliditydefend -f sarif -o results.sarif contract.sol
 
 # Filter by severity
 ./target/release/soliditydefend -s high contract.sol

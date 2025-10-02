@@ -362,7 +362,7 @@ Add these aliases to your shell configuration:
 # ~/.bashrc or ~/.zshrc
 alias sd='soliditydefend'
 alias sdj='soliditydefend -f json'
-alias sds='soliditydefend -f sarif'
+alias sdc='soliditydefend -f console'
 
 # Function for quick analysis
 analyze() {
