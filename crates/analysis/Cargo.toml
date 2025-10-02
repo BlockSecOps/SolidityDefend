@@ -1,17 +1,19 @@
 [package]
-name = "ir"
+name = "analysis"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "SSA-form Intermediate Representation"
+description = "Unified analysis engine for SolidityDefend"
 
 [dependencies]
 ast = { path = "../ast" }
+ir = { path = "../ir" }
+cfg = { path = "../cfg" }
+dataflow = { path = "../dataflow" }
 semantic = { path = "../semantic" }
 indexmap.workspace = true
 serde.workspace = true
 anyhow.workspace = true
-hex.workspace = true
 tracing.workspace = true

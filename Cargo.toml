@@ -8,6 +8,7 @@ members = [
     "crates/ir",
     "crates/cfg",
     "crates/dataflow",
+    "crates/analysis",
     "crates/detectors",
     "crates/output",
     "crates/fixes",
