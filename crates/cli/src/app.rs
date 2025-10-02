@@ -40,7 +40,7 @@ impl CliApp {
                     .short('f')
                     .long("format")
                     .help("Output format")
-                    .value_parser(["json", "sarif", "console"])
+                    .value_parser(["json", "console"])
                     .default_value("console"),
             )
             .arg(
@@ -87,7 +87,6 @@ impl CliApp {
 
         let format = match matches.get_one::<String>("format").unwrap().as_str() {
             "json" => OutputFormat::Json,
-            "sarif" => OutputFormat::Sarif,
             "console" => OutputFormat::Console,
             _ => OutputFormat::Console,
         };

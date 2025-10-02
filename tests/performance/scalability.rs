@@ -343,7 +343,7 @@ impl ScalabilityTester {
         let output = tokio::time::timeout(
             self.config.timeout,
             AsyncCommand::new(binary_path)
-                .args(&["--sarif", "--quiet"])
+                .args(&["--format", "json", "--quiet"])
                 .arg(contract_path)
                 .output()
         ).await??;
@@ -361,19 +361,13 @@ impl ScalabilityTester {
         Ok((execution_time, memory_used, vulnerabilities))
     }
 
-    /// Count vulnerabilities in SARIF output
-    fn count_vulnerabilities(&self, sarif_bytes: &[u8]) -> Result<usize, Box<dyn std::error::Error>> {
-        let sarif_str = String::from_utf8_lossy(sarif_bytes);
+    /// Count vulnerabilities in JSON output
+    fn count_vulnerabilities(&self, json_bytes: &[u8]) -> Result<usize, Box<dyn std::error::Error>> {
+        let json_str = String::from_utf8_lossy(json_bytes);
 
-        if let Ok(sarif) = serde_json::from_str::<serde_json::Value>(&sarif_str) {
-            if let Some(runs) = sarif["runs"].as_array() {
-                let mut total = 0;
-                for run in runs {
-                    if let Some(results) = run["results"].as_array() {
-                        total += results.len();
-                    }
-                }
-                return Ok(total);
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_str) {
+            if let Some(findings) = json["findings"].as_array() {
+                return Ok(findings.len());
             }
         }
 

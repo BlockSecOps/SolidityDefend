@@ -105,7 +105,7 @@ contract CleanContract {
 
     #[test]
     #[should_panic(expected = "CLI binary not found")]
-    fn test_ci_sarif_output_format() {
+    fn test_ci_json_output_format() {
         let temp_dir = TempDir::new().unwrap();
         let dir_path = temp_dir.path();
 
@@ -120,19 +120,13 @@ contract TestContract {
 }"#).unwrap();
 
         // This should fail because CLI binary doesn't exist yet
-        let output = run_soliditydefend(&["--format", "sarif", "test.sol"], dir_path).unwrap();
+        let output = run_soliditydefend(&["--format", "json", "test.sol"], dir_path).unwrap();
 
-        // Should produce valid SARIF output
-        let sarif_output: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        // Should produce valid JSON output
+        let json_output: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
 
-        // Validate SARIF structure
-        assert_eq!(sarif_output["version"], "2.1.0");
-        assert!(sarif_output["runs"].is_array());
-        assert!(!sarif_output["runs"].as_array().unwrap().is_empty());
-
-        let run = &sarif_output["runs"][0];
-        assert!(run["tool"]["driver"]["name"].as_str().unwrap().contains("SolidityDefend"));
-        assert!(run["results"].is_array());
+        // Validate JSON structure
+        assert!(json_output["findings"].is_array());
     }
 
     #[test]
@@ -231,7 +225,7 @@ contract EvolvingContract {
         let config_content = r#"
 [analysis]
 severity_threshold = "medium"
-output_format = "sarif"
+output_format = "json"
 exit_on_findings = true
 
 [detectors]
@@ -270,9 +264,9 @@ contract ConfiguredTest {
         // Should use configuration settings
         assert_eq!(output.status.code(), Some(1)); // Should fail due to high severity
 
-        // Should output SARIF format as configured
-        let sarif_output: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
-        assert_eq!(sarif_output["version"], "2.1.0");
+        // Should output JSON format as configured
+        let json_output: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+        assert!(json_output["findings"].is_array());
     }
 
     #[test]

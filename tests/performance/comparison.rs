@@ -103,7 +103,7 @@ impl PerformanceComparison {
     pub fn add_soliditydefend(&mut self, binary_path: &str) {
         let config = ToolConfig {
             command: binary_path.to_string(),
-            args: vec!["--sarif".to_string(), "--quiet".to_string()],
+            args: vec!["--format".to_string(), "json".to_string(), "--quiet".to_string()],
             version_command: format!("{} --version", binary_path),
             output_parser: Box::new(parse_soliditydefend_output),
         };
@@ -535,16 +535,12 @@ pub struct ComparisonReport {
 
 // Output parsers for different tools
 fn parse_soliditydefend_output(output: &str) -> Option<PerformanceMetrics> {
-    // Parse SARIF output to count vulnerabilities
-    if let Ok(sarif) = serde_json::from_str::<serde_json::Value>(output) {
+    // Parse JSON output to count vulnerabilities
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(output) {
         let mut vuln_count = 0;
 
-        if let Some(runs) = sarif["runs"].as_array() {
-            for run in runs {
-                if let Some(results) = run["results"].as_array() {
-                    vuln_count += results.len();
-                }
-            }
+        if let Some(findings) = json["findings"].as_array() {
+            vuln_count = findings.len();
         }
 
         Some(PerformanceMetrics {
@@ -791,16 +787,14 @@ mod tests {
 
     #[test]
     fn test_soliditydefend_output_parsing() {
-        let sarif_output = r#"{
-            "runs": [{
-                "results": [
-                    {"ruleId": "reentrancy"},
-                    {"ruleId": "access-control"}
-                ]
-            }]
+        let json_output = r#"{
+            "findings": [
+                {"rule_id": "reentrancy"},
+                {"rule_id": "access-control"}
+            ]
         }"#;
 
-        let metrics = parse_soliditydefend_output(sarif_output).unwrap();
+        let metrics = parse_soliditydefend_output(json_output).unwrap();
         assert_eq!(metrics.vulnerabilities_detected, 2);
         assert!(metrics.success);
     }

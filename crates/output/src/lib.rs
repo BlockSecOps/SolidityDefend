@@ -1,10 +1,8 @@
 pub mod console;
 pub mod json;
-pub mod sarif;
 
 pub use console::{ConsoleFormatter, ConsoleConfig};
 pub use json::{JsonFormatter, JsonOutputBuilder, JsonError};
-pub use sarif::{SarifFormatter, SarifReport};
 
 use detectors::types::{Finding, AnalysisContext};
 
@@ -13,7 +11,6 @@ use detectors::types::{Finding, AnalysisContext};
 pub enum OutputFormatter {
     Console(ConsoleFormatter),
     Json(JsonFormatter),
-    Sarif(SarifFormatter),
 }
 
 impl OutputFormatter {
@@ -27,17 +24,11 @@ impl OutputFormatter {
         Self::Json(JsonFormatter::new())
     }
 
-    /// Create a SARIF formatter
-    pub fn sarif() -> Self {
-        Self::Sarif(SarifFormatter::new().unwrap())
-    }
-
     /// Format findings using the selected formatter
     pub fn format(&self, findings: &[Finding]) -> Result<String, anyhow::Error> {
         match self {
             Self::Console(formatter) => formatter.format_simple(findings),
             Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
-            Self::Sarif(formatter) => formatter.format_simple(findings),
         }
     }
 
@@ -46,7 +37,6 @@ impl OutputFormatter {
         match self {
             Self::Console(formatter) => formatter.format_findings(findings, ctx),
             Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
-            Self::Sarif(formatter) => formatter.format_findings(findings, ctx).and_then(|report| serde_json::to_string_pretty(&report).map_err(|e| e.into())),
         }
     }
 }
@@ -64,7 +54,6 @@ pub struct OutputFormatterBuilder {
 pub enum OutputFormat {
     Console,
     Json,
-    Sarif,
 }
 
 impl OutputFormatterBuilder {
@@ -117,9 +106,6 @@ impl OutputFormatterBuilder {
                     .build();
                 OutputFormatter::Json(formatter)
             }
-            OutputFormat::Sarif => {
-                OutputFormatter::Sarif(SarifFormatter::new().unwrap())
-            }
         }
     }
 }
@@ -145,7 +131,6 @@ impl OutputManager {
         let formatter = match format {
             OutputFormat::Console => OutputFormatter::console(),
             OutputFormat::Json => OutputFormatter::json(),
-            OutputFormat::Sarif => OutputFormatter::sarif(),
         };
 
         let output = formatter.format(findings)?;
@@ -158,7 +143,6 @@ impl OutputManager {
         let formatter = match format {
             OutputFormat::Console => OutputFormatter::console(),
             OutputFormat::Json => OutputFormatter::json(),
-            OutputFormat::Sarif => OutputFormatter::sarif(),
         };
 
         let output = formatter.format(findings)?;
