@@ -1,3 +1,5 @@
+mod version;
+
 use anyhow::Result;
 use cli::CliApp;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
