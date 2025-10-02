@@ -49,13 +49,78 @@ impl Detector for UnprotectedInitializerDetector {
         self.base.default_severity
     }
 
-    fn detect(&self, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
-        // TODO: Implement initializer detection logic
-        Ok(Vec::new())
+    fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        let mut findings = Vec::new();
+
+        // Check for functions that look like initializers
+        for function in ctx.get_functions() {
+            // Skip internal/private functions
+            if function.visibility == ast::Visibility::Internal ||
+               function.visibility == ast::Visibility::Private {
+                continue;
+            }
+
+            // Look for initializer function patterns
+            let function_name = function.name.name.to_lowercase();
+            let is_initializer = function_name.contains("init") ||
+                               function_name.contains("setup") ||
+                               function_name.contains("configure") ||
+                               function_name == "initialize";
+
+            if is_initializer {
+                // Check if it has access control
+                if !self.has_access_control_modifiers(function) {
+                    let message = format!(
+                        "Initializer function '{}' lacks access control and can be called by anyone",
+                        function.name.name
+                    );
+
+                    let finding = self.base.create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_cwe(665) // CWE-665: Improper Initialization
+                    .with_fix_suggestion(format!(
+                        "Add an access control modifier to '{}' or ensure it can only be called once during deployment",
+                        function.name.name
+                    ));
+
+                    findings.push(finding);
+                }
+            }
+        }
+
+        Ok(findings)
     }
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl UnprotectedInitializerDetector {
+    /// Check if a function has access control modifiers
+    fn has_access_control_modifiers(&self, function: &ast::Function<'_>) -> bool {
+        if function.modifiers.is_empty() {
+            return false;
+        }
+
+        // Look for access control patterns
+        for modifier in &function.modifiers {
+            let modifier_name = modifier.name.name.to_lowercase();
+            if modifier_name.contains("only") ||
+               modifier_name.contains("auth") ||
+               modifier_name.contains("restricted") ||
+               modifier_name.contains("protected") {
+                return true;
+            }
+        }
+
+        false
     }
 }
 
