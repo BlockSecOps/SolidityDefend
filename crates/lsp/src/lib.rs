@@ -3,6 +3,5 @@ pub mod diagnostics;
 pub mod hover;
 pub mod server;
 
-/// Language Server Protocol implementation.
-/// Implementation will be added in T093-T096.
-pub struct Placeholder;
+// Re-export main server functionality
+pub use server::{SolidityDefendLanguageServer, start_lsp_server};
