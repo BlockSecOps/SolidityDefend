@@ -1,0 +1,24 @@
+[package]
+name = "soliditydefend-tests"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "benchmark_runner"
+path = "benchmarks/benchmark_runner.rs"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Testing dependencies
+criterion = { workspace = true }
+proptest = { workspace = true }
+
+# SolidityDefend crates
+parser = { path = "../crates/parser" }
+ast = { path = "../crates/ast" }
+analysis = { path = "../crates/analysis" }
