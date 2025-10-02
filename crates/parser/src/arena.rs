@@ -1,4 +1,4 @@
-use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType};
+use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility};
 use crate::error::{ParseError, ParseResult, ParseErrors};
 use solang_parser::{pt, parse, diagnostics};
 
@@ -179,11 +179,28 @@ impl<'arena> ArenaParser<'arena> {
         };
 
         let location = self.convert_location_with_source(&func.loc, file_path, Some(source));
-        let function = Function::new(self.arena, name, location);
+        let mut function = Function::new(self.arena, name, location);
+
+        // Convert function visibility
+        for attr in &func.attributes {
+            if let pt::FunctionAttribute::Visibility(vis) = attr {
+                function.visibility = self.convert_visibility(vis);
+            }
+        }
 
         // TODO: Convert function parameters, body, etc.
 
         Ok(function)
+    }
+
+    /// Convert function visibility
+    fn convert_visibility(&self, vis: &pt::Visibility) -> Visibility {
+        match vis {
+            pt::Visibility::Public(_) => Visibility::Public,
+            pt::Visibility::Internal(_) => Visibility::Internal,
+            pt::Visibility::External(_) => Visibility::External,
+            pt::Visibility::Private(_) => Visibility::Private,
+        }
     }
 
     /// Convert solang identifier to our Identifier
