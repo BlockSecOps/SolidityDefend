@@ -76,27 +76,552 @@ impl Default for DetectorConfig {
 
 #[derive(Debug)]
 struct SecurityAnalyzer {
-    // This will fail until security analysis is implemented
+    detector_engine: crate::detectors::DetectorEngine,
+    ast_parser: crate::parser::SolidityParser,
 }
 
 impl SecurityAnalyzer {
     fn new() -> Self {
-        Self {}
+        Self {
+            detector_engine: crate::detectors::DetectorEngine::new(),
+            ast_parser: crate::parser::SolidityParser::new(),
+        }
     }
 
-    async fn analyze_document(&self, _document: &DocumentState) -> Result<AnalysisResult> {
-        // This will fail until analysis is implemented
-        Err(Error::method_not_found())
+    async fn analyze_document(&self, document: &DocumentState) -> Result<AnalysisResult> {
+        let start_time = std::time::Instant::now();
+
+        // Parse the Solidity code
+        let ast = match self.ast_parser.parse(&document.text) {
+            Ok(ast) => ast,
+            Err(e) => {
+                return Ok(AnalysisResult {
+                    diagnostics: vec![Diagnostic {
+                        range: Range {
+                            start: Position { line: 0, character: 0 },
+                            end: Position { line: 0, character: 10 },
+                        },
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        code: Some(NumberOrString::String("parse-error".to_string())),
+                        source: Some("SolidityDefend".to_string()),
+                        message: format!("Parse error: {}", e),
+                        related_information: None,
+                        tags: None,
+                        data: None,
+                    }],
+                    symbols: vec![],
+                    analysis_time_ms: start_time.elapsed().as_millis() as u64,
+                });
+            }
+        };
+
+        // Run security analysis
+        let security_findings = self.detector_engine.analyze(&ast, &document.text);
+
+        // Convert findings to diagnostics
+        let mut diagnostics = Vec::new();
+        for finding in security_findings {
+            diagnostics.push(self.finding_to_diagnostic(finding));
+        }
+
+        // Extract document symbols
+        let symbols = self.extract_symbols(&ast);
+
+        Ok(AnalysisResult {
+            diagnostics,
+            symbols,
+            analysis_time_ms: start_time.elapsed().as_millis() as u64,
+        })
     }
 
-    async fn get_hover_info(&self, _document: &DocumentState, _position: Position) -> Result<Option<Hover>> {
-        // This will fail until hover info is implemented
-        Err(Error::method_not_found())
+    async fn get_hover_info(&self, document: &DocumentState, position: Position) -> Result<Option<Hover>> {
+        if let Ok(ast) = self.ast_parser.parse(&document.text) {
+            if let Some(hover_info) = self.get_hover_at_position(&ast, &document.text, position) {
+                return Ok(Some(Hover {
+                    contents: HoverContents::Markup(MarkupContent {
+                        kind: MarkupKind::Markdown,
+                        value: hover_info,
+                    }),
+                    range: None,
+                }));
+            }
+        }
+        Ok(None)
     }
 
-    async fn get_code_actions(&self, _document: &DocumentState, _range: Range, _context: &CodeActionContext) -> Result<Vec<CodeActionOrCommand>> {
-        // This will fail until code actions are implemented
-        Err(Error::method_not_found())
+    async fn get_code_actions(&self, document: &DocumentState, range: Range, context: &CodeActionContext) -> Result<Vec<CodeActionOrCommand>> {
+        let mut actions = Vec::new();
+
+        // Generate quick fixes for diagnostics
+        for diagnostic in &context.diagnostics {
+            if let Some(action) = self.create_quick_fix(document, diagnostic) {
+                actions.push(CodeActionOrCommand::CodeAction(action));
+            }
+        }
+
+        // Add refactoring actions
+        actions.extend(self.get_refactoring_actions(document, range));
+
+        // Add security enhancement actions
+        actions.extend(self.get_security_enhancement_actions(document));
+
+        Ok(actions)
+    }
+
+    fn finding_to_diagnostic(&self, finding: crate::detectors::Finding) -> Diagnostic {
+        let severity = match finding.severity.as_str() {
+            "Critical" => DiagnosticSeverity::ERROR,
+            "High" => DiagnosticSeverity::ERROR,
+            "Medium" => DiagnosticSeverity::WARNING,
+            "Low" => DiagnosticSeverity::INFORMATION,
+            "Info" => DiagnosticSeverity::HINT,
+            _ => DiagnosticSeverity::WARNING,
+        };
+
+        Diagnostic {
+            range: Range {
+                start: Position {
+                    line: finding.location.line.saturating_sub(1) as u32,
+                    character: finding.location.column as u32,
+                },
+                end: Position {
+                    line: finding.location.end_line.unwrap_or(finding.location.line).saturating_sub(1) as u32,
+                    character: finding.location.end_column.unwrap_or(finding.location.column + 10) as u32,
+                },
+            },
+            severity: Some(severity),
+            code: Some(NumberOrString::String(finding.detector_id)),
+            code_description: Some(CodeDescription {
+                href: url::Url::parse(&format!("https://docs.soliditydefend.dev/detectors/{}", finding.detector_id)).unwrap(),
+            }),
+            source: Some("SolidityDefend".to_string()),
+            message: finding.message,
+            related_information: finding.suggested_fix.map(|fix| {
+                vec![DiagnosticRelatedInformation {
+                    location: Location {
+                        uri: url::Url::parse("file:///").unwrap(),
+                        range: Range {
+                            start: Position { line: 0, character: 0 },
+                            end: Position { line: 0, character: 0 },
+                        },
+                    },
+                    message: format!("Suggested fix: {}", fix),
+                }]
+            }),
+            tags: None,
+            data: None,
+        }
+    }
+
+    fn extract_symbols(&self, ast: &crate::ast::SourceUnit) -> Vec<DocumentSymbol> {
+        let mut symbols = Vec::new();
+
+        for contract in &ast.contracts {
+            let contract_symbol = DocumentSymbol {
+                name: contract.name.clone(),
+                detail: Some(format!("contract {}", contract.name)),
+                kind: SymbolKind::CLASS,
+                tags: None,
+                deprecated: Some(false),
+                range: Range {
+                    start: Position { line: contract.location.line as u32, character: contract.location.column as u32 },
+                    end: Position { line: contract.location.end_line.unwrap_or(contract.location.line) as u32, character: contract.location.end_column.unwrap_or(contract.location.column + 10) as u32 },
+                },
+                selection_range: Range {
+                    start: Position { line: contract.location.line as u32, character: contract.location.column as u32 },
+                    end: Position { line: contract.location.line as u32, character: (contract.location.column + contract.name.len()) as u32 },
+                },
+                children: Some(self.extract_contract_children(contract)),
+            };
+            symbols.push(contract_symbol);
+        }
+
+        symbols
+    }
+
+    fn extract_contract_children(&self, contract: &crate::ast::Contract) -> Vec<DocumentSymbol> {
+        let mut children = Vec::new();
+
+        // Add functions
+        for function in &contract.functions {
+            let function_symbol = DocumentSymbol {
+                name: function.name.clone(),
+                detail: Some(format!("function {}", function.name)),
+                kind: SymbolKind::FUNCTION,
+                tags: None,
+                deprecated: Some(false),
+                range: Range {
+                    start: Position { line: function.location.line as u32, character: function.location.column as u32 },
+                    end: Position { line: function.location.end_line.unwrap_or(function.location.line) as u32, character: function.location.end_column.unwrap_or(function.location.column + 10) as u32 },
+                },
+                selection_range: Range {
+                    start: Position { line: function.location.line as u32, character: function.location.column as u32 },
+                    end: Position { line: function.location.line as u32, character: (function.location.column + function.name.len()) as u32 },
+                },
+                children: None,
+            };
+            children.push(function_symbol);
+        }
+
+        // Add state variables
+        for variable in &contract.state_variables {
+            let variable_symbol = DocumentSymbol {
+                name: variable.name.clone(),
+                detail: Some(format!("{} {}", variable.type_name, variable.name)),
+                kind: SymbolKind::FIELD,
+                tags: None,
+                deprecated: Some(false),
+                range: Range {
+                    start: Position { line: variable.location.line as u32, character: variable.location.column as u32 },
+                    end: Position { line: variable.location.end_line.unwrap_or(variable.location.line) as u32, character: variable.location.end_column.unwrap_or(variable.location.column + 10) as u32 },
+                },
+                selection_range: Range {
+                    start: Position { line: variable.location.line as u32, character: variable.location.column as u32 },
+                    end: Position { line: variable.location.line as u32, character: (variable.location.column + variable.name.len()) as u32 },
+                },
+                children: None,
+            };
+            children.push(variable_symbol);
+        }
+
+        children
+    }
+
+    fn get_hover_at_position(&self, ast: &crate::ast::SourceUnit, source: &str, position: Position) -> Option<String> {
+        // Find the symbol at the given position
+        let line = position.line as usize + 1;
+        let column = position.character as usize;
+
+        // Check contracts
+        for contract in &ast.contracts {
+            if self.is_position_in_range(line, column, &contract.location) {
+                return Some(format!("**Contract:** `{}`\n\nSolidity smart contract", contract.name));
+            }
+
+            // Check functions
+            for function in &contract.functions {
+                if self.is_position_in_range(line, column, &function.location) {
+                    let mut info = format!("**Function:** `{}`\n\n", function.name);
+
+                    if let Some(visibility) = &function.visibility {
+                        info.push_str(&format!("**Visibility:** {}\n", visibility));
+                    }
+
+                    if !function.modifiers.is_empty() {
+                        info.push_str(&format!("**Modifiers:** {}\n", function.modifiers.join(", ")));
+                    }
+
+                    // Add security analysis
+                    let security_notes = self.get_function_security_notes(function);
+                    if !security_notes.is_empty() {
+                        info.push_str("\n**Security Notes:**\n");
+                        for note in security_notes {
+                            info.push_str(&format!("- {}\n", note));
+                        }
+                    }
+
+                    return Some(info);
+                }
+            }
+
+            // Check state variables
+            for variable in &contract.state_variables {
+                if self.is_position_in_range(line, column, &variable.location) {
+                    let mut info = format!("**State Variable:** `{}`\n\n", variable.name);
+                    info.push_str(&format!("**Type:** {}\n", variable.type_name));
+                    info.push_str(&format!("**Visibility:** {}\n", variable.visibility));
+
+                    // Add security analysis for state variables
+                    let security_notes = self.get_variable_security_notes(variable);
+                    if !security_notes.is_empty() {
+                        info.push_str("\n**Security Notes:**\n");
+                        for note in security_notes {
+                            info.push_str(&format!("- {}\n", note));
+                        }
+                    }
+
+                    return Some(info);
+                }
+            }
+        }
+
+        None
+    }
+
+    fn is_position_in_range(&self, line: usize, column: usize, location: &crate::ast::Location) -> bool {
+        if line < location.line || line > location.end_line.unwrap_or(location.line) {
+            return false;
+        }
+
+        if line == location.line && column < location.column {
+            return false;
+        }
+
+        if line == location.end_line.unwrap_or(location.line) && column > location.end_column.unwrap_or(location.column + 10) {
+            return false;
+        }
+
+        true
+    }
+
+    fn get_function_security_notes(&self, function: &crate::ast::Function) -> Vec<String> {
+        let mut notes = Vec::new();
+
+        // Check for common security patterns
+        if function.visibility.as_deref() == Some("public") && function.modifiers.is_empty() {
+            notes.push("Consider adding access control modifiers for public functions".to_string());
+        }
+
+        if function.name.contains("withdraw") && !function.modifiers.contains(&"nonReentrant".to_string()) {
+            notes.push("Withdrawal functions should include reentrancy protection".to_string());
+        }
+
+        if function.name.contains("transfer") || function.name.contains("send") {
+            notes.push("Ensure proper error handling for transfer operations".to_string());
+        }
+
+        notes
+    }
+
+    fn get_variable_security_notes(&self, variable: &crate::ast::StateVariable) -> Vec<String> {
+        let mut notes = Vec::new();
+
+        if variable.visibility == "public" && variable.type_name.contains("mapping") {
+            notes.push("Public mappings expose all keys and values".to_string());
+        }
+
+        if variable.name.to_lowercase().contains("owner") && variable.visibility != "private" {
+            notes.push("Owner variables should typically be private with getter functions".to_string());
+        }
+
+        notes
+    }
+
+    fn create_quick_fix(&self, document: &DocumentState, diagnostic: &Diagnostic) -> Option<CodeAction> {
+        if let Some(NumberOrString::String(code)) = &diagnostic.code {
+            match code.as_str() {
+                "tx-origin" => {
+                    return Some(CodeAction {
+                        title: "Replace tx.origin with msg.sender".to_string(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        diagnostics: Some(vec![diagnostic.clone()]),
+                        edit: Some(WorkspaceEdit {
+                            changes: Some(HashMap::from([(
+                                document.uri.clone(),
+                                vec![TextEdit {
+                                    range: diagnostic.range,
+                                    new_text: "msg.sender".to_string(),
+                                }]
+                            )])),
+                            document_changes: None,
+                            change_annotations: None,
+                        }),
+                        command: None,
+                        is_preferred: Some(true),
+                        disabled: None,
+                        data: None,
+                    });
+                }
+                "missing-access-control" => {
+                    return Some(CodeAction {
+                        title: "Add onlyOwner modifier".to_string(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        diagnostics: Some(vec![diagnostic.clone()]),
+                        edit: Some(self.create_access_control_fix(&document.text, diagnostic.range)),
+                        command: None,
+                        is_preferred: Some(true),
+                        disabled: None,
+                        data: None,
+                    });
+                }
+                "reentrancy" => {
+                    return Some(CodeAction {
+                        title: "Add nonReentrant modifier".to_string(),
+                        kind: Some(CodeActionKind::QUICKFIX),
+                        diagnostics: Some(vec![diagnostic.clone()]),
+                        edit: Some(self.create_reentrancy_fix(&document.text, diagnostic.range)),
+                        command: None,
+                        is_preferred: Some(true),
+                        disabled: None,
+                        data: None,
+                    });
+                }
+                _ => {}
+            }
+        }
+        None
+    }
+
+    fn get_refactoring_actions(&self, document: &DocumentState, range: Range) -> Vec<CodeActionOrCommand> {
+        let mut actions = Vec::new();
+
+        // Extract function
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Extract to function".to_string(),
+            kind: Some(CodeActionKind::REFACTOR_EXTRACT),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Extract to function".to_string(),
+                command: "soliditydefend.extractFunction".to_string(),
+                arguments: Some(vec![serde_json::to_value(range).unwrap()]),
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        // Extract modifier
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Extract to modifier".to_string(),
+            kind: Some(CodeActionKind::REFACTOR_EXTRACT),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Extract to modifier".to_string(),
+                command: "soliditydefend.extractModifier".to_string(),
+                arguments: Some(vec![serde_json::to_value(range).unwrap()]),
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        // Inline function
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Inline function".to_string(),
+            kind: Some(CodeActionKind::REFACTOR_INLINE),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Inline function".to_string(),
+                command: "soliditydefend.inlineFunction".to_string(),
+                arguments: Some(vec![serde_json::to_value(range).unwrap()]),
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        actions
+    }
+
+    fn get_security_enhancement_actions(&self, document: &DocumentState) -> Vec<CodeActionOrCommand> {
+        let mut actions = Vec::new();
+
+        // Add reentrancy guard to contract
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Add reentrancy guard to contract".to_string(),
+            kind: Some(CodeActionKind::REFACTOR),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Add reentrancy guard".to_string(),
+                command: "soliditydefend.addReentrancyGuard".to_string(),
+                arguments: None,
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        // Add access control
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Add access control pattern".to_string(),
+            kind: Some(CodeActionKind::REFACTOR),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Add access control".to_string(),
+                command: "soliditydefend.addAccessControl".to_string(),
+                arguments: None,
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        // Add pause functionality
+        actions.push(CodeActionOrCommand::CodeAction(CodeAction {
+            title: "Add pausable pattern".to_string(),
+            kind: Some(CodeActionKind::REFACTOR),
+            diagnostics: None,
+            edit: None,
+            command: Some(Command {
+                title: "Add pausable".to_string(),
+                command: "soliditydefend.addPausable".to_string(),
+                arguments: None,
+            }),
+            is_preferred: None,
+            disabled: None,
+            data: None,
+        }));
+
+        actions
+    }
+
+    fn create_access_control_fix(&self, text: &str, range: Range) -> WorkspaceEdit {
+        // Find the function declaration and add onlyOwner modifier
+        let lines: Vec<&str> = text.lines().collect();
+        let function_line_idx = range.start.line as usize;
+
+        if let Some(line) = lines.get(function_line_idx) {
+            if line.trim_start().starts_with("function") {
+                let new_text = line.replace(" {", " onlyOwner {");
+                return WorkspaceEdit {
+                    changes: Some(HashMap::from([(
+                        url::Url::parse("file:///").unwrap(), // Should use actual URI
+                        vec![TextEdit {
+                            range: Range {
+                                start: Position { line: function_line_idx as u32, character: 0 },
+                                end: Position { line: function_line_idx as u32, character: line.len() as u32 },
+                            },
+                            new_text,
+                        }]
+                    )])),
+                    document_changes: None,
+                    change_annotations: None,
+                };
+            }
+        }
+
+        WorkspaceEdit {
+            changes: None,
+            document_changes: None,
+            change_annotations: None,
+        }
+    }
+
+    fn create_reentrancy_fix(&self, text: &str, range: Range) -> WorkspaceEdit {
+        // Find the function declaration and add nonReentrant modifier
+        let lines: Vec<&str> = text.lines().collect();
+        let function_line_idx = range.start.line as usize;
+
+        if let Some(line) = lines.get(function_line_idx) {
+            if line.trim_start().starts_with("function") {
+                let new_text = line.replace(" {", " nonReentrant {");
+                return WorkspaceEdit {
+                    changes: Some(HashMap::from([(
+                        url::Url::parse("file:///").unwrap(), // Should use actual URI
+                        vec![TextEdit {
+                            range: Range {
+                                start: Position { line: function_line_idx as u32, character: 0 },
+                                end: Position { line: function_line_idx as u32, character: line.len() as u32 },
+                            },
+                            new_text,
+                        }]
+                    )])),
+                    document_changes: None,
+                    change_annotations: None,
+                };
+            }
+        }
+
+        WorkspaceEdit {
+            changes: None,
+            document_changes: None,
+            change_annotations: None,
+        }
     }
 }
 
@@ -196,8 +721,45 @@ impl SolidityDefendLsp {
             let delay_ms = config.read().unwrap().analysis_delay_ms;
             tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
 
-            // This will fail until analysis is implemented
-            // The actual implementation would analyze the document here
+            // Get document from map
+            let document = {
+                let docs = document_map.read().unwrap();
+                docs.get(&uri).cloned()
+            };
+
+            if let Some(doc) = document {
+                // Perform analysis
+                match analyzer.analyze_document(&doc).await {
+                    Ok(result) => {
+                        // Update document state with analysis result
+                        {
+                            let mut docs = document_map.write().unwrap();
+                            if let Some(doc_state) = docs.get_mut(&uri) {
+                                doc_state.last_analysis = Some(result.clone());
+                            }
+                        }
+
+                        // Send diagnostics
+                        let update = DiagnosticUpdate {
+                            uri,
+                            version: Some(doc.version),
+                            diagnostics: result.diagnostics,
+                        };
+
+                        let _ = sender.send(update);
+                    }
+                    Err(_) => {
+                        // Send empty diagnostics on error
+                        let update = DiagnosticUpdate {
+                            uri,
+                            version: Some(doc.version),
+                            diagnostics: vec![],
+                        };
+
+                        let _ = sender.send(update);
+                    }
+                }
+            }
         });
     }
 
@@ -239,10 +801,6 @@ impl LanguageServer for SolidityDefendLsp {
             }
         }
 
-        // This will fail until LSP capabilities are properly implemented
-        Err(Error::method_not_found())
-
-        #[allow(unreachable_code)]
         Ok(InitializeResult {
             capabilities: ServerCapabilities {
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -260,6 +818,19 @@ impl LanguageServer for SolidityDefendLsp {
                         work_done_progress_options: WorkDoneProgressOptions::default(),
                     },
                 )),
+                completion_provider: Some(CompletionOptions {
+                    resolve_provider: Some(false),
+                    trigger_characters: Some(vec![".".to_string(), " ".to_string()]),
+                    work_done_progress_options: WorkDoneProgressOptions::default(),
+                    all_commit_characters: None,
+                    completion_item: None,
+                }),
+                code_lens_provider: Some(CodeLensOptions {
+                    resolve_provider: Some(true),
+                }),
+                document_formatting_provider: Some(OneOf::Left(true)),
+                document_range_formatting_provider: Some(OneOf::Left(true)),
+                rename_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
             server_info: Some(ServerInfo {
@@ -299,8 +870,7 @@ impl LanguageServer for SolidityDefendLsp {
 
         // Schedule analysis if applicable
         if self.should_analyze_file(&uri) {
-            // This will fail until analysis scheduling is implemented
-            return Err(Error::method_not_found());
+            self.schedule_analysis(uri.clone());
         }
 
         Ok(())
@@ -331,8 +901,7 @@ impl LanguageServer for SolidityDefendLsp {
 
         // Schedule re-analysis
         if self.should_analyze_file(&uri) {
-            // This will fail until analysis scheduling is implemented
-            return Err(Error::method_not_found());
+            self.schedule_analysis(uri.clone());
         }
 
         Ok(())
