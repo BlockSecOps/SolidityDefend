@@ -1,0 +1,29 @@
+[package]
+name = "performance"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Performance optimization and large codebase handling"
+
+[dependencies]
+cache = { path = "../cache" }
+detectors = { path = "../detectors" }
+parser = { path = "../parser" }
+ast = { path = "../ast" }
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tokio = { version = "1.0", features = ["full"] }
+dashmap.workspace = true
+blake3.workspace = true
+notify = "6.0"
+rayon = "1.7"
+crossbeam-channel = "0.5"
+memmap2 = "0.9"
+lru = "0.12"
+parking_lot = "0.12"
+bytesize = "1.3"
+num_cpus = "1.16"
+log = "0.4"
