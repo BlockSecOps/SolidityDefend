@@ -64,20 +64,24 @@ pub enum DetectorCategory {
     AccessControl,
     /// Reentrancy vulnerabilities
     Reentrancy,
+    /// Reentrancy attack patterns
+    ReentrancyAttacks,
     /// Oracle manipulation and price attacks
     Oracle,
     /// Flash loan attack vectors
     FlashLoan,
+    /// Flash loan attack patterns
+    FlashLoanAttacks,
     /// MEV and front-running issues
-    Mev,
+    MEV,
+    /// External call vulnerabilities
+    ExternalCalls,
     /// Input validation problems
     Validation,
     /// Logic bugs and business logic issues
     Logic,
     /// Timestamp dependencies
     Timestamp,
-    /// External call security
-    External,
     /// Authentication and authorization
     Auth,
     /// General security best practices
@@ -90,13 +94,15 @@ impl DetectorCategory {
         vec![
             Self::AccessControl,
             Self::Reentrancy,
+            Self::ReentrancyAttacks,
             Self::Oracle,
             Self::FlashLoan,
-            Self::Mev,
+            Self::FlashLoanAttacks,
+            Self::MEV,
+            Self::ExternalCalls,
             Self::Validation,
             Self::Logic,
             Self::Timestamp,
-            Self::External,
             Self::Auth,
             Self::BestPractices,
         ]
@@ -107,13 +113,15 @@ impl DetectorCategory {
         match self {
             Self::AccessControl => "Access Control",
             Self::Reentrancy => "Reentrancy",
+            Self::ReentrancyAttacks => "Reentrancy Attacks",
             Self::Oracle => "Oracle Manipulation",
             Self::FlashLoan => "Flash Loan Attacks",
-            Self::Mev => "MEV & Front-running",
+            Self::FlashLoanAttacks => "Flash Loan Attack Patterns",
+            Self::MEV => "MEV & Front-running",
+            Self::ExternalCalls => "External Calls",
             Self::Validation => "Input Validation",
             Self::Logic => "Logic Bugs",
             Self::Timestamp => "Timestamp Dependencies",
-            Self::External => "External Calls",
             Self::Auth => "Authentication",
             Self::BestPractices => "Best Practices",
         }

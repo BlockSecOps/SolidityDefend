@@ -65,6 +65,20 @@ impl DetectorRegistry {
         }
     }
 
+    /// Create a new detector registry with all built-in detectors
+    pub fn with_all_detectors() -> Self {
+        let mut registry = Self::new();
+        registry.register_built_in_detectors();
+        registry
+    }
+
+    /// Create a new detector registry with all built-in detectors and config
+    pub fn with_all_detectors_and_config(config: RegistryConfig) -> Self {
+        let mut registry = Self::with_config(config);
+        registry.register_built_in_detectors();
+        registry
+    }
+
     /// Register a detector in the registry
     pub fn register(&mut self, detector: Arc<dyn Detector>) {
         let id = detector.id();
@@ -331,6 +345,47 @@ impl DetectorRegistry {
         // 1. Interior mutability (RefCell/Mutex)
         // 2. A different API design
         // 3. Returning a new registry with reset metrics
+    }
+
+    /// Register all built-in detectors
+    fn register_built_in_detectors(&mut self) {
+        // Access Control Detectors
+        self.register(Arc::new(crate::access_control::MissingModifiersDetector::new()));
+        self.register(Arc::new(crate::access_control::UnprotectedInitializerDetector::new()));
+        self.register(Arc::new(crate::access_control::DefaultVisibilityDetector::new()));
+
+        // Reentrancy Detectors
+        self.register(Arc::new(crate::reentrancy::ClassicReentrancyDetector::new()));
+        self.register(Arc::new(crate::reentrancy::ReadOnlyReentrancyDetector::new()));
+
+        // Logic Detectors
+        self.register(Arc::new(crate::logic::division_order::DivisionOrderDetector::new()));
+        self.register(Arc::new(crate::logic::state_machine::StateMachineDetector::new()));
+
+        // Validation Detectors
+        self.register(Arc::new(crate::validation::zero_address::ZeroAddressDetector::new()));
+        self.register(Arc::new(crate::validation::array_bounds::ArrayBoundsDetector::new()));
+        self.register(Arc::new(crate::validation::parameter_check::ParameterConsistencyDetector::new()));
+
+        // Oracle Detectors
+        self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
+        self.register(Arc::new(crate::oracle::PriceValidationDetector::new()));
+
+        // Flash Loan Detectors
+        self.register(Arc::new(crate::flashloan::VulnerablePatternsDetector::new()));
+
+        // External Call Detectors
+        self.register(Arc::new(crate::external::UncheckedCallDetector::new()));
+
+        // MEV Detectors
+        self.register(Arc::new(crate::mev::SandwichAttackDetector::new()));
+        self.register(Arc::new(crate::mev::FrontRunningDetector::new()));
+
+        // Timestamp Detectors
+        self.register(Arc::new(crate::timestamp::BlockDependencyDetector::new()));
+
+        // Auth Detectors
+        self.register(Arc::new(crate::auth::TxOriginDetector::new()));
     }
 }
 

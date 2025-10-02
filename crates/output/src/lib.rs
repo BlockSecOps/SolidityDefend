@@ -123,3 +123,52 @@ impl OutputFormatterBuilder {
         }
     }
 }
+
+/// Output manager for handling different output formats and destinations
+pub struct OutputManager {
+    formatter: OutputFormatter,
+}
+
+impl OutputManager {
+    pub fn new() -> Self {
+        Self {
+            formatter: OutputFormatter::console(),
+        }
+    }
+
+    pub fn with_formatter(formatter: OutputFormatter) -> Self {
+        Self { formatter }
+    }
+
+    /// Write findings to stdout with the configured format
+    pub fn write_to_stdout(&self, findings: &[Finding], format: OutputFormat) -> anyhow::Result<()> {
+        let formatter = match format {
+            OutputFormat::Console => OutputFormatter::console(),
+            OutputFormat::Json => OutputFormatter::json(),
+            OutputFormat::Sarif => OutputFormatter::sarif(),
+        };
+
+        let output = formatter.format(findings)?;
+        println!("{}", output);
+        Ok(())
+    }
+
+    /// Write findings to a file with the configured format
+    pub fn write_to_file(&self, findings: &[Finding], format: OutputFormat, path: &std::path::Path) -> anyhow::Result<()> {
+        let formatter = match format {
+            OutputFormat::Console => OutputFormatter::console(),
+            OutputFormat::Json => OutputFormatter::json(),
+            OutputFormat::Sarif => OutputFormatter::sarif(),
+        };
+
+        let output = formatter.format(findings)?;
+        std::fs::write(path, output)?;
+        Ok(())
+    }
+}
+
+impl Default for OutputManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}

@@ -12,6 +12,10 @@ detectors = { path = "../detectors" }
 output = { path = "../output" }
 fixes = { path = "../fixes" }
 cache = { path = "../cache" }
+parser = { path = "../parser" }
+db = { path = "../db" }
+ast = { path = "../ast" }
+semantic = { path = "../semantic" }
 clap.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true

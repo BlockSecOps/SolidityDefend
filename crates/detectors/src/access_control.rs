@@ -9,6 +9,56 @@ pub struct MissingModifiersDetector {
     base: BaseDetector,
 }
 
+/// Detector for unprotected initializer functions
+pub struct UnprotectedInitializerDetector {
+    base: BaseDetector,
+}
+
+impl UnprotectedInitializerDetector {
+    pub fn new() -> Self {
+        Self {
+            base: BaseDetector::new(
+                DetectorId::new("unprotected-initializer"),
+                "Unprotected Initializer".to_string(),
+                "Initializer functions lack proper access control".to_string(),
+                vec![DetectorCategory::AccessControl],
+                Severity::High,
+            ),
+        }
+    }
+}
+
+impl Detector for UnprotectedInitializerDetector {
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+
+    fn detect(&self, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        // TODO: Implement initializer detection logic
+        Ok(Vec::new())
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
 impl MissingModifiersDetector {
     pub fn new() -> Self {
         Self {
