@@ -16,6 +16,18 @@ pub mod reentrancy;
 pub mod timestamp;
 pub mod validation;
 
+// DeFi-specific detectors
+pub mod defi;
+
+// Cross-contract analysis
+pub mod cross_contract;
+
+// Advanced taint analysis
+pub mod taint;
+
+// Advanced security engine integrating all advanced features
+pub mod advanced_security_engine;
+
 // Re-export core types and traits
 pub use detector::{
     Detector, DetectorCategory, ConfigurableDetector, MetricsDetector,
