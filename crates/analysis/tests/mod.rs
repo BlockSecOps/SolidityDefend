@@ -7,6 +7,10 @@ pub mod regression_tests;
 
 use anyhow::Result;
 use std::time::Instant;
+use ast::AstArena;
+use parser::Parser;
+use analysis::AnalysisEngine;
+use crate::test_fixtures::TestFixtures;
 
 /// Unified test runner for comprehensive analysis testing
 pub struct TestRunner;
@@ -71,48 +75,42 @@ impl TestRunner {
 
     /// Test analysis engine creation
     fn test_analysis_engine_creation() -> TestResult {
-        match std::panic::catch_unwind(|| {
-            use analysis::AnalysisEngine;
-            let engine = AnalysisEngine::new();
-            let stats = engine.get_statistics();
-            stats.functions_analyzed == 0
-        }) {
-            Ok(true) => TestResult::passed("Analysis engine created successfully"),
-            Ok(false) => TestResult::failed("Analysis engine statistics incorrect"),
-            Err(_) => TestResult::failed("Analysis engine creation panicked"),
+        let engine = AnalysisEngine::new();
+        let stats = engine.get_statistics();
+        if stats.functions_analyzed == 0 {
+            TestResult::passed("Analysis engine created successfully")
+        } else {
+            TestResult::failed("Analysis engine statistics incorrect")
         }
     }
 
     /// Test parser integration
     fn test_parser_integration() -> TestResult {
-        match std::panic::catch_unwind(|| {
-            use ast::AstArena;
-            use parser::Parser;
-            use analysis::AnalysisEngine;
+        let arena = AstArena::new();
+        let parser = Parser::new();
+        let _engine = AnalysisEngine::new();
 
-            let arena = AstArena::new();
-            let parser = Parser::new();
-            let mut engine = AnalysisEngine::new();
+        let source = r#"
+        pragma solidity ^0.8.0;
+        contract Test {
+            function test() public pure returns (uint256) {
+                return 42;
+            }
+        }
+        "#;
 
-            let source = r#"
-            pragma solidity ^0.8.0;
-            contract Test {
-                function test() public pure returns (uint256) {
-                    return 42;
+        let parse_result = parser.parse(&arena, source, "test.sol");
+        match parse_result {
+            Ok(ast) => {
+                let result = ast.contracts.len() == 1 && !ast.contracts[0].functions.is_empty();
+                drop(ast); // Explicit drop to end arena borrowing
+                if result {
+                    TestResult::passed("Parser integration working")
+                } else {
+                    TestResult::failed("Parser integration failed")
                 }
             }
-            "#;
-
-            match parser.parse(&arena, source, "test.sol") {
-                Ok(ast) => {
-                    ast.contracts.len() == 1 && !ast.contracts[0].functions.is_empty()
-                }
-                Err(_) => false,
-            }
-        }) {
-            Ok(true) => TestResult::passed("Parser integration working"),
-            Ok(false) => TestResult::failed("Parser integration failed"),
-            Err(_) => TestResult::failed("Parser integration panicked"),
+            Err(_) => TestResult::failed("Parse failed"),
         }
     }
 
@@ -131,9 +129,12 @@ impl TestRunner {
         }
         "#;
 
-        match parser.parse(&arena, source, "test.sol") {
+        let parse_result = parser.parse(&arena, source, "test.sol");
+        match parse_result {
             Ok(ast) => {
-                match engine.analyze_source_file(&ast) {
+                let analysis_result = engine.analyze_source_file(&ast);
+                drop(ast); // Explicit drop to end arena borrowing
+                match analysis_result {
                     Ok(results) => {
                         if !results.function_analyses.is_empty() {
                             TestResult::passed("Simple contract analysis working")
@@ -159,9 +160,12 @@ impl TestRunner {
         contract Empty {}
         "#;
 
-        match parser.parse(&arena, source, "test.sol") {
+        let parse_result = parser.parse(&arena, source, "test.sol");
+        match parse_result {
             Ok(ast) => {
-                match engine.analyze_source_file(&ast) {
+                let analysis_result = engine.analyze_source_file(&ast);
+                drop(ast); // Explicit drop to end arena borrowing
+                match analysis_result {
                     Ok(results) => {
                         if results.function_analyses.is_empty() {
                             TestResult::passed("Empty contract handling working")
@@ -191,9 +195,12 @@ impl TestRunner {
         }
         "#;
 
-        match parser.parse(&arena, source, "test.sol") {
+        let parse_result = parser.parse(&arena, source, "test.sol");
+        match parse_result {
             Ok(ast) => {
-                match engine.analyze_source_file(&ast) {
+                let analysis_result = engine.analyze_source_file(&ast);
+                drop(ast); // Explicit drop to end arena borrowing
+                match analysis_result {
                     Ok(results) => {
                         if results.function_analyses.len() >= 1 {
                             TestResult::passed("Multiple functions analysis working")
@@ -231,9 +238,12 @@ impl TestRunner {
         let mut engine = AnalysisEngine::new();
 
         // Test simple function pipeline
-        match fixtures.parse_source(TestFixtures::simple_patterns_source()) {
+        let parse_result = fixtures.parse_source(TestFixtures::simple_patterns_source());
+        match parse_result {
             Ok(ast) => {
-                match engine.analyze_source_file(&ast) {
+                let analysis_result = engine.analyze_source_file(&ast);
+                drop(ast); // Explicit drop to end arena borrowing
+                match analysis_result {
                     Ok(results) => {
                         // Verify pipeline components
                         for func in &results.function_analyses {
@@ -265,8 +275,14 @@ impl TestRunner {
         ];
 
         for (i, source) in sources.iter().enumerate() {
-            if fixtures.parse_source(source).is_err() {
-                return TestResult::failed(&format!("Failed to parse fixture {}", i));
+            let parse_result = fixtures.parse_source(source);
+            match parse_result {
+                Ok(ast) => {
+                    drop(ast); // Explicit drop to end arena borrowing
+                }
+                Err(_) => {
+                    return TestResult::failed(&format!("Failed to parse fixture {}", i));
+                }
             }
         }
         TestResult::passed("Test fixtures loading")
@@ -279,9 +295,12 @@ impl TestRunner {
         let mut engine = AnalysisEngine::new();
 
         // Test complex control flow
-        match fixtures.parse_source(TestFixtures::complex_control_flow_source()) {
+        let parse_result = fixtures.parse_source(TestFixtures::complex_control_flow_source());
+        match parse_result {
             Ok(ast) => {
-                match engine.analyze_source_file(&ast) {
+                let analysis_result = engine.analyze_source_file(&ast);
+                drop(ast); // Explicit drop to end arena borrowing
+                match analysis_result {
                     Ok(_) => TestResult::passed("Complex scenarios working"),
                     Err(_) => TestResult::failed("Analysis failed"),
                 }

@@ -90,7 +90,8 @@ impl PerformanceBenchmarks {
             let start_time = Instant::now();
             let start_memory = Self::get_memory_usage();
 
-            match parser.parse(&arena, source, "benchmark.sol") {
+            let parse_result = parser.parse(&arena, source, "benchmark.sol");
+            match parse_result {
                 Ok(ast) => {
                     match engine.analyze_source_file(&ast) {
                         Ok(_) => {
@@ -421,7 +422,7 @@ impl BenchmarkResults {
         }
     }
 
-    pub fn add_result(&mut self, name: &str, result: BenchmarkResult) {
+    pub fn add_result(&mut self, _name: &str, result: BenchmarkResult) {
         self.results.push(result);
     }
 
