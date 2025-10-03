@@ -123,6 +123,48 @@ impl std::fmt::Display for SourceLocation {
     }
 }
 
+/// Result from a detector containing a finding and metadata
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct DetectorResult {
+    /// The security finding
+    pub finding: Finding,
+    /// Additional metadata about the detection process
+    pub metadata: HashMap<String, String>,
+    /// Gas impact description
+    pub gas_impact: Option<String>,
+    /// Suggested fix for the issue
+    pub suggested_fix: Option<String>,
+}
+
+impl DetectorResult {
+    pub fn new(finding: Finding) -> Self {
+        Self {
+            finding,
+            metadata: HashMap::new(),
+            gas_impact: None,
+            suggested_fix: None,
+        }
+    }
+
+    /// Add metadata to this result
+    pub fn with_metadata(mut self, key: String, value: String) -> Self {
+        self.metadata.insert(key, value);
+        self
+    }
+
+    /// Add gas impact description
+    pub fn with_gas_impact(mut self, impact: String) -> Self {
+        self.gas_impact = Some(impact);
+        self
+    }
+
+    /// Add suggested fix
+    pub fn with_suggested_fix(mut self, fix: String) -> Self {
+        self.suggested_fix = Some(fix);
+        self
+    }
+}
+
 /// A security finding from a detector
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {

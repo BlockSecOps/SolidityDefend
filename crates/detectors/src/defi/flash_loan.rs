@@ -1,4 +1,5 @@
-use crate::types::{DetectorResult, AnalysisContext, Severity, Finding};
+use crate::types::{DetectorResult, AnalysisContext, Severity, Finding, DetectorId, Confidence, SourceLocation};
+use ast::Function;
 use crate::defi::{DeFiDetector, DeFiPatterns};
 
 /// Detector for flash loan vulnerabilities
@@ -51,27 +52,29 @@ impl FlashLoanDetector {
                 // Look for external calls without reentrancy protection
                 if self.has_unprotected_external_calls(ctx, func) &&
                    !self.has_reentrancy_guard(ctx, func) {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::Critical,
-                            title: "Flash loan reentrancy vulnerability".to_string(),
-                            description: format!(
-                                "Function '{}' handles flash loan callbacks but lacks reentrancy protection. \
-                                This could allow attackers to drain funds through reentrancy during flash loan execution.",
-                                func.name
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.85,
-                        },
-                        gas_impact: Some("High - Multiple external calls in vulnerable pattern".to_string()),
-                        suggested_fix: Some(
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::Critical,
+                        Confidence::High,
+                        format!(
+                            "Function '{}' handles flash loan callbacks but lacks reentrancy protection. \
+                            This could allow attackers to drain funds through reentrancy during flash loan execution.",
+                            func.name.as_str()
+                        ),
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(362);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("High - Multiple external calls in vulnerable pattern".to_string())
+                        .with_suggested_fix(
                             "Add reentrancy guards using OpenZeppelin's ReentrancyGuard or implement \
                             checks-effects-interactions pattern".to_string()
-                        ),
-                    });
+                        ));
                 }
             }
         }
@@ -87,27 +90,29 @@ impl FlashLoanDetector {
             if self.is_flash_loan_function(func.name.as_str()) {
                 // Check if function affects pricing without proper safeguards
                 if self.affects_pricing(ctx, func) && !self.has_price_manipulation_protection(ctx, func) {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::High,
-                            title: "Flash loan price manipulation vulnerability".to_string(),
-                            description: format!(
-                                "Function '{}' uses flash loans and affects pricing mechanisms. \
-                                This could enable attackers to manipulate prices temporarily using borrowed funds.",
-                                func.name
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.75,
-                        },
-                        gas_impact: Some("High - Complex pricing calculations".to_string()),
-                        suggested_fix: Some(
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::High,
+                        Confidence::Medium,
+                        format!(
+                            "Function '{}' uses flash loans and affects pricing mechanisms. \
+                            This could enable attackers to manipulate prices temporarily using borrowed funds.",
+                            func.name.as_str()
+                        ),
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(682);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("High - Complex pricing calculations".to_string())
+                        .with_suggested_fix(
                             "Implement time-weighted average pricing (TWAP) or use multiple price oracles \
                             to prevent single-transaction price manipulation".to_string()
-                        ),
-                    });
+                        ));
                 }
             }
         }
@@ -144,26 +149,28 @@ impl FlashLoanDetector {
                 }
 
                 if !validation_issues.is_empty() {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::High,
-                            title: "Insufficient flash loan validation".to_string(),
-                            description: format!(
-                                "Flash loan function '{}' has insufficient validation: {}",
-                                func.name,
-                                validation_issues.join(", ")
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.80,
-                        },
-                        gas_impact: Some("Medium - Additional validation checks required".to_string()),
-                        suggested_fix: Some(
-                            "Add comprehensive validation for loan amounts, recipients, fees, and repayment verification".to_string()
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::High,
+                        Confidence::High,
+                        format!(
+                            "Flash loan function '{}' has insufficient validation: {}",
+                            func.name.as_str(),
+                            validation_issues.join(", ")
                         ),
-                    });
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(20);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("Medium - Additional validation checks required".to_string())
+                        .with_suggested_fix(
+                            "Add comprehensive validation for loan amounts, recipients, fees, and repayment verification".to_string()
+                        ));
                 }
             }
         }
@@ -179,27 +186,29 @@ impl FlashLoanDetector {
         for func in &ctx.contract.functions {
             if self.is_flash_loan_callback(func.name.as_str()) {
                 if self.allows_arbitrary_calls(ctx, func) {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::Medium,
-                            title: "Flash loan arbitrage manipulation risk".to_string(),
-                            description: format!(
-                                "Function '{}' allows arbitrary external calls during flash loan execution. \
-                                This could be exploited for complex arbitrage attacks.",
-                                func.name
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.70,
-                        },
-                        gas_impact: Some("Variable - Depends on external call complexity".to_string()),
-                        suggested_fix: Some(
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::Medium,
+                        Confidence::Medium,
+                        format!(
+                            "Function '{}' allows arbitrary external calls during flash loan execution. \
+                            This could be exploited for complex arbitrage attacks.",
+                            func.name.as_str()
+                        ),
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(470);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("Variable - Depends on external call complexity".to_string())
+                        .with_suggested_fix(
                             "Restrict external calls to whitelisted contracts or implement \
                             strict validation of call targets and data".to_string()
-                        ),
-                    });
+                        ));
                 }
             }
         }
@@ -215,26 +224,28 @@ impl FlashLoanDetector {
             if self.is_flash_loan_callback(func.name.as_str()) {
                 // Check if callback validates the caller
                 if !self.validates_flash_loan_caller(ctx, func) {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::High,
-                            title: "Flash loan callback lacks caller validation".to_string(),
-                            description: format!(
-                                "Flash loan callback '{}' does not validate the caller. \
-                                This could allow unauthorized parties to trigger the callback.",
-                                func.name
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.90,
-                        },
-                        gas_impact: Some("Low - Simple address validation".to_string()),
-                        suggested_fix: Some(
-                            "Add validation to ensure the callback is only called by authorized flash loan providers".to_string()
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::High,
+                        Confidence::High,
+                        format!(
+                            "Flash loan callback '{}' does not validate the caller. \
+                            This could allow unauthorized parties to trigger the callback.",
+                            func.name.as_str()
                         ),
-                    });
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(284);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("Low - Simple address validation".to_string())
+                        .with_suggested_fix(
+                            "Add validation to ensure the callback is only called by authorized flash loan providers".to_string()
+                        ));
                 }
             }
         }
@@ -258,76 +269,76 @@ impl FlashLoanDetector {
         callback_patterns.iter().any(|&pattern| name.contains(pattern))
     }
 
-    fn has_unprotected_external_calls(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_unprotected_external_calls(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         // Look for external calls in the function
         // This would require deeper AST analysis
-        ctx.source_code.contains("call(") || ctx.source_code.contains(".transfer(")
+        ctx.source.contains("call(") || ctx.source.contains(".transfer(")
     }
 
-    fn has_reentrancy_guard(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_reentrancy_guard(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         // Check for reentrancy guard patterns
         let guard_patterns = [
             "nonReentrant", "ReentrancyGuard", "_nonReentrantBefore", "_nonReentrantAfter"
         ];
-        guard_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        guard_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn affects_pricing(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn affects_pricing(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let pricing_indicators = [
             "price", "rate", "exchange", "swap", "getAmountOut", "getAmountIn"
         ];
         pricing_indicators.iter().any(|&indicator|
-            func.name.contains(indicator) || ctx.source_code.contains(indicator)
+            func.name.as_str().contains(indicator) || ctx.source.contains(indicator)
         )
     }
 
-    fn has_price_manipulation_protection(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_price_manipulation_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let protection_patterns = [
             "TWAP", "timeWeighted", "oracle", "priceCheck", "slippage"
         ];
-        protection_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        protection_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn validates_loan_amount(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn validates_loan_amount(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let validation_patterns = [
             "require(amount", "assert(amount", "amount > 0", "amount != 0"
         ];
-        validation_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        validation_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn validates_recipient(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn validates_recipient(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let validation_patterns = [
             "require(to", "require(recipient", "to != address(0)", "recipient != address(0)"
         ];
-        validation_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        validation_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn calculates_fees_properly(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn calculates_fees_properly(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let fee_patterns = [
             "fee", "premium", "flashLoanFee", "calculateFee"
         ];
-        fee_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        fee_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn verifies_repayment(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn verifies_repayment(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let repayment_patterns = [
             "balanceAfter", "repayAmount", "totalDebt", "require(balance"
         ];
-        repayment_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        repayment_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn allows_arbitrary_calls(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn allows_arbitrary_calls(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let arbitrary_call_patterns = [
             "call(data)", "delegatecall(", "staticcall(", "target.call"
         ];
-        arbitrary_call_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        arbitrary_call_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 
-    fn validates_flash_loan_caller(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn validates_flash_loan_caller(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let caller_validation_patterns = [
             "msg.sender ==", "require(msg.sender", "onlyFlashLoanProvider", "isAuthorizedCaller"
         ];
-        caller_validation_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
+        caller_validation_patterns.iter().any(|&pattern| ctx.source.contains(pattern))
     }
 }
 

@@ -53,7 +53,7 @@ impl DeFiPatterns {
 
         for func in &ctx.contract.functions {
             for signature in &flash_loan_signatures {
-                if func.name.contains(signature) {
+                if func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -77,7 +77,7 @@ impl DeFiPatterns {
 
         for func in &ctx.contract.functions {
             for signature in &amm_signatures {
-                if func.name.contains(signature) {
+                if func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -100,7 +100,7 @@ impl DeFiPatterns {
 
         for func in &ctx.contract.functions {
             for signature in &oracle_signatures {
-                if func.name.contains(signature) {
+                if func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -149,7 +149,7 @@ impl DeFiPatterns {
         // For now, check function and variable names
         for func in &ctx.contract.functions {
             for indicator in &time_indicators {
-                if ctx.source_code.contains(indicator) {
+                if ctx.source.contains(indicator) {
                     return true;
                 }
             }

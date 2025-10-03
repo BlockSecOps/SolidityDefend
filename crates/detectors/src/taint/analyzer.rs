@@ -52,7 +52,7 @@ impl TaintAnalyzer {
 
     /// Identify taint sources, sinks, and sanitizers in the code
     fn identify_taint_locations(&mut self, context: &AnalysisContext) {
-        let lines: Vec<&str> = context.source_code.lines().collect();
+        let lines: Vec<&str> = context.source.lines().collect();
 
         for (line_idx, line_content) in lines.iter().enumerate() {
             let line_number = line_idx + 1;
@@ -66,17 +66,17 @@ impl TaintAnalyzer {
             };
 
             // Check for taint sources
-            if let Some(source) = TaintUtils::is_taint_source(&location, context.source_code) {
+            if let Some(source) = TaintUtils::is_taint_source(&location, context.source) {
                 self.taint_sources.insert(location.clone(), source);
             }
 
             // Check for taint sinks
-            if let Some(sink) = TaintUtils::is_taint_sink(&location, context.source_code) {
+            if let Some(sink) = TaintUtils::is_taint_sink(&location, context.source) {
                 self.taint_sinks.insert(location.clone(), sink);
             }
 
             // Check for sanitizers
-            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, context.source_code) {
+            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, context.source) {
                 self.sanitizers.insert(location.clone(), sanitizer);
             }
 
@@ -333,7 +333,7 @@ impl TaintAnalyzer {
         // Simplified control flow analysis
         // In a real implementation, this would use proper CFG analysis
 
-        let lines: Vec<&str> = context.source_code.lines().collect();
+        let lines: Vec<&str> = context.source.lines().collect();
         for (i, line) in lines.iter().enumerate() {
             if i > 0 {
                 // Add sequential flow edge

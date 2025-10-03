@@ -1,4 +1,5 @@
-use crate::types::{DetectorResult, AnalysisContext, Severity, Finding};
+use crate::types::{DetectorResult, AnalysisContext, Severity, Finding, DetectorId, Confidence, SourceLocation};
+use ast::Function;
 use crate::defi::{DeFiDetector, DeFiPatterns};
 
 /// Detector for price manipulation vulnerabilities
@@ -47,27 +48,29 @@ impl PriceManipulationDetector {
 
         for func in &ctx.contract.functions {
             if self.uses_single_oracle(ctx, func) && !self.has_oracle_redundancy(ctx, func) {
-                results.push(DetectorResult {
-                    finding: Finding {
-                        detector: self.name().to_string(),
-                        severity: Severity::High,
-                        title: "Single oracle dependency".to_string(),
-                        description: format!(
-                            "Function '{}' relies on a single price oracle without redundancy. \
-                            This creates a single point of failure that could be exploited \
-                            through oracle manipulation or failure.",
-                            func.name
-                        ),
-                        file_path: ctx.file_path.clone(),
-                        line_number: func.line_number,
-                        column: 0,
-                        confidence: 0.85,
-                    },
-                    gas_impact: Some("Medium - Multiple oracle calls increase gas costs".to_string()),
-                    suggested_fix: Some(
-                        "Implement multiple oracle sources with price aggregation and deviation checks".to_string()
+                let finding = Finding::new(
+                    DetectorId::new(self.name()),
+                    Severity::High,
+                    Confidence::High,
+                    format!(
+                        "Function '{}' relies on a single price oracle without redundancy. \
+                        This creates a single point of failure that could be exploited \
+                        through oracle manipulation or failure.",
+                        func.name.as_str()
                     ),
-                });
+                    SourceLocation::new(
+                        ctx.file_path.clone(),
+                        func.location.start().line() as u32,
+                        0,
+                        func.name.as_str().len() as u32,
+                    ),
+                ).with_cwe(20);
+
+                results.push(DetectorResult::new(finding)
+                    .with_gas_impact("Medium - Multiple oracle calls increase gas costs".to_string())
+                    .with_suggested_fix(
+                        "Implement multiple oracle sources with price aggregation and deviation checks".to_string()
+                    ));
             }
         }
 
@@ -80,26 +83,28 @@ impl PriceManipulationDetector {
 
         for func in &ctx.contract.functions {
             if self.uses_spot_price(ctx, func) && !self.has_twap_protection(ctx, func) {
-                results.push(DetectorResult {
-                    finding: Finding {
-                        detector: self.name().to_string(),
-                        severity: Severity::High,
-                        title: "Spot price manipulation vulnerability".to_string(),
-                        description: format!(
-                            "Function '{}' uses spot prices which can be manipulated within a single transaction. \
-                            This allows attackers to temporarily manipulate prices for profit.",
-                            func.name
-                        ),
-                        file_path: ctx.file_path.clone(),
-                        line_number: func.line_number,
-                        column: 0,
-                        confidence: 0.80,
-                    },
-                    gas_impact: Some("High - TWAP calculations require additional storage and computation".to_string()),
-                    suggested_fix: Some(
-                        "Use Time-Weighted Average Price (TWAP) or other manipulation-resistant pricing mechanisms".to_string()
+                let finding = Finding::new(
+                    DetectorId::new(self.name()),
+                    Severity::High,
+                    Confidence::High,
+                    format!(
+                        "Function '{}' uses spot prices which can be manipulated within a single transaction. \
+                        This allows attackers to temporarily manipulate prices for profit.",
+                        func.name.as_str()
                     ),
-                });
+                    SourceLocation::new(
+                        ctx.file_path.clone(),
+                        func.location.start().line() as u32,
+                        0,
+                        func.name.as_str().len() as u32,
+                    ),
+                ).with_cwe(682);
+
+                results.push(DetectorResult::new(finding)
+                    .with_gas_impact("High - TWAP calculations require additional storage and computation".to_string())
+                    .with_suggested_fix(
+                        "Use Time-Weighted Average Price (TWAP) or other manipulation-resistant pricing mechanisms".to_string()
+                    ));
             }
         }
 
@@ -127,27 +132,29 @@ impl PriceManipulationDetector {
                 }
 
                 if !validation_issues.is_empty() {
-                    results.push(DetectorResult {
-                        finding: Finding {
-                            detector: self.name().to_string(),
-                            severity: Severity::Medium,
-                            title: "Insufficient price validation".to_string(),
-                            description: format!(
-                                "Function '{}' has insufficient price validation: {}",
-                                func.name,
-                                validation_issues.join(", ")
-                            ),
-                            file_path: ctx.file_path.clone(),
-                            line_number: func.line_number,
-                            column: 0,
-                            confidence: 0.75,
-                        },
-                        gas_impact: Some("Low - Validation checks are gas-efficient".to_string()),
-                        suggested_fix: Some(
+                    let finding = Finding::new(
+                        DetectorId::new(self.name()),
+                        Severity::Medium,
+                        Confidence::Medium,
+                        format!(
+                            "Function '{}' has insufficient price validation: {}",
+                            func.name.as_str(),
+                            validation_issues.join(", ")
+                        ),
+                        SourceLocation::new(
+                            ctx.file_path.clone(),
+                            func.location.start().line() as u32,
+                            0,
+                            func.name.as_str().len() as u32,
+                        ),
+                    ).with_cwe(20);
+
+                    results.push(DetectorResult::new(finding)
+                        .with_gas_impact("Low - Validation checks are gas-efficient".to_string())
+                        .with_suggested_fix(
                             "Add comprehensive price validation including bounds checking, \
                             freshness validation, and oracle failure handling".to_string()
-                        ),
-                    });
+                        ));
                 }
             }
         }
@@ -163,24 +170,26 @@ impl PriceManipulationDetector {
             if self.is_vulnerable_to_oracle_manipulation(ctx, func) {
                 let manipulation_type = self.classify_manipulation_risk(ctx, func);
 
-                results.push(DetectorResult {
-                    finding: Finding {
-                        detector: self.name().to_string(),
-                        severity: Severity::High,
-                        title: format!("Oracle manipulation risk: {}", manipulation_type),
-                        description: format!(
-                            "Function '{}' is vulnerable to oracle manipulation. {}",
-                            func.name,
-                            self.get_manipulation_description(&manipulation_type)
-                        ),
-                        file_path: ctx.file_path.clone(),
-                        line_number: func.line_number,
-                        column: 0,
-                        confidence: 0.70,
-                    },
-                    gas_impact: Some("Variable - Depends on manipulation complexity".to_string()),
-                    suggested_fix: Some(self.get_manipulation_mitigation(&manipulation_type)),
-                });
+                let finding = Finding::new(
+                    DetectorId::new(self.name()),
+                    Severity::High,
+                    Confidence::Medium,
+                    format!(
+                        "Function '{}' is vulnerable to oracle manipulation. {}",
+                        func.name.as_str(),
+                        self.get_manipulation_description(&manipulation_type)
+                    ),
+                    SourceLocation::new(
+                        ctx.file_path.clone(),
+                        func.location.start().line() as u32,
+                        0,
+                        func.name.as_str().len() as u32,
+                    ),
+                ).with_cwe(682);
+
+                results.push(DetectorResult::new(finding)
+                    .with_gas_impact("Variable - Depends on manipulation complexity".to_string())
+                    .with_suggested_fix(self.get_manipulation_mitigation(&manipulation_type)));
             }
         }
 
@@ -193,27 +202,29 @@ impl PriceManipulationDetector {
 
         for func in &ctx.contract.functions {
             if self.uses_potentially_stale_prices(ctx, func) {
-                results.push(DetectorResult {
-                    finding: Finding {
-                        detector: self.name().to_string(),
-                        severity: Severity::Medium,
-                        title: "Stale price usage vulnerability".to_string(),
-                        description: format!(
-                            "Function '{}' may use stale price data without proper freshness checks. \
-                            This could lead to incorrect pricing decisions during oracle outages.",
-                            func.name
-                        ),
-                        file_path: ctx.file_path.clone(),
-                        line_number: func.line_number,
-                        column: 0,
-                        confidence: 0.65,
-                    },
-                    gas_impact: Some("Low - Timestamp checks are gas-efficient".to_string()),
-                    suggested_fix: Some(
+                let finding = Finding::new(
+                    DetectorId::new(self.name()),
+                    Severity::Medium,
+                    Confidence::Low,
+                    format!(
+                        "Function '{}' may use stale price data without proper freshness checks. \
+                        This could lead to incorrect pricing decisions during oracle outages.",
+                        func.name.as_str()
+                    ),
+                    SourceLocation::new(
+                        ctx.file_path.clone(),
+                        func.location.start().line() as u32,
+                        0,
+                        func.name.as_str().len() as u32,
+                    ),
+                ).with_cwe(20);
+
+                results.push(DetectorResult::new(finding)
+                    .with_gas_impact("Low - Timestamp checks are gas-efficient".to_string())
+                    .with_suggested_fix(
                         "Implement timestamp-based freshness checks and fallback mechanisms \
                         for stale price data".to_string()
-                    ),
-                });
+                    ));
             }
         }
 
@@ -226,27 +237,29 @@ impl PriceManipulationDetector {
 
         for func in &ctx.contract.functions {
             if self.has_decimal_precision_risks(ctx, func) {
-                results.push(DetectorResult {
-                    finding: Finding {
-                        detector: self.name().to_string(),
-                        severity: Severity::Medium,
-                        title: "Price calculation precision issue".to_string(),
-                        description: format!(
-                            "Function '{}' performs price calculations that may suffer from \
-                            precision loss or decimal mismatches between different tokens/oracles.",
-                            func.name
-                        ),
-                        file_path: ctx.file_path.clone(),
-                        line_number: func.line_number,
-                        column: 0,
-                        confidence: 0.60,
-                    },
-                    gas_impact: Some("Low - Precision handling is computationally efficient".to_string()),
-                    suggested_fix: Some(
+                let finding = Finding::new(
+                    DetectorId::new(self.name()),
+                    Severity::Medium,
+                    Confidence::Low,
+                    format!(
+                        "Function '{}' performs price calculations that may suffer from \
+                        precision loss or decimal mismatches between different tokens/oracles.",
+                        func.name.as_str()
+                    ),
+                    SourceLocation::new(
+                        ctx.file_path.clone(),
+                        func.location.start().line() as u32,
+                        0,
+                        func.name.as_str().len() as u32,
+                    ),
+                ).with_cwe(681);
+
+                results.push(DetectorResult::new(finding)
+                    .with_gas_impact("Low - Precision handling is computationally efficient".to_string())
+                    .with_suggested_fix(
                         "Normalize decimal places, use fixed-point arithmetic, or implement \
                         proper scaling for price calculations".to_string()
-                    ),
-                });
+                    ));
             }
         }
 
@@ -260,90 +273,90 @@ impl PriceManipulationDetector {
             "price", "rate", "exchange", "oracle", "feed", "aggregator"
         ];
         pricing_indicators.iter().any(|&indicator|
-            ctx.source_code.to_lowercase().contains(indicator)
+            ctx.source.to_lowercase().contains(indicator)
         )
     }
 
-    fn uses_single_oracle(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn uses_single_oracle(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let oracle_patterns = [
             "getPrice", "latestRoundData", "latestAnswer", "aggregator"
         ];
         oracle_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn has_oracle_redundancy(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_oracle_redundancy(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let redundancy_patterns = [
             "oracle1", "oracle2", "primaryOracle", "secondaryOracle",
             "median", "average", "aggregate", "multiple"
         ];
         redundancy_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
+            ctx.source.to_lowercase().contains(pattern)
         )
     }
 
-    fn uses_spot_price(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn uses_spot_price(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let spot_price_patterns = [
             "getReserves", "balanceOf", "currentPrice", "spotPrice"
         ];
         spot_price_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn has_twap_protection(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_twap_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let twap_patterns = [
             "TWAP", "timeWeighted", "average", "period", "window"
         ];
         twap_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn uses_price_data(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn uses_price_data(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let price_usage_patterns = [
             "price", "rate", "latestRoundData", "getPrice"
         ];
         price_usage_patterns.iter().any(|&pattern|
-            func.name.contains(pattern) || ctx.source_code.contains(pattern)
+            func.name.as_str().contains(pattern) || ctx.source.contains(pattern)
         )
     }
 
-    fn validates_price_bounds(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn validates_price_bounds(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let bounds_patterns = [
             "require(price >", "require(price <", "minPrice", "maxPrice",
             "bounds", "range", "sanity"
         ];
         bounds_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn validates_price_freshness(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn validates_price_freshness(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let freshness_patterns = [
             "updatedAt", "timestamp", "stale", "fresh", "timeout"
         ];
         freshness_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn handles_oracle_failures(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn handles_oracle_failures(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let failure_handling_patterns = [
             "try", "catch", "fallback", "emergency", "paused"
         ];
         failure_handling_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
-    fn is_vulnerable_to_oracle_manipulation(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn is_vulnerable_to_oracle_manipulation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         self.uses_price_data(ctx, func) &&
         (self.uses_spot_price(ctx, func) || !self.has_oracle_redundancy(ctx, func))
     }
 
-    fn classify_manipulation_risk(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> String {
+    fn classify_manipulation_risk(&self, ctx: &AnalysisContext, func: &Function) -> String {
         if self.uses_spot_price(ctx, func) {
             "Flash loan price manipulation".to_string()
         } else if !self.has_oracle_redundancy(ctx, func) {
@@ -375,17 +388,17 @@ impl PriceManipulationDetector {
         }
     }
 
-    fn uses_potentially_stale_prices(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn uses_potentially_stale_prices(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         self.uses_price_data(ctx, func) && !self.validates_price_freshness(ctx, func)
     }
 
-    fn has_decimal_precision_risks(&self, ctx: &AnalysisContext, func: &crate::types::Function) -> bool {
+    fn has_decimal_precision_risks(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         let precision_risk_patterns = [
             "decimals", "mul", "div", "/", "*", "scale", "precision"
         ];
         self.uses_price_data(ctx, func) &&
         precision_risk_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 }
@@ -416,7 +429,7 @@ mod tests {
         let detector = PriceManipulationDetector;
 
         let mut ctx = create_mock_context();
-        ctx.source_code = "function getPrice() { return oracle.latestAnswer(); }".to_string();
+        ctx.source = "function getPrice() { return oracle.latestAnswer(); }".to_string();
 
         let func = Function {
             name: "getPrice".to_string(),
@@ -435,7 +448,7 @@ mod tests {
         let detector = PriceManipulationDetector;
 
         let mut ctx = create_mock_context();
-        ctx.source_code = "function swap() { (uint112 reserve0, uint112 reserve1,) = pair.getReserves(); }".to_string();
+        ctx.source = "function swap() { (uint112 reserve0, uint112 reserve1,) = pair.getReserves(); }".to_string();
 
         let func = Function {
             name: "swap".to_string(),
@@ -462,7 +475,7 @@ mod tests {
         let detector = PriceManipulationDetector;
 
         let mut ctx = create_mock_context();
-        ctx.source_code = "function trade() { uint price = oracle.getPrice(); }".to_string();
+        ctx.source = "function trade() { uint price = oracle.getPrice(); }".to_string();
 
         let func = Function {
             name: "trade".to_string(),

@@ -339,19 +339,19 @@ impl InteractionGraph {
 
     fn calls_contract(context: &AnalysisContext, target: &str) -> bool {
         // Simplified detection - would need AST analysis for precision
-        context.source_code.contains(target) ||
-        context.source_code.contains("call(") ||
-        context.source_code.contains("delegatecall(")
+        context.source.contains(target) ||
+        context.source.contains("call(") ||
+        context.source.contains("delegatecall(")
     }
 
     fn determine_interaction_type(context: &AnalysisContext, target: &str) -> InteractionType {
-        if context.source_code.contains("delegatecall") {
+        if context.source.contains("delegatecall") {
             InteractionType::DelegateCall
-        } else if context.source_code.contains("staticcall") {
+        } else if context.source.contains("staticcall") {
             InteractionType::StaticCall
-        } else if context.source_code.contains("transfer") {
+        } else if context.source.contains("transfer") {
             InteractionType::Transfer
-        } else if context.source_code.contains("approve") {
+        } else if context.source.contains("approve") {
             InteractionType::Approve
         } else {
             InteractionType::FunctionCall
@@ -363,10 +363,10 @@ impl InteractionGraph {
         let mut functions = Vec::new();
 
         // Look for common function call patterns
-        if context.source_code.contains("transfer") {
+        if context.source.contains("transfer") {
             functions.push("transfer".to_string());
         }
-        if context.source_code.contains("approve") {
+        if context.source.contains("approve") {
             functions.push("approve".to_string());
         }
 
@@ -407,7 +407,7 @@ impl ContractNode {
     }
 
     fn determine_contract_type(context: &AnalysisContext) -> ContractType {
-        let source = &context.source_code.to_lowercase();
+        let source = &context.source.to_lowercase();
 
         if source.contains("erc20") || source.contains("token") {
             ContractType::Token
@@ -433,7 +433,7 @@ impl ContractNode {
     }
 
     fn determine_trust_level(context: &AnalysisContext) -> TrustLevel {
-        let source = &context.source_code.to_lowercase();
+        let source = &context.source.to_lowercase();
 
         if source.contains("openzeppelin") || source.contains("@openzeppelin") {
             TrustLevel::Trusted
@@ -556,7 +556,7 @@ mod tests {
     #[test]
     fn test_contract_type_detection() {
         let mut context = create_mock_context("Token");
-        context.source_code = "contract MyToken is ERC20 { }".to_string();
+        context.source = "contract MyToken is ERC20 { }".to_string();
 
         let node = ContractNode::from_context("Token".to_string(), &context);
         assert_eq!(node.contract_type, ContractType::Token);
