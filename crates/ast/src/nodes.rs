@@ -13,11 +13,27 @@ impl<'arena> Identifier<'arena> {
     pub fn new(name: &'arena str, location: SourceLocation) -> Self {
         Self { name, location }
     }
+
+    /// Get the identifier name as a string slice
+    pub fn as_str(&self) -> &str {
+        self.name
+    }
+
+    /// Convert to lowercase string
+    pub fn to_lowercase(&self) -> String {
+        self.name.to_lowercase()
+    }
 }
 
 impl<'arena> Located for Identifier<'arena> {
     fn location(&self) -> &SourceLocation {
         &self.location
+    }
+}
+
+impl<'arena> std::fmt::Display for Identifier<'arena> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.name)
     }
 }
 

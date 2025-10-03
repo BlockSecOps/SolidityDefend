@@ -223,7 +223,7 @@ impl CrossContractAnalyzer {
         ];
 
         privileged_patterns.iter().any(|&pattern|
-            contract_ctx.source_code.contains(pattern)
+            contract_ctx.source.contains(pattern)
         )
     }
 
@@ -260,7 +260,7 @@ impl CrossContractAnalyzer {
         ];
 
         sync_patterns.iter().any(|&pattern|
-            contract_ctx.source_code.contains(pattern)
+            contract_ctx.source.contains(pattern)
         )
     }
 
@@ -270,11 +270,11 @@ impl CrossContractAnalyzer {
         if let Some(contract_ctx) = context.contracts.get(contract_name) {
             // Find functions that call multiple external contracts
             for func in &contract_ctx.contract.functions {
-                let called_contracts = self.extract_called_contracts(contract_ctx, &func.name);
+                let called_contracts = self.extract_called_contracts(contract_ctx, func.name.as_str());
                 if called_contracts.len() > 1 {
                     operations.push(MultiContractOperation {
                         contracts: called_contracts,
-                        functions: vec![func.name.clone()],
+                        functions: vec![func.name.as_str().to_string()],
                         has_atomicity: false, // Will be determined later
                     });
                 }

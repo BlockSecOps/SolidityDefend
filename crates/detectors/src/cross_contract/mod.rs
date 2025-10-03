@@ -5,13 +5,14 @@
 
 pub mod analyzer;
 pub mod interaction_graph;
-pub mod protocol_detector;
-pub mod dependency_analyzer;
+// TODO: Implement missing modules
+// pub mod protocol_detector;
+// pub mod dependency_analyzer;
 
 pub use analyzer::CrossContractAnalyzer;
 pub use interaction_graph::{InteractionGraph, ContractNode, InteractionEdge};
-pub use protocol_detector::ProtocolDetector;
-pub use dependency_analyzer::DependencyAnalyzer;
+// pub use protocol_detector::ProtocolDetector;
+// pub use dependency_analyzer::DependencyAnalyzer;
 
 use crate::types::{DetectorResult, AnalysisContext, Severity};
 use std::collections::{HashMap, HashSet};
@@ -137,8 +138,10 @@ impl<'a> CrossContractContext<'a> {
 
     /// Detect protocol patterns across contracts
     pub fn detect_protocol_patterns(&mut self) {
-        let detector = ProtocolDetector::new();
-        self.protocol_patterns = detector.detect_patterns(&self.contracts, &self.interaction_graph);
+        // TODO: Implement ProtocolDetector
+        // let detector = ProtocolDetector::new();
+        // self.protocol_patterns = detector.detect_patterns(&self.contracts, &self.interaction_graph);
+        self.protocol_patterns = Vec::new();
     }
 
     /// Get contracts that interact with a specific contract
@@ -190,7 +193,7 @@ impl CrossContractUtils {
         ];
 
         external_call_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
@@ -200,9 +203,9 @@ impl CrossContractUtils {
 
         // This would require AST parsing to extract actual addresses
         // For now, we'll look for common patterns
-        if ctx.source_code.contains("0x") {
+        if ctx.source.contains("0x") {
             // Extract potential addresses (simplified)
-            let lines: Vec<&str> = ctx.source_code.lines().collect();
+            let lines: Vec<&str> = ctx.source.lines().collect();
             for line in lines {
                 if line.contains("0x") && line.len() >= 42 {
                     // This is a simplified extraction - real implementation would use regex
@@ -226,7 +229,7 @@ impl CrossContractUtils {
         ];
 
         proxy_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
+            ctx.source.to_lowercase().contains(pattern)
         )
     }
 
@@ -238,7 +241,7 @@ impl CrossContractUtils {
         ];
 
         upgrade_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
@@ -249,7 +252,7 @@ impl CrossContractUtils {
 
     /// Calculate trust score between contracts
     pub fn calculate_trust_score(from_ctx: &AnalysisContext, to_ctx: &AnalysisContext) -> f64 {
-        let mut score = 0.5; // Base trust score
+        let mut score: f64 = 0.5; // Base trust score
 
         // Increase trust for well-known patterns
         if Self::is_standard_interface(to_ctx) {
@@ -274,7 +277,7 @@ impl CrossContractUtils {
             "ERC20", "ERC721", "ERC1155", "IERC", "OpenZeppelin"
         ];
         standard_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
+            ctx.source.contains(pattern)
         )
     }
 
@@ -283,7 +286,7 @@ impl CrossContractUtils {
             "assembly", "delegatecall", "selfdestruct", "create2"
         ];
         complexity_indicators.iter().any(|&indicator|
-            ctx.source_code.contains(indicator)
+            ctx.source.contains(indicator)
         )
     }
 }
