@@ -20,7 +20,7 @@ SolidityDefend can be configured through multiple methods, listed in order of pr
 
 1. **Command-line arguments** (highest priority)
 2. **Environment variables**
-3. **Configuration files** (future feature)
+3. **Configuration files** (YAML format)
 4. **Default values** (lowest priority)
 
 ## Environment Variables
@@ -152,73 +152,131 @@ export SOLIDITYDEFEND_LOG_FILE=/var/log/soliditydefend.log
 
 ## Configuration Files
 
-*Note: Configuration file support is planned for future releases.*
+SolidityDefend supports YAML configuration files for comprehensive customization. Configuration files are loaded in the following order:
 
-### Global Configuration
+1. File specified with `--config` option
+2. `.soliditydefend.yml` in current directory
+3. `.soliditydefend.yaml` in current directory
+4. `~/.config/soliditydefend/config.yml` (user config)
+5. `~/.soliditydefend.yml` (user config)
 
-**Location:** `~/.config/soliditydefend/config.toml`
+### Creating Configuration Files
 
-```toml
-# Future configuration file format
-[general]
-cache_dir = "/tmp/sd-cache"
-max_memory = 4096
-threads = 8
+Use the `--init-config` flag to create a default configuration file:
 
-[output]
-default_format = "console"
-width = 120
-colors = true
+```bash
+# Create .soliditydefend.yml in current directory
+soliditydefend --init-config
 
-[detectors]
-# Enable/disable specific detectors
-enabled = [
-    "missing-access-control",
-    "classic-reentrancy",
-    "zero-address-check"
-]
-disabled = [
-    "parameter-consistency"  # Too noisy for this project
-]
-
-[severity]
-# Custom severity mappings
-overrides = { "parameter-consistency" = "info" }
-
-[cache]
-size_mb = 2048
-ttl_hours = 24
-compression = true
+# Use custom configuration file
+soliditydefend --config my-config.yml contracts/
 ```
 
-### Project Configuration
+### Configuration File Format
 
-**Location:** `./soliditydefend.toml` or `./.soliditydefend.toml`
+**Example: `.soliditydefend.yml`**
 
-```toml
-# Project-specific configuration
-[project]
-name = "MyDeFiProject"
-contracts_dir = "contracts"
-exclude_patterns = ["test/**", "mock/**"]
+```yaml
+# General analysis settings
+general:
+  min_severity: Info              # Minimum severity to report
+  verbose: false                  # Enable verbose logging
+  quiet: false                   # Enable quiet mode
+  include_patterns:              # File patterns to include
+    - "**/*.sol"
+  exclude_patterns:              # File patterns to exclude
+    - "**/node_modules/**"
+    - "**/test/**"
+    - "**/tests/**"
+    - "**/.git/**"
+  max_file_size: 10485760        # Max file size in bytes (10MB)
 
-[analysis]
-min_severity = "medium"
-include_gas_optimization = false
-strict_mode = true
+# Detector configuration
+detectors:
+  min_severity: Info             # Minimum detector severity
+  min_confidence: Low            # Minimum confidence level
+  enabled_categories: []         # Specific categories to enable (empty = all)
+  disabled_detectors: []         # Specific detectors to disable
+  enabled_detectors: []          # Specific detectors to enable (overrides disabled)
+  detector_timeout: 30           # Timeout per detector in seconds
+  fail_fast: false              # Stop on first critical finding
+  custom_settings: {}           # Detector-specific settings
 
-[output]
-format = "json"
-output_file = "security-report.json"
+# Cache configuration
+cache:
+  enabled: true                  # Enable analysis caching
+  max_memory_mb: 256            # Maximum memory usage
+  max_entries: 10000            # Maximum cache entries
+  cache_dir: null               # Custom cache directory (null = auto)
+  persistent: true              # Enable persistent cache
+  ttl_hours: 1                  # Cache time-to-live
 
-[detectors.missing-access-control]
-# Detector-specific configuration
-ignore_functions = ["view", "pure"]
-require_modifiers = ["onlyOwner", "onlyAdmin"]
+# Output configuration
+output:
+  format: console               # Output format: console | json
+  colors: true                  # Enable colored output
+  show_fixes: true              # Show fix suggestions
+  show_snippets: true           # Show code snippets
+  snippet_lines: 3              # Lines to show in snippets
+  sort_by_severity: true        # Sort findings by severity
 
-[detectors.reentrancy]
-max_call_depth = 3
-ignore_view_functions = true
+# Performance settings
+performance:
+  max_threads: 8                # Maximum parallel threads
+  parallel_analysis: true       # Enable parallel processing
+  batch_size: 10               # Files per batch
+  memory_limit_mb: 512         # Memory limit per analysis
+```
+
+### Detector Categories
+
+Available detector categories for the `enabled_categories` setting:
+
+- `AccessControl` - Access control and authorization issues
+- `Reentrancy` - Reentrancy vulnerabilities
+- `ReentrancyAttacks` - Reentrancy attack patterns
+- `Oracle` - Oracle manipulation and price attacks
+- `FlashLoan` - Flash loan attack vectors
+- `FlashLoanAttacks` - Flash loan attack patterns
+- `MEV` - MEV and front-running issues
+- `ExternalCalls` - External call vulnerabilities
+- `Validation` - Input validation problems
+- `Logic` - Logic bugs and business logic issues
+- `Timestamp` - Timestamp dependencies
+- `Auth` - Authentication and authorization
+- `BestPractices` - General security best practices
+
+### Project-Specific Configuration
+
+Create a `.soliditydefend.yml` in your project root:
+
+```yaml
+general:
+  min_severity: Medium
+  exclude_patterns:
+    - "**/node_modules/**"
+    - "**/test/**"
+    - "**/mock/**"
+    - "**/migrations/**"
+
+detectors:
+  min_confidence: Medium
+  enabled_categories:
+    - AccessControl
+    - Reentrancy
+    - Oracle
+    - FlashLoan
+  disabled_detectors:
+    - parameter-consistency    # Too noisy for this project
+
+output:
+  format: json
+  show_fixes: true
+  sort_by_severity: true
+
+performance:
+  max_threads: 4
+  parallel_analysis: true
 ```
 
 ## Cache Configuration
@@ -614,8 +672,6 @@ soliditydefend --dry-run --show-config
 
 The following configuration options are planned for future releases:
 
-- **Configuration files** (TOML format)
-- **Detector-specific settings**
 - **Custom rule definitions**
 - **Integration with external tools**
 - **Team/organization-wide configuration**

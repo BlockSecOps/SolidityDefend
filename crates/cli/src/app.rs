@@ -1,8 +1,9 @@
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgAction, Command};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 use std::collections::HashMap;
+use std::io::Write;
 
 use ast::arena::AstArena;
 use detectors::registry::{DetectorRegistry, RegistryConfig};
@@ -13,6 +14,7 @@ use db::Database;
 use semantic::symbols::SymbolTable;
 use cache::{CacheManager, CacheConfig, CacheKey};
 use cache::analysis_cache::{CachedAnalysisResult, CachedFinding, CachedLocation, AnalysisMetadata, AnalysisStats};
+use crate::config::SolidityDefendConfig;
 
 /// Standard exit codes for CI/CD integration
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -103,29 +105,48 @@ pub struct CliApp {
     output_manager: OutputManager,
     cache_manager: CacheManager,
     exit_config: ExitCodeConfig,
+    config: SolidityDefendConfig,
 }
 
 impl CliApp {
     pub fn new() -> Result<Self> {
-        let cache_config = CacheConfig::default();
+        Self::new_with_config(None)
+    }
+
+    pub fn new_with_config(config_file: Option<&Path>) -> Result<Self> {
+        // Load configuration with fallback chain
+        let config = SolidityDefendConfig::load_from_defaults_and_file(config_file)?;
+        config.validate()?;
+
+        // Create cache manager from config
+        let cache_config = config.to_cache_config();
         let cache_manager = CacheManager::new(cache_config)?;
 
+        // Create detector registry from config
+        let registry_config = config.to_registry_config();
+        let registry = DetectorRegistry::with_config(registry_config);
+
         Ok(Self {
-            registry: DetectorRegistry::with_all_detectors(),
+            registry,
             output_manager: OutputManager::new(),
             cache_manager,
             exit_config: ExitCodeConfig::default(),
+            config,
         })
     }
 
-    pub fn run(&self) -> Result<()> {
+    pub fn run() -> Result<()> {
+        Self::run_with_args(std::env::args().collect())
+    }
+
+    pub fn run_with_args(args: Vec<String>) -> Result<()> {
         let matches = Command::new("soliditydefend")
             .version(env!("CARGO_PKG_VERSION"))
             .about("Solidity Static Application Security Testing (SAST) Tool")
             .arg(
                 Arg::new("files")
                     .help("Solidity files to analyze")
-                    .required_unless_present_any(["list-detectors", "version-info", "lsp"])
+                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config"])
                     .num_args(1..)
                     .value_name("FILE"),
             )
@@ -213,26 +234,51 @@ impl CliApp {
                     .help("Don't exit with error code on analysis failures")
                     .action(ArgAction::SetTrue),
             )
-            .get_matches();
+            .arg(
+                Arg::new("config")
+                    .short('c')
+                    .long("config")
+                    .help("Configuration file path (.soliditydefend.yml)")
+                    .value_name("FILE"),
+            )
+            .arg(
+                Arg::new("init-config")
+                    .long("init-config")
+                    .help("Create a default configuration file in the current directory")
+                    .action(ArgAction::SetTrue),
+            )
+            .try_get_matches_from(args)?;
 
+        // Handle configuration initialization first (doesn't need config loading)
+        if matches.get_flag("init-config") {
+            return Self::handle_init_config();
+        }
+
+        // Get config file path if specified
+        let config_file = matches.get_one::<String>("config").map(PathBuf::from);
+
+        // Create app instance with configuration
+        let app = Self::new_with_config(config_file.as_deref())?;
+
+        // Handle commands that don't need file analysis
         if matches.get_flag("list-detectors") {
-            return self.list_detectors();
+            return app.list_detectors();
         }
 
         if matches.get_flag("version-info") {
-            return self.show_version_info();
+            return app.show_version_info();
         }
 
         if matches.get_flag("clear-cache") {
-            return self.clear_cache();
+            return app.clear_cache();
         }
 
         if matches.get_flag("cache-stats") {
-            return self.show_cache_stats();
+            return app.show_cache_stats();
         }
 
         if matches.get_flag("lsp") {
-            return self.start_lsp_server();
+            return app.start_lsp_server();
         }
 
         let files: Vec<&str> = matches.get_many::<String>("files")
@@ -259,7 +305,7 @@ impl CliApp {
         let use_cache = !matches.get_flag("no-cache");
 
         // Configure exit code behavior
-        let mut exit_config = self.exit_config.clone();
+        let mut exit_config = ExitCodeConfig::default();
 
         // Handle --no-exit-code flag
         if matches.get_flag("no-exit-code") {
@@ -289,7 +335,7 @@ impl CliApp {
             exit_config.error_on_analysis_failure = false;
         }
 
-        self.analyze_files(&files, format, output_file, min_severity, use_cache, exit_config)
+        app.analyze_files(&files, format, output_file, min_severity, use_cache, exit_config)
     }
 
     fn list_detectors(&self) -> Result<()> {
@@ -706,6 +752,34 @@ impl CliApp {
         rt.block_on(async {
             lsp::start_lsp_server().await
         })?;
+
+        Ok(())
+    }
+
+    fn handle_init_config() -> Result<()> {
+        let config_path = PathBuf::from(".soliditydefend.yml");
+
+        if config_path.exists() {
+            println!("Configuration file already exists: {}", config_path.display());
+            print!("Overwrite? [y/N]: ");
+            std::io::Write::flush(&mut std::io::stdout())?;
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input)?;
+
+            if !input.trim().to_lowercase().starts_with('y') {
+                println!("Configuration initialization cancelled.");
+                return Ok(());
+            }
+        }
+
+        SolidityDefendConfig::create_default_config_file(&config_path)?;
+        println!("Created default configuration file: {}", config_path.display());
+        println!("\nEdit this file to customize SolidityDefend settings:");
+        println!("- Detector settings");
+        println!("- Cache configuration");
+        println!("- Output preferences");
+        println!("- Performance tuning");
 
         Ok(())
     }

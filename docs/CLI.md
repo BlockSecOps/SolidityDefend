@@ -28,6 +28,25 @@ soliditydefend [OPTIONS] [COMMAND] [FILES]...
 -V, --version       Show version information
 ```
 
+### Configuration
+
+```bash
+-c, --config <FILE>    Configuration file path (.soliditydefend.yml)
+--init-config          Create a default configuration file in the current directory
+```
+
+**Examples:**
+```bash
+# Create default configuration file
+soliditydefend --init-config
+
+# Use custom configuration file
+soliditydefend --config custom-config.yml contracts/
+
+# Use default configuration from current directory
+soliditydefend contracts/  # Loads .soliditydefend.yml if present
+```
+
 ### Input Files
 
 ```bash
