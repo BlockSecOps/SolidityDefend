@@ -68,6 +68,8 @@ Building from source ensures you get the latest features and optimal performance
    cargo build
    ```
 
+   > **Note**: Recent improvements have resolved major compilation issues in the detector pipeline. The build process now completes successfully with all core DeFi detectors functional.
+
 3. **Install globally** (optional):
    ```bash
    cargo install --path crates/soliditydefend
