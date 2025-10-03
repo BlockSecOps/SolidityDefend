@@ -7,20 +7,20 @@ Complete specification for all output formats supported by SolidityDefend.
 - [Overview](#overview)
 - [Console Output](#console-output)
 - [JSON Output](#json-output)
-- [SARIF Output](#sarif-output)
 - [Output Comparison](#output-comparison)
 - [Integration Examples](#integration-examples)
 - [Customization](#customization)
 
 ## Overview
 
-SolidityDefend supports three output formats designed for different use cases:
+SolidityDefend Community Edition supports two output formats designed for different use cases:
 
 | Format | Use Case | Features |
 |--------|----------|----------|
 | **Console** | Human review, development | Colors, code snippets, interactive |
 | **JSON** | Automation, CI/CD | Structured data, programmatic processing |
-| **SARIF** | Security tools, enterprise | Industry standard, tool interoperability |
+
+> **Note**: SARIF output is available in SolidityDefend Enterprise Edition for advanced security tool integration.
 
 ### Format Selection
 
@@ -31,9 +31,6 @@ soliditydefend -f console contract.sol
 
 # JSON
 soliditydefend -f json contract.sol
-
-# SARIF
-soliditydefend -f sarif contract.sol
 ```
 
 ## Console Output
@@ -273,203 +270,51 @@ soliditydefend -f json contracts/ | jq '{
 }'
 ```
 
-## SARIF Output
+## Output Comparison
 
-Static Analysis Results Interchange Format (SARIF) is the industry standard for security analysis tools.
+### Feature Matrix
 
-### SARIF Schema Version
+| Feature | Console | JSON |
+|---------|---------|------|
+| **Human Readable** | ✅ Excellent | ❌ No |
+| **Machine Readable** | ❌ No | ✅ Excellent |
+| **Code Snippets** | ✅ Rich | ✅ Basic |
+| **Colors/Formatting** | ✅ Yes | ❌ No |
+| **Fix Suggestions** | ✅ Text | ✅ Text + Code |
+| **Tool Integration** | ⚡ Limited | ✅ Good |
+| **File Size** | Small | Medium |
+| **Processing Speed** | Fast | Fast |
 
-SolidityDefend outputs SARIF 2.1.0 compliant JSON, ensuring compatibility with major security platforms.
+> **Enterprise Edition**: SARIF output with industry-standard compliance and advanced tool integration is available in SolidityDefend Enterprise.
 
-### Example SARIF Output
+### Format Selection Guidelines
 
-```json
-{
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
-  "version": "2.1.0",
-  "runs": [
-    {
-      "tool": {
-        "driver": {
-          "name": "SolidityDefend",
-          "version": "0.1.0",
-          "informationUri": "https://github.com/soliditydefend/cli",
-          "organization": "SolidityDefend",
-          "shortDescription": {
-            "text": "Static analysis security tool for Solidity smart contracts"
-          },
-          "fullDescription": {
-            "text": "A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy."
-          },
-          "rules": [
-            {
-              "id": "classic-reentrancy",
-              "name": "ClassicReentrancy",
-              "shortDescription": {
-                "text": "Classic Reentrancy"
-              },
-              "fullDescription": {
-                "text": "Detects the classic reentrancy vulnerability where external calls are made before state updates"
-              },
-              "help": {
-                "text": "Ensure state updates occur before external calls to prevent reentrancy attacks",
-                "markdown": "Ensure state updates occur before external calls to prevent reentrancy attacks. See [reentrancy documentation](https://docs.soliditydefend.com/detectors/reentrancy) for details."
-              },
-              "defaultConfiguration": {
-                "level": "error"
-              },
-              "properties": {
-                "category": "reentrancy",
-                "severity": "critical",
-                "confidence": "high",
-                "tags": ["security", "reentrancy", "external-calls"]
-              }
-            }
-          ]
-        }
-      },
-      "results": [
-        {
-          "ruleId": "classic-reentrancy",
-          "ruleIndex": 0,
-          "level": "error",
-          "message": {
-            "text": "External call before state change in withdraw() function",
-            "markdown": "External call before state change in `withdraw()` function. Update balances before external call to prevent reentrancy."
-          },
-          "locations": [
-            {
-              "physicalLocation": {
-                "artifactLocation": {
-                  "uri": "contracts/MyToken.sol",
-                  "uriBaseId": "SRCROOT"
-                },
-                "region": {
-                  "startLine": 45,
-                  "endLine": 45,
-                  "startColumn": 9,
-                  "endColumn": 47,
-                  "snippet": {
-                    "text": "msg.sender.call{value: amount}(\"\");"
-                  }
-                },
-                "contextRegion": {
-                  "startLine": 42,
-                  "endLine": 47,
-                  "snippet": {
-                    "text": "function withdraw() public {\n    uint256 amount = balances[msg.sender];\n    require(amount > 0, \"No balance\");\n    msg.sender.call{value: amount}(\"\");\n    balances[msg.sender] = 0;\n}"
-                  }
-                }
-              }
-            }
-          ],
-          "fixes": [
-            {
-              "description": {
-                "text": "Update state before external call"
-              },
-              "artifactChanges": [
-                {
-                  "artifactLocation": {
-                    "uri": "contracts/MyToken.sol"
-                  },
-                  "replacements": [
-                    {
-                      "deletedRegion": {
-                        "startLine": 45,
-                        "endLine": 46,
-                        "startColumn": 5,
-                        "endColumn": 29
-                      },
-                      "insertedContent": {
-                        "text": "    balances[msg.sender] = 0;\n    msg.sender.call{value: amount}(\"\");"
-                      }
-                    }
-                  ]
-                }
-              ]
-            }
-          ],
-          "properties": {
-            "detector": "classic-reentrancy",
-            "category": "reentrancy",
-            "confidence": "high",
-            "function_name": "withdraw",
-            "external_call_type": "low-level-call"
-          }
-        }
-      ],
-      "columnKind": "utf16CodeUnits",
-      "originalUriBaseIds": {
-        "SRCROOT": {
-          "uri": "file:///workspace/"
-        }
-      }
-    }
-  ]
-}
-```
+#### Console Format - Best For:
+- **Development**: Real-time feedback during coding
+- **Code Review**: Human review of security issues
+- **Learning**: Understanding security vulnerabilities
+- **Terminal Workflows**: Command-line focused development
 
-### SARIF Features
-
-#### Tool Information
-- **Tool Metadata**: Name, version, organization
-- **Rule Definitions**: Complete rule descriptions and help
-- **Configuration**: Default severity levels and settings
-
-#### Result Details
-- **Location Information**: Precise file, line, and column positions
-- **Code Snippets**: Both the specific issue and surrounding context
-- **Fix Suggestions**: Automated fix descriptions and code changes
-- **Rich Messages**: Both plain text and Markdown formatting
-
-#### Integration Benefits
-- **GitHub Integration**: Automatic security tab population
-- **IDE Support**: Built-in SARIF viewers in VS Code, IntelliJ
-- **CI/CD Compatibility**: Jenkins, Azure DevOps, GitLab CI
-- **Security Platforms**: Compatibility with enterprise security tools
-
-### SARIF Processing
-
-#### Upload to GitHub Security Tab
-```yaml
-# GitHub Actions
-- name: Upload SARIF to GitHub
-  uses: github/codeql-action/upload-sarif@v2
-  with:
-    sarif_file: security-report.sarif
-```
-
-#### Convert SARIF to Other Formats
-```bash
-# Convert SARIF to CSV (using sarif-om)
-sarif-om convert -i security.sarif -o security.csv
-
-# Convert SARIF to HTML report
-sarif-html -i security.sarif -o security.html
-```
-
-#### Filter SARIF Results
-```bash
-# Extract only critical/high severity issues
-jq '.runs[0].results[] | select(.level == "error")' security.sarif
-```
+#### JSON Format - Best For:
+- **CI/CD Pipelines**: Automated security testing
+- **Custom Tooling**: Building custom analysis tools
+- **Data Processing**: Statistical analysis of security trends
+- **API Integration**: Programmatic access to results
 
 ## Output Comparison
 
 ### Feature Matrix
 
-| Feature | Console | JSON | SARIF |
-|---------|---------|------|-------|
-| **Human Readable** | ✅ Excellent | ❌ No | ⚡ Limited |
-| **Machine Readable** | ❌ No | ✅ Excellent | ✅ Excellent |
-| **Code Snippets** | ✅ Rich | ✅ Basic | ✅ Rich |
-| **Colors/Formatting** | ✅ Yes | ❌ No | ❌ No |
-| **Fix Suggestions** | ✅ Text | ✅ Text + Code | ✅ Structured |
-| **Tool Integration** | ⚡ Limited | ✅ Good | ✅ Excellent |
-| **Industry Standard** | ❌ No | ❌ No | ✅ Yes |
-| **File Size** | Small | Medium | Large |
-| **Processing Speed** | Fast | Fast | Medium |
+| Feature | Console | JSON |
+|---------|---------|------|
+| **Human Readable** | ✅ Excellent | ❌ No |
+| **Machine Readable** | ❌ No | ✅ Excellent |
+| **Code Snippets** | ✅ Rich | ✅ Basic |
+| **Colors/Formatting** | ✅ Yes | ❌ No |
+| **Fix Suggestions** | ✅ Text | ✅ Text + Code |
+| **Tool Integration** | ⚡ Limited | ✅ Good |
+| **File Size** | Small | Medium |
+| **Processing Speed** | Fast | Fast |
 
 ### Use Case Recommendations
 
@@ -485,17 +330,11 @@ jq '.runs[0].results[] | select(.level == "error")' security.sarif
 - **Data Processing**: Statistical analysis of security trends
 - **API Integration**: Programmatic access to results
 
-#### SARIF Format - Best For:
-- **Enterprise Integration**: Large organization security workflows
-- **Tool Interoperability**: Multi-tool security analysis
-- **Compliance Reporting**: Standardized security documentation
-- **Platform Integration**: GitHub, Azure DevOps, enterprise platforms
-
 ## Integration Examples
 
 ### CI/CD Integration
 
-#### GitHub Actions with Multiple Formats
+#### GitHub Actions
 ```yaml
 name: Security Analysis
 on: [push, pull_request]
@@ -521,15 +360,6 @@ jobs:
     # JSON for processing
     - name: Run Analysis (JSON)
       run: soliditydefend -f json -o security.json contracts/
-
-    # SARIF for GitHub Security tab
-    - name: Run Analysis (SARIF)
-      run: soliditydefend -f sarif -o security.sarif contracts/
-
-    - name: Upload SARIF
-      uses: github/codeql-action/upload-sarif@v2
-      with:
-        sarif_file: security.sarif
 
     - name: Process Results
       run: |
@@ -562,10 +392,9 @@ pipeline {
         stage('Security Analysis') {
             steps {
                 script {
-                    // Run analysis in all formats
+                    // Run analysis in multiple formats
                     sh 'soliditydefend -f console contracts/ > console-report.txt'
                     sh 'soliditydefend -f json -o security.json contracts/'
-                    sh 'soliditydefend -f sarif -o security.sarif contracts/'
 
                     // Parse JSON results
                     def results = readJSON file: 'security.json'
@@ -573,10 +402,7 @@ pipeline {
                     def high = results.summary.by_severity.high
 
                     // Archive reports
-                    archiveArtifacts artifacts: '*.txt,*.json,*.sarif'
-
-                    // Publish SARIF
-                    publishSarif results: [file: 'security.sarif']
+                    archiveArtifacts artifacts: '*.txt,*.json'
 
                     // Fail if critical/high issues
                     if (critical > 0 || high > 0) {
@@ -618,13 +444,6 @@ pipeline {
           "message": 5
         }
       }
-    },
-    {
-      "label": "SolidityDefend: SARIF Analysis",
-      "type": "shell",
-      "command": "soliditydefend",
-      "args": ["-f", "sarif", "-o", "security.sarif", "${workspaceFolder}/contracts/"],
-      "group": "build"
     }
   ]
 }
@@ -760,9 +579,6 @@ export SOLIDITYDEFEND_JSON_PRETTY=true         # Pretty-print JSON
 export SOLIDITYDEFEND_JSON_SNIPPETS=true       # Include code snippets
 export SOLIDITYDEFEND_JSON_FIXES=true          # Include fix suggestions
 
-# SARIF output customization
-export SOLIDITYDEFEND_SARIF_MINIMAL=true       # Minimal SARIF output
-export SOLIDITYDEFEND_SARIF_FIXES=true         # Include fix suggestions
 ```
 
 ### Output Filtering
@@ -800,10 +616,6 @@ include_snippets = true
 include_fixes = true
 include_metadata = true
 
-[output.sarif]
-include_fixes = true
-minimal = false
-organization = "MyCompany"
 ```
 
 ## Best Practices
@@ -812,27 +624,21 @@ organization = "MyCompany"
 
 1. **Development Phase**: Use console format for immediate feedback
 2. **Code Review**: Use console format for human-readable issues
-3. **CI/CD Pipelines**: Use JSON for processing, SARIF for integration
+3. **CI/CD Pipelines**: Use JSON for processing and automation
 4. **Documentation**: Use console output in documentation and tutorials
-5. **Compliance**: Use SARIF for regulatory and enterprise requirements
 
 ### Performance Considerations
 
 - **Console**: Fastest rendering, smallest output
 - **JSON**: Fast processing, medium file size
-- **SARIF**: More processing overhead, largest files
 
 ### Storage and Archival
 
 ```bash
-# Compress SARIF files for archival
-gzip security.sarif
-
 # Store multiple formats
 mkdir reports/$(date +%Y-%m-%d)
 soliditydefend -f console contracts/ > reports/$(date +%Y-%m-%d)/console.txt
 soliditydefend -f json -o reports/$(date +%Y-%m-%d)/security.json contracts/
-soliditydefend -f sarif -o reports/$(date +%Y-%m-%d)/security.sarif contracts/
 ```
 
 ## See Also
@@ -840,4 +646,3 @@ soliditydefend -f sarif -o reports/$(date +%Y-%m-%d)/security.sarif contracts/
 - [Usage Guide](USAGE.md) - How to use different output formats effectively
 - [CLI Reference](CLI.md) - Command-line options for output control
 - [Integration Examples](USAGE.md#integration-examples) - Real-world integration patterns
-- [SARIF Specification](https://docs.oasis-open.org/sarif/sarif/v2.1.0/sarif-v2.1.0.html) - Official SARIF documentation
