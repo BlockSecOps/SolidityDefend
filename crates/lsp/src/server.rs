@@ -97,6 +97,25 @@ impl SolidityDefendLanguageServer {
 
     /// Analyze a document and return findings
     async fn analyze_document(&self, uri: &Url, content: &str) -> Result<Vec<Finding>> {
+        // Perform all arena-dependent analysis synchronously first
+        let findings_result = self.analyze_document_sync(uri, content);
+
+        // Extract the findings count for logging before matching
+        let findings_count = match &findings_result {
+            Ok(findings) => findings.len(),
+            Err(_) => 0,
+        };
+
+        // Now we can do async operations safely
+        self.client
+            .log_message(MessageType::INFO, format!("Analysis completed for {} with {} findings", uri, findings_count))
+            .await;
+
+        findings_result
+    }
+
+    /// Synchronous document analysis to avoid Send issues with arena-allocated AST
+    fn analyze_document_sync(&self, uri: &Url, content: &str) -> Result<Vec<Finding>> {
         use ast::AstArena;
         use parser::Parser;
         use detectors::types::AnalysisContext;
@@ -126,10 +145,6 @@ impl SolidityDefendLanguageServer {
             let result = self.detector_registry.run_analysis(&ctx)?;
             all_findings.extend(result.findings);
         }
-
-        self.client
-            .log_message(MessageType::INFO, format!("Analysis completed for {} with {} findings", uri, all_findings.len()))
-            .await;
 
         Ok(all_findings)
     }

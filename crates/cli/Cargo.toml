@@ -16,6 +16,7 @@ parser = { path = "../parser" }
 db = { path = "../db" }
 ast = { path = "../ast" }
 semantic = { path = "../semantic" }
+lsp = { path = "../lsp" }
 clap.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
@@ -23,3 +24,4 @@ walkdir.workspace = true
 glob.workspace = true
 anyhow.workspace = true
 tracing.workspace = true
+tokio = { version = "1.0", features = ["full"] }
