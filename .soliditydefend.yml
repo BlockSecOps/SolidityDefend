@@ -1,198 +1,40 @@
-# SolidityDefend Configuration Template
-version: "1.0"
-
-# Analysis configuration
-analysis:
-  # Analysis depth: fast, normal, thorough, audit
-  depth: "normal"
-
-  # Maximum time per contract in seconds
-  timeout: 120
-
-  # Enable incremental analysis
-  incremental: true
-
-  # Thread count (0 = auto-detect)
-  threads: 0
-
-# Severity configuration
-severity:
-  # Fail CI/CD on these severities
-  fail_on: ["critical", "high"]
-
-  # Show warnings for these severities
-  warn_on: ["medium"]
-
-  # Only report findings above this confidence level
-  min_confidence: "medium"
-
-# Rule configuration
-rules:
-  # Enable specific detector categories
-  enabled:
-    # Access control vulnerabilities
-    - "access-control-missing"
-    - "access-control-unprotected-init"
-    - "access-control-default-visibility"
-
-    # Reentrancy vulnerabilities
-    - "reentrancy-classic"
-    - "reentrancy-readonly"
-    - "reentrancy-cross-function"
-
-    # Oracle manipulation
-    - "oracle-single-source"
-    - "oracle-price-manipulation"
-    - "oracle-missing-validation"
-
-    # Flash loan vulnerabilities
-    - "flashloan-price-manipulation"
-    - "flashloan-insufficient-validation"
-
-    # External call security
-    - "external-unchecked-calls"
-    - "external-dangerous-delegatecall"
-    - "external-gas-griefing"
-
-    # Logic errors
-    - "logic-division-before-multiplication"
-    - "logic-state-machine-errors"
-    - "logic-timestamp-dependence"
-
-    # Input validation
-    - "validation-zero-address"
-    - "validation-array-bounds"
-    - "validation-parameter-consistency"
-
-    # MEV vulnerabilities
-    - "mev-sandwich-attack"
-    - "mev-front-running"
-    - "mev-slippage-tolerance"
-
-    # Authentication issues
-    - "auth-tx-origin"
-    - "auth-missing-modifiers"
-
-  # Disable specific detectors
-  disabled:
-    # Gas optimization rules (often too noisy)
-    - "gas-optimization-*"
-
-    # Style-related rules for initial development
-    - "style-*"
-
-  # Custom rule configuration
-  custom_rules:
-    # Path to custom detector implementations
-    path: "./custom-detectors/"
-
-    # Enable custom rules
-    enabled: false
-
-# Path configuration
-paths:
-  # Include these paths in analysis
-  include:
-    - "contracts/**/*.sol"
-    - "src/**/*.sol"
-    - "lib/**/*.sol"
-
-  # Exclude these paths from analysis
-  exclude:
-    - "test/**"
-    - "tests/**"
-    - "mock/**"
-    - "mocks/**"
-    - "node_modules/**"
-    - "cache/**"
-    - "artifacts/**"
-    - "build/**"
-    - "out/**"
-
-# Output configuration
-output:
-  # Output formats: console, json, sarif, html
-  formats: ["console"]
-
-  # Output files for each format
-  files:
-    sarif: "security-report.sarif"
-    json: "security-report.json"
-    html: "security-report.html"
-
-  # Console output configuration
-  console:
-    # Color output: always, never, auto
-    color: "auto"
-
-    # Show fix suggestions
-    show_fixes: true
-
-    # Show confidence scores
-    show_confidence: true
-
-    # Group findings by severity
-    group_by_severity: true
-
-    # Show summary statistics
-    show_summary: true
-
-# Caching configuration
+general:
+  min_severity: Info
+  verbose: false
+  quiet: false
+  include_patterns:
+  - '**/*.sol'
+  exclude_patterns:
+  - '**/node_modules/**'
+  - '**/test/**'
+  - '**/tests/**'
+  - '**/.git/**'
+  max_file_size: 10485760
+detectors:
+  min_severity: Info
+  min_confidence: Low
+  enabled_categories: []
+  disabled_detectors: []
+  enabled_detectors: []
+  detector_timeout: 30
+  fail_fast: false
+  custom_settings: {}
 cache:
-  # Enable persistent caching
   enabled: true
-
-  # Cache directory
-  directory: ".soliditydefend-cache"
-
-  # Cache size limit in MB
-  size_limit: 500
-
-  # Cache TTL in hours
-  ttl: 24
-
-# Integration configuration
-integrations:
-  # GitHub integration
-  github:
-    # Create GitHub issues for findings
-    create_issues: false
-
-    # Labels to add to issues
-    issue_labels: ["security", "solidity"]
-
-  # Slack notifications
-  slack:
-    # Webhook URL (set via environment variable)
-    webhook_url: ""
-
-    # Only notify on new findings
-    notify_on_new: true
-
-    # Minimum severity for notifications
-    min_severity: "high"
-
-# Performance tuning
+  max_memory_mb: 256
+  max_entries: 10000
+  cache_dir: null
+  persistent: true
+  ttl_hours: 1
+output:
+  format: console
+  colors: true
+  show_fixes: true
+  show_snippets: true
+  snippet_lines: 3
+  sort_by_severity: true
 performance:
-  # Memory limit in MB
-  memory_limit: 2048
-
-  # Enable parallel processing
-  parallel: true
-
-  # Batch size for processing multiple files
+  max_threads: 8
+  parallel_analysis: true
   batch_size: 10
-
-# Development configuration
-development:
-  # Watch mode for continuous analysis
-  watch: false
-
-  # Watch file patterns
-  watch_patterns:
-    - "**/*.sol"
-
-  # Ignore file patterns during watch
-  watch_ignore:
-    - "test/**"
-    - "cache/**"
+  memory_limit_mb: 512
