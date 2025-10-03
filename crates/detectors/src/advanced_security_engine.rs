@@ -248,11 +248,11 @@ impl AdvancedSecurityEngine {
         let mut findings = Vec::new();
 
         let flash_loan_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("flash-loan"))
+            .filter(|f| f.finding.detector_id.to_string().contains("flash-loan"))
             .collect();
 
         let mev_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("mev"))
+            .filter(|f| f.finding.detector_id.to_string().contains("mev"))
             .collect();
 
         if !flash_loan_findings.is_empty() && !mev_findings.is_empty() {
@@ -343,11 +343,11 @@ impl AdvancedSecurityEngine {
         let mut findings = Vec::new();
 
         let governance_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("governance"))
+            .filter(|f| f.finding.detector_id.to_string().contains("governance"))
             .collect();
 
         let flash_loan_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("flash-loan"))
+            .filter(|f| f.finding.detector_id.to_string().contains("flash-loan"))
             .collect();
 
         if !governance_findings.is_empty() && !flash_loan_findings.is_empty() {
@@ -393,11 +393,11 @@ impl AdvancedSecurityEngine {
         let mut findings = Vec::new();
 
         let liquidity_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("liquidity"))
+            .filter(|f| f.finding.detector_id.to_string().contains("liquidity"))
             .collect();
 
         let price_findings: Vec<_> = result.defi_findings.iter()
-            .filter(|f| f.finding.detector.contains("price"))
+            .filter(|f| f.finding.detector_id.to_string().contains("price"))
             .collect();
 
         if !liquidity_findings.is_empty() && !price_findings.is_empty() {
@@ -475,7 +475,7 @@ impl AdvancedSecurityEngine {
         // Identify high-risk components
         for finding in &result.defi_findings {
             if finding.finding.severity == Severity::Critical || finding.finding.severity == Severity::High {
-                high_risk_components.insert(finding.finding.file_path.clone());
+                high_risk_components.insert(finding.finding.primary_location.file.clone());
             }
         }
 
