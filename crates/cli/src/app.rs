@@ -14,10 +14,95 @@ use semantic::symbols::SymbolTable;
 use cache::{CacheManager, CacheConfig, CacheKey};
 use cache::analysis_cache::{CachedAnalysisResult, CachedFinding, CachedLocation, AnalysisMetadata, AnalysisStats};
 
+/// Standard exit codes for CI/CD integration
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ExitCode {
+    Success = 0,           // No issues found
+    SecurityIssues = 1,    // Security issues found
+    AnalysisError = 2,     // Analysis failed (file errors, parsing errors)
+    ConfigError = 3,       // Configuration errors
+    InternalError = 4,     // Internal tool errors
+}
+
+impl ExitCode {
+    /// Convert to process exit code
+    pub fn as_code(&self) -> i32 {
+        *self as i32
+    }
+
+    /// Exit the process with this code
+    pub fn exit(&self) -> ! {
+        std::process::exit(self.as_code())
+    }
+}
+
+/// Exit code configuration for different CI/CD scenarios
+#[derive(Debug, Clone)]
+pub struct ExitCodeConfig {
+    /// Exit with error on any finding above this severity
+    pub error_on_severity: Option<Severity>,
+    /// Exit with error only on high/critical findings (default behavior)
+    pub error_on_high_severity: bool,
+    /// Exit with error if any files fail to analyze
+    pub error_on_analysis_failure: bool,
+    /// Exit with error if no files were successfully analyzed
+    pub error_on_no_files: bool,
+}
+
+impl Default for ExitCodeConfig {
+    fn default() -> Self {
+        Self {
+            error_on_severity: None,
+            error_on_high_severity: true,
+            error_on_analysis_failure: true,
+            error_on_no_files: false,
+        }
+    }
+}
+
+/// Analysis result summary for exit code determination
+#[derive(Debug, Default)]
+pub struct AnalysisSummary {
+    pub total_files: usize,
+    pub successful_files: usize,
+    pub failed_files: usize,
+    pub findings_by_severity: HashMap<Severity, usize>,
+    pub total_findings: usize,
+}
+
+impl AnalysisSummary {
+    pub fn add_finding(&mut self, severity: &Severity) {
+        *self.findings_by_severity.entry(*severity).or_insert(0) += 1;
+        self.total_findings += 1;
+    }
+
+    pub fn has_findings_at_or_above(&self, severity: &Severity) -> bool {
+        match severity {
+            Severity::Info => self.total_findings > 0,
+            Severity::Low => {
+                self.findings_by_severity.get(&Severity::Low).unwrap_or(&0) > &0
+                || self.has_findings_at_or_above(&Severity::Medium)
+            },
+            Severity::Medium => {
+                self.findings_by_severity.get(&Severity::Medium).unwrap_or(&0) > &0
+                || self.has_findings_at_or_above(&Severity::High)
+            },
+            Severity::High => {
+                self.findings_by_severity.get(&Severity::High).unwrap_or(&0) > &0
+                || self.has_findings_at_or_above(&Severity::Critical)
+            },
+            Severity::Critical => {
+                self.findings_by_severity.get(&Severity::Critical).unwrap_or(&0) > &0
+            },
+        }
+    }
+}
+
 pub struct CliApp {
     registry: DetectorRegistry,
     output_manager: OutputManager,
     cache_manager: CacheManager,
+    exit_config: ExitCodeConfig,
 }
 
 impl CliApp {
@@ -29,6 +114,7 @@ impl CliApp {
             registry: DetectorRegistry::with_all_detectors(),
             output_manager: OutputManager::new(),
             cache_manager,
+            exit_config: ExitCodeConfig::default(),
         })
     }
 
@@ -102,6 +188,31 @@ impl CliApp {
                     .help("Start Language Server Protocol server")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("exit-code-level")
+                    .long("exit-code-level")
+                    .help("Exit with non-zero code when findings at or above this severity are found")
+                    .value_parser(["info", "low", "medium", "high", "critical"])
+                    .value_name("LEVEL"),
+            )
+            .arg(
+                Arg::new("no-exit-code")
+                    .long("no-exit-code")
+                    .help("Always exit with code 0, regardless of findings (useful for CI info gathering)")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("exit-on-analysis-error")
+                    .long("exit-on-analysis-error")
+                    .help("Exit with error code if any files fail to analyze (default: true)")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("no-exit-on-analysis-error")
+                    .long("no-exit-on-analysis-error")
+                    .help("Don't exit with error code on analysis failures")
+                    .action(ArgAction::SetTrue),
+            )
             .get_matches();
 
         if matches.get_flag("list-detectors") {
@@ -147,7 +258,38 @@ impl CliApp {
         let output_file = matches.get_one::<String>("output").map(PathBuf::from);
         let use_cache = !matches.get_flag("no-cache");
 
-        self.analyze_files(&files, format, output_file, min_severity, use_cache)
+        // Configure exit code behavior
+        let mut exit_config = self.exit_config.clone();
+
+        // Handle --no-exit-code flag
+        if matches.get_flag("no-exit-code") {
+            exit_config.error_on_severity = None;
+            exit_config.error_on_high_severity = false;
+            exit_config.error_on_analysis_failure = false;
+        }
+
+        // Handle --exit-code-level flag
+        if let Some(level) = matches.get_one::<String>("exit-code-level") {
+            let severity = match level.as_str() {
+                "info" => Severity::Info,
+                "low" => Severity::Low,
+                "medium" => Severity::Medium,
+                "high" => Severity::High,
+                "critical" => Severity::Critical,
+                _ => Severity::High, // fallback
+            };
+            exit_config.error_on_severity = Some(severity);
+            exit_config.error_on_high_severity = false; // Use custom severity instead
+        }
+
+        // Handle analysis error flags
+        if matches.get_flag("exit-on-analysis-error") {
+            exit_config.error_on_analysis_failure = true;
+        } else if matches.get_flag("no-exit-on-analysis-error") {
+            exit_config.error_on_analysis_failure = false;
+        }
+
+        self.analyze_files(&files, format, output_file, min_severity, use_cache, exit_config)
     }
 
     fn list_detectors(&self) -> Result<()> {
@@ -257,25 +399,35 @@ impl CliApp {
         output_file: Option<PathBuf>,
         min_severity: Severity,
         use_cache: bool,
+        exit_config: ExitCodeConfig,
     ) -> Result<()> {
         println!("Starting analysis...");
         let start_time = Instant::now();
 
+        let mut analysis_summary = AnalysisSummary::default();
         let mut all_findings = Vec::new();
-        let mut total_files = 0;
 
         for file_path in files {
             println!("Analyzing: {}", file_path);
-            total_files += 1;
+            analysis_summary.total_files += 1;
 
             match self.analyze_file(file_path, min_severity, use_cache) {
                 Ok((findings, from_cache)) => {
                     let cache_indicator = if from_cache { " (cached)" } else { "" };
                     println!("  Found {} issues{}", findings.len(), cache_indicator);
+
+                    analysis_summary.successful_files += 1;
+
+                    // Track findings by severity
+                    for finding in &findings {
+                        analysis_summary.add_finding(&finding.severity);
+                    }
+
                     all_findings.extend(findings);
                 }
                 Err(e) => {
                     eprintln!("  Error analyzing {}: {}", file_path, e);
+                    analysis_summary.failed_files += 1;
                 }
             }
         }
@@ -301,20 +453,61 @@ impl CliApp {
         }
 
         println!("\nAnalysis complete:");
-        println!("  Files analyzed: {}", total_files);
-        println!("  Issues found: {}", all_findings.len());
+        println!("  Files analyzed: {}", analysis_summary.total_files);
+        println!("  Successful: {}", analysis_summary.successful_files);
+        if analysis_summary.failed_files > 0 {
+            println!("  Failed: {}", analysis_summary.failed_files);
+        }
+        println!("  Issues found: {}", analysis_summary.total_findings);
         println!("  Time taken: {:.2}s", duration.as_secs_f64());
 
-        // Exit with error code if high severity issues found
-        let has_high_severity = all_findings.iter().any(|f|
-            matches!(f.severity, Severity::High | Severity::Critical)
-        );
+        // Determine exit code based on configuration
+        let exit_code = self.determine_exit_code(&analysis_summary, &exit_config);
 
-        if has_high_severity {
-            std::process::exit(1);
+        if exit_code != ExitCode::Success {
+            println!("\nExiting with code {} due to:", exit_code.as_code());
+            if analysis_summary.failed_files > 0 && exit_config.error_on_analysis_failure {
+                println!("  - {} file(s) failed to analyze", analysis_summary.failed_files);
+            }
+            if let Some(severity) = &exit_config.error_on_severity {
+                if analysis_summary.has_findings_at_or_above(severity) {
+                    println!("  - Found {} or higher severity issues", severity);
+                }
+            } else if exit_config.error_on_high_severity &&
+                     analysis_summary.has_findings_at_or_above(&Severity::High) {
+                println!("  - Found high or critical severity issues");
+            }
+            exit_code.exit();
         }
 
         Ok(())
+    }
+
+    /// Determine the appropriate exit code based on analysis results and configuration
+    fn determine_exit_code(&self, summary: &AnalysisSummary, config: &ExitCodeConfig) -> ExitCode {
+        // Check for analysis failures first
+        if config.error_on_analysis_failure && summary.failed_files > 0 {
+            return ExitCode::AnalysisError;
+        }
+
+        // Check if no files were successfully analyzed
+        if config.error_on_no_files && summary.successful_files == 0 {
+            return ExitCode::AnalysisError;
+        }
+
+        // Check for security issues based on severity configuration
+        if let Some(severity) = &config.error_on_severity {
+            if summary.has_findings_at_or_above(severity) {
+                return ExitCode::SecurityIssues;
+            }
+        } else if config.error_on_high_severity {
+            // Default behavior: exit on high/critical issues
+            if summary.has_findings_at_or_above(&Severity::High) {
+                return ExitCode::SecurityIssues;
+            }
+        }
+
+        ExitCode::Success
     }
 
     fn analyze_file(&self, file_path: &str, min_severity: Severity, use_cache: bool) -> Result<(Vec<Finding>, bool)> {
