@@ -17,7 +17,7 @@ Complete reference for all 17 security detectors available in SolidityDefend.
 
 ## Overview
 
-SolidityDefend includes 17 production-ready security detectors covering the most critical vulnerability classes in smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues.
+SolidityDefend includes 17 production-ready security detectors covering the most critical vulnerability classes in smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been fully validated and is currently functional with standardized Finding format and CWE mappings.
 
 ### Detector Statistics
 
@@ -28,7 +28,8 @@ SolidityDefend includes 17 production-ready security detectors covering the most
 | Input Validation | 3 | Low - Medium |
 | Logic & State Management | 2 | Medium |
 | Oracle & Price Security | 2 | Medium - High |
-| Flash Loan & MEV Protection | 3 | Medium - High |
+| Flash Loan & MEV Protection | 4 | Medium - Critical |
+| DeFi Protocol Security | 3 | Medium - Critical |
 | External Integration | 2 | Medium |
 
 **Total: 17 detectors**

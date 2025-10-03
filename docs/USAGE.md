@@ -1,6 +1,6 @@
 # Usage Guide
 
-This comprehensive guide provides examples and tutorials for using SolidityDefend effectively.
+This comprehensive guide provides examples and tutorials for using SolidityDefend effectively. All core detector functionality is operational, including DeFi security analysis, MEV protection, and standard vulnerability detection.
 
 ## Table of Contents
 
