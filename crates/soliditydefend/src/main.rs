@@ -15,6 +15,6 @@ fn main() -> Result<()> {
         .init();
 
     // Run the CLI application
-    let app = CliApp::new();
+    let app = CliApp::new()?;
     app.run()
 }

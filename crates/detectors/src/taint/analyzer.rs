@@ -66,17 +66,17 @@ impl TaintAnalyzer {
             };
 
             // Check for taint sources
-            if let Some(source) = TaintUtils::is_taint_source(&location, context.source) {
+            if let Some(source) = TaintUtils::is_taint_source(&location, &context.source) {
                 self.taint_sources.insert(location.clone(), source);
             }
 
             // Check for taint sinks
-            if let Some(sink) = TaintUtils::is_taint_sink(&location, context.source) {
+            if let Some(sink) = TaintUtils::is_taint_sink(&location, &context.source) {
                 self.taint_sinks.insert(location.clone(), sink);
             }
 
             // Check for sanitizers
-            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, context.source) {
+            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, &context.source) {
                 self.sanitizers.insert(location.clone(), sanitizer);
             }
 
@@ -285,8 +285,8 @@ impl TaintAnalyzer {
     fn get_current_function(&self, context: &AnalysisContext, line_number: usize) -> String {
         // Simplified - would need proper AST parsing
         for func in &context.contract.functions {
-            if func.line_number <= line_number {
-                return func.name.clone();
+            if func.location.start().line() <= line_number {
+                return func.name.to_string();
             }
         }
         "unknown".to_string()
@@ -367,7 +367,7 @@ impl TaintAnalyzer {
         }
     }
 
-    fn find_outgoing_edges(&self, graph: &DataFlowGraph, location: &SourceLocation) -> Vec<&DataFlowEdge> {
+    fn find_outgoing_edges<'a>(&self, graph: &'a DataFlowGraph, location: &SourceLocation) -> Vec<&'a DataFlowEdge> {
         let node_id = format!("source_{}_{}_{}", location.file, location.line, location.column);
         graph.edges.iter()
             .filter(|edge| edge.from == node_id)
@@ -412,6 +412,8 @@ impl TaintAnalyzer {
             TaintSource::BlockHash => TaintType::TimeDependent,
             TaintSource::ExternalCall => TaintType::ExternalCall,
             TaintSource::Oracle => TaintType::ExternalData,
+            TaintSource::UserInput => TaintType::UserInput,
+            TaintSource::Storage => TaintType::UntrustedStorage,
             TaintSource::Custom(name) => TaintType::Custom(name.clone()),
         }
     }

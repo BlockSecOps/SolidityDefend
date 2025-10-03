@@ -20,7 +20,7 @@ use crate::types::{AnalysisContext, Severity};
 use std::collections::{HashMap, HashSet};
 
 /// Represents tainted data in the analysis
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TaintedData {
     pub source: TaintSource,
     pub current_location: SourceLocation,
@@ -30,7 +30,7 @@ pub struct TaintedData {
 }
 
 /// Source location in the code
-#[derive(Debug, Clone, PartialEq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct SourceLocation {
     pub file: String,
     pub line: usize,
@@ -272,7 +272,7 @@ impl TaintUtils {
         path: &[PropagationStep],
         sanitizers: &[TaintSanitizer]
     ) -> f64 {
-        let mut fp_likelihood = 0.1; // Base false positive rate
+        let mut fp_likelihood: f64 = 0.1; // Base false positive rate
 
         // Increase likelihood if path is very long
         if path.len() > 10 {
