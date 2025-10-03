@@ -58,7 +58,7 @@ pub trait Detector: Send + Sync {
 }
 
 /// Categories of vulnerability detectors
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
 pub enum DetectorCategory {
     /// Access control and authorization issues
     AccessControl,

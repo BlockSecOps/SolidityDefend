@@ -26,7 +26,8 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - Rich formatting with fix suggestions
 
 🛠️ **Developer Experience**
-- Full-featured command-line interface
+- Full-featured command-line interface with YAML configuration support
+- Comprehensive configuration system (.soliditydefend.yml)
 - Language Server Protocol (LSP) framework for IDE integration
 - Docker containerization ready
 - Comprehensive test infrastructure with 150+ tests covering all pipeline components
