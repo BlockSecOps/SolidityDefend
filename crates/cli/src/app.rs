@@ -39,7 +39,7 @@ impl CliApp {
             .arg(
                 Arg::new("files")
                     .help("Solidity files to analyze")
-                    .required_unless_present_any(["list-detectors", "version-info"])
+                    .required_unless_present_any(["list-detectors", "version-info", "lsp"])
                     .num_args(1..)
                     .value_name("FILE"),
             )
@@ -96,6 +96,12 @@ impl CliApp {
                     .help("Show cache statistics")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("lsp")
+                    .long("lsp")
+                    .help("Start Language Server Protocol server")
+                    .action(ArgAction::SetTrue),
+            )
             .get_matches();
 
         if matches.get_flag("list-detectors") {
@@ -112,6 +118,10 @@ impl CliApp {
 
         if matches.get_flag("cache-stats") {
             return self.show_cache_stats();
+        }
+
+        if matches.get_flag("lsp") {
+            return self.start_lsp_server();
         }
 
         let files: Vec<&str> = matches.get_many::<String>("files")
@@ -493,6 +503,18 @@ impl CliApp {
         }
 
         finding
+    }
+
+    fn start_lsp_server(&self) -> Result<()> {
+        println!("Starting SolidityDefend Language Server...");
+
+        // Use tokio to run the async LSP server
+        let rt = tokio::runtime::Runtime::new()?;
+        rt.block_on(async {
+            lsp::start_lsp_server().await
+        })?;
+
+        Ok(())
     }
 }
 
