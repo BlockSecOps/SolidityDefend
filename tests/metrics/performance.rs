@@ -9,13 +9,8 @@ use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 
-// Re-export performance testing framework
-pub use crate::tests::performance::{
-    PerformanceComparison, BenchmarkConfig, PerformanceMetrics, ComparisonResult,
-    RegressionTester, RegressionConfig, RegressionResult,
-    ScalabilityTester, ScalabilityConfig, ScalabilityResult,
-    PerformanceTestSuite, PerformanceTestConfig,
-};
+// Performance testing framework types are defined in this module
+// TODO: Re-export when additional performance modules are implemented
 
 /// Performance metrics specifically for accuracy measurement integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -265,8 +260,6 @@ impl PerformanceBenchmarker {
                                     .to_string(),
                             };
                             vulnerabilities.push(vuln);
-                        }
-                    }
                 }
             }
         }
