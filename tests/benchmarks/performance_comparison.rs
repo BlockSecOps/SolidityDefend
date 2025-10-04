@@ -367,7 +367,7 @@ mod tests {
     #[test]
     fn test_benchmark_initialization() {
         let benchmark = PerformanceBenchmark::new();
-        assert_eq!(benchmark.baseline_tool, "soliditydefend");
+        assert_eq!(benchmark._baseline_tool, "soliditydefend");
         assert!(!benchmark.comparison_tools.is_empty());
         assert!(!benchmark.test_datasets.is_empty());
     }
