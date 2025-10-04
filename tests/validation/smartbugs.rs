@@ -342,6 +342,21 @@ contract IntegerOverflow {
 
     /// Run SolidityDefend on all test cases
     pub async fn run_validation(&self) -> Result<SmartBugsResults, Box<dyn std::error::Error>> {
+        // Check if SolidityDefend binary exists before running any tests
+        let binary_paths = [
+            "./target/release/soliditydefend",
+            "./target/debug/soliditydefend",
+            "soliditydefend",
+        ];
+
+        let binary_exists = binary_paths.iter().any(|path| {
+            std::path::Path::new(path).exists()
+        });
+
+        if !binary_exists {
+            return Err("SolidityDefend binary not found".into());
+        }
+
         let mut results = Vec::new();
         let mut category_stats: HashMap<SmartBugsCategory, (usize, usize, usize, usize)> = HashMap::new();
 
@@ -489,9 +504,23 @@ contract IntegerOverflow {
 
     /// Execute SolidityDefend binary on a source file
     async fn execute_soliditydefend(&self, source_file: &Path) -> Result<Vec<DetectedVulnerability>, String> {
-        // This would execute the actual SolidityDefend binary
-        // For now, simulate some detections based on the test case
+        // Check if the actual SolidityDefend binary exists
+        let binary_paths = [
+            "./target/release/soliditydefend",
+            "./target/debug/soliditydefend",
+            "soliditydefend",
+        ];
 
+        let binary_exists = binary_paths.iter().any(|path| {
+            std::path::Path::new(path).exists()
+        });
+
+        if !binary_exists {
+            return Err("SolidityDefend binary not found".to_string());
+        }
+
+        // If binary exists, try to execute it (this would be real implementation)
+        // For now, simulate some detections based on the test case
         let source_content = fs::read_to_string(source_file).map_err(|e| e.to_string())?;
         let mut detected = Vec::new();
 
@@ -508,7 +537,9 @@ contract IntegerOverflow {
             });
         }
 
-        // Simulate access control detection
+        // TODO: Implement access control detection
+        // Disabled until proper implementation
+        /*
         if source_content.contains("function withdraw") && !source_content.contains("onlyOwner") &&
            !source_content.contains("require(msg.sender == owner") {
             detected.push(DetectedVulnerability {
@@ -521,8 +552,11 @@ contract IntegerOverflow {
                 function_name: Some("withdraw".to_string()),
             });
         }
+        */
 
-        // Simulate arithmetic overflow detection
+        // TODO: Implement arithmetic overflow detection
+        // Disabled until proper implementation
+        /*
         if source_content.contains("balances[msg.sender] - amount") &&
            source_content.contains("pragma solidity ^0.4") {
             detected.push(DetectedVulnerability {
@@ -535,6 +569,7 @@ contract IntegerOverflow {
                 function_name: Some("transfer".to_string()),
             });
         }
+        */
 
         Ok(detected)
     }
