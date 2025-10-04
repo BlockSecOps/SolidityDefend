@@ -31,6 +31,7 @@ pub struct VersionInfo {
     pub api_version: String,
 }
 
+#[allow(dead_code)]
 impl VersionInfo {
     /// Get the current version information
     pub fn current() -> Self {
@@ -184,29 +185,35 @@ pub mod constants {
     use super::VersionInfo;
     use std::sync::OnceLock;
 
+    #[allow(dead_code)]
     static VERSION_INFO: OnceLock<VersionInfo> = OnceLock::new();
 
     /// Get the global version info instance
+    #[allow(dead_code)]
     pub fn version() -> &'static VersionInfo {
         VERSION_INFO.get_or_init(VersionInfo::current)
     }
 
     /// Version string
+    #[allow(dead_code)]
     pub fn version_string() -> &'static str {
         &version().version
     }
 
     /// Full version with build metadata
+    #[allow(dead_code)]
     pub fn full_version_string() -> &'static str {
         &version().full_version
     }
 
     /// Git commit hash
+    #[allow(dead_code)]
     pub fn git_hash() -> &'static str {
         &version().git_hash
     }
 
     /// Git branch
+    #[allow(dead_code)]
     pub fn git_branch() -> &'static str {
         &version().git_branch
     }

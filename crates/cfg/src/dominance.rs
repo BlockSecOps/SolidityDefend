@@ -715,11 +715,11 @@ mod tests {
 
         // Block 4 should be in the dominance frontier of blocks 2 and 3
         // (since they both can reach 4, but don't dominate it)
-        let frontier_1 = dom_tree.dominance_frontier(block1);
+        let _frontier_1 = dom_tree.dominance_frontier(block1);
 
         // The exact frontier depends on the specific CFG structure
         // Just verify the method doesn't crash
-        assert!(frontier_1.len() >= 0);
+        // Length is inherently non-negative due to type constraints
     }
 
     #[test]
@@ -741,9 +741,9 @@ mod tests {
         // This CFG has no loops, so should be empty
         assert!(natural_loops.is_empty());
 
-        let regions = analysis.find_reducible_regions().unwrap();
+        let _regions = analysis.find_reducible_regions().unwrap();
         // Should find some regions
-        assert!(regions.len() >= 0);
+        // Length is inherently non-negative due to type constraints
     }
 
     #[test]

@@ -609,7 +609,6 @@ struct SingleTestResult {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
 
     #[tokio::test]
     #[should_panic(expected = "SolidityDefend binary not found")]

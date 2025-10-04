@@ -452,7 +452,7 @@ mod tests {
     #[test]
     fn test_inheritance_graph_builder() {
         let symbol_table = crate::symbols::SymbolTable::new();
-        let inheritance_graph = InheritanceGraph::new();
+        let _inheritance_graph = InheritanceGraph::new();
 
         let builder = InheritanceGraphBuilder::new(&symbol_table);
         let result = builder.build();

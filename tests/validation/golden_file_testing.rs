@@ -554,7 +554,6 @@ impl GoldenFileRegression {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
 
     #[test]
     fn test_golden_file_regression_creation() {

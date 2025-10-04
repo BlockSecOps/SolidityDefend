@@ -553,8 +553,8 @@ mod tests {
 
         // Each block should have some register pressure
         assert!(pressure.len() > 0);
-        for (_, count) in pressure {
-            assert!(count >= 0);
+        for (_, _count) in pressure {
+            // Count values are inherently non-negative due to type constraints
         }
     }
 
@@ -568,10 +568,10 @@ mod tests {
         let interference = analysis.compute_interference_graph(&result);
 
         // Variables that are live at the same time should interfere
-        if let Some(x_interferences) = interference.get(&ValueId(1)) {
+        if let Some(_x_interferences) = interference.get(&ValueId(1)) {
             // x might interfere with y if they're live at the same time
             // The exact interference depends on the CFG structure
-            assert!(x_interferences.len() >= 0);
+            // Length is inherently non-negative due to type constraints
         }
     }
 }
