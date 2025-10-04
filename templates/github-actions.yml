@@ -97,7 +97,7 @@ jobs:
           cat > soliditydefend.yml << EOF
           analysis:
             severity_threshold: ${{ github.event.inputs.severity_threshold || 'medium' }}
-            output_format: 'sarif'
+            output_format: 'json'
             include_fix_suggestions: true
 
           detectors:
@@ -148,7 +148,7 @@ jobs:
           echo "Running SolidityDefend in $SCAN_MODE mode..."
 
           # Build command based on scan mode
-          SCAN_CMD="soliditydefend --config soliditydefend.yml --format sarif"
+          SCAN_CMD="soliditydefend --config soliditydefend.yml --format json"
 
           case $SCAN_MODE in
             incremental)
@@ -172,18 +172,18 @@ jobs:
           # Run scan and capture output
           mkdir -p reports
 
-          if $SCAN_CMD --output reports/security-findings.sarif; then
+          if $SCAN_CMD --output reports/security-findings.json; then
             echo "✅ Security scan completed successfully"
             echo "has-findings=false" >> $GITHUB_OUTPUT
             echo "findings-count=0" >> $GITHUB_OUTPUT
             echo "critical-count=0" >> $GITHUB_OUTPUT
             echo "high-count=0" >> $GITHUB_OUTPUT
           else
-            # Parse SARIF to extract metrics
-            if [ -f reports/security-findings.sarif ]; then
-              FINDINGS_COUNT=$(jq '.runs[0].results | length' reports/security-findings.sarif)
-              CRITICAL_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 9)] | length' reports/security-findings.sarif)
-              HIGH_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 7)] | length' reports/security-findings.sarif)
+            # Parse JSON to extract metrics
+            if [ -f reports/security-findings.json ]; then
+              FINDINGS_COUNT=$(jq '.findings | length' reports/security-findings.json)
+              CRITICAL_COUNT=$(jq '[.findings[] | select(.severity == "critical")] | length' reports/security-findings.json)
+              HIGH_COUNT=$(jq '[.findings[] | select(.severity == "high")] | length' reports/security-findings.json)
 
               echo "⚠️ Security issues found: $FINDINGS_COUNT total, $CRITICAL_COUNT critical, $HIGH_COUNT high"
               echo "has-findings=true" >> $GITHUB_OUTPUT

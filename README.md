@@ -125,7 +125,7 @@ SolidityDefend is built as a modular Rust workspace with the following component
 - **Fixes** (`crates/fixes`): Automatic fix suggestions and code transformations
 
 ### Interface & Output
-- **Output** (`crates/output`): Multi-format output (Console, JSON, SARIF)
+- **Output** (`crates/output`): Multi-format output (Console, JSON)
 - **CLI** (`crates/cli`): Command-line interface and configuration
 - **LSP** (`crates/lsp`): Language Server Protocol framework for IDE integration
 

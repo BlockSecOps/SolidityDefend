@@ -368,8 +368,7 @@ async function exportAnalysisResults() {
         defaultUri: vscode.Uri.file('security-report.json'),
         filters: {
             'JSON': ['json'],
-            'SARIF': ['sarif'],
-            'HTML': ['html']
+            'Text': ['txt']
         }
     });
 
