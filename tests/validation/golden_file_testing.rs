@@ -58,7 +58,7 @@ pub struct PerformanceMetrics {
     pub analysis_time_ms: u64,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct RegressionTestResult {
     pub test_name: String,
     pub status: TestStatus,
@@ -66,7 +66,7 @@ pub struct RegressionTestResult {
     pub summary: String,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum TestStatus {
     Passed,
     Failed,
@@ -74,7 +74,7 @@ pub enum TestStatus {
     Skipped,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Difference {
     pub field: String,
     pub expected: String,
@@ -82,7 +82,7 @@ pub struct Difference {
     pub severity: DifferenceSeverity,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum DifferenceSeverity {
     Critical,    // Breaking changes (e.g., missing critical findings)
     Major,       // Significant changes (e.g., different number of findings)

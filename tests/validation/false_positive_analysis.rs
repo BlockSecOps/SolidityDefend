@@ -13,7 +13,7 @@ pub struct Finding {
     pub confidence: f64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
 pub enum Severity {
     Critical,
     High,
