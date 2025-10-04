@@ -52,7 +52,7 @@ impl TaintAnalyzer {
 
     /// Identify taint sources, sinks, and sanitizers in the code
     fn identify_taint_locations(&mut self, context: &AnalysisContext) {
-        let lines: Vec<&str> = context.source.lines().collect();
+        let lines: Vec<&str> = context.source_code.lines().collect();
 
         for (line_idx, line_content) in lines.iter().enumerate() {
             let line_number = line_idx + 1;
@@ -66,17 +66,17 @@ impl TaintAnalyzer {
             };
 
             // Check for taint sources
-            if let Some(source) = TaintUtils::is_taint_source(&location, &context.source) {
+            if let Some(source) = TaintUtils::is_taint_source(&location, &context.source_code) {
                 self.taint_sources.insert(location.clone(), source);
             }
 
             // Check for taint sinks
-            if let Some(sink) = TaintUtils::is_taint_sink(&location, &context.source) {
+            if let Some(sink) = TaintUtils::is_taint_sink(&location, &context.source_code) {
                 self.taint_sinks.insert(location.clone(), sink);
             }
 
             // Check for sanitizers
-            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, &context.source) {
+            if let Some(sanitizer) = TaintUtils::is_sanitizer(&location, &context.source_code) {
                 self.sanitizers.insert(location.clone(), sanitizer);
             }
 
@@ -333,7 +333,7 @@ impl TaintAnalyzer {
         // Simplified control flow analysis
         // In a real implementation, this would use proper CFG analysis
 
-        let lines: Vec<&str> = context.source.lines().collect();
+        let lines: Vec<&str> = context.source_code.lines().collect();
         for (i, line) in lines.iter().enumerate() {
             if i > 0 {
                 // Add sequential flow edge
@@ -481,22 +481,9 @@ impl TaintAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract, Function};
-
-    fn create_mock_context() -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: "TestContract".to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "function test() { address sender = msg.sender; target.call(); }".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
+    use semantic::SymbolTable;
 
     #[test]
     fn test_analyzer_creation() {
@@ -510,7 +497,23 @@ mod tests {
     fn test_source_identification() {
         let config = TaintAnalysisConfig::default();
         let mut analyzer = TaintAnalyzer::new(config);
-        let context = create_mock_context();
+        let arena = AstArena::new();
+
+        let function = create_mock_ast_function(
+            &arena,
+            "test",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
+
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let context = AnalysisContext {
+            contract: &contract,
+            symbols: SymbolTable::new(),
+            source_code: "function test() { address sender = msg.sender; target.call(); }".to_string(),
+            file_path: "test.sol".to_string(),
+        };
 
         analyzer.identify_taint_locations(&context);
 

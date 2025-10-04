@@ -339,19 +339,19 @@ impl InteractionGraph {
 
     fn calls_contract(context: &AnalysisContext, target: &str) -> bool {
         // Simplified detection - would need AST analysis for precision
-        context.source.contains(target) ||
-        context.source.contains("call(") ||
-        context.source.contains("delegatecall(")
+        context.source_code.contains(target) ||
+        context.source_code.contains("call(") ||
+        context.source_code.contains("delegatecall(")
     }
 
     fn determine_interaction_type(context: &AnalysisContext, target: &str) -> InteractionType {
-        if context.source.contains("delegatecall") {
+        if context.source_code.contains("delegatecall") {
             InteractionType::DelegateCall
-        } else if context.source.contains("staticcall") {
+        } else if context.source_code.contains("staticcall") {
             InteractionType::StaticCall
-        } else if context.source.contains("transfer") {
+        } else if context.source_code.contains("transfer") {
             InteractionType::Transfer
-        } else if context.source.contains("approve") {
+        } else if context.source_code.contains("approve") {
             InteractionType::Approve
         } else {
             InteractionType::FunctionCall
@@ -363,10 +363,10 @@ impl InteractionGraph {
         let mut functions = Vec::new();
 
         // Look for common function call patterns
-        if context.source.contains("transfer") {
+        if context.source_code.contains("transfer") {
             functions.push("transfer".to_string());
         }
-        if context.source.contains("approve") {
+        if context.source_code.contains("approve") {
             functions.push("approve".to_string());
         }
 
@@ -407,7 +407,7 @@ impl ContractNode {
     }
 
     fn determine_contract_type(context: &AnalysisContext) -> ContractType {
-        let source = &context.source.to_lowercase();
+        let source = &context.source_code.to_lowercase();
 
         if source.contains("erc20") || source.contains("token") {
             ContractType::Token
@@ -433,7 +433,7 @@ impl ContractNode {
     }
 
     fn determine_trust_level(context: &AnalysisContext) -> TrustLevel {
-        let source = &context.source.to_lowercase();
+        let source = &context.source_code.to_lowercase();
 
         if source.contains("openzeppelin") || source.contains("@openzeppelin") {
             TrustLevel::Trusted
@@ -475,22 +475,9 @@ impl Default for InteractionGraph {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract};
-
-    fn create_mock_context(name: &str) -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: name.to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
+    use semantic::SymbolTable;
 
     #[test]
     fn test_graph_creation() {
@@ -555,8 +542,22 @@ mod tests {
 
     #[test]
     fn test_contract_type_detection() {
-        let mut context = create_mock_context("Token");
-        context.source = "contract MyToken is ERC20 { }".to_string();
+        let arena = AstArena::new();
+        let function = create_mock_ast_function(
+            &arena,
+            "transfer",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
+
+        let contract = create_mock_ast_contract(&arena, "Token", vec![function]);
+
+        let context = AnalysisContext {
+            contract: &contract,
+            symbols: SymbolTable::new(),
+            source_code: "contract MyToken is ERC20 { }".to_string(),
+            file_path: "test.sol".to_string(),
+        };
 
         let node = ContractNode::from_context("Token".to_string(), &context);
         assert_eq!(node.contract_type, ContractType::Token);

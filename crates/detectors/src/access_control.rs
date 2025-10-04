@@ -373,8 +373,8 @@ impl DefaultVisibilityDetector {
     fn uses_old_solidity(&self, ctx: &AnalysisContext<'_>) -> bool {
         // This is a simplified check - in practice we'd parse pragma directives
         // For now, assume any contract without explicit visibility is old
-        ctx.source.contains("pragma solidity ^0.4") ||
-        ctx.source.contains("pragma solidity 0.4")
+        ctx.source_code.contains("pragma solidity ^0.4") ||
+        ctx.source_code.contains("pragma solidity 0.4")
     }
 }
 

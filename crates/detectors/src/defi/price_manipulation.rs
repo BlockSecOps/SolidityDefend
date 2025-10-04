@@ -273,7 +273,7 @@ impl PriceManipulationDetector {
             "price", "rate", "exchange", "oracle", "feed", "aggregator"
         ];
         pricing_indicators.iter().any(|&indicator|
-            ctx.source.to_lowercase().contains(indicator)
+            ctx.source_code.to_lowercase().contains(indicator)
         )
     }
 
@@ -282,7 +282,7 @@ impl PriceManipulationDetector {
             "getPrice", "latestRoundData", "latestAnswer", "aggregator"
         ];
         oracle_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -292,7 +292,7 @@ impl PriceManipulationDetector {
             "median", "average", "aggregate", "multiple"
         ];
         redundancy_patterns.iter().any(|&pattern|
-            ctx.source.to_lowercase().contains(pattern)
+            ctx.source_code.to_lowercase().contains(pattern)
         )
     }
 
@@ -301,7 +301,7 @@ impl PriceManipulationDetector {
             "getReserves", "balanceOf", "currentPrice", "spotPrice"
         ];
         spot_price_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -310,7 +310,7 @@ impl PriceManipulationDetector {
             "TWAP", "timeWeighted", "average", "period", "window"
         ];
         twap_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -319,7 +319,7 @@ impl PriceManipulationDetector {
             "price", "rate", "latestRoundData", "getPrice"
         ];
         price_usage_patterns.iter().any(|&pattern|
-            func.name.as_str().contains(pattern) || ctx.source.contains(pattern)
+            func.name.as_str().contains(pattern) || ctx.source_code.contains(pattern)
         )
     }
 
@@ -329,7 +329,7 @@ impl PriceManipulationDetector {
             "bounds", "range", "sanity"
         ];
         bounds_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -338,7 +338,7 @@ impl PriceManipulationDetector {
             "updatedAt", "timestamp", "stale", "fresh", "timeout"
         ];
         freshness_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -347,7 +347,7 @@ impl PriceManipulationDetector {
             "try", "catch", "fallback", "emergency", "paused"
         ];
         failure_handling_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -398,7 +398,7 @@ impl PriceManipulationDetector {
         ];
         self.uses_price_data(ctx, func) &&
         precision_risk_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 }
@@ -406,60 +406,58 @@ impl PriceManipulationDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract, Function};
-    use std::collections::HashMap;
-
-    fn create_mock_context() -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: "TestContract".to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
 
     #[test]
     fn test_single_oracle_detection() {
         let detector = PriceManipulationDetector;
+        let arena = AstArena::new();
 
-        let mut ctx = create_mock_context();
-        ctx.source = "function getPrice() { return oracle.latestAnswer(); }".to_string();
+        // Create mock AST function with oracle dependency
+        let function = create_mock_ast_function(
+            &arena,
+            "getPrice",
+            Visibility::External,
+            StateMutability::View,
+        );
 
-        let func = Function {
-            name: "getPrice".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let ctx = AnalysisContext {
+            contract: &contract,
+            symbols: semantic::SymbolTable::new(),
+            source_code: "function getPrice() { return oracle.latestAnswer(); }".to_string(),
+            file_path: "test.sol".to_string(),
         };
 
-        assert!(detector.uses_single_oracle(&ctx, &func));
-        assert!(!detector.has_oracle_redundancy(&ctx, &func));
+        assert!(detector.uses_single_oracle(&ctx, &ctx.contract.functions[0]));
+        assert!(!detector.has_oracle_redundancy(&ctx, &ctx.contract.functions[0]));
     }
 
     #[test]
     fn test_spot_price_detection() {
         let detector = PriceManipulationDetector;
+        let arena = AstArena::new();
 
-        let mut ctx = create_mock_context();
-        ctx.source = "function swap() { (uint112 reserve0, uint112 reserve1,) = pair.getReserves(); }".to_string();
+        let function = create_mock_ast_function(
+            &arena,
+            "swap",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
 
-        let func = Function {
-            name: "swap".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let ctx = AnalysisContext {
+            contract: &contract,
+            symbols: semantic::SymbolTable::new(),
+            source_code: "function swap() { (uint112 reserve0, uint112 reserve1,) = pair.getReserves(); }".to_string(),
+            file_path: "test.sol".to_string(),
         };
 
-        assert!(detector.uses_spot_price(&ctx, &func));
-        assert!(!detector.has_twap_protection(&ctx, &func));
+        assert!(detector.uses_spot_price(&ctx, &ctx.contract.functions[0]));
+        assert!(!detector.has_twap_protection(&ctx, &ctx.contract.functions[0]));
     }
 
     #[test]
@@ -473,20 +471,26 @@ mod tests {
     #[test]
     fn test_price_validation_detection() {
         let detector = PriceManipulationDetector;
+        let arena = AstArena::new();
 
-        let mut ctx = create_mock_context();
-        ctx.source = "function trade() { uint price = oracle.getPrice(); }".to_string();
+        let function = create_mock_ast_function(
+            &arena,
+            "trade",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
 
-        let func = Function {
-            name: "trade".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let ctx = AnalysisContext {
+            contract: &contract,
+            symbols: semantic::SymbolTable::new(),
+            source_code: "function trade() { uint price = oracle.getPrice(); }".to_string(),
+            file_path: "test.sol".to_string(),
         };
 
-        assert!(detector.uses_price_data(&ctx, &func));
-        assert!(!detector.validates_price_bounds(&ctx, &func));
-        assert!(!detector.validates_price_freshness(&ctx, &func));
+        assert!(detector.uses_price_data(&ctx, &ctx.contract.functions[0]));
+        assert!(!detector.validates_price_bounds(&ctx, &ctx.contract.functions[0]));
+        assert!(!detector.validates_price_freshness(&ctx, &ctx.contract.functions[0]));
     }
 }
