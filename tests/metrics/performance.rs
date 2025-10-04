@@ -15,6 +15,15 @@ use serde::{Deserialize, Serialize};
 /// Result of tool comparison analysis
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ComparisonResult {
+    pub tool_name: String,
+    pub version: String,
+    pub avg_metrics: PerformanceMetrics,
+    pub std_metrics: PerformanceMetrics,
+    pub min_metrics: PerformanceMetrics,
+    pub max_metrics: PerformanceMetrics,
+    pub runs: Vec<PerformanceMetrics>,
+    pub relative_performance: Option<f64>,
+    // Legacy fields for backward compatibility
     pub baseline_tool: String,
     pub performance_ratio: f64,
     pub accuracy_ratio: f64,
@@ -42,6 +51,7 @@ pub struct PerformanceTestConfig {
     pub test_cases: Vec<String>,
     pub timeout_seconds: u64,
     pub memory_limit_mb: usize,
+    pub datasets: Vec<String>,
 }
 
 /// Performance test suite
@@ -49,6 +59,96 @@ pub struct PerformanceTestConfig {
 pub struct PerformanceTestSuite {
     pub config: PerformanceTestConfig,
     pub results: Vec<AccuracyPerformanceMetrics>,
+}
+
+/// Benchmark configuration for testing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkConfig {
+    pub name: String,
+    pub timeout: Duration,
+    pub iterations: usize,
+    pub warmup: bool,
+    pub memory_limit: Option<usize>,
+    pub datasets: Vec<String>,
+}
+
+/// Performance metrics for benchmarking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceMetrics {
+    pub tool_name: String,
+    pub analysis_time: Duration,
+    pub memory_usage: u64,
+    pub findings_count: usize,
+    pub success_rate: f64,
+}
+
+/// Performance comparison framework
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceComparison {
+    pub config: BenchmarkConfig,
+    pub tools: Vec<String>,
+    pub results: Vec<PerformanceMetrics>,
+}
+
+impl PerformanceComparison {
+    pub fn new(config: BenchmarkConfig) -> Self {
+        Self {
+            config,
+            tools: Vec::new(),
+            results: Vec::new(),
+        }
+    }
+
+    pub fn add_soliditydefend(&mut self, binary_path: &str) {
+        self.tools.push(format!("soliditydefend:{}", binary_path));
+    }
+
+    pub fn add_slither(&mut self) {
+        self.tools.push("slither".to_string());
+    }
+
+    pub fn add_mythril(&mut self) {
+        self.tools.push("mythril".to_string());
+    }
+
+    pub fn run_comparison(&mut self, test_files: &[std::path::PathBuf]) -> Result<(), Box<dyn std::error::Error>> {
+        // Placeholder implementation for comparison execution
+        for tool in &self.tools {
+            let metrics = PerformanceMetrics {
+                tool_name: tool.clone(),
+                analysis_time: Duration::from_millis(100), // Placeholder
+                memory_usage: 1024 * 1024, // 1MB placeholder
+                findings_count: 5, // Placeholder
+                success_rate: 0.95, // Placeholder
+            };
+            self.results.push(metrics);
+        }
+        Ok(())
+    }
+
+    pub fn get_performance_ranking(&self) -> Vec<String> {
+        let mut sorted_tools: Vec<_> = self.results.iter()
+            .map(|r| (r.tool_name.clone(), r.analysis_time))
+            .collect();
+        sorted_tools.sort_by_key(|&(_, time)| time);
+        sorted_tools.into_iter().map(|(name, _)| name).collect()
+    }
+}
+
+/// Regression configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegressionConfig {
+    pub baseline_version: String,
+    pub test_cases: Vec<String>,
+    pub tolerance: f64,
+}
+
+/// Scalability configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalabilityConfig {
+    pub max_file_size: usize,
+    pub max_complexity: usize,
+    pub memory_limit: usize,
 }
 
 /// Performance metrics specifically for accuracy measurement integration
