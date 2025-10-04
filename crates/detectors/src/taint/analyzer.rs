@@ -129,7 +129,7 @@ impl TaintAnalyzer {
     /// Propagate taint through the data flow graph
     fn propagate_taint(
         &self,
-        context: &AnalysisContext,
+        _context: &AnalysisContext,
         graph: &mut DataFlowGraph
     ) -> HashMap<SourceLocation, Vec<TaintedData>> {
         let mut taint_map = HashMap::new();
@@ -186,7 +186,7 @@ impl TaintAnalyzer {
     /// Detect vulnerable paths from sources to sinks
     fn detect_vulnerable_paths(
         &self,
-        context: &AnalysisContext,
+        _context: &AnalysisContext,
         taint_map: &HashMap<SourceLocation, Vec<TaintedData>>
     ) -> Vec<TaintFinding> {
         let mut findings = Vec::new();
@@ -400,7 +400,7 @@ impl TaintAnalyzer {
         propagated
     }
 
-    fn is_sanitized(&self, tainted_data: &TaintedData, location: &SourceLocation) -> bool {
+    fn is_sanitized(&self, _tainted_data: &TaintedData, location: &SourceLocation) -> bool {
         self.sanitizers.contains_key(location)
     }
 

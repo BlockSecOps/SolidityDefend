@@ -342,7 +342,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn vulnerable_to_flash_loan_voting(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn vulnerable_to_flash_loan_voting(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let uses_current_balance = ctx.source_code.contains("balanceOf(") ||
                                   ctx.source_code.contains("currentBalance") ||
                                   ctx.source_code.contains("getBalance");
@@ -390,7 +390,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_proposal_threshold(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_proposal_threshold(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let threshold_patterns = [
             "proposalThreshold", "minimumTokens", "requiredBalance", "threshold"
         ];
@@ -399,7 +399,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_proposal_cooldown(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_proposal_cooldown(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let cooldown_patterns = [
             "cooldown", "delay", "interval", "waitPeriod", "lastProposal"
         ];
@@ -408,7 +408,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_proposal_cost(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_proposal_cost(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let cost_patterns = [
             "proposalFee", "deposit", "bond", "stake", "cost"
         ];
@@ -417,7 +417,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_spam_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_spam_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let spam_protection_patterns = [
             "rateLimit", "maxProposals", "spamProtection", "antiSpam"
         ];
@@ -426,7 +426,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn enables_vote_delegation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn enables_vote_delegation(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         let delegation_patterns = [
             "delegate", "proxy", "representative", "assignVote"
         ];
@@ -435,7 +435,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_vote_buying_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_vote_buying_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
             "identity", "reputation", "verification", "sybilResistance", "antiVoteBuying"
         ];
@@ -453,7 +453,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn vulnerable_to_griefing(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn vulnerable_to_griefing(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let lacks_execution_guarantee = !ctx.source_code.contains("guarantee") &&
                                        !ctx.source_code.contains("bond") &&
                                        !ctx.source_code.contains("penalty");
@@ -464,7 +464,7 @@ impl GovernanceAttackDetector {
         lacks_execution_guarantee && allows_execution_failure
     }
 
-    fn uses_voting_snapshots(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn uses_voting_snapshots(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let snapshot_patterns = [
             "snapshot", "checkpoint", "balanceAt", "totalSupplyAt"
         ];
@@ -473,7 +473,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn has_snapshot_manipulation_risk(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_snapshot_manipulation_risk(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let manipulation_indicators = [
             "block.number", "block.timestamp", "now"
         ];
@@ -491,7 +491,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn enforces_quorum(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn enforces_quorum(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let quorum_patterns = [
             "quorum", "minimumParticipation", "requiredVotes", "threshold"
         ];
@@ -500,7 +500,7 @@ impl GovernanceAttackDetector {
         )
     }
 
-    fn vulnerable_to_quorum_manipulation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn vulnerable_to_quorum_manipulation(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let uses_simple_quorum = ctx.source_code.contains("totalSupply") &&
                                 !ctx.source_code.contains("timeWeighted");
 
@@ -510,7 +510,7 @@ impl GovernanceAttackDetector {
         uses_simple_quorum && lacks_participation_validation
     }
 
-    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
             "commitReveal", "delay", "queue", "timelock", "batch"
         ];

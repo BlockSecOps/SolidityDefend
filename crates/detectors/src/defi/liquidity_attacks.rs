@@ -308,7 +308,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_withdrawal_limits(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_withdrawal_limits(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let limit_patterns = [
             "maxWithdraw", "withdrawLimit", "dailyLimit", "cap", "maximum"
         ];
@@ -317,7 +317,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_slippage_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_slippage_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let slippage_patterns = [
             "slippage", "minAmount", "maxSlippage", "tolerance"
         ];
@@ -326,7 +326,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn validates_liquidity_availability(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_liquidity_availability(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let validation_patterns = [
             "require(balance", "availableLiquidity", "checkLiquidity", "sufficientLiquidity"
         ];
@@ -335,7 +335,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn allows_emergency_withdrawal(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn allows_emergency_withdrawal(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         let emergency_patterns = [
             "emergency", "panic", "drain", "rescue", "recover"
         ];
@@ -344,7 +344,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_emergency_controls(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_emergency_controls(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let control_patterns = [
             "onlyOwner", "onlyAdmin", "multisig", "timelock", "pause"
         ];
@@ -353,7 +353,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn manages_liquidity_positions(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn manages_liquidity_positions(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         let position_patterns = [
             "position", "rebalance", "allocate", "distribute", "manage"
         ];
@@ -362,7 +362,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_impermanent_loss_amplification_risk(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_impermanent_loss_amplification_risk(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let risk_indicators = [
             "leverage", "amplify", "volatile", "aggressive", "high-frequency"
         ];
@@ -371,7 +371,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
             "commitReveal", "timelock", "batch", "private", "deadline"
         ];
@@ -389,7 +389,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn vulnerable_to_jit_attacks(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn vulnerable_to_jit_attacks(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let jit_vulnerability_patterns = [
             "snapshot", "current", "now", "block.timestamp"
         ];
@@ -407,7 +407,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn creates_multiple_pools(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn creates_multiple_pools(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         let pool_creation_patterns = [
             "createPool", "newPool", "deployPool", "initializePool"
         ];
@@ -416,7 +416,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_liquidity_aggregation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_liquidity_aggregation(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let aggregation_patterns = [
             "aggregate", "route", "combine", "merge", "consolidate"
         ];
@@ -435,7 +435,7 @@ impl LiquidityAttackDetector {
         )
     }
 
-    fn has_excessive_migration_rewards(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_excessive_migration_rewards(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         // This would require more sophisticated analysis of reward calculations
         // For now, check for large bonus percentages or unlimited rewards
         let excessive_reward_patterns = [

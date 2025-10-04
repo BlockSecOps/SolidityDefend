@@ -51,9 +51,9 @@ impl DeFiPatterns {
             "receiveFlashLoan",
         ];
 
-        for func in &ctx.contract.functions {
+        for _func in &ctx.contract.functions {
             for signature in &flash_loan_signatures {
-                if func.name.as_str().contains(signature) {
+                if _func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -75,9 +75,9 @@ impl DeFiPatterns {
             "skim",
         ];
 
-        for func in &ctx.contract.functions {
+        for _func in &ctx.contract.functions {
             for signature in &amm_signatures {
-                if func.name.as_str().contains(signature) {
+                if _func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -98,9 +98,9 @@ impl DeFiPatterns {
             "token1",
         ];
 
-        for func in &ctx.contract.functions {
+        for _func in &ctx.contract.functions {
             for signature in &oracle_signatures {
-                if func.name.as_str().contains(signature) {
+                if _func.name.as_str().contains(signature) {
                     return true;
                 }
             }
@@ -147,7 +147,7 @@ impl DeFiPatterns {
 
         // This would need to be integrated with the AST analysis
         // For now, check function and variable names
-        for func in &ctx.contract.functions {
+        for _func in &ctx.contract.functions {
             for indicator in &time_indicators {
                 if ctx.source_code.contains(indicator) {
                     return true;

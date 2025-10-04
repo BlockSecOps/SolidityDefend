@@ -184,7 +184,7 @@ impl ReplacementEngine {
     }
 
     /// Generate replacements for reordering expressions (e.g., division before multiplication)
-    pub fn reorder_expression(&self, line: u32, old_expression: &str, new_expression: &str) -> TextReplacement {
+    pub fn reorder_expression(&self, line: u32, _old_expression: &str, new_expression: &str) -> TextReplacement {
         TextReplacement {
             start_line: line,
             start_column: 1,

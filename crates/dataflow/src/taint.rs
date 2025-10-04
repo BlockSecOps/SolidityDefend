@@ -254,14 +254,14 @@ impl TaintState {
     }
 
     /// Check if a variable is tainted
-    pub fn is_tainted(&self, variable: &str) -> bool {
+    pub fn is_tainted(&self, _variable: &str) -> bool {
         // For string lookup, we'd need a mapping from names to ValueIds
         // This is a simplified implementation
         false
     }
 
     /// Check if a variable is conditionally tainted
-    pub fn is_conditionally_tainted(&self, variable: &str) -> bool {
+    pub fn is_conditionally_tainted(&self, _variable: &str) -> bool {
         // Simplified implementation
         false
     }
@@ -379,21 +379,21 @@ impl<'a> TaintAnalysis<'a> {
     }
 
     /// Check if an instruction is a taint source
-    fn is_source(&self, instruction: &Instruction) -> Option<HashSet<String>> {
+    fn is_source(&self, _instruction: &Instruction) -> Option<HashSet<String>> {
         // This would need to be implemented based on the specific instruction
         // and the configured sources
         None
     }
 
     /// Check if an instruction is a taint sink
-    fn is_sink(&self, instruction: &Instruction) -> Option<String> {
+    fn is_sink(&self, _instruction: &Instruction) -> Option<String> {
         // This would need to be implemented based on the specific instruction
         // and the configured sinks
         None
     }
 
     /// Check if an instruction is a sanitizer
-    fn is_sanitizer(&self, instruction: &Instruction) -> Option<HashSet<String>> {
+    fn is_sanitizer(&self, _instruction: &Instruction) -> Option<HashSet<String>> {
         // This would need to be implemented based on the specific instruction
         // and the configured sanitizers
         None
@@ -465,7 +465,7 @@ impl<'a> TaintAnalysis<'a> {
                     }
                 }
             },
-            Instruction::Store(address, value) => {
+            Instruction::Store(_address, value) => {
                 // Storage writes are potential sinks
                 if let Some(value_var) = utils::extract_variable_id(value) {
                     if let Some(value_info) = state.get_taint_info(value_var) {
@@ -530,7 +530,7 @@ impl<'a> TaintAnalysis<'a> {
         for (block_id, block_node) in self.cfg.basic_blocks() {
             let instructions = &block_node.instructions;
             if let Some(block_state) = result.get_exit_state(block_id) {
-                for (instr_index, instruction) in instructions.iter().enumerate() {
+                for (_instr_index, instruction) in instructions.iter().enumerate() {
                     if let Some(sink_name) = self.is_sink(instruction) {
                         // Check if any used variables are tainted
                         let used_vars = utils::get_instruction_uses(instruction);
@@ -561,7 +561,7 @@ impl<'a> TaintAnalysis<'a> {
     }
 
     /// Assess the severity of a taint violation
-    fn assess_severity(&self, sink_name: &str, taint_info: &TaintInfo) -> TaintViolationSeverity {
+    fn assess_severity(&self, sink_name: &str, _taint_info: &TaintInfo) -> TaintViolationSeverity {
         // This is a simplified assessment - in practice, this would be more sophisticated
         match sink_name {
             name if name.contains("assembly") || name.contains("delegatecall") => TaintViolationSeverity::Critical,

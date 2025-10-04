@@ -190,7 +190,7 @@ impl AdvancedSecurityEngine {
     fn run_defi_analysis(&self, contexts: &HashMap<String, &AnalysisContext>) -> Vec<DetectorResult> {
         let mut all_findings = Vec::new();
 
-        for (contract_name, context) in contexts {
+        for (_contract_name, context) in contexts {
             for detector in &self.defi_detectors {
                 if detector.applies_to_contract(context) {
                     let findings = detector.detect_defi_vulnerabilities(context);
@@ -222,7 +222,7 @@ impl AdvancedSecurityEngine {
     fn run_taint_analysis(&mut self, contexts: &HashMap<String, &AnalysisContext>) -> Vec<crate::taint::TaintFinding> {
         let mut all_taint_findings = Vec::new();
 
-        for (contract_name, context) in contexts {
+        for (_contract_name, context) in contexts {
             let analysis_result = self.taint_analyzer.analyze(context);
             all_taint_findings.extend(analysis_result.findings);
         }

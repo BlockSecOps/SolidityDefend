@@ -284,7 +284,7 @@ impl MEVDetector {
         ) && !self.has_frontrunning_protection(ctx, func)
     }
 
-    fn classify_frontrunning_risk(&self, ctx: &AnalysisContext, func: &Function) -> String {
+    fn classify_frontrunning_risk(&self, _ctx: &AnalysisContext, func: &Function) -> String {
         if func.name.as_str().to_lowercase().contains("approve") {
             "Approval frontrunning".to_string()
         } else if func.name.as_str().to_lowercase().contains("swap") || func.name.as_str().to_lowercase().contains("trade") {
@@ -363,7 +363,7 @@ impl MEVDetector {
         is_swap_function && !has_slippage_protection
     }
 
-    fn creates_backrunning_opportunity(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn creates_backrunning_opportunity(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         // Functions that create profitable state changes
         let backrunnable_patterns = [
             "updatePrice", "sync", "rebalance", "liquidate", "harvest"
@@ -403,7 +403,7 @@ impl MEVDetector {
         )
     }
 
-    fn has_mev_extractable_liquidation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_mev_extractable_liquidation(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         // Check if liquidation provides excessive rewards
         let reward_indicators = ["bonus", "incentive", "reward", "discount"];
         reward_indicators.iter().any(|&indicator|
@@ -411,7 +411,7 @@ impl MEVDetector {
         )
     }
 
-    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_frontrunning_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
             "commitReveal", "timelock", "nonce", "deadline", "private"
         ];

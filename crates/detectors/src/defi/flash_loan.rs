@@ -292,49 +292,49 @@ impl FlashLoanDetector {
         )
     }
 
-    fn has_price_manipulation_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_price_manipulation_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
             "TWAP", "timeWeighted", "oracle", "priceCheck", "slippage"
         ];
         protection_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn validates_loan_amount(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_loan_amount(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let validation_patterns = [
             "require(amount", "assert(amount", "amount > 0", "amount != 0"
         ];
         validation_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn validates_recipient(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_recipient(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let validation_patterns = [
             "require(to", "require(recipient", "to != address(0)", "recipient != address(0)"
         ];
         validation_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn calculates_fees_properly(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn calculates_fees_properly(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let fee_patterns = [
             "fee", "premium", "flashLoanFee", "calculateFee"
         ];
         fee_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn verifies_repayment(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn verifies_repayment(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let repayment_patterns = [
             "balanceAfter", "repayAmount", "totalDebt", "require(balance"
         ];
         repayment_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn allows_arbitrary_calls(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn allows_arbitrary_calls(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let arbitrary_call_patterns = [
             "call(data)", "delegatecall(", "staticcall(", "target.call"
         ];
         arbitrary_call_patterns.iter().any(|&pattern| ctx.source_code.contains(pattern))
     }
 
-    fn validates_flash_loan_caller(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_flash_loan_caller(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let caller_validation_patterns = [
             "msg.sender ==", "require(msg.sender", "onlyFlashLoanProvider", "isAuthorizedCaller"
         ];

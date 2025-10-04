@@ -216,7 +216,7 @@ impl CrossContractAnalyzer {
 
     // Helper methods
 
-    fn makes_privileged_calls(&self, contract_ctx: &AnalysisContext, target_contract: &str) -> bool {
+    fn makes_privileged_calls(&self, contract_ctx: &AnalysisContext, _target_contract: &str) -> bool {
         let privileged_patterns = [
             "onlyOwner", "onlyAdmin", "restricted", "authorized",
             "delegatecall", "selfdestruct", "upgrade"
@@ -254,7 +254,7 @@ impl CrossContractAnalyzer {
         !state_vars1.intersection(&state_vars2).collect::<Vec<_>>().is_empty()
     }
 
-    fn has_state_synchronization_mechanism(&self, contract_ctx: &AnalysisContext, shared_contract: &str) -> bool {
+    fn has_state_synchronization_mechanism(&self, contract_ctx: &AnalysisContext, _shared_contract: &str) -> bool {
         let sync_patterns = [
             "event", "emit", "callback", "sync", "notify", "update"
         ];
