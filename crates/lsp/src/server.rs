@@ -19,11 +19,11 @@ pub struct SolidityDefendLanguageServer {
     /// Document store for open files
     documents: Arc<DashMap<Url, DocumentState>>,
     /// Cache manager for faster re-analysis
-    cache_manager: Arc<CacheManager>,
+    _cache_manager: Arc<CacheManager>,
     /// Detector registry
     detector_registry: Arc<DetectorRegistry>,
     /// Fix engine for code actions
-    fix_engine: Arc<FixEngine>,
+    _fix_engine: Arc<FixEngine>,
     /// Server state
     state: Arc<RwLock<ServerState>>,
 }
@@ -32,11 +32,11 @@ pub struct SolidityDefendLanguageServer {
 #[derive(Debug, Clone)]
 struct DocumentState {
     /// Document URI
-    uri: Url,
+    _uri: Url,
     /// Document content
     content: String,
     /// Document version (incremented on each change)
-    version: i32,
+    _version: i32,
     /// Last analysis results
     findings: Vec<Finding>,
     /// Analysis metadata
@@ -62,9 +62,9 @@ struct AnalysisSettings {
     /// Whether to run analysis on document save
     analyze_on_save: bool,
     /// Analysis debounce delay in milliseconds
-    debounce_ms: u64,
+    _debounce_ms: u64,
     /// Maximum number of findings to report per document
-    max_findings: usize,
+    _max_findings: usize,
 }
 
 impl Default for AnalysisSettings {
@@ -72,8 +72,8 @@ impl Default for AnalysisSettings {
         Self {
             analyze_on_change: true,
             analyze_on_save: true,
-            debounce_ms: 500,
-            max_findings: 100,
+            _debounce_ms: 500,
+            _max_findings: 100,
         }
     }
 }
@@ -88,9 +88,9 @@ impl SolidityDefendLanguageServer {
         Ok(Self {
             client,
             documents: Arc::new(DashMap::new()),
-            cache_manager,
+            _cache_manager: cache_manager,
             detector_registry,
-            fix_engine,
+            _fix_engine: fix_engine,
             state: Arc::new(RwLock::new(ServerState::default())),
         })
     }
@@ -211,9 +211,9 @@ impl SolidityDefendLanguageServer {
     async fn handle_document_change(&self, uri: Url, content: String, version: i32) {
         // Update document state
         let mut doc_state = DocumentState {
-            uri: uri.clone(),
+            _uri: uri.clone(),
             content: content.clone(),
-            version,
+            _version: version,
             findings: vec![],
             last_analyzed: None,
         };

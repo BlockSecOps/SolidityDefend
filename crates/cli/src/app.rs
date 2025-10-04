@@ -103,8 +103,8 @@ pub struct CliApp {
     registry: DetectorRegistry,
     output_manager: OutputManager,
     cache_manager: CacheManager,
-    exit_config: ExitCodeConfig,
-    config: SolidityDefendConfig,
+    _exit_config: ExitCodeConfig,
+    _config: SolidityDefendConfig,
 }
 
 impl CliApp {
@@ -129,8 +129,8 @@ impl CliApp {
             registry,
             output_manager: OutputManager::new(),
             cache_manager,
-            exit_config: ExitCodeConfig::default(),
-            config,
+            _exit_config: ExitCodeConfig::default(),
+            _config: config,
         })
     }
 

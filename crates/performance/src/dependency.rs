@@ -17,7 +17,7 @@ pub struct DependencyTracker {
     /// File metadata for change detection
     file_metadata: Arc<DashMap<PathBuf, FileMetadata>>,
     /// Cache manager for persistent storage
-    cache_manager: Arc<CacheManager>,
+    _cache_manager: Arc<CacheManager>,
     /// Dependency cache for resolved imports
     dependency_cache: Arc<DashMap<String, ResolvedDependency>>,
     /// Configuration
@@ -154,7 +154,7 @@ impl DependencyTracker {
             dependencies: Arc::new(DashMap::new()),
             dependents: Arc::new(DashMap::new()),
             file_metadata: Arc::new(DashMap::new()),
-            cache_manager,
+            _cache_manager: cache_manager,
             dependency_cache: Arc::new(DashMap::new()),
             config,
         }

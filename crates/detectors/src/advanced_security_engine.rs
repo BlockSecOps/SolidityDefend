@@ -560,9 +560,6 @@ use std::collections::HashSet;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
-    use semantic::SymbolTable;
 
     #[test]
     fn test_engine_creation() {
@@ -589,7 +586,7 @@ mod tests {
         let config = AdvancedSecurityConfig::default();
         let engine = AdvancedSecurityEngine::new(config);
 
-        let mut result = AdvancedAnalysisResult {
+        let result = AdvancedAnalysisResult {
             defi_findings: Vec::new(),
             cross_contract_findings: Vec::new(),
             taint_findings: Vec::new(),

@@ -106,7 +106,7 @@ pub struct MemoryStats {
     /// Memory pressure events
     pressure_events: AtomicUsize,
     /// Last pressure check
-    last_pressure_check: Mutex<Instant>,
+    _last_pressure_check: Mutex<Instant>,
 }
 
 /// Memory pressure monitoring
@@ -543,7 +543,7 @@ impl MemoryStats {
             gc_runs: AtomicUsize::new(0),
             gc_freed: AtomicUsize::new(0),
             pressure_events: AtomicUsize::new(0),
-            last_pressure_check: Mutex::new(Instant::now()),
+            _last_pressure_check: Mutex::new(Instant::now()),
         }
     }
 }

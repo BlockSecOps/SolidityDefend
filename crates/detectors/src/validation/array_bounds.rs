@@ -78,11 +78,11 @@ impl ArrayBoundsDetector {
         match type_name {
             ast::TypeName::Array { base_type, length } => {
                 Some(ArrayInfo {
-                    base_type: format!("{:?}", base_type), // Simplified - would need proper type formatting
+                    _base_type: format!("{:?}", base_type), // Simplified - would need proper type formatting
                     is_dynamic: length.is_none(),
-                    fixed_length: length.and_then(|_| Some(0)), // Would need to evaluate expression
-                    location: location.clone(),
-                    dimensions: 1,
+                    _fixed_length: length.and_then(|_| Some(0)), // Would need to evaluate expression
+                    _location: location.clone(),
+                    _dimensions: 1,
                 })
             }
             _ => None,
@@ -563,11 +563,11 @@ impl ArrayBoundsDetector {
 /// Information about an array variable
 #[derive(Debug, Clone)]
 struct ArrayInfo {
-    base_type: String,
+    _base_type: String,
     is_dynamic: bool,
-    fixed_length: Option<u32>,
-    location: ast::SourceLocation,
-    dimensions: u8,
+    _fixed_length: Option<u32>,
+    _location: ast::SourceLocation,
+    _dimensions: u8,
 }
 
 impl Detector for ArrayBoundsDetector {

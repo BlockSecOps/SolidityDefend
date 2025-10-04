@@ -312,7 +312,7 @@ impl ZeroAddressDetector {
     }
 
     /// Check if function has any state-changing operations
-    fn has_state_changes(&self, function: &ast::Function<'_>) -> bool {
+    fn _has_state_changes(&self, function: &ast::Function<'_>) -> bool {
         !matches!(function.mutability, ast::StateMutability::View | ast::StateMutability::Pure)
     }
 

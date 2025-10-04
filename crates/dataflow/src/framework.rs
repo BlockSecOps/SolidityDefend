@@ -415,8 +415,7 @@ pub fn get_instruction_uses(instruction: &Instruction) -> HashSet<ValueId> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ir::{IrFunction, IrType, Instruction, IrValue, ValueId};
-    use cfg::{ControlFlowGraph, EdgeType};
+    use ir::{Instruction, IrValue, ValueId};
 
     #[test]
     fn test_reaching_definitions_state() {

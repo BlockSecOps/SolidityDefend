@@ -371,7 +371,6 @@ impl Default for JsonOutputBuilder {
 mod tests {
     use super::*;
     use detectors::types::{DetectorId, Severity, Confidence, SourceLocation};
-    use fixes::FixSuggestion;
     use std::collections::HashMap;
 
     fn create_test_finding() -> Finding {

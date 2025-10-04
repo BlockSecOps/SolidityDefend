@@ -151,7 +151,7 @@ impl FunctionLike for Function {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use ast::{SourceLocation, Identifier, FunctionType, ContractType, Position};
+    use ast::{SourceLocation, Identifier, Position};
     use bumpalo::collections::Vec as BumpVec;
     use ast::AstArena;
     use std::path::PathBuf;

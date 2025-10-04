@@ -417,7 +417,7 @@ impl ConsoleFormatter {
 
         Ok(Some(CodeSnippet {
             lines: snippet_lines,
-            highlight_line: line,
+            _highlight_line: line,
         }))
     }
 
@@ -471,7 +471,7 @@ impl ConsoleFormatter {
 #[derive(Debug)]
 struct CodeSnippet {
     lines: Vec<(u32, String)>,
-    highlight_line: u32,
+    _highlight_line: u32,
 }
 
 #[cfg(test)]

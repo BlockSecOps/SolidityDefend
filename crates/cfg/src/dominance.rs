@@ -711,7 +711,7 @@ mod tests {
         let dom_tree = DominatorTree::build(&cfg).unwrap();
 
         let block1 = BlockId(1);
-        let block4 = BlockId(4);
+        let _block4 = BlockId(4);
 
         // Block 4 should be in the dominance frontier of blocks 2 and 3
         // (since they both can reach 4, but don't dominate it)

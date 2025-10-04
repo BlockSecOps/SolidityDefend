@@ -274,8 +274,8 @@ impl CrossContractAnalyzer {
                 if called_contracts.len() > 1 {
                     operations.push(MultiContractOperation {
                         contracts: called_contracts,
-                        functions: vec![func.name.as_str().to_string()],
-                        has_atomicity: false, // Will be determined later
+                        _functions: vec![func.name.as_str().to_string()],
+                        _has_atomicity: false, // Will be determined later
                     });
                 }
             }
@@ -361,8 +361,8 @@ impl CrossContractAnalyzer {
 #[derive(Debug, Clone)]
 struct MultiContractOperation {
     contracts: Vec<String>,
-    functions: Vec<String>,
-    has_atomicity: bool,
+    _functions: Vec<String>,
+    _has_atomicity: bool,
 }
 
 impl Default for CrossContractAnalyzer {

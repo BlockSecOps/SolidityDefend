@@ -300,7 +300,7 @@ impl ReentrancyFixGenerator {
 }
 
 impl FixGenerator for ReentrancyFixGenerator {
-    fn generate_fixes(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "reentrancy-checks-effects-interactions".to_string(),
             description: "Apply checks-effects-interactions pattern".to_string(),
@@ -335,7 +335,7 @@ impl AccessControlFixGenerator {
 }
 
 impl FixGenerator for AccessControlFixGenerator {
-    fn generate_fixes(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "access-control-onlyowner".to_string(),
             description: "Add onlyOwner access control modifier".to_string(),
@@ -370,7 +370,7 @@ impl ZeroAddressFixGenerator {
 }
 
 impl FixGenerator for ZeroAddressFixGenerator {
-    fn generate_fixes(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "zero-address-check".to_string(),
             description: "Add zero address validation".to_string(),
@@ -405,7 +405,7 @@ impl IntegerOverflowFixGenerator {
 }
 
 impl FixGenerator for IntegerOverflowFixGenerator {
-    fn generate_fixes(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let solidity_08_fix = FixSuggestion {
             id: "overflow-solidity-08".to_string(),
             description: "Upgrade to Solidity ^0.8.0".to_string(),
@@ -452,7 +452,7 @@ impl DivisionOrderFixGenerator {
 }
 
 impl FixGenerator for DivisionOrderFixGenerator {
-    fn generate_fixes(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "division-order-reorder".to_string(),
             description: "Reorder operations: multiplication before division".to_string(),

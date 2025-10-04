@@ -61,8 +61,8 @@ impl ParameterConsistencyDetector {
                     name: name.name.to_string(),
                     type_info: self.analyze_parameter_type(&param.type_name),
                     location: name.location.clone(),
-                    index,
-                    storage_location: param.storage_location,
+                    _index: index,
+                    _storage_location: param.storage_location,
                 };
                 params.push(param_info);
             }
@@ -643,8 +643,8 @@ struct ParameterInfo {
     name: String,
     type_info: ParameterType,
     location: ast::SourceLocation,
-    index: usize,
-    storage_location: Option<ast::StorageLocation>,
+    _index: usize,
+    _storage_location: Option<ast::StorageLocation>,
 }
 
 /// Simplified parameter type classification
