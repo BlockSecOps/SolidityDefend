@@ -16,8 +16,8 @@ pub use sources::{TaintSource, TaintSourceDetector};
 pub use sinks::{TaintSink, TaintSinkDetector};
 pub use sanitizers::{TaintSanitizer, SanitizerDetector};
 
-use crate::types::{AnalysisContext, Severity};
-use std::collections::{HashMap, HashSet};
+use crate::types::Severity;
+use std::collections::HashMap;
 
 /// Represents tainted data in the analysis
 #[derive(Debug, Clone, PartialEq)]

@@ -351,7 +351,7 @@ impl SolidityDefendConfig {
     }
 
     /// Merge two configurations (loaded overrides defaults)
-    fn merge_configs(mut defaults: Self, loaded: Self) -> Self {
+    fn merge_configs(defaults: Self, loaded: Self) -> Self {
         // For simplicity, loaded config completely overrides defaults
         // In a more sophisticated implementation, we might merge individual fields
         loaded

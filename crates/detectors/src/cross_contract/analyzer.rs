@@ -1,9 +1,9 @@
 use crate::cross_contract::{
     CrossContractContext, CrossContractFinding, CrossContractVulnerabilityType,
-    CrossContractDetector, CrossContractUtils, DataFlowEdge
+    CrossContractDetector, CrossContractUtils
 };
 use crate::types::{AnalysisContext, Severity};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::HashSet;
 
 /// Main analyzer for cross-contract vulnerabilities
 pub struct CrossContractAnalyzer {

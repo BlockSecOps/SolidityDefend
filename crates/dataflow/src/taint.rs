@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use ir::{BlockId, ValueId, Instruction, IrValue};
+use ir::{BlockId, ValueId, Instruction};
 use cfg::ControlFlowGraph;
 use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, utils};
 
@@ -659,7 +659,7 @@ impl<'a> DataFlowAnalysis for TaintAnalysis<'a> {
 
     fn boundary_state(&self) -> Self::State {
         // Entry point may have tainted parameters
-        let mut state = TaintState::new();
+        let state = TaintState::new();
 
         // Initialize tainted parameters based on configured sources
         // This would need access to function parameters

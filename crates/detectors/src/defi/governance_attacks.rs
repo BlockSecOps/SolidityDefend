@@ -1,6 +1,6 @@
 use crate::types::{DetectorResult, AnalysisContext, Severity, Finding, DetectorId, Confidence, SourceLocation};
 use ast::Function;
-use crate::defi::{DeFiDetector, DeFiPatterns};
+use crate::defi::DeFiDetector;
 
 /// Detector for governance-related attack vulnerabilities
 pub struct GovernanceAttackDetector;
