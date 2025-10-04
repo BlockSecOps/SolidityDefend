@@ -1,6 +1,8 @@
 # Usage Guide
 
-This comprehensive guide provides examples and tutorials for using SolidityDefend effectively. All core detector functionality is operational, including DeFi security analysis, MEV protection, and standard vulnerability detection.
+This comprehensive guide provides examples and tutorials for using SolidityDefend Community Edition effectively. All core detector functionality is operational, including DeFi security analysis, MEV protection, and standard vulnerability detection.
+
+> **Note**: This documentation covers SolidityDefend Community Edition features. Advanced features like SARIF output format and enterprise integrations are available in the Enterprise Edition. See [Enterprise Edition Features](#enterprise-edition-features) for details.
 
 ## Table of Contents
 
@@ -12,6 +14,7 @@ This comprehensive guide provides examples and tutorials for using SolidityDefen
 - [Best Practices](#best-practices)
 - [Common Scenarios](#common-scenarios)
 - [Troubleshooting](#troubleshooting)
+- [Enterprise Edition Features](#enterprise-edition-features)
 
 ## Quick Start
 
@@ -60,7 +63,7 @@ soliditydefend [OPTIONS] <FILES>...
 
 ```bash
 # Output format
--f, --format <FORMAT>    # console (default), json, sarif
+-f, --format <FORMAT>    # console (default), json
 
 # Output file
 -o, --output <FILE>      # Save results to file
@@ -83,9 +86,6 @@ soliditydefend contract.sol
 
 # JSON output to file
 soliditydefend -f json -o results.json contract.sol
-
-# SARIF format for CI/CD
-soliditydefend -f sarif -o results.sarif src/*.sol
 
 # High severity issues only
 soliditydefend -s high contract.sol
@@ -201,13 +201,7 @@ soliditydefend -f json contract.sol
 }
 ```
 
-### SARIF Output
-
-Industry-standard format for security tools:
-
-```bash
-soliditydefend -f sarif -o results.sarif contract.sol
-```
+*Note: SARIF output format is available in Enterprise Edition. Community Edition supports console and JSON output formats, which provide comprehensive analysis results suitable for most use cases.*
 
 ## Integration Examples
 
@@ -237,12 +231,13 @@ jobs:
 
     - name: Run Security Analysis
       run: |
-        soliditydefend -f sarif -o results.sarif contracts/
+        soliditydefend -f json -o results.json contracts/
 
-    - name: Upload SARIF to GitHub
-      uses: github/codeql-action/upload-sarif@v2
+    - name: Upload Security Report
+      uses: actions/upload-artifact@v3
       with:
-        sarif_file: results.sarif
+        name: security-report
+        path: results.json
 
     - name: Fail on Critical Issues
       run: |
@@ -262,13 +257,12 @@ security_analysis:
   script:
     - cargo install soliditydefend
     - soliditydefend -f json -o security-report.json contracts/
-    - soliditydefend -f sarif -o security-report.sarif contracts/
   artifacts:
-    reports:
-      sast: security-report.sarif
     paths:
       - security-report.json
   allow_failure: false
+
+# Note: SARIF format and advanced SAST integration available in Enterprise Edition
 ```
 
 ### IDE Integration
@@ -345,10 +339,7 @@ soliditydefend -s low contracts/
 # For human review
 soliditydefend contracts/
 
-# For CI/CD pipelines
-soliditydefend -f sarif contracts/
-
-# For automated processing
+# For automated processing and CI/CD pipelines
 soliditydefend -f json contracts/
 ```
 
@@ -393,8 +384,10 @@ soliditydefend -f json -o full-analysis.json contracts/
 # 3. Generate human-readable report
 soliditydefend -f console contracts/ > audit-report.txt
 
-# 4. Create SARIF for tools integration
-soliditydefend -f sarif -o security.sarif contracts/
+# 4. Save comprehensive results for further analysis
+soliditydefend -f json -o comprehensive-analysis.json contracts/
+
+# Note: SARIF format for advanced tools integration available in Enterprise Edition
 ```
 
 ### Development Workflow
@@ -422,7 +415,7 @@ mkdir -p "$OUTPUT_DIR"
 
 # Generate reports
 soliditydefend -f json -o "$OUTPUT_DIR/security.json" contracts/
-soliditydefend -f sarif -o "$OUTPUT_DIR/security.sarif" contracts/
+soliditydefend -f console > "$OUTPUT_DIR/security-report.txt" contracts/
 
 # Check for new critical issues
 CRITICAL_COUNT=$(jq '.summary.by_severity.critical' "$OUTPUT_DIR/security.json")
@@ -551,11 +544,13 @@ security:
     soliditydefend src/ -o security-report.json
 
 security-ci:
-    soliditydefend -f sarif -o security.sarif src/
+    soliditydefend -f json -o security-report.json src/
     @if [ $$(jq '.summary.by_severity.critical + .summary.by_severity.high' security-report.json) -gt 0 ]; then \
         echo "High severity issues found!"; \
         exit 1; \
     fi
+
+# Note: SARIF output for advanced CI/CD integration available in Enterprise Edition
 ```
 
 #### Truffle
@@ -571,6 +566,41 @@ module.exports = {
   }
 };
 ```
+
+## Enterprise Edition Features
+
+SolidityDefend Enterprise Edition includes all Community Edition features plus advanced capabilities for enterprise environments:
+
+### SARIF Output Format
+
+Industry-standard Static Analysis Results Interchange Format (SARIF) provides:
+- Rich metadata for security findings
+- Tool interoperability with enterprise security platforms
+- Advanced CI/CD integration capabilities
+- Seamless integration with GitHub Security, GitLab SAST, and other enterprise tools
+
+```bash
+# Enterprise Edition only
+soliditydefend -f sarif -o results.sarif contracts/
+```
+
+### Advanced CI/CD Integration
+
+Enterprise Edition includes native support for:
+- GitHub Security tab integration via SARIF upload
+- GitLab SAST reporting
+- Azure DevOps security dashboards
+- Jenkins security plugins
+- Custom enterprise tool integrations
+
+### Enterprise Support
+
+- Priority technical support
+- Custom detector development
+- Enterprise deployment assistance
+- Training and consultation services
+
+For more information about Enterprise Edition features and pricing, visit our website or contact our sales team.
 
 ## Next Steps
 

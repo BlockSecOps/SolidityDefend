@@ -48,7 +48,7 @@ security-scan:
       cat > soliditydefend.yml << EOF
       analysis:
         severity_threshold: ${SECURITY_THRESHOLD}
-        output_format: 'sarif'
+        output_format: 'json'
         include_fix_suggestions: true
 
       detectors:
@@ -87,7 +87,7 @@ security-scan:
       fi
 
     # Build scan command
-    - SCAN_CMD="soliditydefend --config soliditydefend.yml --format sarif"
+    - SCAN_CMD="soliditydefend --config soliditydefend.yml --format json"
     - |
       case $SCAN_MODE in
         incremental)
@@ -118,7 +118,7 @@ security-scan:
     # Run security scan
     - |
       echo "Running: $SCAN_CMD"
-      if $SCAN_CMD --output security-reports/findings.sarif; then
+      if $SCAN_CMD --output security-reports/findings.json; then
         echo "✅ No security issues found"
         echo "SCAN_STATUS=passed" >> scan_results.env
         echo "FINDINGS_COUNT=0" >> scan_results.env
@@ -127,11 +127,11 @@ security-scan:
       else
         echo "⚠️ Security issues detected"
 
-        # Extract metrics from SARIF
-        if [ -f security-reports/findings.sarif ]; then
-          FINDINGS_COUNT=$(jq '.runs[0].results | length' security-reports/findings.sarif)
-          CRITICAL_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 9)] | length' security-reports/findings.sarif)
-          HIGH_COUNT=$(jq '[.runs[0].results[] | select(.level == "error" and (.properties.security_severity // "0") | tonumber >= 7)] | length' security-reports/findings.sarif)
+        # Extract metrics from JSON
+        if [ -f security-reports/findings.json ]; then
+          FINDINGS_COUNT=$(jq '.findings | length' security-reports/findings.json)
+          CRITICAL_COUNT=$(jq '[.findings[] | select(.severity == "critical")] | length' security-reports/findings.json)
+          HIGH_COUNT=$(jq '[.findings[] | select(.severity == "high")] | length' security-reports/findings.json)
 
           echo "Total findings: $FINDINGS_COUNT"
           echo "Critical: $CRITICAL_COUNT"
@@ -152,7 +152,7 @@ security-scan:
 
   artifacts:
     reports:
-      sast: security-reports/findings.sarif
+      # Community Edition uses JSON reports - SARIF available in Enterprise Edition
     paths:
       - security-reports/
       - scan_results.env
@@ -220,7 +220,7 @@ detailed-analysis:
       $(find contracts/ src/ -name "*.sol" 2>/dev/null | wc -l) Solidity files
 
       ## Next Steps
-      1. Review findings in the SARIF report
+      1. Review findings in the JSON report
       2. Check suggested fixes in \`suggested-fixes.json\`
       3. Apply fixes and re-run analysis
       4. Update baseline when issues are resolved
@@ -323,7 +323,7 @@ security-report:
 
           <div class="findings">
               <h2>📋 Detailed Findings</h2>
-              <p>Download the <a href="findings.sarif">SARIF report</a> for detailed findings.</p>
+              <p>Download the <a href="findings.json">JSON report</a> for detailed findings.</p>
               <p>View the <a href="console-report.txt">console report</a> for human-readable output.</p>
           </div>
 
