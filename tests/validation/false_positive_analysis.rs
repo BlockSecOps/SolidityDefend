@@ -516,7 +516,7 @@ mod tests {
 
     #[test]
     fn test_pattern_identification() {
-        let analyzer = FalsePositiveAnalyzer::new(0.8);
+        let _analyzer = FalsePositiveAnalyzer::new(0.8);
 
         // Add ground truth with known false positive patterns
         let mut ground_truth = HashMap::new();

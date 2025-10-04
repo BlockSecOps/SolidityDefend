@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_validation_suite_creation() {
         let config = ValidationConfig::default();
-        let suite = ValidationSuite::new(config);
+        let _suite = ValidationSuite::new(config);
 
         // Verify suite was created successfully
         // In a real implementation, we would test the individual components

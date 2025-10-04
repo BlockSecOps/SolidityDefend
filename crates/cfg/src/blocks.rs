@@ -629,9 +629,9 @@ mod tests {
         let ir_function = create_test_function();
         let analyzer = BasicBlockAnalyzer::new();
 
-        let mergeable = analyzer.find_mergeable_blocks(&ir_function).unwrap();
+        let _mergeable = analyzer.find_mergeable_blocks(&ir_function).unwrap();
         // The result depends on the specific structure, so just check it doesn't crash
-        assert!(mergeable.len() >= 0);
+        // Length is inherently non-negative due to type constraints
     }
 
     #[test]

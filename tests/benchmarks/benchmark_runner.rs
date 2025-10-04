@@ -145,6 +145,7 @@ mod tests {
     }
 }
 
+#[allow(dead_code)]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let runner = BenchmarkRunner::new("benchmark_results");
     runner.run_all_benchmarks()?;
