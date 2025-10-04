@@ -1,0 +1,221 @@
+{
+  "version": "1.0.0",
+  "description": "2025 Modern Vulnerability Test Contracts Configuration",
+  "contracts": [
+    {
+      "name": "FlashLoanArbitrage",
+      "path": "defi/FlashLoanArbitrage.sol",
+      "category": "defi",
+      "complexity": "high",
+      "vulnerability_count": 8,
+      "critical_vulnerabilities": [
+        "mev-vulnerable-pricing",
+        "flash-loan-reentrancy",
+        "oracle-manipulation"
+      ],
+      "high_vulnerabilities": [
+        "missing-slippage-protection",
+        "missing-access-control",
+        "sandwich-attack-susceptible"
+      ],
+      "medium_vulnerabilities": [
+        "state-manipulation",
+        "emergency-function-abuse"
+      ],
+      "expected_analysis_time_ms": 3000,
+      "expected_memory_mb": 75
+    },
+    {
+      "name": "BridgeVault",
+      "path": "cross_chain/BridgeVault.sol",
+      "category": "cross_chain",
+      "complexity": "high",
+      "vulnerability_count": 10,
+      "critical_vulnerabilities": [
+        "cross-chain-replay",
+        "signature-manipulation",
+        "double-spending"
+      ],
+      "high_vulnerabilities": [
+        "weak-signature-validation",
+        "validator-manipulation",
+        "time-based-attacks"
+      ],
+      "medium_vulnerabilities": [
+        "emergency-function-abuse",
+        "access-control-centralization",
+        "parameter-manipulation",
+        "fee-manipulation"
+      ],
+      "expected_analysis_time_ms": 4000,
+      "expected_memory_mb": 85
+    },
+    {
+      "name": "MEVProtectedDEX",
+      "path": "mev/MEVProtectedDEX.sol",
+      "category": "mev",
+      "complexity": "very_high",
+      "vulnerability_count": 10,
+      "critical_vulnerabilities": [
+        "oracle-manipulation",
+        "flash-loan-price-manipulation"
+      ],
+      "high_vulnerabilities": [
+        "weak-commit-reveal",
+        "auction-timing-manipulation",
+        "jit-liquidity-attacks",
+        "batch-manipulation"
+      ],
+      "medium_vulnerabilities": [
+        "gas-price-manipulation",
+        "time-dependency",
+        "parameter-manipulation",
+        "emergency-bypass"
+      ],
+      "expected_analysis_time_ms": 5000,
+      "expected_memory_mb": 95
+    },
+    {
+      "name": "DAOGovernance",
+      "path": "governance/DAOGovernance.sol",
+      "category": "governance",
+      "complexity": "high",
+      "vulnerability_count": 10,
+      "critical_vulnerabilities": [
+        "flash-loan-governance",
+        "delegation-manipulation"
+      ],
+      "high_vulnerabilities": [
+        "proposal-execution-mev",
+        "voting-manipulation",
+        "quorum-manipulation",
+        "cross-chain-inconsistency"
+      ],
+      "medium_vulnerabilities": [
+        "emergency-governance-bypass",
+        "parameter-manipulation",
+        "time-manipulation",
+        "access-control-centralization"
+      ],
+      "expected_analysis_time_ms": 4500,
+      "expected_memory_mb": 90
+    },
+    {
+      "name": "LiquidityMining",
+      "path": "yield_farming/LiquidityMining.sol",
+      "category": "yield_farming",
+      "complexity": "very_high",
+      "vulnerability_count": 10,
+      "critical_vulnerabilities": [
+        "flash-loan-staking",
+        "reward-calculation-manipulation"
+      ],
+      "high_vulnerabilities": [
+        "oracle-reward-manipulation",
+        "time-based-boost-gaming",
+        "pool-manipulation",
+        "multi-block-mev"
+      ],
+      "medium_vulnerabilities": [
+        "emergency-withdrawal-abuse",
+        "fee-manipulation",
+        "parameter-manipulation",
+        "access-control-issues"
+      ],
+      "expected_analysis_time_ms": 5500,
+      "expected_memory_mb": 100
+    }
+  ],
+  "test_suites": [
+    {
+      "name": "critical_vulnerability_detection",
+      "description": "Test detection of critical vulnerabilities across all contracts",
+      "contracts": ["FlashLoanArbitrage", "BridgeVault", "MEVProtectedDEX", "DAOGovernance", "LiquidityMining"],
+      "expected_detection_rate": 0.95,
+      "timeout_ms": 30000
+    },
+    {
+      "name": "high_risk_vulnerability_detection",
+      "description": "Test detection of high-risk vulnerabilities",
+      "contracts": ["FlashLoanArbitrage", "BridgeVault", "MEVProtectedDEX", "DAOGovernance", "LiquidityMining"],
+      "expected_detection_rate": 0.85,
+      "timeout_ms": 25000
+    },
+    {
+      "name": "performance_benchmark",
+      "description": "Test analysis performance on complex contracts",
+      "contracts": ["MEVProtectedDEX", "LiquidityMining"],
+      "max_analysis_time_ms": 6000,
+      "max_memory_mb": 120
+    },
+    {
+      "name": "false_positive_validation",
+      "description": "Validate low false positive rate on complex legitimate patterns",
+      "contracts": ["FlashLoanArbitrage", "BridgeVault", "MEVProtectedDEX", "DAOGovernance", "LiquidityMining"],
+      "max_false_positive_rate": 0.10
+    }
+  ],
+  "detector_mappings": {
+    "reentrancy": [
+      "flash-loan-reentrancy",
+      "cross-contract-reentrancy"
+    ],
+    "access_control": [
+      "missing-access-control",
+      "access-control-centralization",
+      "emergency-function-abuse"
+    ],
+    "oracle_manipulation": [
+      "oracle-manipulation",
+      "oracle-reward-manipulation",
+      "flash-loan-price-manipulation"
+    ],
+    "mev_vulnerabilities": [
+      "mev-vulnerable-pricing",
+      "sandwich-attack-susceptible",
+      "proposal-execution-mev",
+      "multi-block-mev"
+    ],
+    "flash_loan_attacks": [
+      "flash-loan-reentrancy",
+      "flash-loan-governance",
+      "flash-loan-staking",
+      "flash-loan-price-manipulation"
+    ],
+    "time_manipulation": [
+      "timestamp-manipulation",
+      "time-dependency",
+      "time-based-attacks",
+      "time-based-boost-gaming"
+    ],
+    "cross_chain": [
+      "cross-chain-replay",
+      "cross-chain-inconsistency",
+      "signature-manipulation"
+    ],
+    "governance": [
+      "flash-loan-governance",
+      "delegation-manipulation",
+      "voting-manipulation",
+      "quorum-manipulation",
+      "emergency-governance-bypass"
+    ]
+  },
+  "benchmark_targets": {
+    "overall_detection_rate": 0.80,
+    "critical_detection_rate": 0.95,
+    "high_risk_detection_rate": 0.85,
+    "medium_risk_detection_rate": 0.70,
+    "false_positive_rate": 0.10,
+    "max_analysis_time_per_contract_ms": 6000,
+    "max_memory_per_contract_mb": 120,
+    "scalability_target_contracts": 10
+  },
+  "integration_notes": {
+    "smartbugs_integration": "Copy contracts to tests/datasets/smartbugs/2025_vulnerabilities/",
+    "test_fixture_updates": "Update test_fixtures.rs to include 2025 vulnerability patterns",
+    "detector_improvements": "Use results to enhance detector accuracy and coverage",
+    "performance_optimization": "Optimize analysis for complex modern contracts",
+    "continuous_updates": "Regularly update with new vulnerability patterns"
+  }
+}
