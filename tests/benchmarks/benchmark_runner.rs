@@ -132,13 +132,13 @@ mod tests {
         let runner = BenchmarkRunner::new(test_dir);
 
         // Clean up any existing test directory
-        if Path::new(test_dir).exists() {
+        if fs::metadata(test_dir).is_ok() {
             fs::remove_dir_all(test_dir).ok();
         }
 
         // This would normally run benchmarks, but we'll just test directory creation
         fs::create_dir_all(&runner.output_dir).unwrap();
-        assert!(Path::new(test_dir).exists());
+        assert!(fs::metadata(test_dir).is_ok());
 
         // Clean up
         fs::remove_dir_all(test_dir).unwrap();

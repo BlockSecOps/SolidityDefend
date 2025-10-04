@@ -559,7 +559,7 @@ mod tests {
     fn test_golden_file_regression_creation() {
         let regression = GoldenFileRegression::new("test_golden", "test_inputs");
         assert_eq!(regression.golden_files_dir, PathBuf::from("test_golden"));
-        assert_eq!(regression.test_inputs_dir, PathBuf::from("test_inputs"));
+        assert_eq!(regression._test_inputs_dir, PathBuf::from("test_inputs"));
         assert!(!regression.update_mode);
     }
 
