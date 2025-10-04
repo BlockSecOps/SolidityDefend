@@ -1,4 +1,3 @@
-use std::path::Path;
 use chrono::Utc;
 
 use crate::validation::{
@@ -11,8 +10,8 @@ use crate::benchmarks::BenchmarkRunner;
 // use crate::metrics::AccuracyCalculator; // Temporarily disabled
 
 pub struct ValidationSuite {
-    smartbugs_integration: SmartBugsDataset,
-    false_positive_analyzer: FalsePositiveAnalyzer,
+    _smartbugs_integration: SmartBugsDataset,
+    _false_positive_analyzer: FalsePositiveAnalyzer,
     golden_file_regression: GoldenFileRegression,
     benchmark_runner: BenchmarkRunner,
     // accuracy_calculator: AccuracyCalculator, // Temporarily disabled
@@ -66,8 +65,8 @@ impl ValidationSuite {
         // let accuracy_calculator = AccuracyCalculator::new(); // Temporarily disabled
 
         Self {
-            smartbugs_integration,
-            false_positive_analyzer,
+            _smartbugs_integration: smartbugs_integration,
+            _false_positive_analyzer: false_positive_analyzer,
             golden_file_regression,
             benchmark_runner,
             // accuracy_calculator, // Temporarily disabled

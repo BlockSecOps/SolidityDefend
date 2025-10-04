@@ -1,6 +1,5 @@
-use std::collections::HashMap;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -92,7 +91,7 @@ pub enum DifferenceSeverity {
 
 pub struct GoldenFileRegression {
     golden_files_dir: PathBuf,
-    test_inputs_dir: PathBuf,
+    _test_inputs_dir: PathBuf,
     tolerance_config: ToleranceConfig,
     update_mode: bool,
 }
@@ -122,7 +121,7 @@ impl GoldenFileRegression {
     pub fn new(golden_files_dir: &str, test_inputs_dir: &str) -> Self {
         Self {
             golden_files_dir: PathBuf::from(golden_files_dir),
-            test_inputs_dir: PathBuf::from(test_inputs_dir),
+            _test_inputs_dir: PathBuf::from(test_inputs_dir),
             tolerance_config: ToleranceConfig::default(),
             update_mode: false,
         }

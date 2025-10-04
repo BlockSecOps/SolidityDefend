@@ -16,7 +16,7 @@ pub struct IncrementalAnalyzer {
     /// Dependency graph for change propagation
     dependency_graph: Arc<DashMap<PathBuf, HashSet<PathBuf>>>,
     /// Cache manager for persistence
-    cache_manager: Arc<CacheManager>,
+    _cache_manager: Arc<CacheManager>,
     /// Analysis queue for changed files
     analysis_queue: Arc<DashMap<PathBuf, AnalysisTask>>,
     /// Configuration
@@ -153,7 +153,7 @@ impl IncrementalAnalyzer {
         Self {
             file_states: Arc::new(DashMap::new()),
             dependency_graph: Arc::new(DashMap::new()),
-            cache_manager,
+            _cache_manager: cache_manager,
             analysis_queue: Arc::new(DashMap::new()),
             config,
         }

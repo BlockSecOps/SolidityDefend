@@ -112,18 +112,18 @@ impl OutputFormatterBuilder {
 
 /// Output manager for handling different output formats and destinations
 pub struct OutputManager {
-    formatter: OutputFormatter,
+    _formatter: OutputFormatter,
 }
 
 impl OutputManager {
     pub fn new() -> Self {
         Self {
-            formatter: OutputFormatter::console(),
+            _formatter: OutputFormatter::console(),
         }
     }
 
     pub fn with_formatter(formatter: OutputFormatter) -> Self {
-        Self { formatter }
+        Self { _formatter: formatter }
     }
 
     /// Write findings to stdout with the configured format

@@ -813,7 +813,7 @@ mod tests {
     fn test_sanitization() {
         let mut state = TaintState::new();
 
-        let mut taint_info = TaintInfo::new(true, {
+        let taint_info = TaintInfo::new(true, {
             let mut sources = HashSet::new();
             sources.insert("sanitized_source".to_string());
             sources

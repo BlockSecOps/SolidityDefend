@@ -24,7 +24,7 @@ pub struct BenchmarkResult {
 }
 
 pub struct PerformanceBenchmark {
-    baseline_tool: String,
+    _baseline_tool: String,
     comparison_tools: Vec<String>,
     test_datasets: Vec<TestDataset>,
 }
@@ -49,7 +49,7 @@ pub enum ComplexityLevel {
 impl PerformanceBenchmark {
     pub fn new() -> Self {
         Self {
-            baseline_tool: "soliditydefend".to_string(),
+            _baseline_tool: "soliditydefend".to_string(),
             comparison_tools: vec![
                 "slither".to_string(),
                 "mythril".to_string(),
@@ -131,7 +131,7 @@ impl PerformanceBenchmark {
         let start_memory = self.get_memory_usage()?;
 
         // Run SolidityDefend analysis
-        let output = Command::new("./target/release/soliditydefend")
+        let _output = Command::new("./target/release/soliditydefend")
             .arg("--input")
             .arg(&dataset.path)
             .arg("--output")

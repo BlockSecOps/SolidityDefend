@@ -27,7 +27,7 @@ impl SingleSourceDetector {
         }
     }
 
-    fn is_oracle_call(&self, expr: &ast::Expression<'_>) -> bool {
+    fn _is_oracle_call(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
             ast::Expression::FunctionCall { function, .. } => {
                 match function {

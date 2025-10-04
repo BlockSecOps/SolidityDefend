@@ -5,15 +5,11 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use std::time::Duration;
 
 use serde::{Deserialize, Serialize};
 use tempfile::TempDir;
 use tokio::time::timeout;
-
-// Re-export test utilities
-use crate::common::test_utils::*;
 
 /// Type alias for SmartBugs integration
 pub type SmartBugsIntegration = SmartBugsDataset;
@@ -133,9 +129,9 @@ pub enum TestStatus {
 
 /// SmartBugs dataset manager
 pub struct SmartBugsDataset {
-    dataset_path: PathBuf,
+    _dataset_path: PathBuf,
     test_cases: Vec<SmartBugsTestCase>,
-    temp_dir: Option<TempDir>,
+    _temp_dir: Option<TempDir>,
 }
 
 impl SmartBugsDataset {
@@ -153,9 +149,9 @@ impl SmartBugsDataset {
         let test_cases = Self::load_test_cases(&dataset_path)?;
 
         Ok(Self {
-            dataset_path: dataset_path.to_path_buf(),
+            _dataset_path: dataset_path.to_path_buf(),
             test_cases,
-            temp_dir,
+            _temp_dir: temp_dir,
         })
     }
 

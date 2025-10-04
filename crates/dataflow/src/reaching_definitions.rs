@@ -460,7 +460,7 @@ mod tests {
     #[test]
     fn test_definition_killing() {
         let cfg = create_test_cfg();
-        let analysis = ReachingDefinitions::new(&cfg);
+        let _analysis = ReachingDefinitions::new(&cfg);
 
         // Test that new definitions kill old ones
         let mut state = ReachingDefinitionsState::new();
