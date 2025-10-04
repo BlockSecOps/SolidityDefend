@@ -17,6 +17,7 @@ members = [
     "crates/cache",
     "crates/metrics",
     "crates/performance",
+    "tests",
 ]
 
 resolver = "2"

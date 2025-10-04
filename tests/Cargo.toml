@@ -3,6 +3,10 @@ name = "soliditydefend-tests"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "soliditydefend_tests"
+path = "lib.rs"
+
 [[bin]]
 name = "benchmark_runner"
 path = "benchmarks/benchmark_runner.rs"
