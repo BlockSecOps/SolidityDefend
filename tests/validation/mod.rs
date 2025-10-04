@@ -3,7 +3,7 @@ pub mod false_positive_analysis;
 pub mod golden_file_testing;
 pub mod integration_runner;
 
-pub use smartbugs::SmartBugsIntegration;
+pub use smartbugs::SmartBugsDataset;
 pub use false_positive_analysis::{
     FalsePositiveAnalyzer,
     FalsePositiveAnalysis,

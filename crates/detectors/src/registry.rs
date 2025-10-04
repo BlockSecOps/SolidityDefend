@@ -266,7 +266,7 @@ impl DetectorRegistry {
     #[allow(dead_code)]
     fn run_parallel(
         &self,
-        detectors: &[&Arc<dyn Detector>],
+        _detectors: &[&Arc<dyn Detector>],
         _ctx: &AnalysisContext<'_>,
     ) -> Result<Vec<Vec<Finding>>> {
         // TODO: Implement parallel execution with thread-safe AST

@@ -395,7 +395,7 @@ impl ConsoleFormatter {
 
     /// Extract code snippet around the finding
     fn extract_code_snippet(&self, ctx: &AnalysisContext<'_>, line: u32, _column: u32, _length: u32) -> Result<Option<CodeSnippet>> {
-        let lines: Vec<&str> = ctx.source.lines().collect();
+        let lines: Vec<&str> = ctx.source_code.lines().collect();
         let total_lines = lines.len() as u32;
 
         if line == 0 || line > total_lines {
@@ -534,7 +534,7 @@ mod tests {
         };
 
         AnalysisContext::new(
-            contract,
+            &contract,
             symbols,
             source.to_string(),
             "test.sol".to_string(),

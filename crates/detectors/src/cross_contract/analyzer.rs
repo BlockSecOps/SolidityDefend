@@ -284,13 +284,13 @@ impl CrossContractAnalyzer {
         operations
     }
 
-    fn extract_called_contracts(&self, contract_ctx: &AnalysisContext, function_name: &str) -> Vec<String> {
+    fn extract_called_contracts(&self, _contract_ctx: &AnalysisContext, _function_name: &str) -> Vec<String> {
         // This would require more sophisticated AST analysis
         // For now, return empty vector as placeholder
         Vec::new()
     }
 
-    fn has_atomicity_guarantees(&self, operation: &MultiContractOperation) -> bool {
+    fn has_atomicity_guarantees(&self, _operation: &MultiContractOperation) -> bool {
         // Check for atomicity patterns like try-catch, rollback mechanisms
         false // Simplified for now
     }
