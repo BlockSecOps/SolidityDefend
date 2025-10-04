@@ -400,7 +400,6 @@ impl<'a> DefUseAnalysis for ReachingDefinitions<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::analysis::{DataFlowEngine};
     use cfg::{ControlFlowGraph, EdgeType};
     use ir::{Instruction, IrValue, ValueId};
 

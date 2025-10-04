@@ -411,7 +411,6 @@ impl<'a> TypeResolver<'a> {
 mod tests {
     use super::*;
     use crate::symbols::SymbolTable;
-    use ast::{SourceLocation, Position};
 
     #[test]
     fn test_elementary_type_resolution() {

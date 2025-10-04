@@ -1,5 +1,4 @@
 use std::time::{Duration, Instant};
-use anyhow::Result;
 use ast::AstArena;
 use parser::Parser;
 use analysis::AnalysisEngine;
