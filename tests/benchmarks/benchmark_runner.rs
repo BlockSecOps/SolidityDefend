@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 use chrono::Utc;
 
+// Import from local module for binary
 mod performance_comparison;
 use performance_comparison::{PerformanceBenchmark, BenchmarkResult};
 

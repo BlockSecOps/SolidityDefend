@@ -18,6 +18,12 @@ chrono = { workspace = true }
 anyhow = { workspace = true }
 thiserror = { workspace = true }
 
+# Additional dependencies for test infrastructure
+sha2 = { workspace = true }
+tokio = { version = "1.47", features = ["macros", "rt-multi-thread", "time", "process"] }
+which = "7.0"
+tempfile = "3.23"
+
 # Testing dependencies
 criterion = { workspace = true }
 proptest = { workspace = true }

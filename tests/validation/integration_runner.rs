@@ -290,7 +290,7 @@ impl ValidationSuite {
 #[derive(Debug, serde::Serialize)]
 pub struct ValidationReport {
     pub generated_at: String,
-    pub smartbugs_results: Option<crate::validation::smartbugs::SmartBugsTestResults>,
+    pub smartbugs_results: Option<crate::validation::smartbugs::SmartBugsResults>,
     pub false_positive_analysis: Option<crate::validation::FalsePositiveAnalysis>,
     pub regression_results: Option<Vec<crate::validation::RegressionTestResult>>,
     pub accuracy_metrics: Option<crate::metrics::AccuracyMetrics>,

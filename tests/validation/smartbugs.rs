@@ -15,6 +15,9 @@ use tokio::time::timeout;
 // Re-export test utilities
 use crate::common::test_utils::*;
 
+/// Type alias for SmartBugs integration
+pub type SmartBugsIntegration = SmartBugsDataset;
+
 /// SmartBugs vulnerability categories that we validate against
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum SmartBugsCategory {
@@ -150,7 +153,7 @@ impl SmartBugsDataset {
         let test_cases = Self::load_test_cases(&dataset_path)?;
 
         Ok(Self {
-            dataset_path,
+            dataset_path: dataset_path.to_path_buf(),
             test_cases,
             temp_dir,
         })
