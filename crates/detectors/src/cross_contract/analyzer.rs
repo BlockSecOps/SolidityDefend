@@ -89,7 +89,7 @@ impl CrossContractAnalyzer {
     fn detect_trust_boundary_violations(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
-        for (contract_name, contract_ctx) in &context.contracts {
+        for (contract_name, _contract_ctx) in &context.contracts {
             let interacting_contracts = context.get_interacting_contracts(contract_name);
 
             for target_contract in &interacting_contracts {
@@ -125,7 +125,7 @@ impl CrossContractAnalyzer {
         let mut findings = Vec::new();
 
         // Look for contracts that maintain synchronized state
-        for (contract_name, contract_ctx) in &context.contracts {
+        for (contract_name, _contract_ctx) in &context.contracts {
             let shared_state_contracts = self.find_shared_state_contracts(context, contract_name);
 
             for shared_contract in shared_state_contracts {
@@ -156,7 +156,7 @@ impl CrossContractAnalyzer {
     fn detect_atomicity_violations(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
-        for (contract_name, contract_ctx) in &context.contracts {
+        for (contract_name, _contract_ctx) in &context.contracts {
             let multi_contract_operations = self.find_multi_contract_operations(context, contract_name);
 
             for operation in multi_contract_operations {
@@ -186,7 +186,7 @@ impl CrossContractAnalyzer {
     fn detect_cross_contract_reentrancy(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
-        for (contract_name, contract_ctx) in &context.contracts {
+        for (contract_name, _contract_ctx) in &context.contracts {
             let reentrancy_paths = self.find_reentrancy_paths(context, contract_name);
 
             for path in reentrancy_paths {
