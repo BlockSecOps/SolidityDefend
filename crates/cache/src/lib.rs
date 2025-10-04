@@ -78,7 +78,7 @@ pub struct CacheManager {
     /// Query cache for database queries
     query_cache: Arc<query_cache::QueryCache>,
     /// Cache configuration
-    config: CacheConfig,
+    _config: CacheConfig,
 }
 
 /// Cache configuration
@@ -123,7 +123,7 @@ impl CacheManager {
             file_cache,
             analysis_cache,
             query_cache,
-            config,
+            _config: config,
         })
     }
 
