@@ -212,7 +212,7 @@ impl Default for OutputConfig {
 }
 
 /// Output format setting for serialization
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum OutputFormatSetting {
     Console,
@@ -351,7 +351,7 @@ impl SolidityDefendConfig {
     }
 
     /// Merge two configurations (loaded overrides defaults)
-    fn merge_configs(defaults: Self, loaded: Self) -> Self {
+    fn merge_configs(_defaults: Self, loaded: Self) -> Self {
         // For simplicity, loaded config completely overrides defaults
         // In a more sophisticated implementation, we might merge individual fields
         loaded

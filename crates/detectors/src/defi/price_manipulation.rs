@@ -277,7 +277,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn uses_single_oracle(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn uses_single_oracle(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let oracle_patterns = [
             "getPrice", "latestRoundData", "latestAnswer", "aggregator"
         ];
@@ -286,7 +286,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn has_oracle_redundancy(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_oracle_redundancy(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let redundancy_patterns = [
             "oracle1", "oracle2", "primaryOracle", "secondaryOracle",
             "median", "average", "aggregate", "multiple"
@@ -296,7 +296,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn uses_spot_price(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn uses_spot_price(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let spot_price_patterns = [
             "getReserves", "balanceOf", "currentPrice", "spotPrice"
         ];
@@ -305,7 +305,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn has_twap_protection(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_twap_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let twap_patterns = [
             "TWAP", "timeWeighted", "average", "period", "window"
         ];
@@ -323,7 +323,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn validates_price_bounds(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_price_bounds(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let bounds_patterns = [
             "require(price >", "require(price <", "minPrice", "maxPrice",
             "bounds", "range", "sanity"
@@ -333,7 +333,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn validates_price_freshness(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn validates_price_freshness(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let freshness_patterns = [
             "updatedAt", "timestamp", "stale", "fresh", "timeout"
         ];
@@ -342,7 +342,7 @@ impl PriceManipulationDetector {
         )
     }
 
-    fn handles_oracle_failures(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn handles_oracle_failures(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let failure_handling_patterns = [
             "try", "catch", "fallback", "emergency", "paused"
         ];

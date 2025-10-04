@@ -185,7 +185,7 @@ pub struct CrossContractUtils;
 
 impl CrossContractUtils {
     /// Check if a function makes external calls
-    pub fn makes_external_calls(ctx: &AnalysisContext, function_name: &str) -> bool {
+    pub fn makes_external_calls(ctx: &AnalysisContext, _function_name: &str) -> bool {
         let external_call_patterns = [
             ".call(", ".delegatecall(", ".staticcall(",
             ".transfer(", ".send(",
@@ -251,7 +251,7 @@ impl CrossContractUtils {
     }
 
     /// Calculate trust score between contracts
-    pub fn calculate_trust_score(from_ctx: &AnalysisContext, to_ctx: &AnalysisContext) -> f64 {
+    pub fn calculate_trust_score(_from_ctx: &AnalysisContext, to_ctx: &AnalysisContext) -> f64 {
         let mut score: f64 = 0.5; // Base trust score
 
         // Increase trust for well-known patterns

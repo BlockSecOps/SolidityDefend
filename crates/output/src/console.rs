@@ -514,7 +514,7 @@ mod tests {
             ),
         };
 
-        let contract = Contract {
+        let contract = Box::leak(Box::new(Contract {
             name: identifier,
             contract_type: ContractType::Contract,
             inheritance: BumpVec::new_in(&arena.bump),
@@ -531,10 +531,10 @@ mod tests {
                 Position::new(1, 1, 0),
                 Position::new(10, 100, 99)
             ),
-        };
+        }));
 
         AnalysisContext::new(
-            &contract,
+            contract,
             symbols,
             source.to_string(),
             "test.sol".to_string(),

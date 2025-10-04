@@ -22,7 +22,7 @@ pub trait DataFlowAnalysis {
     fn transfer_instruction(&self, state: &Self::State, instruction: &Instruction) -> Self::State;
 
     /// Transfer function for an entire basic block
-    fn transfer_block(&self, state: &Self::State, block_id: BlockId, instructions: &[Instruction]) -> Self::State {
+    fn transfer_block(&self, state: &Self::State, _block_id: BlockId, instructions: &[Instruction]) -> Self::State {
         let mut current_state = state.clone();
 
         for instruction in instructions {

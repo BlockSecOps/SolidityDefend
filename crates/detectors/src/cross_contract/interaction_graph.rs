@@ -311,17 +311,17 @@ impl InteractionGraph {
     /// Detect interaction between two contracts
     fn detect_interaction(
         from_name: &str,
-        from__context: &AnalysisContext,
+        _from_context: &AnalysisContext,
         to_name: &str,
-        to__context: &AnalysisContext
+        _to_context: &AnalysisContext
     ) -> Option<InteractionEdge> {
         // Look for function calls to the target contract
-        let calls_target = Self::calls_contract(from__context, to_name);
+        let calls_target = Self::calls_contract(_from_context, to_name);
 
         if calls_target {
-            let interaction_type = Self::determine_interaction_type(from__context, to_name);
-            let functions = Self::extract_called_functions(from__context, to_name);
-            let data_flow = Self::analyze_data_flow(from__context, to__context);
+            let interaction_type = Self::determine_interaction_type(_from_context, to_name);
+            let functions = Self::extract_called_functions(_from_context, to_name);
+            let data_flow = Self::analyze_data_flow(_from_context, _to_context);
             let risk_level = Self::assess_risk_level(&interaction_type, &data_flow);
 
             Some(InteractionEdge {
@@ -373,7 +373,7 @@ impl InteractionGraph {
         functions
     }
 
-    fn analyze_data_flow(from__context: &AnalysisContext, to__context: &AnalysisContext) -> Vec<DataFlow> {
+    fn analyze_data_flow(_from_context: &AnalysisContext, _to_context: &AnalysisContext) -> Vec<DataFlow> {
         // Simplified data flow analysis - would need more sophisticated implementation
         Vec::new()
     }

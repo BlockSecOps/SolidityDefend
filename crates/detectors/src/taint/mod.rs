@@ -256,7 +256,7 @@ impl TaintUtils {
     }
 
     /// Calculate taint propagation factor
-    pub fn calculate_propagation_factor(operation: &str, taint_type: &TaintType) -> f64 {
+    pub fn calculate_propagation_factor(operation: &str, _taint_type: &TaintType) -> f64 {
         match operation {
             "=" => 1.0,  // Direct assignment preserves all taint
             "+" | "-" | "*" | "/" => 0.8,  // Arithmetic may reduce taint slightly
