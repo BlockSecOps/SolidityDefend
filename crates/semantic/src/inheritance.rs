@@ -424,7 +424,6 @@ impl<'a> InheritanceGraphBuilder<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast::{SourceLocation, Position};
 
     #[test]
     fn test_graph_creation() {

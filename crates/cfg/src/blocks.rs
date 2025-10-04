@@ -530,7 +530,7 @@ impl std::fmt::Display for BasicBlockStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ir::{IrFunction, IrType, Instruction, IrValue, ValueId};
+    use ir::{IrFunction, Instruction, IrValue, ValueId};
 
     fn create_test_function() -> IrFunction {
         let mut ir_function = IrFunction::new(

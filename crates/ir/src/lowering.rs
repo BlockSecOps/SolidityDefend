@@ -757,8 +757,6 @@ impl Lowering {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ast::*;
-    use crate::instruction::*;
 
     #[test]
     fn test_lowering_context_creation() {

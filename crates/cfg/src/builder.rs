@@ -442,8 +442,7 @@ impl<'a> CfgAnalysis<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ir::{IrFunction, IrType};
-    use std::collections::HashMap;
+    use ir::IrFunction;
 
     fn create_test_function() -> IrFunction {
         let mut ir_function = IrFunction::new(

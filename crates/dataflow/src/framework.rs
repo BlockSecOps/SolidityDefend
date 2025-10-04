@@ -88,12 +88,12 @@ impl ReachingDefinitionsState {
 /// Reaching definitions analysis implementation
 pub struct ReachingDefinitionsAnalysis<'a> {
     cfg: &'a ControlFlowGraph,
-    ir_function: &'a IrFunction,
+    _ir_function: &'a IrFunction,
 }
 
 impl<'a> ReachingDefinitionsAnalysis<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, ir_function }
+        Self { cfg, _ir_function: ir_function }
     }
 }
 
@@ -177,12 +177,12 @@ impl LiveVariablesState {
 /// Live variables analysis implementation
 pub struct LiveVariablesAnalysis<'a> {
     cfg: &'a ControlFlowGraph,
-    ir_function: &'a IrFunction,
+    _ir_function: &'a IrFunction,
 }
 
 impl<'a> LiveVariablesAnalysis<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, ir_function }
+        Self { cfg, _ir_function: ir_function }
     }
 }
 
@@ -268,12 +268,12 @@ impl DefUseChains {
 /// Builder for def-use chains
 pub struct DefUseChainBuilder<'a> {
     cfg: &'a ControlFlowGraph,
-    ir_function: &'a IrFunction,
+    _ir_function: &'a IrFunction,
 }
 
 impl<'a> DefUseChainBuilder<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, ir_function }
+        Self { cfg, _ir_function: ir_function }
     }
 
     pub fn build(
