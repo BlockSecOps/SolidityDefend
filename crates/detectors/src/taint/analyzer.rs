@@ -5,7 +5,7 @@ use crate::taint::{
 };
 use crate::taint::{TaintSource, TaintSink, TaintSanitizer};
 use crate::types::{AnalysisContext, Severity};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 
 /// Advanced taint analyzer for data flow tracking
 pub struct TaintAnalyzer {

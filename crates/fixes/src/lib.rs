@@ -122,7 +122,7 @@ impl FixEngine {
 
     /// Apply multiple fixes to source code
     pub fn apply_multiple_fixes(&self, source: &str, fixes: &[FixSuggestion]) -> Result<String> {
-        let mut current_source = source.to_string();
+        let current_source = source.to_string();
 
         // Sort replacements by position (reverse order to avoid offset issues)
         let mut all_replacements = Vec::new();

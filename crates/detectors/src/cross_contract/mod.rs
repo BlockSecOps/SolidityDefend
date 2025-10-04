@@ -14,8 +14,8 @@ pub use interaction_graph::{InteractionGraph, ContractNode, InteractionEdge};
 // pub use protocol_detector::ProtocolDetector;
 // pub use dependency_analyzer::DependencyAnalyzer;
 
-use crate::types::{DetectorResult, AnalysisContext, Severity};
-use std::collections::{HashMap, HashSet};
+use crate::types::{AnalysisContext, Severity};
+use std::collections::HashMap;
 
 /// Represents a cross-contract vulnerability finding
 #[derive(Debug, Clone)]

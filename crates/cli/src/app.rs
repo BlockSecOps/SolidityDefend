@@ -3,7 +3,6 @@ use clap::{Arg, ArgAction, Command};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use std::collections::HashMap;
-use std::io::Write;
 
 use ast::arena::AstArena;
 use detectors::registry::{DetectorRegistry, RegistryConfig};
@@ -12,7 +11,7 @@ use output::{OutputFormat, OutputManager};
 use parser::Parser;
 use db::Database;
 use semantic::symbols::SymbolTable;
-use cache::{CacheManager, CacheConfig, CacheKey};
+use cache::{CacheManager, CacheKey};
 use cache::analysis_cache::{CachedAnalysisResult, CachedFinding, CachedLocation, AnalysisMetadata, AnalysisStats};
 use crate::config::SolidityDefendConfig;
 

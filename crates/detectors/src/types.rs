@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use ast::{Contract, Function, Modifier};
 use semantic::SymbolTable;
+
+// Re-export AST types for detector use
+pub use ast::{Contract, Function, Modifier};
 // Temporarily disabled due to CFG compilation errors
 // use cfg::ControlFlowGraph;
 // use dataflow::{DataFlowAnalysis, TaintAnalysis};

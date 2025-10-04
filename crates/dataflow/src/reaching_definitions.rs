@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use ir::{BlockId, ValueId, Instruction, IrValue};
+use ir::{BlockId, ValueId, Instruction};
 use cfg::ControlFlowGraph;
 use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, DefUseAnalysis, utils};
 

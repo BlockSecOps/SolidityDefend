@@ -1,11 +1,10 @@
 use std::collections::{HashMap, HashSet, VecDeque};
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use ir::{BlockId, ValueId, Instruction, IrValue};
+use ir::{BlockId, ValueId, Instruction};
 use cfg::ControlFlowGraph;
 use crate::analysis::{utils, DataFlowResult};
-use crate::reaching_definitions::{ReachingDefinitions, ReachingDefinitionsState, DefinitionSite};
+use crate::reaching_definitions::{ReachingDefinitionsState, DefinitionSite};
 
 /// Def-Use chain analysis
 ///
@@ -90,7 +89,7 @@ pub struct DefUseStatistics {
 impl DefUseChain {
     /// Build def-use chains for a control flow graph
     pub fn build(cfg: &ControlFlowGraph) -> Self {
-        let mut builder = DefUseChainBuilder::new(cfg);
+        let builder = DefUseChainBuilder::new(cfg);
         builder.build()
     }
 
@@ -99,7 +98,7 @@ impl DefUseChain {
         cfg: &ControlFlowGraph,
         reaching_defs: &DataFlowResult<ReachingDefinitionsState>
     ) -> Self {
-        let mut builder = DefUseChainBuilder::new(cfg);
+        let builder = DefUseChainBuilder::new(cfg);
         builder.build_with_reaching_definitions(reaching_defs)
     }
 

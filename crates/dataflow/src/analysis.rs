@@ -1,6 +1,5 @@
 use std::collections::{HashMap, HashSet};
 use anyhow::Result;
-use serde::{Deserialize, Serialize};
 
 use ir::{BlockId, ValueId, Instruction, IrValue};
 use cfg::ControlFlowGraph;

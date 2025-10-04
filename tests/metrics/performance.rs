@@ -12,6 +12,45 @@ use serde::{Deserialize, Serialize};
 // Performance testing framework types are defined in this module
 // TODO: Re-export when additional performance modules are implemented
 
+/// Result of tool comparison analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ComparisonResult {
+    pub baseline_tool: String,
+    pub performance_ratio: f64,
+    pub accuracy_ratio: f64,
+}
+
+/// Result of regression analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RegressionResult {
+    pub baseline_version: String,
+    pub performance_change: f64,
+    pub accuracy_change: f64,
+}
+
+/// Result of scalability analysis
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ScalabilityResult {
+    pub max_supported_lines: usize,
+    pub scaling_factor: f64,
+    pub memory_scaling: f64,
+}
+
+/// Configuration for performance testing
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceTestConfig {
+    pub test_cases: Vec<String>,
+    pub timeout_seconds: u64,
+    pub memory_limit_mb: usize,
+}
+
+/// Performance test suite
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PerformanceTestSuite {
+    pub config: PerformanceTestConfig,
+    pub results: Vec<AccuracyPerformanceMetrics>,
+}
+
 /// Performance metrics specifically for accuracy measurement integration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AccuracyPerformanceMetrics {

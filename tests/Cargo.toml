@@ -7,9 +7,7 @@ edition = "2021"
 name = "soliditydefend_tests"
 path = "lib.rs"
 
-[[bin]]
-name = "benchmark_runner"
-path = "benchmarks/benchmark_runner.rs"
+# Binary removed to prevent module conflicts - functionality available through lib
 
 [dependencies]
 serde = { workspace = true }
