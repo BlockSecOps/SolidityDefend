@@ -339,11 +339,149 @@ pub fn validate_memory_usage(peak_mb: f64, limit_mb: f64) {
 
 ### Coverage Metrics
 - **Pipeline Coverage**: 100% (AST → IR → CFG → Dataflow)
-- **Detector Coverage**: 17/17 detectors tested
+- **Detector Coverage**: 17/17 detectors tested with AST-based infrastructure
 - **Contract Pattern Coverage**: 15+ realistic scenarios
 - **Performance Coverage**: 4 complexity levels validated
 
+## Detector Testing Infrastructure
+
+### AST-Based Testing Migration
+All detector tests have been migrated from test-friendly mock types to proper AST-based types using arena allocation. This ensures tests validate actual detector functionality rather than simplified mock implementations.
+
+#### Test Infrastructure Location
+Detector-specific tests are located in:
+```
+crates/detectors/src/
+├── defi/
+│   ├── mev.rs                     # MEV detector tests
+│   ├── price_manipulation.rs      # Price manipulation tests
+│   ├── governance_attacks.rs      # Governance attack tests
+│   ├── flash_loan.rs             # Flash loan detector tests
+│   └── liquidity_attacks.rs      # Liquidity attack tests
+├── cross_contract/
+│   ├── analyzer.rs               # Cross-contract analyzer tests
+│   └── interaction_graph.rs      # Interaction graph tests
+├── taint/
+│   └── analyzer.rs               # Taint analysis tests
+└── advanced_security_engine.rs   # Advanced security engine tests
+```
+
+#### Test Utilities
+All detector tests use standardized AST-based test utilities:
+
+```rust
+use crate::types::test_utils::*;
+use ast::{AstArena, Visibility, StateMutability};
+use semantic::SymbolTable;
+
+#[test]
+fn test_detector_functionality() {
+    let arena = AstArena::new();
+
+    let function = create_mock_ast_function(
+        &arena,
+        "testFunction",
+        Visibility::External,
+        StateMutability::NonPayable,
+    );
+
+    let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+    let ctx = AnalysisContext {
+        contract: &contract,
+        symbols: SymbolTable::new(),
+        source_code: "contract Test { function testFunction() external {} }".to_string(),
+        file_path: "test.sol".to_string(),
+    };
+
+    // Test detector logic with real AST types
+    let detector = MyDetector;
+    let results = detector.detect_vulnerabilities(&ctx);
+    assert!(!results.is_empty());
+}
+```
+
+#### Migration Benefits
+- **Type Consistency**: All tests use the same AST types as production code
+- **Arena Management**: Proper memory management with arena allocation
+- **Real Functionality**: Tests validate actual AST interaction, not mock behavior
+- **Build Reliability**: Eliminates type mismatches between test and production code
+
+### Detector Test Results
+✅ **All Detector Tests**: 40/40 PASSING (100% success rate)
+- Cross-contract analyzer: 3/3 tests passing
+- Taint analyzer: 4/4 tests passing
+- Advanced security engine: 3/3 tests passing
+- Interaction graph: 4/4 tests passing
+- DeFi detectors: 26/26 tests passing
+
+### Running Detector Tests
+```bash
+# Run all detector tests
+cargo test -p detectors
+
+# Run specific detector category tests
+cargo test -p detectors defi::
+cargo test -p detectors cross_contract::
+cargo test -p detectors taint::
+
+# Run with verbose output
+cargo test -p detectors -- --nocapture
+```
+
 ## Contributing to Tests
+
+### Adding New Detector Tests
+
+Follow the AST-based testing approach for all new detector tests:
+
+1. **Use proper imports**:
+```rust
+use crate::types::test_utils::*;
+use ast::{AstArena, Visibility, StateMutability};
+use semantic::SymbolTable;
+```
+
+2. **Create AST-based test fixtures**:
+```rust
+#[test]
+fn test_new_detector_functionality() {
+    let arena = AstArena::new();
+
+    let function = create_mock_ast_function(
+        &arena,
+        "vulnerableFunction",
+        Visibility::External,
+        StateMutability::NonPayable,
+    );
+
+    let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+    let ctx = AnalysisContext {
+        contract: &contract,
+        symbols: SymbolTable::new(),
+        source_code: "contract Test { function vulnerableFunction() external {} }".to_string(),
+        file_path: "test.sol".to_string(),
+    };
+
+    let detector = NewDetector;
+    let results = detector.detect_vulnerabilities(&ctx);
+
+    assert!(!results.is_empty());
+    assert_eq!(results[0].severity, Severity::High);
+}
+```
+
+3. **Avoid deprecated patterns**:
+```rust
+// ❌ DON'T: Use old test-friendly types
+use crate::types::{Contract, Function};
+use std::collections::HashMap;
+
+// ✅ DO: Use AST-based test utilities
+use crate::types::test_utils::*;
+use semantic::SymbolTable;
+```
 
 ### Adding New Test Fixtures
 

@@ -193,7 +193,7 @@ impl CrossContractUtils {
         ];
 
         external_call_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -203,9 +203,9 @@ impl CrossContractUtils {
 
         // This would require AST parsing to extract actual addresses
         // For now, we'll look for common patterns
-        if ctx.source.contains("0x") {
+        if ctx.source_code.contains("0x") {
             // Extract potential addresses (simplified)
-            let lines: Vec<&str> = ctx.source.lines().collect();
+            let lines: Vec<&str> = ctx.source_code.lines().collect();
             for line in lines {
                 if line.contains("0x") && line.len() >= 42 {
                     // This is a simplified extraction - real implementation would use regex
@@ -229,7 +229,7 @@ impl CrossContractUtils {
         ];
 
         proxy_patterns.iter().any(|&pattern|
-            ctx.source.to_lowercase().contains(pattern)
+            ctx.source_code.to_lowercase().contains(pattern)
         )
     }
 
@@ -241,7 +241,7 @@ impl CrossContractUtils {
         ];
 
         upgrade_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -277,7 +277,7 @@ impl CrossContractUtils {
             "ERC20", "ERC721", "ERC1155", "IERC", "OpenZeppelin"
         ];
         standard_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -286,7 +286,7 @@ impl CrossContractUtils {
             "assembly", "delegatecall", "selfdestruct", "create2"
         ];
         complexity_indicators.iter().any(|&indicator|
-            ctx.source.contains(indicator)
+            ctx.source_code.contains(indicator)
         )
     }
 }

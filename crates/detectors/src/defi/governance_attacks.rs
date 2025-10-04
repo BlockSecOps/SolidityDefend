@@ -329,7 +329,7 @@ impl GovernanceAttackDetector {
             "ballot", "referendum", "poll", "democracy"
         ];
         governance_indicators.iter().any(|&indicator|
-            ctx.source.to_lowercase().contains(indicator)
+            ctx.source_code.to_lowercase().contains(indicator)
         )
     }
 
@@ -343,9 +343,9 @@ impl GovernanceAttackDetector {
     }
 
     fn vulnerable_to_flash_loan_voting(&self, ctx: &AnalysisContext, func: &Function) -> bool {
-        let uses_current_balance = ctx.source.contains("balanceOf(") ||
-                                  ctx.source.contains("currentBalance") ||
-                                  ctx.source.contains("getBalance");
+        let uses_current_balance = ctx.source_code.contains("balanceOf(") ||
+                                  ctx.source_code.contains("currentBalance") ||
+                                  ctx.source_code.contains("getBalance");
 
         let lacks_time_protection = !self.has_time_weighted_voting(ctx) &&
                                    !self.has_snapshot_based_voting(ctx) &&
@@ -359,7 +359,7 @@ impl GovernanceAttackDetector {
             "timeWeighted", "averageBalance", "historicalBalance", "weightedVoting"
         ];
         time_weighted_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -368,7 +368,7 @@ impl GovernanceAttackDetector {
             "snapshot", "checkpointBalance", "balanceAt", "votingPower"
         ];
         snapshot_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -377,7 +377,7 @@ impl GovernanceAttackDetector {
             "holdingPeriod", "lockPeriod", "vestingPeriod", "minimumHolding"
         ];
         holding_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -386,7 +386,7 @@ impl GovernanceAttackDetector {
             "propose", "createProposal", "submitProposal", "addProposal"
         ];
         proposal_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
+            func.name.as_str().to_lowercase().contains(&pattern.to_lowercase())
         )
     }
 
@@ -395,7 +395,7 @@ impl GovernanceAttackDetector {
             "proposalThreshold", "minimumTokens", "requiredBalance", "threshold"
         ];
         threshold_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -404,7 +404,7 @@ impl GovernanceAttackDetector {
             "cooldown", "delay", "interval", "waitPeriod", "lastProposal"
         ];
         cooldown_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -413,7 +413,7 @@ impl GovernanceAttackDetector {
             "proposalFee", "deposit", "bond", "stake", "cost"
         ];
         cost_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -422,7 +422,7 @@ impl GovernanceAttackDetector {
             "rateLimit", "maxProposals", "spamProtection", "antiSpam"
         ];
         spam_protection_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -440,7 +440,7 @@ impl GovernanceAttackDetector {
             "identity", "reputation", "verification", "sybilResistance", "antiVoteBuying"
         ];
         protection_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -454,12 +454,12 @@ impl GovernanceAttackDetector {
     }
 
     fn vulnerable_to_griefing(&self, ctx: &AnalysisContext, func: &Function) -> bool {
-        let lacks_execution_guarantee = !ctx.source.contains("guarantee") &&
-                                       !ctx.source.contains("bond") &&
-                                       !ctx.source.contains("penalty");
+        let lacks_execution_guarantee = !ctx.source_code.contains("guarantee") &&
+                                       !ctx.source_code.contains("bond") &&
+                                       !ctx.source_code.contains("penalty");
 
-        let allows_execution_failure = ctx.source.contains("revert") ||
-                                      ctx.source.contains("fail");
+        let allows_execution_failure = ctx.source_code.contains("revert") ||
+                                      ctx.source_code.contains("fail");
 
         lacks_execution_guarantee && allows_execution_failure
     }
@@ -469,7 +469,7 @@ impl GovernanceAttackDetector {
             "snapshot", "checkpoint", "balanceAt", "totalSupplyAt"
         ];
         snapshot_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -478,7 +478,7 @@ impl GovernanceAttackDetector {
             "block.number", "block.timestamp", "now"
         ];
         manipulation_indicators.iter().any(|&indicator|
-            ctx.source.contains(indicator)
+            ctx.source_code.contains(indicator)
         ) && !self.has_deterministic_snapshots(ctx)
     }
 
@@ -487,7 +487,7 @@ impl GovernanceAttackDetector {
             "fixedSnapshot", "predeterminedSnapshot", "scheduledSnapshot"
         ];
         deterministic_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
@@ -496,16 +496,16 @@ impl GovernanceAttackDetector {
             "quorum", "minimumParticipation", "requiredVotes", "threshold"
         ];
         quorum_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 
     fn vulnerable_to_quorum_manipulation(&self, ctx: &AnalysisContext, func: &Function) -> bool {
-        let uses_simple_quorum = ctx.source.contains("totalSupply") &&
-                                !ctx.source.contains("timeWeighted");
+        let uses_simple_quorum = ctx.source_code.contains("totalSupply") &&
+                                !ctx.source_code.contains("timeWeighted");
 
-        let lacks_participation_validation = !ctx.source.contains("validateParticipation") &&
-                                            !ctx.source.contains("verifyQuorum");
+        let lacks_participation_validation = !ctx.source_code.contains("validateParticipation") &&
+                                            !ctx.source_code.contains("verifyQuorum");
 
         uses_simple_quorum && lacks_participation_validation
     }
@@ -515,7 +515,7 @@ impl GovernanceAttackDetector {
             "commitReveal", "delay", "queue", "timelock", "batch"
         ];
         protection_patterns.iter().any(|&pattern|
-            ctx.source.contains(pattern)
+            ctx.source_code.contains(pattern)
         )
     }
 }
@@ -523,70 +523,62 @@ impl GovernanceAttackDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract, Function};
-    use std::collections::HashMap;
-
-    fn create_mock_context() -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: "TestContract".to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
 
     #[test]
     fn test_voting_function_detection() {
         let detector = GovernanceAttackDetector;
+        let arena = AstArena::new();
 
-        let func = Function {
-            name: "castVote".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
-        };
+        let function = create_mock_ast_function(
+            &arena,
+            "castVote",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
 
-        assert!(detector.is_voting_function(&func));
+        assert!(detector.is_voting_function(&function));
     }
 
     #[test]
     fn test_proposal_creation_detection() {
         let detector = GovernanceAttackDetector;
+        let arena = AstArena::new();
 
-        let func = Function {
-            name: "createProposal".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
-        };
+        let function = create_mock_ast_function(
+            &arena,
+            "createProposal",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
 
-        assert!(detector.is_proposal_creation_function(&func));
+
+        assert!(detector.is_proposal_creation_function(&function));
     }
 
     #[test]
     fn test_flash_loan_voting_vulnerability() {
         let detector = GovernanceAttackDetector;
+        let arena = AstArena::new();
 
-        let mut ctx = create_mock_context();
-        ctx.source = "function vote() { uint power = token.balanceOf(msg.sender); }".to_string();
+        let function = create_mock_ast_function(
+            &arena,
+            "vote",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
 
-        let func = Function {
-            name: "vote".to_string(),
-            visibility: Some("external".to_string()),
-            line_number: 10,
-            parameters: Vec::new(),
-            returns: Vec::new(),
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let ctx = AnalysisContext {
+            contract: &contract,
+            symbols: semantic::SymbolTable::new(),
+            source_code: "function vote() { uint power = token.balanceOf(msg.sender); }".to_string(),
+            file_path: "test.sol".to_string(),
         };
 
-        assert!(detector.vulnerable_to_flash_loan_voting(&ctx, &func));
+        assert!(detector.vulnerable_to_flash_loan_voting(&ctx, &ctx.contract.functions[0]));
     }
 
     #[test]

@@ -149,7 +149,7 @@ impl DeFiPatterns {
         // For now, check function and variable names
         for func in &ctx.contract.functions {
             for indicator in &time_indicators {
-                if ctx.source.contains(indicator) {
+                if ctx.source_code.contains(indicator) {
                     return true;
                 }
             }

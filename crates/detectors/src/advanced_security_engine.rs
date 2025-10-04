@@ -560,22 +560,9 @@ use std::collections::HashSet;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract, Function};
-
-    fn create_mock_context(name: &str) -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: name.to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "contract Test { function flashLoan() external { } }".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
+    use semantic::SymbolTable;
 
     #[test]
     fn test_engine_creation() {

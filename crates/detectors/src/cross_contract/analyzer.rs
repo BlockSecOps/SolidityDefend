@@ -223,7 +223,7 @@ impl CrossContractAnalyzer {
         ];
 
         privileged_patterns.iter().any(|&pattern|
-            contract_ctx.source.contains(pattern)
+            contract_ctx.source_code.contains(pattern)
         )
     }
 
@@ -260,7 +260,7 @@ impl CrossContractAnalyzer {
         ];
 
         sync_patterns.iter().any(|&pattern|
-            contract_ctx.source.contains(pattern)
+            contract_ctx.source_code.contains(pattern)
         )
     }
 
@@ -374,23 +374,9 @@ impl Default for CrossContractAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Contract, Function};
-    use std::collections::HashMap;
-
-    fn create_mock_context() -> AnalysisContext<'static> {
-        AnalysisContext {
-            contract: &Contract {
-                name: "TestContract".to_string(),
-                functions: Vec::new(),
-                state_variables: Vec::new(),
-                events: Vec::new(),
-                modifiers: Vec::new(),
-            },
-            symbols: HashMap::new(),
-            source_code: "".to_string(),
-            file_path: "test.sol".to_string(),
-        }
-    }
+    use crate::types::test_utils::*;
+    use ast::{AstArena, Visibility, StateMutability};
+    use semantic::SymbolTable;
 
     #[test]
     fn test_analyzer_creation() {
@@ -401,9 +387,23 @@ mod tests {
     #[test]
     fn test_privileged_calls_detection() {
         let analyzer = CrossContractAnalyzer::new();
+        let arena = AstArena::new();
 
-        let mut ctx = create_mock_context();
-        ctx.source_code = "function admin() onlyOwner { target.call(); }".to_string();
+        let function = create_mock_ast_function(
+            &arena,
+            "admin",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
+
+        let contract = create_mock_ast_contract(&arena, "TestContract", vec![function]);
+
+        let ctx = AnalysisContext {
+            contract: &contract,
+            symbols: SymbolTable::new(),
+            source_code: "function admin() onlyOwner { target.call(); }".to_string(),
+            file_path: "test.sol".to_string(),
+        };
 
         assert!(analyzer.makes_privileged_calls(&ctx, "target"));
     }
@@ -411,9 +411,38 @@ mod tests {
     #[test]
     fn test_shared_state_detection() {
         let analyzer = CrossContractAnalyzer::new();
+        let arena = AstArena::new();
 
-        let ctx1 = create_mock_context();
-        let ctx2 = create_mock_context();
+        let function1 = create_mock_ast_function(
+            &arena,
+            "func1",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
+
+        let function2 = create_mock_ast_function(
+            &arena,
+            "func2",
+            Visibility::External,
+            StateMutability::NonPayable,
+        );
+
+        let contract1 = create_mock_ast_contract(&arena, "Contract1", vec![function1]);
+        let contract2 = create_mock_ast_contract(&arena, "Contract2", vec![function2]);
+
+        let ctx1 = AnalysisContext {
+            contract: &contract1,
+            symbols: SymbolTable::new(),
+            source_code: "".to_string(),
+            file_path: "test1.sol".to_string(),
+        };
+
+        let ctx2 = AnalysisContext {
+            contract: &contract2,
+            symbols: SymbolTable::new(),
+            source_code: "".to_string(),
+            file_path: "test2.sol".to_string(),
+        };
 
         // This would need more sophisticated state variable comparison
         assert!(!analyzer.shares_state(&ctx1, &ctx2));
