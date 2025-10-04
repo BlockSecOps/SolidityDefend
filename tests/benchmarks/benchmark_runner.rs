@@ -2,7 +2,8 @@ use std::fs;
 use std::path::Path;
 use chrono::Utc;
 
-use crate::benchmarks::performance_comparison::PerformanceBenchmark;
+mod performance_comparison;
+use performance_comparison::{PerformanceBenchmark, BenchmarkResult};
 
 pub struct BenchmarkRunner {
     output_dir: String,
@@ -49,7 +50,7 @@ impl BenchmarkRunner {
         Ok(())
     }
 
-    fn print_summary(&self, results: &[crate::benchmarks::performance_comparison::BenchmarkResult]) {
+    fn print_summary(&self, results: &[BenchmarkResult]) {
         println!("\n📊 BENCHMARK SUMMARY");
         println!("===================");
 
@@ -143,4 +144,11 @@ mod tests {
         // Clean up
         fs::remove_dir_all(test_dir).unwrap();
     }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let runner = BenchmarkRunner::new("benchmark_results");
+    runner.run_all_benchmarks()?;
+    println!("Benchmarks completed successfully!");
+    Ok(())
 }
