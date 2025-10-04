@@ -224,6 +224,7 @@ pub mod compare {
     use std::cmp::Ordering;
 
     /// Parse a semantic version string
+    #[allow(dead_code)]
     fn parse_version(version: &str) -> Result<(u32, u32, u32), String> {
         let clean_version = version.split('-').next().unwrap_or(version);
         let parts: Vec<&str> = clean_version.split('.').collect();
@@ -240,6 +241,7 @@ pub mod compare {
     }
 
     /// Compare two semantic versions
+    #[allow(dead_code)]
     pub fn compare_versions(v1: &str, v2: &str) -> Result<Ordering, String> {
         let (maj1, min1, pat1) = parse_version(v1)?;
         let (maj2, min2, pat2) = parse_version(v2)?;
@@ -248,6 +250,7 @@ pub mod compare {
     }
 
     /// Check if version1 is compatible with version2 (same major.minor)
+    #[allow(dead_code)]
     pub fn is_compatible(v1: &str, v2: &str) -> Result<bool, String> {
         let (maj1, min1, _) = parse_version(v1)?;
         let (maj2, min2, _) = parse_version(v2)?;
@@ -256,6 +259,7 @@ pub mod compare {
     }
 
     /// Check if version1 is newer than version2
+    #[allow(dead_code)]
     pub fn is_newer(v1: &str, v2: &str) -> Result<bool, String> {
         Ok(compare_versions(v1, v2)? == Ordering::Greater)
     }
