@@ -3,7 +3,8 @@ use anyhow::Result;
 
 use ast::{SourceFile, Function};
 use cfg::{ControlFlowGraph, CfgBuilder, CfgAnalysisEngine};
-use dataflow::{DataFlowFramework, DefUseChains, DataFlowResult};
+use dataflow::{DefUseChain, DataFlowResult};
+use dataflow::framework::{DataFlowFramework, DefUseChains};
 use dataflow::framework::{ReachingDefinitionsState, LiveVariablesState};
 use ir::{IrFunction, Lowering};
 
