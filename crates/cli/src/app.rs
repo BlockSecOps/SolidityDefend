@@ -123,7 +123,7 @@ impl CliApp {
 
         // Create detector registry from config
         let registry_config = config.to_registry_config();
-        let registry = DetectorRegistry::with_config(registry_config);
+        let registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
 
         Ok(Self {
             registry,
