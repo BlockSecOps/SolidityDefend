@@ -9,8 +9,8 @@ pub mod live_variables;
 pub mod def_use;
 
 pub use analysis::*;
-pub use framework::*;
-pub use reaching_definitions::*;
-pub use live_variables::*;
+pub use framework::{DataFlowAnalysis};
+pub use reaching_definitions::{ReachingDefinitionsState};
+pub use live_variables::{LiveVariablesState};
 pub use taint::*;
 pub use def_use::*;

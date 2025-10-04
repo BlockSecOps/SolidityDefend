@@ -269,13 +269,13 @@ impl FlashLoanDetector {
         callback_patterns.iter().any(|&pattern| name.contains(pattern))
     }
 
-    fn has_unprotected_external_calls(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_unprotected_external_calls(&self, ctx: &AnalysisContext, __func: &Function) -> bool {
         // Look for external calls in the function
         // This would require deeper AST analysis
         ctx.source_code.contains("call(") || ctx.source_code.contains(".transfer(")
     }
 
-    fn has_reentrancy_guard(&self, ctx: &AnalysisContext, func: &Function) -> bool {
+    fn has_reentrancy_guard(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         // Check for reentrancy guard patterns
         let guard_patterns = [
             "nonReentrant", "ReentrancyGuard", "_nonReentrantBefore", "_nonReentrantAfter"

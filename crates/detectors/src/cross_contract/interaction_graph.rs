@@ -311,17 +311,17 @@ impl InteractionGraph {
     /// Detect interaction between two contracts
     fn detect_interaction(
         from_name: &str,
-        from_context: &AnalysisContext,
+        from__context: &AnalysisContext,
         to_name: &str,
-        to_context: &AnalysisContext
+        to__context: &AnalysisContext
     ) -> Option<InteractionEdge> {
         // Look for function calls to the target contract
-        let calls_target = Self::calls_contract(from_context, to_name);
+        let calls_target = Self::calls_contract(from__context, to_name);
 
         if calls_target {
-            let interaction_type = Self::determine_interaction_type(from_context, to_name);
-            let functions = Self::extract_called_functions(from_context, to_name);
-            let data_flow = Self::analyze_data_flow(from_context, to_context);
+            let interaction_type = Self::determine_interaction_type(from__context, to_name);
+            let functions = Self::extract_called_functions(from__context, to_name);
+            let data_flow = Self::analyze_data_flow(from__context, to__context);
             let risk_level = Self::assess_risk_level(&interaction_type, &data_flow);
 
             Some(InteractionEdge {
@@ -337,48 +337,48 @@ impl InteractionGraph {
         }
     }
 
-    fn calls_contract(context: &AnalysisContext, target: &str) -> bool {
+    fn calls_contract(_context: &AnalysisContext, _target: &str) -> bool {
         // Simplified detection - would need AST analysis for precision
-        context.source_code.contains(target) ||
-        context.source_code.contains("call(") ||
-        context.source_code.contains("delegatecall(")
+        _context.source_code.contains(_target) ||
+        _context.source_code.contains("call(") ||
+        _context.source_code.contains("delegatecall(")
     }
 
-    fn determine_interaction_type(context: &AnalysisContext, target: &str) -> InteractionType {
-        if context.source_code.contains("delegatecall") {
+    fn determine_interaction_type(_context: &AnalysisContext, _target: &str) -> InteractionType {
+        if _context.source_code.contains("delegatecall") {
             InteractionType::DelegateCall
-        } else if context.source_code.contains("staticcall") {
+        } else if _context.source_code.contains("staticcall") {
             InteractionType::StaticCall
-        } else if context.source_code.contains("transfer") {
+        } else if _context.source_code.contains("transfer") {
             InteractionType::Transfer
-        } else if context.source_code.contains("approve") {
+        } else if _context.source_code.contains("approve") {
             InteractionType::Approve
         } else {
             InteractionType::FunctionCall
         }
     }
 
-    fn extract_called_functions(context: &AnalysisContext, target: &str) -> Vec<String> {
+    fn extract_called_functions(_context: &AnalysisContext, _target: &str) -> Vec<String> {
         // Simplified extraction - would need proper AST parsing
         let mut functions = Vec::new();
 
         // Look for common function call patterns
-        if context.source_code.contains("transfer") {
+        if _context.source_code.contains("transfer") {
             functions.push("transfer".to_string());
         }
-        if context.source_code.contains("approve") {
+        if _context.source_code.contains("approve") {
             functions.push("approve".to_string());
         }
 
         functions
     }
 
-    fn analyze_data_flow(from_context: &AnalysisContext, to_context: &AnalysisContext) -> Vec<DataFlow> {
+    fn analyze_data_flow(from__context: &AnalysisContext, to__context: &AnalysisContext) -> Vec<DataFlow> {
         // Simplified data flow analysis - would need more sophisticated implementation
         Vec::new()
     }
 
-    fn assess_risk_level(interaction_type: &InteractionType, data_flow: &[DataFlow]) -> RiskLevel {
+    fn assess_risk_level(interaction_type: &InteractionType, _data_flow: &[DataFlow]) -> RiskLevel {
         match interaction_type {
             InteractionType::DelegateCall => RiskLevel::Critical,
             InteractionType::FunctionCall => RiskLevel::Medium,
@@ -391,11 +391,11 @@ impl InteractionGraph {
 
 impl ContractNode {
     /// Create a contract node from analysis context
-    pub fn from_context(name: String, context: &AnalysisContext) -> Self {
-        let contract_type = Self::determine_contract_type(context);
-        let trust_level = Self::determine_trust_level(context);
-        let external_calls = Self::extract_external_calls(context);
-        let receives_calls = Self::extract_received_calls(context);
+    pub fn from_context(name: String, _context: &AnalysisContext) -> Self {
+        let contract_type = Self::determine_contract_type(_context);
+        let trust_level = Self::determine_trust_level(_context);
+        let external_calls = Self::extract_external_calls(_context);
+        let receives_calls = Self::extract_received_calls(_context);
 
         Self {
             name,
@@ -406,8 +406,8 @@ impl ContractNode {
         }
     }
 
-    fn determine_contract_type(context: &AnalysisContext) -> ContractType {
-        let source = &context.source_code.to_lowercase();
+    fn determine_contract_type(_context: &AnalysisContext) -> ContractType {
+        let source = &_context.source_code.to_lowercase();
 
         if source.contains("erc20") || source.contains("token") {
             ContractType::Token
@@ -432,8 +432,8 @@ impl ContractNode {
         }
     }
 
-    fn determine_trust_level(context: &AnalysisContext) -> TrustLevel {
-        let source = &context.source_code.to_lowercase();
+    fn determine_trust_level(_context: &AnalysisContext) -> TrustLevel {
+        let source = &_context.source_code.to_lowercase();
 
         if source.contains("openzeppelin") || source.contains("@openzeppelin") {
             TrustLevel::Trusted
@@ -444,12 +444,12 @@ impl ContractNode {
         }
     }
 
-    fn extract_external_calls(context: &AnalysisContext) -> Vec<String> {
+    fn extract_external_calls(_context: &AnalysisContext) -> Vec<String> {
         // Simplified extraction - would need AST analysis
         Vec::new()
     }
 
-    fn extract_received_calls(context: &AnalysisContext) -> Vec<String> {
+    fn extract_received_calls(_context: &AnalysisContext) -> Vec<String> {
         // Simplified extraction - would need AST analysis
         Vec::new()
     }
