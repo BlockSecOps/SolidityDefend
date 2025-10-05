@@ -5,6 +5,23 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **URL-Based Contract Analysis**: Analyze smart contracts directly from blockchain explorer URLs
+  - Support for Etherscan, Polygonscan, BscScan, and Arbiscan
+  - Transaction URL analysis (contract creation and interaction)
+  - Contract address URL analysis for direct contract inspection
+  - Interactive API key setup with `--setup-api-keys` command
+  - Freemium model with user-provided API keys
+  - Comprehensive error handling and user guidance
+  - Temporary file management with automatic cleanup
+
+### Enhanced
+- **CLI Interface**: Added `--from-url` and `--setup-api-keys` flags for URL-based analysis
+- **Documentation**: Comprehensive URL analysis guide with troubleshooting and examples
+- **User Experience**: Intuitive setup process with helpful error messages and guidance
+
 ## [0.8.0] - 2024-10-04
 
 ### Added

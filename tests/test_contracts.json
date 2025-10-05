@@ -1,0 +1,73 @@
+{
+  "description": "Test contracts for URL-based analysis validation",
+  "version": "1.0.0",
+  "test_contracts": {
+    "ethereum_mainnet": {
+      "sample_contract": {
+        "address": "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+        "description": "Sample contract for URL-based analysis testing",
+        "platform": "etherscan",
+        "network": "ethereum",
+        "urls": {
+          "contract": "https://etherscan.io/address/0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+          "creation_tx": "https://etherscan.io/tx/0x[creation_transaction_hash]"
+        },
+        "expected_analysis": {
+          "should_be_verified": true,
+          "expected_findings": "multiple",
+          "test_categories": ["access_control", "validation", "external_calls"]
+        }
+      }
+    },
+    "test_cases": {
+      "valid_urls": [
+        "https://etherscan.io/address/0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+        "https://polygonscan.com/address/0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+        "https://bscscan.com/address/0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e",
+        "https://arbiscan.io/address/0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e"
+      ],
+      "valid_tx_urls": [
+        "https://etherscan.io/tx/0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+        "https://polygonscan.com/tx/0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+        "https://bscscan.com/tx/0x9876543210fedcba9876543210fedcba9876543210fedcba9876543210fedcba"
+      ],
+      "invalid_urls": [
+        "https://invalid-explorer.com/address/0x123",
+        "https://etherscan.io/invalid/0x123",
+        "https://etherscan.io/address/invalid_address",
+        "not_a_url_at_all",
+        "ftp://etherscan.io/address/0x123"
+      ]
+    },
+    "platforms": {
+      "etherscan": {
+        "name": "Etherscan",
+        "api_base": "https://api.etherscan.io/api",
+        "explorer_base": "https://etherscan.io",
+        "free_rate_limit": "5 calls/sec, 100k/day",
+        "api_key_env": "ETHERSCAN_API_KEY"
+      },
+      "polygonscan": {
+        "name": "Polygonscan",
+        "api_base": "https://api.polygonscan.com/api",
+        "explorer_base": "https://polygonscan.com",
+        "free_rate_limit": "5 calls/sec, 100k/day",
+        "api_key_env": "POLYGONSCAN_API_KEY"
+      },
+      "bscscan": {
+        "name": "BscScan",
+        "api_base": "https://api.bscscan.com/api",
+        "explorer_base": "https://bscscan.com",
+        "free_rate_limit": "5 calls/sec, 10k/day",
+        "api_key_env": "BSCSCAN_API_KEY"
+      },
+      "arbiscan": {
+        "name": "Arbiscan",
+        "api_base": "https://api.arbiscan.io/api",
+        "explorer_base": "https://arbiscan.io",
+        "free_rate_limit": "5 calls/sec, 100k/day",
+        "api_key_env": "ARBISCAN_API_KEY"
+      }
+    }
+  }
+}
