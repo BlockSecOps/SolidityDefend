@@ -406,9 +406,12 @@ impl<'arena> ArenaParser<'arena> {
 
         match expr {
             pt::Expression::FunctionCall(_, function, args) => {
+                // Handle regular function calls, including those where the function
+                // might be a FunctionCallBlock (like call{value: amount}(""))
                 let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
                 let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
+                // Convert the regular arguments
                 for arg in args {
                     if let Ok(converted_arg) = self.convert_expression(arg, source, file_path) {
                         arguments.push(converted_arg);
@@ -425,10 +428,14 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             pt::Expression::FunctionCallBlock(_, function, _block) => {
-                // Handle function calls with blocks like msg.sender.call{value: amount}("")
+                // Handle function calls with blocks like msg.sender.call{value: amount}
+                // For now, treat this exactly like a regular FunctionCall to test basic functionality
                 let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
                 let arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
                 let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                // TODO: Parse the block to extract call options (like {value: amount})
+                // For now, ignore the block and just make this detectable as an external call
 
                 Ok(Expression::FunctionCall {
                     function: function_expr,
@@ -462,8 +469,31 @@ impl<'arena> ArenaParser<'arena> {
                     location,
                 })
             }
+            pt::Expression::NamedFunctionCall(_, function, named_args) => {
+                // Handle named function calls like function({name: value})
+                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let mut names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                // Convert named arguments
+                for named_arg in named_args {
+                    if let Ok(arg_expr) = self.convert_expression(&named_arg.expr, source, file_path) {
+                        arguments.push(arg_expr);
+                        let name_ident = self.convert_identifier_with_source(&named_arg.name, source, file_path)?;
+                        names.push(name_ident);
+                    }
+                }
+
+                Ok(Expression::FunctionCall {
+                    function: function_expr,
+                    arguments,
+                    names,
+                    location,
+                })
+            }
             _ => {
                 // For unimplemented expression types, create a literal placeholder
+                // TODO: Add proper logging here to debug what expression types are being missed
                 Ok(Expression::Literal {
                     value: ast::LiteralValue::Number("0".into()),
                     location,
