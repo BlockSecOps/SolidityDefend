@@ -427,16 +427,29 @@ impl<'arena> ArenaParser<'arena> {
                     location,
                 })
             }
-            pt::Expression::FunctionCallBlock(_, function, _block) => {
+            pt::Expression::FunctionCallBlock(_, function, block) => {
                 // Handle function calls with blocks like msg.sender.call{value: amount}
-                // For now, treat this exactly like a regular FunctionCall to test basic functionality
                 let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
-                let arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
-                let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let mut names = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
-                // TODO: Parse the block to extract call options (like {value: amount})
-                // For now, ignore the block and just make this detectable as an external call
+                // Parse the block to extract call options (like {value: amount, gas: 1000})
+                // The block is a Statement::Block containing the options as expressions
+                if let pt::Statement::Block { statements, .. } = block.as_ref() {
+                    for stmt in statements {
+                        // Each statement in the block should be an assignment-like expression
+                        // representing call options like "value: amount" or "gas: 1000"
+                        if let pt::Statement::Expression(_, expr) = stmt {
+                            // Try to parse expressions in the block as call option assignments
+                            if let Ok(arg_expr) = self.convert_expression(expr, source, file_path) {
+                                arguments.push(arg_expr);
+                            }
+                        }
+                    }
+                }
 
+                // Create FunctionCall that represents both the function and its call options
+                // This maintains compatibility with the detector while preserving call option info
                 Ok(Expression::FunctionCall {
                     function: function_expr,
                     arguments,

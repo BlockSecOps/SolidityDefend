@@ -59,7 +59,13 @@ impl ClassicReentrancyDetector {
         match expr {
             ast::Expression::FunctionCall { function, .. } => {
                 match function {
+                    // Direct member access pattern: obj.method()
                     ast::Expression::MemberAccess { .. } => true,
+                    // Nested function call pattern: obj.method{options}()
+                    ast::Expression::FunctionCall { function: inner_function, .. } => {
+                        // Check if the inner function is a MemberAccess (e.g., msg.sender.call)
+                        matches!(inner_function, ast::Expression::MemberAccess { .. })
+                    }
                     _ => false,
                 }
             }
