@@ -110,7 +110,7 @@ pub struct DetectorConfig {
     pub fail_fast: bool,
 
     /// Custom detector settings
-    pub custom_settings: HashMap<String, serde_yaml::Value>,
+    pub custom_settings: HashMap<String, serde_norway::Value>,
 }
 
 impl Default for DetectorConfig {
@@ -284,7 +284,7 @@ impl SolidityDefendConfig {
         let content = std::fs::read_to_string(path)
             .with_context(|| format!("Failed to read config file: {}", path.display()))?;
 
-        let config: SolidityDefendConfig = serde_yaml::from_str(&content)
+        let config: SolidityDefendConfig = serde_norway::from_str(&content)
             .with_context(|| format!("Failed to parse config file: {}", path.display()))?;
 
         Ok(config)
@@ -300,7 +300,7 @@ impl SolidityDefendConfig {
                 .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
         }
 
-        let content = serde_yaml::to_string(self)
+        let content = serde_norway::to_string(self)
             .context("Failed to serialize configuration")?;
 
         std::fs::write(path, content)
@@ -416,11 +416,11 @@ mod tests {
     #[test]
     fn test_config_serialization() {
         let config = SolidityDefendConfig::default();
-        let yaml = serde_yaml::to_string(&config).unwrap();
+        let yaml = serde_norway::to_string(&config).unwrap();
         assert!(yaml.contains("min_severity"));
         assert!(yaml.contains("enabled"));
 
-        let deserialized: SolidityDefendConfig = serde_yaml::from_str(&yaml).unwrap();
+        let deserialized: SolidityDefendConfig = serde_norway::from_str(&yaml).unwrap();
         assert_eq!(deserialized.general.min_severity, config.general.min_severity);
     }
 
