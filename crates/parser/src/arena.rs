@@ -353,6 +353,23 @@ impl<'arena> ArenaParser<'arena> {
                 let body_stmt = self.arena.alloc(self.convert_statement(body, source, file_path)?);
                 Ok(Statement::While { condition: condition_expr, body: body_stmt, location })
             }
+            pt::Statement::DoWhile(_, body, condition) => {
+                // Convert do-while statement
+                let condition_expr = self.convert_expression(condition, source, file_path)?;
+                let body_stmt = self.arena.alloc(self.convert_statement(body, source, file_path)?);
+
+                // Create a while statement (our AST doesn't distinguish do-while from while)
+                Ok(Statement::While { condition: condition_expr, body: body_stmt, location })
+            }
+            pt::Statement::Assembly { .. } => {
+                // Convert assembly statement to a placeholder
+                // Assembly blocks are unlikely to contain external calls relevant to reentrancy
+                let dummy_expr = Expression::Literal {
+                    value: ast::LiteralValue::String("assembly"),
+                    location: location.clone(),
+                };
+                Ok(Statement::Expression(dummy_expr))
+            }
             pt::Statement::For(_, init, condition, increment, body) => {
                 let init_stmt = if let Some(init) = init {
                     Some(self.arena.alloc(self.convert_statement(init, source, file_path)?))
@@ -382,6 +399,104 @@ impl<'arena> ArenaParser<'arena> {
                     update: update_expr,
                     body: body_stmt,
                     location
+                })
+            }
+            pt::Statement::VariableDefinition(_, var_def, initial_value) => {
+                // Convert variable declaration with optional initial value
+                let mut declarations = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                // Convert the variable definition
+                let var_name = if let Some(name) = &var_def.name {
+                    self.convert_identifier_with_source(name, source, file_path)?
+                } else {
+                    // Create dummy identifier if name is None
+                    ast::Identifier::new("_unnamed", self.convert_location_with_source(&var_def.loc, file_path, Some(source)))
+                };
+                let var_location = self.convert_location_with_source(&var_def.loc, file_path, Some(source));
+
+                let var_decl = ast::VariableDeclaration {
+                    name: var_name,
+                    type_name: None, // TODO: Convert type if needed
+                    storage_location: None,
+                    location: var_location,
+                };
+                declarations.push(var_decl);
+
+                // Convert initial value if present
+                let initial_expr = if let Some(init_expr) = initial_value {
+                    Some(self.convert_expression(init_expr, source, file_path)?)
+                } else {
+                    None
+                };
+
+                Ok(Statement::VariableDeclaration {
+                    declarations,
+                    initial_value: initial_expr,
+                    location,
+                })
+            }
+            pt::Statement::Try(_, expr, returns_and_stmt, catch_clauses) => {
+                // Convert try-catch statement
+                let try_expr = self.convert_expression(expr, source, file_path)?;
+
+                // Extract try body from returns_and_stmt
+                let try_body = if let Some((_, stmt)) = returns_and_stmt {
+                    self.convert_statement_to_block(stmt, source, file_path)?
+                } else {
+                    // Create empty block if no try body
+                    Block::new(self.arena, location.clone())
+                };
+
+                // Convert catch clauses
+                let mut converted_catch_clauses = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                for catch_clause in catch_clauses {
+                    let (catch_location, catch_body) = match catch_clause {
+                        pt::CatchClause::Simple(loc, _param, stmt) => {
+                            let body = self.convert_statement_to_block(stmt, source, file_path)?;
+                            (*loc, body)
+                        }
+                        pt::CatchClause::Named(loc, _ident, _param, stmt) => {
+                            let body = self.convert_statement_to_block(stmt, source, file_path)?;
+                            (*loc, body)
+                        }
+                    };
+
+                    // Create a simple catch clause structure
+                    let catch = ast::CatchClause {
+                        identifier: None, // TODO: Convert identifier if needed
+                        parameters: bumpalo::collections::Vec::new_in(&self.arena.bump),
+                        body: catch_body,
+                        location: self.convert_location_with_source(&catch_location, file_path, Some(source)),
+                    };
+                    converted_catch_clauses.push(catch);
+                }
+
+                Ok(Statement::TryStatement {
+                    expression: try_expr,
+                    returns: None, // TODO: Implement proper returns conversion
+                    body: try_body,
+                    catch_clauses: converted_catch_clauses,
+                    location,
+                })
+            }
+            pt::Statement::Emit(_, expr) => {
+                // Convert emit statement
+                let event_expr = self.convert_expression(expr, source, file_path)?;
+                Ok(Statement::EmitStatement {
+                    event_call: event_expr,
+                    location,
+                })
+            }
+            pt::Statement::Revert(_, _, exprs) => {
+                // Convert revert statement - just take first expression if any
+                let error_expr = if let Some(expr) = exprs.first() {
+                    Some(self.convert_expression(expr, source, file_path)?)
+                } else {
+                    None
+                };
+                Ok(Statement::RevertStatement {
+                    error_call: error_expr,
+                    location,
                 })
             }
             _ => {
