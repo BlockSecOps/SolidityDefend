@@ -1,4 +1,4 @@
-use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility};
+use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator};
 use crate::error::{ParseError, ParseResult, ParseErrors};
 use solang_parser::{pt, parse, diagnostics};
 
@@ -188,7 +188,10 @@ impl<'arena> ArenaParser<'arena> {
             }
         }
 
-        // TODO: Convert function parameters, body, etc.
+        // Convert function body
+        if let Some(body_stmt) = &func.body {
+            function.body = Some(self.convert_statement_to_block(body_stmt, source, file_path)?);
+        }
 
         Ok(function)
     }
@@ -268,5 +271,304 @@ impl<'arena> ArenaParser<'arena> {
         let start_pos = Position::new(1, 1, 0);
         let end_pos = Position::new(1, 1, 0);
         SourceLocation::new(file_path.into(), start_pos, end_pos)
+    }
+
+    /// Convert a solang statement to a Block (for function bodies)
+    fn convert_statement_to_block(
+        &self,
+        stmt: &pt::Statement,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<Block<'arena>> {
+        match stmt {
+            pt::Statement::Block { loc, statements, .. } => {
+                let location = self.convert_location_with_source(loc, file_path, Some(source));
+                let mut block = Block::new(self.arena, location);
+
+                for stmt in statements {
+                    if let Ok(converted) = self.convert_statement(stmt, source, file_path) {
+                        block.statements.push(converted);
+                    }
+                }
+
+                Ok(block)
+            }
+            _ => {
+                // For non-block statements, wrap in a block
+                let location = self.convert_location_with_source(&self.get_statement_location(stmt), file_path, Some(source));
+                let mut block = Block::new(self.arena, location);
+
+                if let Ok(converted) = self.convert_statement(stmt, source, file_path) {
+                    block.statements.push(converted);
+                }
+
+                Ok(block)
+            }
+        }
+    }
+
+    /// Convert a solang statement to our Statement
+    fn convert_statement(
+        &self,
+        stmt: &pt::Statement,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<Statement<'arena>> {
+        let location = self.convert_location_with_source(&self.get_statement_location(stmt), file_path, Some(source));
+
+        match stmt {
+            pt::Statement::Block { statements, .. } => {
+                let mut block = Block::new(self.arena, location);
+                for stmt in statements {
+                    if let Ok(converted) = self.convert_statement(stmt, source, file_path) {
+                        block.statements.push(converted);
+                    }
+                }
+                Ok(Statement::Block(block))
+            }
+            pt::Statement::Expression(_, expr) => {
+                let converted_expr = self.convert_expression(expr, source, file_path)?;
+                Ok(Statement::Expression(converted_expr))
+            }
+            pt::Statement::Return(_, expr_opt) => {
+                let expr = if let Some(expr) = expr_opt {
+                    Some(self.convert_expression(expr, source, file_path)?)
+                } else {
+                    None
+                };
+                Ok(Statement::Return { value: expr, location })
+            }
+            pt::Statement::If(_, condition, then_stmt, else_stmt) => {
+                let condition_expr = self.convert_expression(condition, source, file_path)?;
+                let then_branch = self.arena.alloc(self.convert_statement(then_stmt, source, file_path)?);
+                let else_branch = if let Some(else_stmt) = else_stmt {
+                    Some(self.arena.alloc(self.convert_statement(else_stmt, source, file_path)?))
+                } else {
+                    None
+                };
+                Ok(Statement::If { condition: condition_expr, then_branch, else_branch, location })
+            }
+            pt::Statement::While(_, condition, body) => {
+                let condition_expr = self.convert_expression(condition, source, file_path)?;
+                let body_stmt = self.arena.alloc(self.convert_statement(body, source, file_path)?);
+                Ok(Statement::While { condition: condition_expr, body: body_stmt, location })
+            }
+            pt::Statement::For(_, init, condition, increment, body) => {
+                let init_stmt = if let Some(init) = init {
+                    Some(self.arena.alloc(self.convert_statement(init, source, file_path)?))
+                } else {
+                    None
+                };
+                let condition_expr = if let Some(condition) = condition {
+                    Some(self.convert_expression(condition, source, file_path)?)
+                } else {
+                    None
+                };
+                let update_expr = if let Some(increment) = increment {
+                    Some(self.convert_expression(increment, source, file_path)?)
+                } else {
+                    None
+                };
+                let body_stmt = if let Some(body) = body {
+                    self.arena.alloc(self.convert_statement(body, source, file_path)?)
+                } else {
+                    // Create empty block if no body
+                    let dummy_block = Block::new(self.arena, location.clone());
+                    self.arena.alloc(Statement::Block(dummy_block))
+                };
+                Ok(Statement::For {
+                    init: init_stmt,
+                    condition: condition_expr,
+                    update: update_expr,
+                    body: body_stmt,
+                    location
+                })
+            }
+            _ => {
+                // For unimplemented statement types, create a placeholder
+                let dummy_expr = Expression::Literal {
+                    value: ast::LiteralValue::Number("0".into()),
+                    location: location.clone(),
+                };
+                Ok(Statement::Expression(dummy_expr))
+            }
+        }
+    }
+
+    /// Convert a solang expression to our Expression
+    fn convert_expression(
+        &self,
+        expr: &pt::Expression,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<Expression<'arena>> {
+        let location = self.convert_location_with_source(&self.get_expression_location(expr), file_path, Some(source));
+
+        match expr {
+            pt::Expression::FunctionCall(_, function, args) => {
+                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                for arg in args {
+                    if let Ok(converted_arg) = self.convert_expression(arg, source, file_path) {
+                        arguments.push(converted_arg);
+                    }
+                }
+
+                let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                Ok(Expression::FunctionCall {
+                    function: function_expr,
+                    arguments,
+                    names,
+                    location,
+                })
+            }
+            pt::Expression::FunctionCallBlock(_, function, _block) => {
+                // Handle function calls with blocks like msg.sender.call{value: amount}("")
+                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+                Ok(Expression::FunctionCall {
+                    function: function_expr,
+                    arguments,
+                    names,
+                    location,
+                })
+            }
+            pt::Expression::MemberAccess(_, expr, member) => {
+                let expr_converted = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                let member_converted = self.convert_identifier_with_source(member, source, file_path)?;
+
+                Ok(Expression::MemberAccess {
+                    expression: expr_converted,
+                    member: member_converted,
+                    location,
+                })
+            }
+            pt::Expression::Variable(ident) => {
+                let identifier = self.convert_identifier_with_source(ident, source, file_path)?;
+                Ok(Expression::Identifier(identifier))
+            }
+            pt::Expression::Assign(_, left, right) => {
+                let left_expr = self.arena.alloc(self.convert_expression(left, source, file_path)?);
+                let right_expr = self.arena.alloc(self.convert_expression(right, source, file_path)?);
+
+                Ok(Expression::Assignment {
+                    left: left_expr,
+                    operator: AssignmentOperator::Assign,
+                    right: right_expr,
+                    location,
+                })
+            }
+            _ => {
+                // For unimplemented expression types, create a literal placeholder
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Number("0".into()),
+                    location,
+                })
+            }
+        }
+    }
+
+    /// Extract location from solang Statement
+    fn get_statement_location(&self, stmt: &pt::Statement) -> pt::Loc {
+        match stmt {
+            pt::Statement::Block { loc, .. } => *loc,
+            pt::Statement::Assembly { loc, .. } => *loc,
+            pt::Statement::Args(loc, _) => *loc,
+            pt::Statement::If(loc, ..) => *loc,
+            pt::Statement::While(loc, ..) => *loc,
+            pt::Statement::Expression(loc, _) => *loc,
+            pt::Statement::VariableDefinition(loc, ..) => *loc,
+            pt::Statement::For(loc, ..) => *loc,
+            pt::Statement::DoWhile(loc, ..) => *loc,
+            pt::Statement::Continue(loc) => *loc,
+            pt::Statement::Break(loc) => *loc,
+            pt::Statement::Return(loc, _) => *loc,
+            pt::Statement::Revert(loc, ..) => *loc,
+            pt::Statement::RevertNamedArgs(loc, ..) => *loc,
+            pt::Statement::Emit(loc, _) => *loc,
+            pt::Statement::Try(loc, ..) => *loc,
+            pt::Statement::Error(loc) => *loc,
+        }
+    }
+
+    /// Extract location from solang Expression
+    fn get_expression_location(&self, expr: &pt::Expression) -> pt::Loc {
+        match expr {
+            pt::Expression::PostIncrement(loc, _) => *loc,
+            pt::Expression::PostDecrement(loc, _) => *loc,
+            pt::Expression::New(loc, _) => *loc,
+            pt::Expression::ArraySubscript(loc, ..) => *loc,
+            pt::Expression::ArraySlice(loc, ..) => *loc,
+            pt::Expression::Parenthesis(loc, _) => *loc,
+            pt::Expression::MemberAccess(loc, ..) => *loc,
+            pt::Expression::FunctionCall(loc, ..) => *loc,
+            pt::Expression::FunctionCallBlock(loc, ..) => *loc,
+            pt::Expression::NamedFunctionCall(loc, ..) => *loc,
+            pt::Expression::Not(loc, _) => *loc,
+            pt::Expression::BitwiseNot(loc, _) => *loc,
+            pt::Expression::Delete(loc, _) => *loc,
+            pt::Expression::PreIncrement(loc, _) => *loc,
+            pt::Expression::PreDecrement(loc, _) => *loc,
+            pt::Expression::UnaryPlus(loc, _) => *loc,
+            pt::Expression::Negate(loc, _) => *loc,
+            pt::Expression::Power(loc, ..) => *loc,
+            pt::Expression::Multiply(loc, ..) => *loc,
+            pt::Expression::Divide(loc, ..) => *loc,
+            pt::Expression::Modulo(loc, ..) => *loc,
+            pt::Expression::Add(loc, ..) => *loc,
+            pt::Expression::Subtract(loc, ..) => *loc,
+            pt::Expression::ShiftLeft(loc, ..) => *loc,
+            pt::Expression::ShiftRight(loc, ..) => *loc,
+            pt::Expression::BitwiseAnd(loc, ..) => *loc,
+            pt::Expression::BitwiseXor(loc, ..) => *loc,
+            pt::Expression::BitwiseOr(loc, ..) => *loc,
+            pt::Expression::Less(loc, ..) => *loc,
+            pt::Expression::More(loc, ..) => *loc,
+            pt::Expression::LessEqual(loc, ..) => *loc,
+            pt::Expression::MoreEqual(loc, ..) => *loc,
+            pt::Expression::Equal(loc, ..) => *loc,
+            pt::Expression::NotEqual(loc, ..) => *loc,
+            pt::Expression::And(loc, ..) => *loc,
+            pt::Expression::Or(loc, ..) => *loc,
+            pt::Expression::ConditionalOperator(loc, ..) => *loc,
+            pt::Expression::Assign(loc, ..) => *loc,
+            pt::Expression::AssignOr(loc, ..) => *loc,
+            pt::Expression::AssignAnd(loc, ..) => *loc,
+            pt::Expression::AssignXor(loc, ..) => *loc,
+            pt::Expression::AssignShiftLeft(loc, ..) => *loc,
+            pt::Expression::AssignShiftRight(loc, ..) => *loc,
+            pt::Expression::AssignAdd(loc, ..) => *loc,
+            pt::Expression::AssignSubtract(loc, ..) => *loc,
+            pt::Expression::AssignMultiply(loc, ..) => *loc,
+            pt::Expression::AssignDivide(loc, ..) => *loc,
+            pt::Expression::AssignModulo(loc, ..) => *loc,
+            pt::Expression::BoolLiteral(loc, _) => *loc,
+            pt::Expression::NumberLiteral(loc, ..) => *loc,
+            pt::Expression::RationalNumberLiteral(loc, ..) => *loc,
+            pt::Expression::HexNumberLiteral(loc, ..) => *loc,
+            pt::Expression::StringLiteral(string_lits) => {
+                if let Some(first) = string_lits.first() {
+                    first.loc
+                } else {
+                    pt::Loc::Builtin
+                }
+            }
+            pt::Expression::Type(loc, _) => *loc,
+            pt::Expression::HexLiteral(hex_lits) => {
+                if let Some(first) = hex_lits.first() {
+                    first.loc
+                } else {
+                    pt::Loc::Builtin
+                }
+            }
+            pt::Expression::AddressLiteral(loc, _) => *loc,
+            pt::Expression::Variable(ident) => ident.loc,
+            pt::Expression::List(loc, _) => *loc,
+            pt::Expression::ArrayLiteral(loc, _) => *loc,
+        }
     }
 }
