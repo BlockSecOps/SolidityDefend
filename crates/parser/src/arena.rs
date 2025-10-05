@@ -1,4 +1,4 @@
-use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator};
+use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator, BinaryOperator, UnaryOperator};
 use crate::error::{ParseError, ParseResult, ParseErrors};
 use solang_parser::{pt, parse, diagnostics};
 
@@ -491,6 +491,174 @@ impl<'arena> ArenaParser<'arena> {
                     location,
                 })
             }
+            pt::Expression::BoolLiteral(_, value) => {
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Boolean(*value),
+                    location,
+                })
+            }
+            pt::Expression::NumberLiteral(_, value, _exp, _unit) => {
+                let number_str = self.arena.alloc_str(value);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Number(number_str),
+                    location,
+                })
+            }
+            pt::Expression::RationalNumberLiteral(_, value, _fraction, _exp, _unit) => {
+                let number_str = self.arena.alloc_str(value);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Number(number_str),
+                    location,
+                })
+            }
+            pt::Expression::HexNumberLiteral(_, value, _) => {
+                let hex_str = self.arena.alloc_str(value);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Number(hex_str),
+                    location,
+                })
+            }
+            pt::Expression::StringLiteral(string_lits) => {
+                // Concatenate multiple string literals
+                let combined = string_lits.iter()
+                    .map(|s| s.string.as_str())
+                    .collect::<Vec<_>>()
+                    .join("");
+                let string_str = self.arena.alloc_str(&combined);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::String(string_str),
+                    location,
+                })
+            }
+            pt::Expression::HexLiteral(hex_lits) => {
+                // Concatenate multiple hex literals
+                let combined = hex_lits.iter()
+                    .map(|h| h.hex.as_str())
+                    .collect::<Vec<_>>()
+                    .join("");
+                let hex_str = self.arena.alloc_str(&combined);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::HexString(hex_str),
+                    location,
+                })
+            }
+            pt::Expression::AddressLiteral(_, addr) => {
+                let addr_str = self.arena.alloc_str(addr);
+                Ok(Expression::Literal {
+                    value: ast::LiteralValue::Address(addr_str),
+                    location,
+                })
+            }
+            // Binary operations
+            pt::Expression::Add(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Add, source, file_path, location)
+            }
+            pt::Expression::Subtract(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Sub, source, file_path, location)
+            }
+            pt::Expression::Multiply(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Mul, source, file_path, location)
+            }
+            pt::Expression::Divide(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Div, source, file_path, location)
+            }
+            pt::Expression::Modulo(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Mod, source, file_path, location)
+            }
+            pt::Expression::Power(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Pow, source, file_path, location)
+            }
+            pt::Expression::Equal(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Equal, source, file_path, location)
+            }
+            pt::Expression::NotEqual(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::NotEqual, source, file_path, location)
+            }
+            pt::Expression::Less(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Less, source, file_path, location)
+            }
+            pt::Expression::LessEqual(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::LessEqual, source, file_path, location)
+            }
+            pt::Expression::More(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Greater, source, file_path, location)
+            }
+            pt::Expression::MoreEqual(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::GreaterEqual, source, file_path, location)
+            }
+            pt::Expression::And(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::And, source, file_path, location)
+            }
+            pt::Expression::Or(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::Or, source, file_path, location)
+            }
+            pt::Expression::BitwiseAnd(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::BitwiseAnd, source, file_path, location)
+            }
+            pt::Expression::BitwiseOr(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::BitwiseOr, source, file_path, location)
+            }
+            pt::Expression::BitwiseXor(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::BitwiseXor, source, file_path, location)
+            }
+            pt::Expression::ShiftLeft(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::ShiftLeft, source, file_path, location)
+            }
+            pt::Expression::ShiftRight(_, left, right) => {
+                self.convert_binary_operation(left, right, BinaryOperator::ShiftRight, source, file_path, location)
+            }
+            // Array access
+            pt::Expression::ArraySubscript(_, array, index) => {
+                let array_expr = self.arena.alloc(self.convert_expression(array, source, file_path)?);
+                let index_expr = if let Some(idx) = index {
+                    Some(self.arena.alloc(self.convert_expression(idx, source, file_path)?))
+                } else {
+                    None
+                };
+
+                Ok(Expression::IndexAccess {
+                    base: array_expr,
+                    index: index_expr,
+                    location,
+                })
+            }
+            // Unary operations
+            pt::Expression::Not(_, expr) => {
+                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                Ok(Expression::UnaryOperation {
+                    operator: UnaryOperator::Not,
+                    operand,
+                    prefix: true,
+                    location,
+                })
+            }
+            pt::Expression::BitwiseNot(_, expr) => {
+                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                Ok(Expression::UnaryOperation {
+                    operator: UnaryOperator::BitwiseNot,
+                    operand,
+                    prefix: true,
+                    location,
+                })
+            }
+            pt::Expression::Negate(_, expr) => {
+                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                Ok(Expression::UnaryOperation {
+                    operator: UnaryOperator::Minus,
+                    operand,
+                    prefix: true,
+                    location,
+                })
+            }
+            pt::Expression::UnaryPlus(_, expr) => {
+                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                Ok(Expression::UnaryOperation {
+                    operator: UnaryOperator::Plus,
+                    operand,
+                    prefix: true,
+                    location,
+                })
+            }
             _ => {
                 // For unimplemented expression types, create a literal placeholder
                 // TODO: Add proper logging here to debug what expression types are being missed
@@ -500,6 +668,27 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
         }
+    }
+
+    /// Helper method to convert binary operations
+    fn convert_binary_operation(
+        &self,
+        left: &pt::Expression,
+        right: &pt::Expression,
+        operator: BinaryOperator,
+        source: &str,
+        file_path: &str,
+        location: SourceLocation,
+    ) -> ParseResult<Expression<'arena>> {
+        let left_expr = self.arena.alloc(self.convert_expression(left, source, file_path)?);
+        let right_expr = self.arena.alloc(self.convert_expression(right, source, file_path)?);
+
+        Ok(Expression::BinaryOperation {
+            left: left_expr,
+            operator,
+            right: right_expr,
+            location,
+        })
     }
 
     /// Extract location from solang Statement
