@@ -179,7 +179,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: soliditydefend/cli
+          images: solidityops/soliditydefend
           tags: |
             type=ref,event=tag
             type=semver,pattern={{version}}
@@ -207,8 +207,8 @@ jobs:
         uses: mislav/bump-homebrew-formula-action@v2
         with:
           formula-name: soliditydefend
-          homebrew-tap: soliditydefend/homebrew-tap
+          homebrew-tap: solidityops/homebrew-tap
           base-branch: main
-          download-url: https://github.com/soliditydefend/cli/releases/download/v${{ needs.create-release.outputs.version }}/soliditydefend-macos-x86_64.tar.gz
+          download-url: https://github.com/SolidityOps/SolidityDefend/releases/download/v${{ needs.create-release.outputs.version }}/soliditydefend-macos-x86_64.tar.gz
         env:
           COMMITTER_TOKEN: ${{ secrets.HOMEBREW_TOKEN }}

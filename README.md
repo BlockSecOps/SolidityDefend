@@ -1,7 +1,7 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue.svg)](https://github.com/soliditydefend/cli/releases)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/soliditydefend/cli#license)
+[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy.
@@ -34,7 +34,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 
 ## Production Status
 
-🎯 **PRODUCTION READY - Community Edition Complete**
+🎯 **PRODUCTION READY - Version 0.8.0 Complete**
 
 ✅ **Core Infrastructure (COMPLETE)**
 - ✅ Rust workspace with 18 crates (27,000+ lines of optimized code)
@@ -45,7 +45,8 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - ✅ Control flow graph construction with dominance analysis
 
 ✅ **Security Analysis Engine (COMPLETE)**
-- ✅ **Detector Execution Pipeline**: Production-ready with parallel processing
+- ✅ **Detector Registry**: Fully functional with all 17 detectors properly initialized
+- ✅ **Modern Vulnerability Detection**: Enhanced coverage for 2025-era attack patterns
 - ✅ **17 production-ready detectors validated:**
   - **Access Control**: Missing modifiers, unprotected initializers, default visibility
   - **Reentrancy**: Classic and read-only reentrancy detection
@@ -138,8 +139,8 @@ SolidityDefend is built as a modular Rust workspace with the following component
 #### From Source
 ```bash
 # Clone the repository
-git clone https://github.com/soliditydefend/cli.git
-cd cli
+git clone https://github.com/SolidityOps/SolidityDefend.git
+cd SolidityDefend
 
 # Build the project
 cargo build --release
@@ -289,10 +290,10 @@ cargo test -- --nocapture
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contribution instructions.
 
 ### Current Priority Areas
-1. **Detector Integration**: Fix core detector execution pipeline
+1. **Modern Vulnerability Patterns**: Enhance detectors for 2025-era attack patterns (flash loans, MEV, cross-chain)
 2. **LSP Completion**: Complete Language Server Protocol implementation
-3. **Performance Integration**: Integrate performance optimization features
-4. **Additional Detectors**: Expand security detector coverage
+3. **Performance Integration**: Integrate advanced performance optimization features
+4. **Enhanced Detection**: Expand coverage for complex vulnerability combinations
 
 ## License
 
