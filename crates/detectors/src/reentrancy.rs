@@ -91,6 +91,26 @@ impl ClassicReentrancyDetector {
     fn statement_has_external_call(&self, stmt: &ast::Statement<'_>) -> bool {
         match stmt {
             ast::Statement::Expression(expr) => self.is_external_call(expr),
+            ast::Statement::Block(block) => {
+                // Recursively check all statements in the block
+                self.check_statements_for_external_calls(&block.statements)
+            }
+            ast::Statement::If { condition, then_branch, else_branch, .. } => {
+                // Check condition expression and both branches
+                self.is_external_call(condition) ||
+                self.statement_has_external_call(then_branch) ||
+                else_branch.map_or(false, |stmt| self.statement_has_external_call(stmt))
+            }
+            ast::Statement::While { condition, body, .. } => {
+                // Check condition and loop body
+                self.is_external_call(condition) || self.statement_has_external_call(body)
+            }
+            ast::Statement::For { condition, update, body, .. } => {
+                // Check condition, update expression, and loop body
+                condition.as_ref().map_or(false, |cond| self.is_external_call(cond)) ||
+                update.as_ref().map_or(false, |upd| self.is_external_call(upd)) ||
+                self.statement_has_external_call(body)
+            }
             _ => false,
         }
     }
@@ -98,6 +118,23 @@ impl ClassicReentrancyDetector {
     fn statement_has_state_change(&self, stmt: &ast::Statement<'_>) -> bool {
         match stmt {
             ast::Statement::Expression(ast::Expression::Assignment { .. }) => true,
+            ast::Statement::Block(block) => {
+                // Recursively check all statements in the block for state changes
+                block.statements.iter().any(|s| self.statement_has_state_change(s))
+            }
+            ast::Statement::If { then_branch, else_branch, .. } => {
+                // Check both branches for state changes
+                self.statement_has_state_change(then_branch) ||
+                else_branch.map_or(false, |stmt| self.statement_has_state_change(stmt))
+            }
+            ast::Statement::While { body, .. } => {
+                // Check loop body for state changes
+                self.statement_has_state_change(body)
+            }
+            ast::Statement::For { body, .. } => {
+                // Check loop body for state changes
+                self.statement_has_state_change(body)
+            }
             _ => false,
         }
     }
