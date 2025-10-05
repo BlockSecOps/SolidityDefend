@@ -25,6 +25,12 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - JSON output for programmatic processing and CI/CD integration
 - Rich formatting with fix suggestions
 
+🌐 **URL-Based Analysis (NEW)**
+- Analyze contracts directly from blockchain explorer URLs
+- Support for Etherscan, Polygonscan, BscScan, Arbiscan
+- Transaction and contract address analysis
+- Freemium model with user-provided API keys
+
 🛠️ **Developer Experience**
 - Full-featured command-line interface with YAML configuration support
 - Comprehensive configuration system (.soliditydefend.yml)
@@ -161,6 +167,15 @@ cargo build --release
 
 # Analyze multiple files
 ./target/release/soliditydefend src/**/*.sol
+
+# Analyze contract from blockchain explorer URL
+./target/release/soliditydefend --from-url https://etherscan.io/tx/0x1234...
+
+# Analyze contract by address
+./target/release/soliditydefend --from-url https://etherscan.io/address/0x1234...
+
+# Setup API keys for URL analysis
+./target/release/soliditydefend --setup-api-keys
 
 # JSON output for CI/CD
 ./target/release/soliditydefend -f json -o results.json contract.sol

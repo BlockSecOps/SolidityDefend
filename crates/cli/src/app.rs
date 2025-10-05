@@ -145,7 +145,7 @@ impl CliApp {
             .arg(
                 Arg::new("files")
                     .help("Solidity files to analyze")
-                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config"])
+                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config", "from-url", "setup-api-keys"])
                     .num_args(1..)
                     .value_name("FILE"),
             )
@@ -246,11 +246,29 @@ impl CliApp {
                     .help("Create a default configuration file in the current directory")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("from-url")
+                    .long("from-url")
+                    .help("Analyze contract from blockchain explorer URL (transaction or contract)")
+                    .value_name("URL")
+                    .conflicts_with("files"),
+            )
+            .arg(
+                Arg::new("setup-api-keys")
+                    .long("setup-api-keys")
+                    .help("Interactive setup for blockchain API keys")
+                    .action(ArgAction::SetTrue),
+            )
             .try_get_matches_from(args)?;
 
         // Handle configuration initialization first (doesn't need config loading)
         if matches.get_flag("init-config") {
             return Self::handle_init_config();
+        }
+
+        // Handle API key setup
+        if matches.get_flag("setup-api-keys") {
+            return Self::handle_setup_api_keys();
         }
 
         // Get config file path if specified
@@ -278,6 +296,29 @@ impl CliApp {
 
         if matches.get_flag("lsp") {
             return app.start_lsp_server();
+        }
+
+        // Handle URL-based analysis
+        if let Some(url) = matches.get_one::<String>("from-url") {
+            let format = match matches.get_one::<String>("format").unwrap().as_str() {
+                "json" => OutputFormat::Json,
+                "console" => OutputFormat::Console,
+                _ => OutputFormat::Console,
+            };
+
+            let min_severity = match matches.get_one::<String>("severity").unwrap().as_str() {
+                "info" => Severity::Info,
+                "low" => Severity::Low,
+                "medium" => Severity::Medium,
+                "high" => Severity::High,
+                "critical" => Severity::Critical,
+                _ => Severity::Info,
+            };
+
+            let output_file = matches.get_one::<String>("output").map(PathBuf::from);
+            let use_cache = !matches.get_flag("no-cache");
+
+            return app.analyze_from_url(url, format, output_file, min_severity, use_cache);
         }
 
         let files: Vec<&str> = matches.get_many::<String>("files")
@@ -779,6 +820,193 @@ impl CliApp {
         println!("- Cache configuration");
         println!("- Output preferences");
         println!("- Performance tuning");
+
+        Ok(())
+    }
+
+    /// Handle URL-based contract analysis
+    fn analyze_from_url(
+        &self,
+        url: &str,
+        format: OutputFormat,
+        output_file: Option<PathBuf>,
+        min_severity: Severity,
+        use_cache: bool,
+    ) -> Result<()> {
+        println!("🔍 Analyzing contract from URL: {}", url);
+
+        // Create URL fetcher with user API keys
+        let fetcher = match crate::url_fetcher::UrlFetcher::with_user_api_keys() {
+            Ok(f) => f,
+            Err(_) => {
+                eprintln!("❌ No API keys configured for blockchain explorers");
+                eprintln!("💡 Set up API keys with: soliditydefend --setup-api-keys");
+                eprintln!("📖 Or set environment variables:");
+                eprintln!("   export ETHERSCAN_API_KEY=your_key_here");
+                eprintln!("   export POLYGONSCAN_API_KEY=your_key_here");
+                eprintln!("   export BSCSCAN_API_KEY=your_key_here");
+                return Err(anyhow!("API keys required for URL-based analysis"));
+            }
+        };
+
+        // Parse URL to check if we have the required API key
+        let (platform, _) = fetcher.parse_url(url)?;
+        if !fetcher.has_api_key(&platform) {
+            let platform_name = format!("{:?}", platform);
+            eprintln!("❌ No API key configured for {}", platform_name);
+            eprintln!("💡 Get your free API key and configure it:");
+
+            match platform {
+                crate::url_fetcher::ExplorerPlatform::Etherscan => {
+                    eprintln!("   🔗 https://etherscan.io/apis");
+                    eprintln!("   🔧 export ETHERSCAN_API_KEY=your_key_here");
+                }
+                crate::url_fetcher::ExplorerPlatform::Polygonscan => {
+                    eprintln!("   🔗 https://polygonscan.com/apis");
+                    eprintln!("   🔧 export POLYGONSCAN_API_KEY=your_key_here");
+                }
+                crate::url_fetcher::ExplorerPlatform::BscScan => {
+                    eprintln!("   🔗 https://bscscan.com/apis");
+                    eprintln!("   🔧 export BSCSCAN_API_KEY=your_key_here");
+                }
+                _ => {
+                    eprintln!("   🔧 Configure the appropriate API key for this platform");
+                }
+            }
+
+            return Err(anyhow!("API key required for {} platform", platform_name));
+        }
+
+        // Fetch contract source
+        let runtime = tokio::runtime::Runtime::new()?;
+        let contracts = runtime.block_on(async {
+            fetcher.fetch_contract_source(url).await
+        })?;
+
+        if contracts.is_empty() {
+            return Err(anyhow!("No verified contracts found at the provided URL"));
+        }
+
+        println!("✅ Found {} verified contract(s)", contracts.len());
+
+        let mut all_findings = Vec::new();
+        let mut analysis_summary = AnalysisSummary::default();
+
+        for (index, contract) in contracts.iter().enumerate() {
+            println!("\n📄 Analyzing contract: {} ({})", contract.name, contract.address);
+            println!("   Platform: {}", contract.platform);
+            println!("   Compiler: {}", contract.compiler_version);
+            println!("   Verified: {}", contract.is_verified);
+
+            // Save contract to temporary file
+            let temp_path = fetcher.save_contract_to_temp(contract)?;
+            println!("   Saved to: {}", temp_path);
+
+            analysis_summary.total_files += 1;
+
+            // Analyze the temporary file
+            match self.analyze_file(&temp_path, min_severity, use_cache) {
+                Ok((findings, from_cache)) => {
+                    let cache_indicator = if from_cache { " (cached)" } else { "" };
+                    println!("   Found {} issues{}", findings.len(), cache_indicator);
+
+                    analysis_summary.successful_files += 1;
+
+                    // Track findings by severity
+                    for finding in &findings {
+                        analysis_summary.add_finding(&finding.severity);
+                    }
+
+                    all_findings.extend(findings);
+                }
+                Err(e) => {
+                    eprintln!("   ❌ Error analyzing contract {}: {}", index + 1, e);
+                    analysis_summary.failed_files += 1;
+                }
+            }
+
+            // Clean up temporary file
+            if let Err(e) = std::fs::remove_file(&temp_path) {
+                eprintln!("   ⚠️  Warning: Failed to clean up temporary file: {}", e);
+            }
+        }
+
+        // Output results
+        match output_file {
+            Some(path) => {
+                self.output_manager.write_to_file(&all_findings, format, &path)?;
+                println!("\n📁 Results written to: {}", path.display());
+            }
+            None => {
+                self.output_manager.write_to_stdout(&all_findings, format)?;
+            }
+        }
+
+        println!("\n📊 Analysis Summary:");
+        println!("   Contracts analyzed: {}", analysis_summary.total_files);
+        println!("   Successful: {}", analysis_summary.successful_files);
+        if analysis_summary.failed_files > 0 {
+            println!("   Failed: {}", analysis_summary.failed_files);
+        }
+        println!("   Total issues found: {}", analysis_summary.total_findings);
+
+        Ok(())
+    }
+
+    /// Handle interactive API key setup
+    fn handle_setup_api_keys() -> Result<()> {
+        use std::io::{self, Write};
+
+        println!("🔑 Setting up blockchain API keys...");
+        println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+        println!("SolidityDefend needs API keys to fetch contract source code from blockchain explorers.");
+        println!("All API keys are free to obtain and stored locally on your machine.\n");
+
+        let api_configs = vec![
+            ("Etherscan", "https://etherscan.io/apis", "ETHERSCAN_API_KEY"),
+            ("Polygonscan", "https://polygonscan.com/apis", "POLYGONSCAN_API_KEY"),
+            ("BscScan", "https://bscscan.com/apis", "BSCSCAN_API_KEY"),
+            ("Arbiscan", "https://arbiscan.io/apis", "ARBISCAN_API_KEY"),
+        ];
+
+        let mut env_commands = Vec::new();
+
+        for (platform, url, env_var) in api_configs {
+            println!("🌐 {} API Key", platform);
+            println!("   Get your free key: {}", url);
+            print!("   Enter API key (or press Enter to skip): ");
+            io::stdout().flush()?;
+
+            let mut input = String::new();
+            io::stdin().read_line(&mut input)?;
+            let api_key = input.trim();
+
+            if !api_key.is_empty() {
+                env_commands.push(format!("export {}={}", env_var, api_key));
+                println!("   ✅ {} configured", platform);
+            } else {
+                println!("   ⏭️  {} skipped", platform);
+            }
+            println!();
+        }
+
+        if env_commands.is_empty() {
+            println!("⚠️  No API keys configured. You can set them later using environment variables.");
+        } else {
+            println!("✅ Setup complete! Add these to your shell profile (.bashrc, .zshrc, etc.):");
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            for cmd in &env_commands {
+                println!("   {}", cmd);
+            }
+            println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            println!("\n💡 Or set them temporarily for this session:");
+            for cmd in &env_commands {
+                println!("   {}", cmd);
+            }
+        }
+
+        println!("\n🚀 Test your setup:");
+        println!("   soliditydefend --from-url https://etherscan.io/tx/0x1234...");
 
         Ok(())
     }
