@@ -9,6 +9,7 @@ pub mod auth;
 pub mod confidence;
 pub mod external;
 pub mod flashloan;
+pub mod governance;
 pub mod logic;
 pub mod mev;
 pub mod oracle;

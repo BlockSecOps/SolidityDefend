@@ -386,6 +386,12 @@ impl DetectorRegistry {
 
         // Auth Detectors
         self.register(Arc::new(crate::auth::TxOriginDetector::new()));
+
+        // Governance Detectors
+        self.register(Arc::new(crate::governance::GovernanceDetector::new()));
+        self.register(Arc::new(crate::governance::ExternalCallsLoopDetector::new()));
+        self.register(Arc::new(crate::governance::SignatureReplayDetector::new()));
+        self.register(Arc::new(crate::governance::EmergencyPauseCentralizationDetector::new()));
     }
 }
 
