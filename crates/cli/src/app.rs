@@ -630,18 +630,10 @@ impl CliApp {
         // Store in database
         let _file_id = db.add_source_file(file_path.to_string(), content.clone());
 
-        // Create minimal analysis context
-        // For now, we'll create a dummy contract and symbol table
-        // TODO: Properly extract contracts from source file
-        let dummy_symbols = SymbolTable::new();
-
         // Skip analysis if no contracts found
         if source_file.contracts.is_empty() {
             return Ok((Vec::new(), false));
         }
-
-        let contract = &source_file.contracts[0]; // Use first contract
-        let ctx = AnalysisContext::new(contract, dummy_symbols, content.clone(), file_path.to_string());
 
         // Run detectors
         let mut config = RegistryConfig::default();
@@ -652,14 +644,28 @@ impl CliApp {
             .unwrap()
             .as_secs();
 
-        // Try to run analysis, fall back to empty result if detector system fails
-        let analysis_result = match self.registry.run_analysis(&ctx) {
-            Ok(result) => result,
-            Err(e) => {
-                eprintln!("Warning: Detector analysis failed ({}), proceeding with empty result", e);
-                detectors::types::AnalysisResult::new()
-            }
-        };
+        // Analyze all contracts in the file
+        let mut all_findings = Vec::new();
+        for contract in &source_file.contracts {
+            // Create a fresh symbol table for each contract
+            let dummy_symbols = SymbolTable::new();
+            let ctx = AnalysisContext::new(contract, dummy_symbols, content.clone(), file_path.to_string());
+
+            // Try to run analysis, fall back to empty result if detector system fails
+            let analysis_result = match self.registry.run_analysis(&ctx) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("Warning: Detector analysis failed for contract '{}' ({}), proceeding with empty result", contract.name.as_str(), e);
+                    detectors::types::AnalysisResult::new()
+                }
+            };
+
+            all_findings.extend(analysis_result.findings);
+        }
+
+        // Create combined analysis result
+        let mut analysis_result = detectors::types::AnalysisResult::new();
+        analysis_result.findings = all_findings;
 
         let end_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

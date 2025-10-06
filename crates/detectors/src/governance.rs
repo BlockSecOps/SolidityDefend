@@ -34,9 +34,15 @@ impl Detector for GovernanceDetector {
         Severity::High
     }
 
-    fn detect(&self, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
-        // Simplified for testing registration
-        Ok(Vec::new())
+    fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        let mut findings = Vec::new();
+
+        // Run all governance vulnerability detection methods
+        findings.extend(self.detect_flash_loan_governance_attacks(ctx)?);
+        findings.extend(self.detect_missing_snapshot_protection(ctx)?);
+        findings.extend(self.detect_temporal_control_issues(ctx)?);
+
+        Ok(findings)
     }
 
     fn as_any(&self) -> &dyn Any {
