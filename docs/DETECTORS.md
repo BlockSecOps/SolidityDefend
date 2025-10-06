@@ -1,6 +1,6 @@
 # Detector Documentation
 
-Complete reference for all 17 security detectors available in SolidityDefend.
+Complete reference for all 21 security detectors available in SolidityDefend.
 
 ## Table of Contents
 
@@ -11,13 +11,14 @@ Complete reference for all 17 security detectors available in SolidityDefend.
 - [Logic & State Management](#logic--state-management)
 - [Oracle & Price Security](#oracle--price-security)
 - [Flash Loan & MEV Protection](#flash-loan--mev-protection)
+- [Governance Security](#governance-security)
 - [External Integration](#external-integration)
 - [Detector Severity Levels](#detector-severity-levels)
 - [Customization](#customization)
 
 ## Overview
 
-SolidityDefend includes 17 production-ready security detectors covering the most critical vulnerability classes in smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been fully validated and is currently functional with standardized Finding format and CWE mappings.
+SolidityDefend includes 21 production-ready security detectors covering the most critical vulnerability classes in smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been fully validated and is currently functional with standardized Finding format and CWE mappings.
 
 ### Detector Statistics
 
@@ -28,11 +29,11 @@ SolidityDefend includes 17 production-ready security detectors covering the most
 | Input Validation | 3 | Low - Medium |
 | Logic & State Management | 2 | Medium |
 | Oracle & Price Security | 2 | Medium - High |
-| Flash Loan & MEV Protection | 4 | Medium - Critical |
-| DeFi Protocol Security | 3 | Medium - Critical |
+| Flash Loan & MEV Protection | 4 | Medium - High |
+| Governance Security | 4 | Medium - High |
 | External Integration | 2 | Medium |
 
-**Total: 17 detectors**
+**Total: 21 detectors**
 
 ## Access Control & Authentication
 
@@ -1363,6 +1364,227 @@ contract SecureAuction {
     }
 }
 ```
+
+## Governance Security
+
+### Governance Vulnerabilities
+
+**ID:** `test-governance`
+**Severity:** High
+**Category:** Governance
+
+**Description:**
+Detects vulnerabilities in DAO governance mechanisms including flash loan attacks on voting power, missing snapshot protection, and temporal control issues.
+
+**What it Finds:**
+- Flash loan governance attacks via current balance checks
+- Missing snapshot-based voting power mechanisms
+- Voting rights without time-delay protection
+- Governance token manipulation opportunities
+
+**Example Vulnerable Code:**
+```solidity
+contract VulnerableDAO {
+    IERC20 public governanceToken;
+    uint256 public proposalThreshold = 100000e18;
+
+    // ❌ Uses current balance - vulnerable to flash loans!
+    function propose(string memory description) external {
+        require(
+            governanceToken.balanceOf(msg.sender) >= proposalThreshold,
+            "Insufficient voting power"
+        );
+        // Create proposal...
+    }
+
+    // ❌ Voting power based on current balance
+    function castVote(uint256 proposalId, uint8 support) external {
+        uint256 votes = governanceToken.balanceOf(msg.sender);
+        // Record vote...
+    }
+}
+```
+
+**Attack Scenario:**
+1. Attacker takes flash loan of governance tokens
+2. Meets proposal threshold with borrowed tokens
+3. Creates malicious proposal
+4. Returns flash loan
+5. Proposal remains valid despite attacker no longer holding tokens
+
+**Secure Code:**
+```solidity
+contract SecureDAO {
+    IVotingToken public governanceToken; // ERC20Votes compatible
+
+    function propose(string memory description) external {
+        // ✅ Check balance at previous block (snapshot)
+        require(
+            governanceToken.getPastVotes(msg.sender, block.number - 1) >= proposalThreshold,
+            "Insufficient voting power"
+        );
+        // Create proposal...
+    }
+
+    function castVote(uint256 proposalId, uint8 support) external {
+        // ✅ Use snapshot from proposal creation
+        uint256 votes = governanceToken.getPastVotes(
+            msg.sender,
+            proposals[proposalId].startBlock
+        );
+        // Record vote...
+    }
+}
+```
+
+**Fix Suggestions:**
+- Implement snapshot-based voting using `getPastVotes()` or `balanceOfAt()`
+- Use ERC20Votes standard for governance tokens
+- Add time-delay requirements for new token holders
+- Implement checkpoint mechanisms for historical balance tracking
+
+**CWE:** CWE-682 (Incorrect Calculation), CWE-284 (Improper Access Control)
+
+---
+
+### External Calls in Loop
+
+**ID:** `external-calls-loop`
+**Severity:** High
+**Category:** Governance
+
+**Description:**
+Detects external calls within loops that can cause DoS attacks if any call fails or consumes excessive gas. Particularly dangerous in governance systems where it can block proposal execution.
+
+**What it Finds:**
+- External calls inside for/while loops
+- Governance proposal execution with multiple external calls
+- Array iteration with external contract interactions
+
+**Example Vulnerable Code:**
+```solidity
+contract VulnerableGovernance {
+    struct Proposal {
+        address[] targets;
+        bytes[] calldatas;
+        uint256[] values;
+    }
+
+    // ❌ External calls in loop - can be griefed!
+    function execute(uint256 proposalId) external {
+        Proposal storage proposal = proposals[proposalId];
+
+        for (uint256 i = 0; i < proposal.targets.length; i++) {
+            (bool success, ) = proposal.targets[i].call{value: proposal.values[i]}(
+                proposal.calldatas[i]
+            );
+            require(success, "Execution failed");
+        }
+    }
+}
+```
+
+**Attack Scenario:**
+1. Attacker creates proposal with multiple targets
+2. One target is malicious contract that always reverts
+3. Proposal passes voting
+4. Execution always fails at malicious target
+5. Entire proposal is blocked permanently
+
+**Secure Code:**
+```solidity
+contract SecureGovernance {
+    // ✅ Individual execution with withdrawal pattern
+    function execute(uint256 proposalId, uint256 actionIndex) external {
+        Proposal storage proposal = proposals[proposalId];
+        require(!proposal.executedActions[actionIndex], "Already executed");
+
+        (bool success, ) = proposal.targets[actionIndex].call{
+            value: proposal.values[actionIndex]
+        }(proposal.calldatas[actionIndex]);
+
+        if (success) {
+            proposal.executedActions[actionIndex] = true;
+        }
+        // Failed actions can be retried or skipped
+    }
+}
+```
+
+**Fix Suggestions:**
+- Use withdrawal pattern instead of loops
+- Execute actions individually with failure isolation
+- Implement try-catch for non-critical failures
+- Add gas limits per external call
+
+**CWE:** CWE-834 (Excessive Iteration)
+
+---
+
+### Signature Replay Attack
+
+**ID:** `signature-replay`
+**Severity:** High
+**Category:** Governance
+
+**Description:**
+Detects signature verification functions that lack replay protection through nonce systems, allowing attackers to reuse valid signatures.
+
+**What it Finds:**
+- Functions using `ecrecover` without nonce tracking
+- Signature-based voting without replay protection
+- Meta-transaction handlers missing nonce validation
+
+**Example Vulnerable Code:**
+```solidity
+contract VulnerableVoting {
+    // ❌ No nonce - signatures can be replayed!
+    function castVoteBySig(
+        uint256 proposalId,
+        uint8 support,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external {
+        bytes32 digest = keccak256(abi.encode(proposalId, support));
+        address signer = ecrecover(digest, v, r, s);
+
+        // Record vote for signer...
+    }
+}
+```
+
+**Fix Suggestions:**
+- Implement nonce tracking per signer
+- Include nonce in signed message
+- Mark nonces as used after consumption
+- Add deadline timestamps to signatures
+
+**CWE:** CWE-294 (Authentication Bypass by Capture-replay)
+
+---
+
+### Emergency Pause Centralization
+
+**ID:** `emergency-pause-centralization`
+**Severity:** Medium
+**Category:** Governance
+
+**Description:**
+Detects emergency pause mechanisms that lack multi-signature or time-lock protection, allowing single points of failure in governance.
+
+**What it Finds:**
+- Emergency pause functions with single-signer control
+- Missing time-delays for emergency actions
+- Lack of multi-signature requirements for critical functions
+
+**Fix Suggestions:**
+- Implement multi-signature requirements for emergency actions
+- Add time-lock delays for pause activation
+- Use decentralized governance for emergency decisions
+- Implement automatic unpause mechanisms
+
+---
 
 ## External Integration
 
