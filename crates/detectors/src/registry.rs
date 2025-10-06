@@ -433,6 +433,12 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::mev_extractable_value::MevExtractableValueDetector::new()));
         self.register(Arc::new(crate::deadline_manipulation::DeadlineManipulationDetector::new()));
         self.register(Arc::new(crate::nonce_reuse::NonceReuseDetector::new()));
+
+        // Staking & Validator Security (Phase 7)
+        self.register(Arc::new(crate::slashing_mechanism::SlashingMechanismDetector::new()));
+        self.register(Arc::new(crate::validator_griefing::ValidatorGriefingDetector::new()));
+        self.register(Arc::new(crate::withdrawal_delay::WithdrawalDelayDetector::new()));
+        self.register(Arc::new(crate::validator_front_running::ValidatorFrontRunningDetector::new()));
     }
 }
 

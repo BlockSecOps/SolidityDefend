@@ -36,15 +36,19 @@ pub mod reward_calculation;
 pub mod sandwich_resistant_swap;
 pub mod selfdestruct_abuse;
 pub mod signature_malleability;
+pub mod slashing_mechanism;
 pub mod slippage_protection;
 pub mod storage_collision;
 pub mod timestamp;
 pub mod timestamp_manipulation;
 pub mod uninitialized_storage;
 pub mod validation;
+pub mod validator_front_running;
+pub mod validator_griefing;
 pub mod vault_share_inflation;
 pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
+pub mod withdrawal_delay;
 
 // DeFi-specific detectors
 pub mod defi;
