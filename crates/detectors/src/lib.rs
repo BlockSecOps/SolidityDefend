@@ -5,6 +5,7 @@ pub mod types;
 
 // Detector implementations
 pub mod access_control;
+pub mod amm_liquidity_manipulation;
 pub mod auction_timing;
 pub mod auth;
 pub mod confidence;
@@ -19,12 +20,16 @@ pub mod flashloan;
 pub mod gas_price_manipulation;
 pub mod governance;
 pub mod integer_overflow;
+pub mod lending_liquidation_abuse;
+pub mod liquidity_bootstrapping_abuse;
 pub mod logic;
 pub mod mev;
 pub mod oracle;
 pub mod oracle_manipulation;
+pub mod price_impact_manipulation;
 pub mod reentrancy;
 pub mod reward_calculation;
+pub mod sandwich_resistant_swap;
 pub mod selfdestruct_abuse;
 pub mod signature_malleability;
 pub mod slippage_protection;
@@ -32,6 +37,7 @@ pub mod storage_collision;
 pub mod timestamp;
 pub mod uninitialized_storage;
 pub mod validation;
+pub mod vault_share_inflation;
 pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
 
