@@ -439,6 +439,10 @@ impl CliApp {
             ("validator-griefing", "Validator Griefing Attack", "High"),
             ("withdrawal-delay", "Withdrawal Delay Vulnerability", "High"),
             ("validator-front-running", "Validator Front-Running", "High"),
+            // Phase 8: Upgradeable Contracts & Dependencies
+            ("upgradeable-proxy-issues", "Upgradeable Proxy Issues", "Critical"),
+            ("token-supply-manipulation", "Token Supply Manipulation", "Critical"),
+            ("circular-dependency", "Circular Dependency", "High"),
         ];
 
         for (id, name, severity) in detector_info {

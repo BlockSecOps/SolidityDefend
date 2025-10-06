@@ -439,6 +439,11 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::validator_griefing::ValidatorGriefingDetector::new()));
         self.register(Arc::new(crate::withdrawal_delay::WithdrawalDelayDetector::new()));
         self.register(Arc::new(crate::validator_front_running::ValidatorFrontRunningDetector::new()));
+
+        // Upgradeable Contracts & Dependencies (Phase 8)
+        self.register(Arc::new(crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new()));
+        self.register(Arc::new(crate::token_supply_manipulation::TokenSupplyManipulationDetector::new()));
+        self.register(Arc::new(crate::circular_dependency::CircularDependencyDetector::new()));
     }
 }
 
