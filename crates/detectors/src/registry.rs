@@ -410,6 +410,14 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::emergency_function_abuse::EmergencyFunctionAbuseDetector::new()));
         self.register(Arc::new(crate::gas_price_manipulation::GasPriceManipulationDetector::new()));
         self.register(Arc::new(crate::emergency_withdrawal_abuse::EmergencyWithdrawalAbuseDetector::new()));
+
+        // Critical Infrastructure Detectors (Phase 4)
+        self.register(Arc::new(crate::storage_collision::StorageCollisionDetector::new()));
+        self.register(Arc::new(crate::dangerous_delegatecall::DangerousDelegatecallDetector::new()));
+        self.register(Arc::new(crate::selfdestruct_abuse::SelfdestructAbuseDetector::new()));
+        self.register(Arc::new(crate::integer_overflow::IntegerOverflowDetector::new()));
+        self.register(Arc::new(crate::uninitialized_storage::UninitializedStorageDetector::new()));
+        self.register(Arc::new(crate::signature_malleability::SignatureMalleabilityDetector::new()));
     }
 }
 

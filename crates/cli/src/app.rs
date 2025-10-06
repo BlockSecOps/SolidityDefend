@@ -417,6 +417,12 @@ impl CliApp {
             ("emergency-function-abuse", "Emergency Function Abuse", "Medium"),
             ("gas-price-manipulation", "Gas Price Manipulation", "Medium"),
             ("emergency-withdrawal-abuse", "Emergency Withdrawal Abuse", "Medium"),
+            ("storage-collision", "Storage Collision Vulnerability", "Critical"),
+            ("dangerous-delegatecall", "Dangerous Delegatecall", "Critical"),
+            ("selfdestruct-abuse", "Selfdestruct Abuse", "High"),
+            ("integer-overflow", "Integer Overflow/Underflow", "High"),
+            ("uninitialized-storage", "Uninitialized Storage Pointer", "High"),
+            ("signature-malleability", "Signature Malleability", "High"),
         ];
 
         for (id, name, severity) in detector_info {
