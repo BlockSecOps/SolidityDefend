@@ -5,9 +5,11 @@ pub mod types;
 
 // Detector implementations
 pub mod access_control;
+pub mod auction_timing;
 pub mod auth;
 pub mod confidence;
 pub mod cross_chain_replay;
+pub mod delegation_loop;
 pub mod external;
 pub mod flash_loan_staking;
 pub mod flashloan;
@@ -17,8 +19,10 @@ pub mod mev;
 pub mod oracle;
 pub mod oracle_manipulation;
 pub mod reentrancy;
+pub mod slippage_protection;
 pub mod timestamp;
 pub mod validation;
+pub mod weak_signature_validation;
 
 // DeFi-specific detectors
 pub mod defi;

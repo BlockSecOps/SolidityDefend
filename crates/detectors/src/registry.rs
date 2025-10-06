@@ -393,10 +393,16 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::governance::SignatureReplayDetector::new()));
         self.register(Arc::new(crate::governance::EmergencyPauseCentralizationDetector::new()));
 
-        // Critical Priority Detectors (2025 Vulnerabilities)
+        // Critical Priority Detectors (2025 Vulnerabilities - Phase 1)
         self.register(Arc::new(crate::cross_chain_replay::CrossChainReplayDetector::new()));
         self.register(Arc::new(crate::flash_loan_staking::FlashLoanStakingDetector::new()));
         self.register(Arc::new(crate::oracle_manipulation::OracleManipulationDetector::new()));
+
+        // High Priority Detectors (2025 Vulnerabilities - Phase 2)
+        self.register(Arc::new(crate::slippage_protection::SlippageProtectionDetector::new()));
+        self.register(Arc::new(crate::delegation_loop::DelegationLoopDetector::new()));
+        self.register(Arc::new(crate::weak_signature_validation::WeakSignatureValidationDetector::new()));
+        self.register(Arc::new(crate::auction_timing::AuctionTimingDetector::new()));
     }
 }
 

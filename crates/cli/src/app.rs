@@ -408,6 +408,10 @@ impl CliApp {
             ("cross-chain-replay", "Cross-Chain Replay Attack", "Critical"),
             ("flash-loan-staking", "Flash Loan Staking Attack", "Critical"),
             ("oracle-manipulation", "Oracle Price Manipulation", "Critical"),
+            ("missing-slippage-protection", "Missing Slippage Protection", "High"),
+            ("delegation-loop", "Delegation Loop Vulnerability", "High"),
+            ("weak-signature-validation", "Weak Signature Validation", "High"),
+            ("auction-timing-manipulation", "Auction Timing Manipulation", "High"),
         ];
 
         for (id, name, severity) in detector_info {
