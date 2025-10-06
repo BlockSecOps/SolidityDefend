@@ -10,18 +10,23 @@ pub mod auth;
 pub mod confidence;
 pub mod cross_chain_replay;
 pub mod delegation_loop;
+pub mod emergency_function_abuse;
+pub mod emergency_withdrawal_abuse;
 pub mod external;
 pub mod flash_loan_staking;
 pub mod flashloan;
+pub mod gas_price_manipulation;
 pub mod governance;
 pub mod logic;
 pub mod mev;
 pub mod oracle;
 pub mod oracle_manipulation;
 pub mod reentrancy;
+pub mod reward_calculation;
 pub mod slippage_protection;
 pub mod timestamp;
 pub mod validation;
+pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
 
 // DeFi-specific detectors

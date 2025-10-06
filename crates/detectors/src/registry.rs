@@ -403,6 +403,13 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::delegation_loop::DelegationLoopDetector::new()));
         self.register(Arc::new(crate::weak_signature_validation::WeakSignatureValidationDetector::new()));
         self.register(Arc::new(crate::auction_timing::AuctionTimingDetector::new()));
+
+        // Medium Priority Detectors (2025 Vulnerabilities - Phase 3)
+        self.register(Arc::new(crate::weak_commit_reveal::WeakCommitRevealDetector::new()));
+        self.register(Arc::new(crate::reward_calculation::RewardCalculationDetector::new()));
+        self.register(Arc::new(crate::emergency_function_abuse::EmergencyFunctionAbuseDetector::new()));
+        self.register(Arc::new(crate::gas_price_manipulation::GasPriceManipulationDetector::new()));
+        self.register(Arc::new(crate::emergency_withdrawal_abuse::EmergencyWithdrawalAbuseDetector::new()));
     }
 }
 

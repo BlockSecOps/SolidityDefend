@@ -412,6 +412,11 @@ impl CliApp {
             ("delegation-loop", "Delegation Loop Vulnerability", "High"),
             ("weak-signature-validation", "Weak Signature Validation", "High"),
             ("auction-timing-manipulation", "Auction Timing Manipulation", "High"),
+            ("weak-commit-reveal", "Weak Commit-Reveal Scheme", "Medium"),
+            ("reward-calculation-manipulation", "Reward Calculation Manipulation", "Medium"),
+            ("emergency-function-abuse", "Emergency Function Abuse", "Medium"),
+            ("gas-price-manipulation", "Gas Price Manipulation", "Medium"),
+            ("emergency-withdrawal-abuse", "Emergency Withdrawal Abuse", "Medium"),
         ];
 
         for (id, name, severity) in detector_info {
