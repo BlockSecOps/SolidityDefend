@@ -429,6 +429,11 @@ impl CliApp {
             ("price-impact-manipulation", "Price Impact Manipulation", "High"),
             ("sandwich-resistant-swap", "Missing Sandwich Attack Protection", "High"),
             ("liquidity-bootstrapping-abuse", "Liquidity Bootstrapping Pool Abuse", "Medium"),
+            ("timestamp-manipulation", "Timestamp Manipulation", "High"),
+            ("block-stuffing-vulnerable", "Block Stuffing Vulnerable", "High"),
+            ("mev-extractable-value", "MEV Extractable Value", "High"),
+            ("deadline-manipulation", "Deadline Manipulation", "Medium"),
+            ("nonce-reuse", "Nonce Reuse Vulnerability", "Medium"),
         ];
 
         for (id, name, severity) in detector_info {
