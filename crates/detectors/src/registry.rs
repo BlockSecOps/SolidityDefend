@@ -426,6 +426,13 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::price_impact_manipulation::PriceImpactManipulationDetector::new()));
         self.register(Arc::new(crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new()));
         self.register(Arc::new(crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new()));
+
+        // MEV & Timing Attacks (Phase 6)
+        self.register(Arc::new(crate::timestamp_manipulation::TimestampManipulationDetector::new()));
+        self.register(Arc::new(crate::block_stuffing_vulnerable::BlockStuffingVulnerableDetector::new()));
+        self.register(Arc::new(crate::mev_extractable_value::MevExtractableValueDetector::new()));
+        self.register(Arc::new(crate::deadline_manipulation::DeadlineManipulationDetector::new()));
+        self.register(Arc::new(crate::nonce_reuse::NonceReuseDetector::new()));
     }
 }
 
