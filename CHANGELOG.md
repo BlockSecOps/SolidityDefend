@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added - Phase 12: Account Abstraction & ERC-4337 Security (76 Total Detectors) 🚀
+
+**Phase 12: Account Abstraction & ERC-4337 (2025 Vulnerabilities)**
+- **erc4337-entrypoint-trust**: Detects hardcoded/untrusted EntryPoint in AA wallets allowing account takeover (Critical, CWE-798, CWE-670) ✅ Functional
+- **aa-initialization-vulnerability**: Detects missing signature verification in EIP-7702 initialization (High, CWE-306, CWE-665) ✅ Functional
+- **aa-account-takeover**: Detects EntryPoint replacement attacks and full account takeover vulnerabilities (Critical, CWE-284, CWE-639) ✅ Functional
+- **aa-bundler-dos**: Detects validation logic causing bundler denial-of-service (Medium, CWE-400, CWE-834) ✅ Functional
+- **hardware-wallet-delegation**: Detects unsafe EIP-7702 delegation patterns in hardware wallets (High, CWE-1188, CWE-665) ✅ Functional
+
+**2025 Security Focus**:
+- ERC-4337 account abstraction vulnerabilities
+- EIP-7702 delegation security issues
+- Hardware wallet integration risks
+- Bundler DoS attack vectors
+- EntryPoint trust and validation
+
+**Implementation Achievement**:
+- Detector count: 71 → 76 (+7% increase)
+- All Phase 12 detectors fully functional
+- Addresses $100M+ vulnerability class from 2024-2025
+- Based on real-world ERC-4337 exploits and research
+
 ### Added - Phases 6-11 Implementation (71 Total Detectors) 🎉
 
 **Phase 6: MEV & Timing Attacks**
