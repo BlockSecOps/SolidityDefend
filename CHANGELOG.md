@@ -16,11 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Freemium model with user-provided API keys
   - Comprehensive error handling and user guidance
   - Temporary file management with automatic cleanup
+- **Test Contract Documentation**: Comprehensive README for test contracts with expected vulnerability counts
 
 ### Enhanced
 - **CLI Interface**: Added `--from-url` and `--setup-api-keys` flags for URL-based analysis
 - **Documentation**: Comprehensive URL analysis guide with troubleshooting and examples
 - **User Experience**: Intuitive setup process with helpful error messages and guidance
+
+### Fixed
+- **Governance Detector Activation**: Enabled GovernanceDetector to execute all detection methods (flash loan attacks, snapshot protection, temporal control)
+- **Multi-Contract Analysis**: Fixed analyzer to process all contracts in a file instead of only the first contract
+- **Detection Coverage**: Increased governance vulnerability detection from 2 to 9 issues in test contracts
+- **Detector Registry**: Properly registered GovernanceDetector alongside other governance-related detectors
 
 ## [0.8.0] - 2024-10-04
 

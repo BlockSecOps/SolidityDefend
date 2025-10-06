@@ -401,6 +401,10 @@ impl CliApp {
             ("front-running", "Front Running", "Medium"),
             ("block-dependency", "Block Dependency", "Medium"),
             ("tx-origin-auth", "Tx Origin Authentication", "High"),
+            ("test-governance", "Governance Vulnerabilities", "High"),
+            ("external-calls-loop", "External Calls in Loop", "High"),
+            ("signature-replay", "Signature Replay Attack", "High"),
+            ("emergency-pause-centralization", "Emergency Pause Centralization", "Medium"),
         ];
 
         for (id, name, severity) in detector_info {
