@@ -429,6 +429,16 @@ impl CliApp {
             ("price-impact-manipulation", "Price Impact Manipulation", "High"),
             ("sandwich-resistant-swap", "Missing Sandwich Attack Protection", "High"),
             ("liquidity-bootstrapping-abuse", "Liquidity Bootstrapping Pool Abuse", "Medium"),
+            ("timestamp-manipulation", "Timestamp Manipulation", "High"),
+            ("block-stuffing-vulnerable", "Block Stuffing Vulnerable", "High"),
+            ("mev-extractable-value", "MEV Extractable Value", "High"),
+            ("deadline-manipulation", "Deadline Manipulation", "Medium"),
+            ("nonce-reuse", "Nonce Reuse Vulnerability", "Medium"),
+            // Phase 7: Staking & Validator Security
+            ("slashing-mechanism", "Slashing Mechanism Vulnerability", "High"),
+            ("validator-griefing", "Validator Griefing Attack", "High"),
+            ("withdrawal-delay", "Withdrawal Delay Vulnerability", "High"),
+            ("validator-front-running", "Validator Front-Running", "High"),
         ];
 
         for (id, name, severity) in detector_info {
