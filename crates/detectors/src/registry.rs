@@ -418,6 +418,14 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::integer_overflow::IntegerOverflowDetector::new()));
         self.register(Arc::new(crate::uninitialized_storage::UninitializedStorageDetector::new()));
         self.register(Arc::new(crate::signature_malleability::SignatureMalleabilityDetector::new()));
+
+        // DeFi Advanced Protocols (Phase 5)
+        self.register(Arc::new(crate::amm_liquidity_manipulation::AmmLiquidityManipulationDetector::new()));
+        self.register(Arc::new(crate::lending_liquidation_abuse::LendingLiquidationAbuseDetector::new()));
+        self.register(Arc::new(crate::vault_share_inflation::VaultShareInflationDetector::new()));
+        self.register(Arc::new(crate::price_impact_manipulation::PriceImpactManipulationDetector::new()));
+        self.register(Arc::new(crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new()));
+        self.register(Arc::new(crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new()));
     }
 }
 

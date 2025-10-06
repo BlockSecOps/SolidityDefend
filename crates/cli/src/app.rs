@@ -423,6 +423,12 @@ impl CliApp {
             ("integer-overflow", "Integer Overflow/Underflow", "High"),
             ("uninitialized-storage", "Uninitialized Storage Pointer", "High"),
             ("signature-malleability", "Signature Malleability", "High"),
+            ("amm-liquidity-manipulation", "AMM Liquidity Manipulation", "Critical"),
+            ("lending-liquidation-abuse", "Lending Liquidation Abuse", "Critical"),
+            ("vault-share-inflation", "Vault Share Inflation Attack", "Critical"),
+            ("price-impact-manipulation", "Price Impact Manipulation", "High"),
+            ("sandwich-resistant-swap", "Missing Sandwich Attack Protection", "High"),
+            ("liquidity-bootstrapping-abuse", "Liquidity Bootstrapping Pool Abuse", "Medium"),
         ];
 
         for (id, name, severity) in detector_info {
