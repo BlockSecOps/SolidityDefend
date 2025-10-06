@@ -86,6 +86,10 @@ pub enum DetectorCategory {
     Auth,
     /// General security best practices
     BestPractices,
+    /// Cross-chain bridge vulnerabilities
+    CrossChain,
+    /// DeFi protocol vulnerabilities
+    DeFi,
 }
 
 impl DetectorCategory {
@@ -105,6 +109,8 @@ impl DetectorCategory {
             Self::Timestamp,
             Self::Auth,
             Self::BestPractices,
+            Self::CrossChain,
+            Self::DeFi,
         ]
     }
 
@@ -124,6 +130,8 @@ impl DetectorCategory {
             Self::Timestamp => "Timestamp Dependencies",
             Self::Auth => "Authentication",
             Self::BestPractices => "Best Practices",
+            Self::CrossChain => "Cross-Chain Bridges",
+            Self::DeFi => "DeFi Protocols",
         }
     }
 }

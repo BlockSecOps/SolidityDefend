@@ -405,6 +405,9 @@ impl CliApp {
             ("external-calls-loop", "External Calls in Loop", "High"),
             ("signature-replay", "Signature Replay Attack", "High"),
             ("emergency-pause-centralization", "Emergency Pause Centralization", "Medium"),
+            ("cross-chain-replay", "Cross-Chain Replay Attack", "Critical"),
+            ("flash-loan-staking", "Flash Loan Staking Attack", "Critical"),
+            ("oracle-manipulation", "Oracle Price Manipulation", "Critical"),
         ];
 
         for (id, name, severity) in detector_info {

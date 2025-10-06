@@ -392,6 +392,11 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::governance::ExternalCallsLoopDetector::new()));
         self.register(Arc::new(crate::governance::SignatureReplayDetector::new()));
         self.register(Arc::new(crate::governance::EmergencyPauseCentralizationDetector::new()));
+
+        // Critical Priority Detectors (2025 Vulnerabilities)
+        self.register(Arc::new(crate::cross_chain_replay::CrossChainReplayDetector::new()));
+        self.register(Arc::new(crate::flash_loan_staking::FlashLoanStakingDetector::new()));
+        self.register(Arc::new(crate::oracle_manipulation::OracleManipulationDetector::new()));
     }
 }
 
