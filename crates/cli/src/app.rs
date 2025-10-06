@@ -443,6 +443,23 @@ impl CliApp {
             ("upgradeable-proxy-issues", "Upgradeable Proxy Issues", "Critical"),
             ("token-supply-manipulation", "Token Supply Manipulation", "Critical"),
             ("circular-dependency", "Circular Dependency", "High"),
+            // Phase 9: Gas & Optimization Issues
+            ("gas-griefing", "Gas Griefing Attack", "Medium"),
+            ("dos-unbounded-operation", "DOS via Unbounded Operation", "High"),
+            ("excessive-gas-usage", "Excessive Gas Usage", "Low"),
+            ("inefficient-storage", "Inefficient Storage Usage", "Low"),
+            ("redundant-checks", "Redundant Checks", "Low"),
+            // Phase 10: Advanced Security
+            ("front-running-mitigation", "Missing Front-Running Mitigation", "Medium"),
+            ("price-oracle-stale", "Stale Price Oracle Data", "High"),
+            ("centralization-risk", "Centralization Risk", "Medium"),
+            ("insufficient-randomness", "Insufficient Randomness", "High"),
+            // Phase 11: Code Quality & Best Practices
+            ("shadowing-variables", "Variable Shadowing", "Medium"),
+            ("unchecked-math", "Unchecked Math Operations", "High"),
+            ("missing-input-validation", "Missing Input Validation", "Medium"),
+            ("deprecated-functions", "Deprecated Functions", "Low"),
+            ("unsafe-type-casting", "Unsafe Type Casting", "Medium"),
         ];
 
         for (id, name, severity) in detector_info {

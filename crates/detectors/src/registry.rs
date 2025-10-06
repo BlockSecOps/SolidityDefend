@@ -444,6 +444,26 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new()));
         self.register(Arc::new(crate::token_supply_manipulation::TokenSupplyManipulationDetector::new()));
         self.register(Arc::new(crate::circular_dependency::CircularDependencyDetector::new()));
+
+        // Gas & Optimization Issues (Phase 9)
+        self.register(Arc::new(crate::gas_griefing::GasGriefingDetector::new()));
+        self.register(Arc::new(crate::dos_unbounded_operation::DosUnboundedOperationDetector::new()));
+        self.register(Arc::new(crate::excessive_gas_usage::ExcessiveGasUsageDetector::new()));
+        self.register(Arc::new(crate::inefficient_storage::InefficientStorageDetector::new()));
+        self.register(Arc::new(crate::redundant_checks::RedundantChecksDetector::new()));
+
+        // Advanced Security (Phase 10)
+        self.register(Arc::new(crate::front_running_mitigation::FrontRunningMitigationDetector::new()));
+        self.register(Arc::new(crate::price_oracle_stale::PriceOracleStaleDetector::new()));
+        self.register(Arc::new(crate::centralization_risk::CentralizationRiskDetector::new()));
+        self.register(Arc::new(crate::insufficient_randomness::InsufficientRandomnessDetector::new()));
+
+        // Code Quality & Best Practices (Phase 11)
+        self.register(Arc::new(crate::shadowing_variables::ShadowingVariablesDetector::new()));
+        self.register(Arc::new(crate::unchecked_math::UncheckedMathDetector::new()));
+        self.register(Arc::new(crate::missing_input_validation::MissingInputValidationDetector::new()));
+        self.register(Arc::new(crate::deprecated_functions::DeprecatedFunctionsDetector::new()));
+        self.register(Arc::new(crate::unsafe_type_casting::UnsafeTypeCastingDetector::new()));
     }
 }
 
