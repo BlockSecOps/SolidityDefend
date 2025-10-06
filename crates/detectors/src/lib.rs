@@ -67,6 +67,13 @@ pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
 pub mod withdrawal_delay;
 
+// Phase 12: Account Abstraction & ERC-4337 (2025)
+pub mod erc4337_entrypoint_trust;
+pub mod aa_initialization_vulnerability;
+pub mod aa_account_takeover;
+pub mod aa_bundler_dos;
+pub mod hardware_wallet_delegation;
+
 // DeFi-specific detectors
 pub mod defi;
 

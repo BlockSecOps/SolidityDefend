@@ -464,6 +464,13 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::missing_input_validation::MissingInputValidationDetector::new()));
         self.register(Arc::new(crate::deprecated_functions::DeprecatedFunctionsDetector::new()));
         self.register(Arc::new(crate::unsafe_type_casting::UnsafeTypeCastingDetector::new()));
+
+        // Account Abstraction & ERC-4337 (Phase 12 - 2025)
+        self.register(Arc::new(crate::erc4337_entrypoint_trust::Erc4337EntrypointTrustDetector::new()));
+        self.register(Arc::new(crate::aa_initialization_vulnerability::AaInitializationVulnerabilityDetector::new()));
+        self.register(Arc::new(crate::aa_account_takeover::AaAccountTakeoverDetector::new()));
+        self.register(Arc::new(crate::aa_bundler_dos::AaBundlerDosDetector::new()));
+        self.register(Arc::new(crate::hardware_wallet_delegation::HardwareWalletDelegationDetector::new()));
     }
 }
 
