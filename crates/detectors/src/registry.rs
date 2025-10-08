@@ -471,6 +471,16 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::aa_account_takeover::AaAccountTakeoverDetector::new()));
         self.register(Arc::new(crate::aa_bundler_dos::AaBundlerDosDetector::new()));
         self.register(Arc::new(crate::hardware_wallet_delegation::HardwareWalletDelegationDetector::new()));
+
+        // Cross-Chain Intent & Bridge Security (Phase 13 - 2025)
+        self.register(Arc::new(crate::erc7683_settlement_validation::SettlementValidationDetector::new()));
+        self.register(Arc::new(crate::erc7683_replay_attack::ReplayAttackDetector::new()));
+        self.register(Arc::new(crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new()));
+        self.register(Arc::new(crate::erc7683_oracle_dependency::OracleDependencyDetector::new()));
+        self.register(Arc::new(crate::erc7683_permit2_integration::Permit2IntegrationDetector::new()));
+        self.register(Arc::new(crate::bridge_token_minting::TokenMintingDetector::new()));
+        self.register(Arc::new(crate::bridge_message_verification::MessageVerificationDetector::new()));
+        self.register(Arc::new(crate::bridge_chain_id_validation::ChainIdValidationDetector::new()));
     }
 }
 

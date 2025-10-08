@@ -74,6 +74,16 @@ pub mod aa_account_takeover;
 pub mod aa_bundler_dos;
 pub mod hardware_wallet_delegation;
 
+// Phase 13: Cross-Chain Intent & Bridge Security (2025)
+pub mod erc7683_settlement_validation;
+pub mod erc7683_replay_attack;
+pub mod erc7683_filler_frontrunning;
+pub mod erc7683_oracle_dependency;
+pub mod erc7683_permit2_integration;
+pub mod bridge_token_minting;
+pub mod bridge_message_verification;
+pub mod bridge_chain_id_validation;
+
 // DeFi-specific detectors
 pub mod defi;
 
