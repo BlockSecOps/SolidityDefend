@@ -212,9 +212,9 @@ impl NonceReuseDetector {
         let increments_nonce = func_source.contains("nonces[") && func_source.contains("++") ||
                               func_source.contains("nonces[") && func_source.contains("+=");
 
-        let no_overflow_check = increments_nonce &&
-                               !func_source.contains("unchecked") &&
-                               !func_source.contains("SafeMath");
+        let _no_overflow_check = increments_nonce &&
+                                !func_source.contains("unchecked") &&
+                                !func_source.contains("SafeMath");
 
         // Pattern 8: Sequential nonce requirement too strict
         let requires_sequential = func_source.contains("require(nonce == nonces[") ||

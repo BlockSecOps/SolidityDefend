@@ -189,6 +189,7 @@ impl SelfdestructAbuseDetector {
     }
 
     /// Check contract for forced ether vulnerabilities
+    #[allow(dead_code)]
     fn check_forced_ether_vulnerability(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> Option<String> {
         let contract_source = self.get_contract_source(contract, ctx);
 
@@ -247,6 +248,7 @@ impl SelfdestructAbuseDetector {
     }
 
     /// Get contract source code
+    #[allow(dead_code)]
     fn get_contract_source(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> String {
         let start = contract.location.start().line();
         let end = contract.location.end().line();

@@ -92,6 +92,7 @@ impl Detector for StorageCollisionDetector {
 
 impl StorageCollisionDetector {
     /// Check if contract is upgradeable (proxy pattern)
+    #[allow(dead_code)]
     fn is_upgradeable_contract(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> bool {
         let contract_source = self.get_contract_source(contract, ctx);
 
@@ -154,6 +155,7 @@ impl StorageCollisionDetector {
     }
 
     /// Get contract source code
+    #[allow(dead_code)]
     fn get_contract_source(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> String {
         let start = contract.location.start().line();
         let end = contract.location.end().line();

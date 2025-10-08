@@ -546,7 +546,7 @@ impl<'arena> ArenaParser<'arena> {
                 // Handle function calls with blocks like msg.sender.call{value: amount}
                 let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
                 let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
-                let mut names = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
                 // Parse the block to extract call options (like {value: amount, gas: 1000})
                 // The block is a Statement::Block containing the options as expressions
