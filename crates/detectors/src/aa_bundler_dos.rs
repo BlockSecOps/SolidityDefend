@@ -236,14 +236,12 @@ impl AaBundlerDosDetector {
         let lines: Vec<&str> = source.lines().collect();
         let mut issues = Vec::new();
         let mut in_validate = false;
-        let mut validate_start = 0;
 
         for (idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
             if trimmed.contains("function validateUserOp") {
                 in_validate = true;
-                validate_start = idx;
             }
 
             if in_validate {

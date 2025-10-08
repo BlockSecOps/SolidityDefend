@@ -165,10 +165,10 @@ impl BlockStuffingVulnerableDetector {
                          func_source.contains("redeem") ||
                          func_source.contains("execute");
 
-        let has_time_check = (func_source.contains("block.number <") ||
+        let has_time_check = func_source.contains("block.number <") ||
                              func_source.contains("block.number <=") ||
                              func_source.contains("block.timestamp <") ||
-                             func_source.contains("block.timestamp <="));
+                             func_source.contains("block.timestamp <=");
 
         let narrow_window = is_critical &&
                            has_time_check &&

@@ -32,13 +32,46 @@ impl AnalysisEngine {
         // Analyze each contract in the source file
         for contract in &source_file.contracts {
             for function in &contract.functions {
-                let function_result = self.analyze_function(function)?;
+                let function_result = self.analyze_function_with_contract(function, contract)?;
                 function_results.push(function_result);
             }
         }
 
         Ok(SourceFileAnalysisResult {
             function_analyses: function_results,
+        })
+    }
+
+    /// Run complete analysis on a single function with contract context
+    fn analyze_function_with_contract(&mut self, function: &Function, contract: &ast::Contract) -> Result<FunctionAnalysisResult> {
+        // Step 1: Lower AST to IR with contract context
+        tracing::debug!("Lowering function {} to IR", function.name.name);
+        let ir_function = self.lowering.lower_contract_function(function, contract)?;
+
+        // Step 2: Build CFG from IR
+        tracing::debug!("Building CFG for function {}", ir_function.name);
+        let cfg = self.cfg_builder.build(&ir_function)?;
+
+        // Step 3: Perform CFG analysis
+        tracing::debug!("Analyzing CFG for function {}", ir_function.name);
+        let mut cfg_analysis_engine = CfgAnalysisEngine::new(&cfg);
+        let cfg_analysis = cfg_analysis_engine.analyze()?;
+
+        // Step 4: Perform dataflow analysis
+        tracing::debug!("Performing dataflow analysis for function {}", ir_function.name);
+        let dataflow_framework = DataFlowFramework::new(&cfg, &ir_function);
+        let reaching_defs = dataflow_framework.reaching_definitions()?;
+        let live_vars = dataflow_framework.live_variables()?;
+        let def_use_chains = dataflow_framework.def_use_chains()?;
+
+        Ok(FunctionAnalysisResult {
+            function_name: ir_function.name.clone(),
+            ir_function,
+            cfg,
+            cfg_analysis,
+            reaching_definitions: reaching_defs,
+            live_variables: live_vars,
+            def_use_chains,
         })
     }
 

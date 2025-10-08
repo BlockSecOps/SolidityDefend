@@ -113,11 +113,80 @@ impl Lowering {
         let mut ir_functions = Vec::new();
 
         for function in &contract.functions {
-            let ir_function = self.lower_function(function)?;
+            let ir_function = self.lower_function_with_contract(function, contract)?;
             ir_functions.push(ir_function);
         }
 
         Ok(ir_functions)
+    }
+
+    /// Lower a single function with contract context (public API)
+    pub fn lower_contract_function(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
+        self.lower_function_with_contract(function, contract)
+    }
+
+    /// Lower a function with contract context
+    fn lower_function_with_contract(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
+        let mut context = LoweringContext::new();
+
+        // Register state variables from the contract
+        for state_var in &contract.state_variables {
+            let var_name = state_var.name.name.to_string();
+            if let Ok(ir_type) = self.lower_type_name(&state_var.type_name) {
+                let value_id = context.create_value(ir_type.clone());
+                context.register_variable(var_name.clone(), value_id, ir_type);
+            }
+        }
+
+        // Convert AST parameter types to IR types
+        let mut ir_parameters = Vec::new();
+        for param in &function.parameters {
+            let ir_type = self.lower_type_name(&param.type_name)?;
+            let param_name = param.name.as_ref()
+                .map(|id| id.name.to_string())
+                .unwrap_or_else(|| format!("param_{}", ir_parameters.len()));
+            ir_parameters.push((param_name, ir_type));
+        }
+
+        // Convert return parameter types
+        let mut ir_return_types = Vec::new();
+        for return_param in &function.return_parameters {
+            let ir_type = self.lower_type_name(&return_param.type_name)?;
+            ir_return_types.push(ir_type);
+        }
+
+        // Create IR function
+        let ir_function = IrFunction::new(
+            function.name.name.to_string(),
+            ir_parameters,
+            ir_return_types,
+        );
+
+        context.current_function = Some(ir_function.clone());
+        context.current_block = Some(ir_function.entry_block);
+
+        // Register function parameters as variables
+        for (i, (param_name, param_type)) in ir_function.parameters.iter().enumerate() {
+            let param_value = context.create_value(param_type.clone());
+            context.register_variable(param_name.clone(), param_value, param_type.clone());
+
+            // Add parameter assignment instruction
+            context.add_instruction(Instruction::Assign(
+                param_value,
+                IrValue::Value(ValueId(i as u32))
+            ))?;
+        }
+
+        // Lower function body if present
+        if let Some(body) = &function.body {
+            self.lower_block(&mut context, body)?;
+        }
+
+        // Ensure function has a return instruction
+        self.ensure_function_return(&mut context, &ir_function.return_types)?;
+
+        // Update the function with the context state
+        context.current_function.ok_or_else(|| anyhow!("Lost function context"))
     }
 
     /// Enhanced function lowering with complete implementation
