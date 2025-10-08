@@ -488,6 +488,11 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::aa_signature_aggregation::SignatureAggregationDetector::new()));
         self.register(Arc::new(crate::aa_social_recovery::SocialRecoveryDetector::new()));
         self.register(Arc::new(crate::aa_nonce_management::NonceManagementDetector::new()));
+
+        // DeFi Protocol Security (Phase 15 - 2025)
+        self.register(Arc::new(crate::defi_liquidity_pool_manipulation::LiquidityPoolManipulationDetector::new()));
+        self.register(Arc::new(crate::defi_jit_liquidity::JitLiquidityDetector::new()));
+        self.register(Arc::new(crate::defi_yield_farming::YieldFarmingDetector::new()));
     }
 }
 
