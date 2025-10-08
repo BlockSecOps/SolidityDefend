@@ -91,6 +91,11 @@ pub mod aa_signature_aggregation;
 pub mod aa_social_recovery;
 pub mod aa_nonce_management;
 
+// Phase 15: DeFi Protocol Security (2025)
+pub mod defi_liquidity_pool_manipulation;
+pub mod defi_jit_liquidity;
+pub mod defi_yield_farming;
+
 // DeFi-specific detectors
 pub mod defi;
 
