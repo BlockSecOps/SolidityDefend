@@ -84,6 +84,13 @@ pub mod bridge_token_minting;
 pub mod bridge_message_verification;
 pub mod bridge_chain_id_validation;
 
+// Phase 14: Account Abstraction Advanced (2025)
+pub mod erc4337_paymaster_abuse;
+pub mod aa_session_key_vulnerabilities;
+pub mod aa_signature_aggregation;
+pub mod aa_social_recovery;
+pub mod aa_nonce_management;
+
 // DeFi-specific detectors
 pub mod defi;
 
