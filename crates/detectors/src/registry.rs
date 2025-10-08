@@ -481,6 +481,13 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::bridge_token_minting::TokenMintingDetector::new()));
         self.register(Arc::new(crate::bridge_message_verification::MessageVerificationDetector::new()));
         self.register(Arc::new(crate::bridge_chain_id_validation::ChainIdValidationDetector::new()));
+
+        // Account Abstraction Advanced (Phase 14 - 2025)
+        self.register(Arc::new(crate::erc4337_paymaster_abuse::PaymasterAbuseDetector::new()));
+        self.register(Arc::new(crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new()));
+        self.register(Arc::new(crate::aa_signature_aggregation::SignatureAggregationDetector::new()));
+        self.register(Arc::new(crate::aa_social_recovery::SocialRecoveryDetector::new()));
+        self.register(Arc::new(crate::aa_nonce_management::NonceManagementDetector::new()));
     }
 }
 
