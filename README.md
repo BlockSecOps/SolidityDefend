@@ -9,7 +9,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 ## Features
 
 🔍 **Comprehensive Security Analysis**
-- **71 vulnerability detectors** covering all major security categories
+- **93 vulnerability detectors** covering all major security categories
 - Advanced taint tracking and data flow analysis framework
 - Control flow graph analysis for complex vulnerability patterns
 - Multi-layered security detection (access control, reentrancy, validation, MEV protection, DeFi, governance, gas optimization, advanced security, code quality)
@@ -51,9 +51,9 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - ✅ Control flow graph construction with dominance analysis
 
 ✅ **Security Analysis Engine (COMPLETE)** 🎉
-- ✅ **Detector Registry**: Fully functional with all 71 detectors properly initialized
+- ✅ **Detector Registry**: Fully functional with all 93 detectors properly initialized
 - ✅ **Modern Vulnerability Detection**: Comprehensive coverage for 2024/2025-era attack patterns
-- ✅ **71 detectors across 11 phases:**
+- ✅ **93 detectors across 15 phases:**
   - **Access Control** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin authentication
   - **Reentrancy** (2): Classic and read-only reentrancy detection
   - **Logic Bugs** (2): Division order, state machine validation
@@ -66,15 +66,19 @@ A high-performance static analysis security tool for Solidity smart contracts, b
   - **Cross-Chain** (2): Replay attacks, weak signature validation
   - **Governance** (5): Delegation loops, emergency function abuse, signature replay, pause centralization
   - **Timestamp Dependencies** (1): Enhanced block dependency analysis with context awareness
-  - **Staking & Validators** (7): Slashing vulnerabilities, validator collusion, minimum stake, reward manipulation, unbonding, delegation, exit queue
+  - **Staking & Validators** (4): Slashing mechanism, validator griefing, withdrawal delay, validator front-running
   - **Advanced Logic** (3): Upgradeable proxy issues, token supply manipulation, circular dependencies
   - **Gas & Optimization** (5): Gas griefing, DoS unbounded operations, excessive gas usage, inefficient storage, redundant checks
-  - **Advanced Security** (4): Oracle staleness, centralization risks, insufficient randomness
+  - **Advanced Security** (4): Front-running mitigation, oracle staleness, centralization risks, insufficient randomness
   - **Code Quality** (5): Variable shadowing, unchecked math, missing validation, deprecated functions, unsafe type casting
+  - **Account Abstraction (ERC-4337)** (5): Entrypoint trust, initialization vulnerabilities, account takeover, bundler DOS, hardware wallet delegation
+  - **Cross-Chain & Bridges** (8): Settlement validation, replay attacks, filler front-running, oracle dependency, Permit2 integration, token minting, message verification, chain ID validation
+  - **Account Abstraction Advanced** (5): Paymaster abuse, session key vulnerabilities, signature aggregation, social recovery, nonce management
+  - **DeFi Protocol Security** (3): Liquidity pool manipulation, JIT liquidity, yield farming
 - ✅ Comprehensive detector registry and framework
 - ✅ Dataflow analysis with taint tracking (834 lines)
 - ✅ Advanced pattern matching and AST traversal
-- ✅ **Achievement**: Increased from 21 to 71 detectors (+238% growth)
+- ✅ **Achievement**: Increased from 21 to 93 detectors (+343% growth)
 
 ✅ **Output & Integration (95% Complete)**
 - ✅ Console formatter with color support and code snippets (11/11 tests passing)
@@ -105,7 +109,7 @@ SolidityDefend Community Edition has **successfully achieved production readines
 - **Production Ready**: ✅ **CONFIRMED** - See detailed `smartbugs_validation_report.md`
 
 ### ✅ **Production Features Complete**
-- **71 Detectors**: Comprehensive vulnerability coverage across 11 security phases
+- **93 Detectors**: Comprehensive vulnerability coverage across 15 security phases
 - **High-Performance Analysis**: Sub-second analysis with intelligent caching
 - **Multiple Output Formats**: Console, JSON with comprehensive configuration
 - **CI/CD Integration**: Exit codes, incremental scanning, GitHub Actions templates
@@ -114,7 +118,7 @@ SolidityDefend Community Edition has **successfully achieved production readines
 ### 📊 **Production Statistics**
 - **Total Code**: 27,000+ lines of production-optimized Rust
 - **Test Infrastructure**: Comprehensive validation framework with SmartBugs integration
-- **Detectors**: 71 security detectors across 11 phases
+- **Detectors**: 93 security detectors across 15 phases (100% functional)
 - **Crates**: 18 modular components with clean architecture
 - **Status**: ✅ **PRODUCTION READY FOR PUBLIC RELEASE**
 
@@ -132,7 +136,7 @@ SolidityDefend is built as a modular Rust workspace with the following component
 - **DataFlow** (`crates/dataflow`): Taint tracking and data flow analysis framework
 
 ### Security Analysis
-- **Detectors** (`crates/detectors`): 71 vulnerability detection engines across 11 security phases
+- **Detectors** (`crates/detectors`): 93 vulnerability detection engines across 15 security phases
 - **Fixes** (`crates/fixes`): Automatic fix suggestions and code transformations
 
 ### Interface & Output
@@ -209,7 +213,7 @@ docker run -v $(pwd):/analysis soliditydefend /analysis/*.sol
 
 ## Security Detectors
 
-SolidityDefend includes 71 security detectors across 11 phases:
+SolidityDefend includes 93 security detectors across 15 phases:
 
 ### Phases 1-5: Core Security (45 detectors)
 - **Access Control & Authentication** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin
@@ -225,35 +229,72 @@ SolidityDefend includes 71 security detectors across 11 phases:
 - **External Integration** (2): Unchecked calls, timestamp dependencies
 - **Additional** (9): State machine validation, oracle manipulation, various security patterns
 
-### Phase 6-7: MEV & Staking (9 detectors)
-- **MEV & Timing**: Commit-reveal schemes, MEV protection bypasses
-- **Staking Security**: Slashing vulnerabilities, validator collusion, minimum stake requirements
-- **Reward Systems**: Delegation vulnerabilities, unbonding periods, exit queues
+### Phase 6: MEV & Timing (5 detectors)
+- **Timestamp Manipulation**: Block timestamp dependency detection
+- **Block Stuffing**: DoS via block gas limit manipulation
+- **MEV Extraction**: General MEV vulnerability patterns
+- **Deadline Manipulation**: Transaction deadline bypass detection
+- **Nonce Reuse**: Nonce-based attack patterns
+
+### Phase 7: Staking & Validator Security (4 detectors)
+- **Slashing Mechanism**: Slashing rule vulnerabilities
+- **Validator Griefing**: Griefing attack detection
+- **Withdrawal Delay**: Withdrawal timing issues
+- **Validator Front-Running**: Front-running in validator selection
 
 ### Phase 8: Advanced Logic (3 detectors)
 - **Upgradeable Proxy Issues**: Unprotected upgrades, initialization guards, storage gaps, unsafe delegatecall
 - **Token Supply Manipulation**: Mint without cap, missing access control, totalSupply manipulation
 - **Circular Dependencies**: Callback loops, missing depth limits, observer patterns
 
-### Phase 9: Gas & Optimization (5 detectors)
+### Phase 9: Gas & Optimization (5 detectors) - ✅ Complete
 - **Gas Griefing**: External calls in loops without gas limits
 - **DoS Unbounded Operations**: Unbounded array iterations, large structure deletions
-- **Excessive Gas Usage**: Inefficient loop patterns (stub)
-- **Inefficient Storage**: Poor storage packing (stub)
-- **Redundant Checks**: Duplicate validation statements (stub)
+- **Excessive Gas Usage**: Inefficient loop patterns
+- **Inefficient Storage**: Poor storage packing
+- **Redundant Checks**: Duplicate validation statements
 
-### Phase 10: Advanced Security (4 detectors)
-- **Front-Running Mitigation**: MEV protection patterns (stub)
-- **Price Oracle Staleness**: Oracle freshness validation (stub)
-- **Centralization Risk**: Access control concentration (stub)
-- **Insufficient Randomness**: Weak RNG sources (stub)
+### Phase 10: Advanced Security (4 detectors) - ✅ Complete
+- **Front-Running Mitigation**: MEV protection pattern detection
+- **Price Oracle Staleness**: Oracle freshness validation
+- **Centralization Risk**: Access control concentration analysis
+- **Insufficient Randomness**: Weak RNG source detection
 
-### Phase 11: Code Quality (5 detectors)
-- **Variable Shadowing**: Scope conflicts (stub)
-- **Unchecked Math**: Arithmetic safety (stub)
-- **Missing Input Validation**: Parameter checks (stub)
-- **Deprecated Functions**: Legacy API usage (stub)
-- **Unsafe Type Casting**: Type conversion safety (stub)
+### Phase 11: Code Quality (5 detectors) - ✅ Complete
+- **Variable Shadowing**: Scope conflict detection
+- **Unchecked Math**: Arithmetic safety validation
+- **Missing Input Validation**: Parameter validation checks
+- **Deprecated Functions**: Legacy API usage detection
+- **Unsafe Type Casting**: Type conversion safety analysis
+
+### Phase 12: Account Abstraction (ERC-4337) (5 detectors) - ✅ Complete
+- **Entrypoint Trust**: ERC-4337 entrypoint validation
+- **Initialization Vulnerabilities**: AA account initialization issues
+- **Account Takeover**: Account security vulnerabilities
+- **Bundler DOS**: Bundler attack vectors
+- **Hardware Wallet Delegation**: Delegation security
+
+### Phase 13: Cross-Chain & Bridge Security (8 detectors) - ✅ Complete
+- **Settlement Validation**: ERC-7683 settlement contract security
+- **Replay Attacks**: Cross-chain replay protection
+- **Filler Front-Running**: ERC-7683 filler vulnerabilities
+- **Oracle Dependency**: Cross-chain oracle risks
+- **Permit2 Integration**: ERC-7683 Permit2 security
+- **Token Minting**: Bridge token minting access control
+- **Message Verification**: Bridge message authentication
+- **Chain ID Validation**: Chain ID verification
+
+### Phase 14: Account Abstraction Advanced (5 detectors) - ✅ Complete
+- **Paymaster Abuse**: Paymaster exploitation vectors
+- **Session Key Vulnerabilities**: Session key security
+- **Signature Aggregation**: Aggregated signature risks
+- **Social Recovery**: Social recovery mechanism issues
+- **Nonce Management**: Nonce handling vulnerabilities
+
+### Phase 15: DeFi Protocol Security (3 detectors) - ✅ Complete
+- **Liquidity Pool Manipulation**: Pool manipulation attacks
+- **JIT Liquidity**: Just-in-time liquidity exploits
+- **Yield Farming**: Yield farming vulnerabilities
 
 For detailed detector documentation, see [docs/DETECTORS.md](docs/DETECTORS.md).
 
