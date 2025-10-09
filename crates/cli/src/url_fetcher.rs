@@ -134,6 +134,12 @@ impl UrlFetcher {
         let url = Url::parse(url_str)
             .with_context(|| format!("Invalid URL format: {}", url_str))?;
 
+        // Validate URL scheme is HTTP or HTTPS
+        match url.scheme() {
+            "http" | "https" => {},
+            scheme => return Err(anyhow!("Unsupported URL scheme: {}. Only HTTP and HTTPS are supported", scheme)),
+        }
+
         let host = url.host_str()
             .ok_or_else(|| anyhow!("URL missing host: {}", url_str))?;
 
@@ -153,11 +159,17 @@ impl UrlFetcher {
             let tx_hash = path.strip_prefix("/tx/")
                 .ok_or_else(|| anyhow!("Invalid transaction URL format"))?
                 .to_string();
+            if tx_hash.is_empty() {
+                return Err(anyhow!("Transaction hash cannot be empty"));
+            }
             UrlType::Transaction(tx_hash)
         } else if path.starts_with("/address/") {
             let address = path.strip_prefix("/address/")
                 .ok_or_else(|| anyhow!("Invalid address URL format"))?
                 .to_string();
+            if address.is_empty() {
+                return Err(anyhow!("Contract address cannot be empty"));
+            }
             UrlType::Contract(address)
         } else {
             return Err(anyhow!("URL must be either a transaction (/tx/) or address (/address/) URL"));

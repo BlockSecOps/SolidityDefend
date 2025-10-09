@@ -289,7 +289,7 @@ mod tests {
     #[test]
     fn test_api_compatibility() {
         let version = VersionInfo::current();
-        assert!(version.is_api_compatible("0.1.5"));
-        assert!(!version.is_api_compatible("0.2.0"));
+        assert!(version.is_api_compatible("0.8.5"));
+        assert!(!version.is_api_compatible("0.9.0"));
     }
 }
