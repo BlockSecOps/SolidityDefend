@@ -35,12 +35,26 @@ impl ChainIdValidationDetector {
             return None;
         }
 
-        let source = &ctx.source_code.to_lowercase();
+        // Only check external/public functions (skip internal/private helpers)
+        let is_external = matches!(
+            function.visibility,
+            ast::Visibility::External | ast::Visibility::Public
+        );
 
-        let validates_chain = (source.contains("chainid") || source.contains("chain.id")) &&
-            (source.contains("==") || source.contains("require"));
+        if !is_external {
+            return None;
+        }
 
-        let in_hash = source.contains("keccak") && source.contains("chainid");
+        // Extract only the function body source code to avoid matching comments
+        let func_source = self.get_function_source(function, ctx).to_lowercase();
+
+        // Look for actual validation using block.chainid (more specific than just "chainid")
+        let validates_chain = (func_source.contains("block.chainid") || func_source.contains("block.chain.id")) &&
+            (func_source.contains("==") || func_source.contains("require"));
+
+        // Check if chainid is used in hash (parameters like sourceChainId or targetChainId)
+        let in_hash = func_source.contains("keccak") &&
+            (func_source.contains("chainid") || func_source.contains("chain_id"));
 
         if !validates_chain && !in_hash {
             Some((
@@ -56,6 +70,31 @@ impl ChainIdValidationDetector {
         } else {
             None
         }
+    }
+
+    /// Get function source code with comments stripped to avoid false positives
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start >= source_lines.len() || end >= source_lines.len() {
+            return String::new();
+        }
+
+        // Strip single-line comments to avoid matching keywords in comments
+        source_lines[start..=end]
+            .iter()
+            .map(|line| {
+                // Remove everything after // to strip single-line comments
+                if let Some(comment_pos) = line.find("//") {
+                    &line[..comment_pos]
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<&str>>()
+            .join("\n")
     }
 }
 
@@ -118,5 +157,19 @@ impl Detector for ChainIdValidationDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = ChainIdValidationDetector::new();
+        assert_eq!(detector.name(), "Missing Chain-ID Validation");
+        assert_eq!(detector.default_severity(), Severity::High);
+        assert!(detector.is_enabled());
+        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
     }
 }

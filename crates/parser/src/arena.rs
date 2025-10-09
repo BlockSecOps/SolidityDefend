@@ -1,4 +1,4 @@
-use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator, BinaryOperator, UnaryOperator};
+use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator, BinaryOperator, UnaryOperator, Parameter, TypeName, ElementaryType, StorageLocation, StateVariable, StateMutability};
 use crate::error::{ParseError, ParseResult, ParseErrors};
 use solang_parser::{pt, parse, diagnostics};
 
@@ -134,8 +134,13 @@ impl<'arena> ArenaParser<'arena> {
                         }
                     }
                 }
-                pt::ContractPart::VariableDefinition(_var) => {
-                    // TODO: Convert state variables
+                pt::ContractPart::VariableDefinition(var) => {
+                    match self.convert_state_variable(var, source, file_path) {
+                        Ok(state_var) => ast_contract.state_variables.push(state_var),
+                        Err(_) => {
+                            // Skip invalid state variables for now
+                        }
+                    }
                 }
                 pt::ContractPart::EventDefinition(_event) => {
                     // TODO: Convert events
@@ -178,13 +183,58 @@ impl<'arena> ArenaParser<'arena> {
             }
         };
 
-        let location = self.convert_location_with_source(&func.loc, file_path, Some(source));
+        // CRITICAL FIX: Use complete function location including signature
+        // func.loc_prototype contains the function signature (function name(...) modifiers)
+        // func.loc contains the entire function including body
+        // We need to span from the start of prototype to the end of the body
+        let location = if matches!(func.loc_prototype, pt::Loc::File(..)) {
+            // Create location spanning from prototype start to body end
+            let proto_loc = self.convert_location_with_source(&func.loc_prototype, file_path, Some(source));
+            let full_loc = self.convert_location_with_source(&func.loc, file_path, Some(source));
+            ast::SourceLocation::new(
+                file_path.into(),
+                proto_loc.start().clone(),
+                full_loc.end().clone(),
+            )
+        } else {
+            // Fallback to full location if prototype location is not available
+            self.convert_location_with_source(&func.loc, file_path, Some(source))
+        };
+
         let mut function = Function::new(self.arena, name, location);
 
-        // Convert function visibility
+        // Convert function attributes (visibility, mutability, modifiers)
         for attr in &func.attributes {
-            if let pt::FunctionAttribute::Visibility(vis) = attr {
-                function.visibility = self.convert_visibility(vis);
+            match attr {
+                pt::FunctionAttribute::Visibility(vis) => {
+                    function.visibility = self.convert_visibility(vis);
+                }
+                pt::FunctionAttribute::Mutability(mutability) => {
+                    function.mutability = self.convert_mutability(mutability);
+                }
+                pt::FunctionAttribute::BaseOrModifier(loc, base) => {
+                    // CRITICAL FIX: Populate modifiers field
+                    if let Ok(modifier_invocation) = self.convert_modifier_invocation(loc, base, source, file_path) {
+                        function.modifiers.push(modifier_invocation);
+                    }
+                }
+                _ => {
+                    // Ignore other attributes (Virtual, Immutable, Override, Error)
+                }
+            }
+        }
+
+        // Convert function parameters
+        for param in &func.params {
+            if let Ok(converted_param) = self.convert_parameter(param, source, file_path) {
+                function.parameters.push(converted_param);
+            }
+        }
+
+        // Convert return parameters
+        for param in &func.returns {
+            if let Ok(converted_param) = self.convert_parameter(param, source, file_path) {
+                function.return_parameters.push(converted_param);
             }
         }
 
@@ -196,6 +246,88 @@ impl<'arena> ArenaParser<'arena> {
         Ok(function)
     }
 
+    /// Convert state variable
+    fn convert_state_variable(
+        &self,
+        var: &pt::VariableDefinition,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<StateVariable<'arena>> {
+        let name = if let Some(ref ident) = var.name {
+            self.convert_identifier_with_source(ident, source, file_path)?
+        } else {
+            // Generate a placeholder name
+            let location = self.convert_location_with_source(&var.loc, file_path, Some(source));
+            Identifier::new(self.arena.alloc_str("_unnamed"), location)
+        };
+        let type_name = self.convert_type_name(&var.ty, source, file_path)?;
+        let location = self.convert_location_with_source(&var.loc, file_path, Some(source));
+
+        // Extract visibility from attributes
+        let mut visibility = Visibility::Internal; // Default
+        for attr in &var.attrs {
+            if let pt::VariableAttribute::Visibility(vis) = attr {
+                visibility = self.convert_visibility(vis);
+            }
+        }
+
+        // TODO: Extract mutability and initial value
+        let mutability = StateMutability::NonPayable; // Default for now
+        let initial_value = None; // TODO: Convert var.initializer
+
+        Ok(StateVariable {
+            name,
+            type_name,
+            visibility,
+            mutability,
+            initial_value,
+            location,
+        })
+    }
+
+    /// Convert function parameter
+    fn convert_parameter(
+        &self,
+        param: &(pt::Loc, Option<pt::Parameter>),
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<Parameter<'arena>> {
+        let (_loc, param_opt) = param;
+
+        if let Some(pt_param) = param_opt {
+            let name = if let Some(ref ident) = pt_param.name {
+                Some(self.convert_identifier_with_source(ident, source, file_path)?)
+            } else {
+                None
+            };
+
+            let type_name = self.convert_type_name(&pt_param.ty, source, file_path)?;
+            let storage_location = pt_param.storage.as_ref().map(|s| self.convert_storage_location(s));
+            let location = self.convert_location_with_source(&pt_param.loc, file_path, Some(source));
+
+            Ok(Parameter {
+                name,
+                type_name,
+                storage_location,
+                location,
+            })
+        } else {
+            Err(ParseError::SyntaxError {
+                message: "Missing parameter definition".into(),
+                location: self.convert_location_with_source(&_loc, file_path, Some(source)),
+            })
+        }
+    }
+
+    /// Convert storage location
+    fn convert_storage_location(&self, storage: &pt::StorageLocation) -> StorageLocation {
+        match storage {
+            pt::StorageLocation::Memory(_) => StorageLocation::Memory,
+            pt::StorageLocation::Storage(_) => StorageLocation::Storage,
+            pt::StorageLocation::Calldata(_) => StorageLocation::Calldata,
+        }
+    }
+
     /// Convert function visibility
     fn convert_visibility(&self, vis: &pt::Visibility) -> Visibility {
         match vis {
@@ -203,6 +335,123 @@ impl<'arena> ArenaParser<'arena> {
             pt::Visibility::Internal(_) => Visibility::Internal,
             pt::Visibility::External(_) => Visibility::External,
             pt::Visibility::Private(_) => Visibility::Private,
+        }
+    }
+
+    /// Convert function mutability
+    fn convert_mutability(&self, mutability: &pt::Mutability) -> StateMutability {
+        match mutability {
+            pt::Mutability::Pure(_) => StateMutability::Pure,
+            pt::Mutability::View(_) => StateMutability::View,
+            pt::Mutability::Constant(_) => StateMutability::View, // constant is deprecated, treat as view
+            pt::Mutability::Payable(_) => StateMutability::Payable,
+        }
+    }
+
+    /// Convert modifier invocation from solang Base to our ModifierInvocation
+    fn convert_modifier_invocation(
+        &self,
+        loc: &pt::Loc,
+        base: &pt::Base,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<ast::ModifierInvocation<'arena>> {
+        // Base.name is an IdentifierPath, which is a list of identifiers
+        // For modifiers, this is typically a single identifier (e.g., "onlyOwner")
+        // For inheritance it can be a path (e.g., "A.B.C"), but we join them
+        let name = if base.name.identifiers.is_empty() {
+            // Shouldn't happen, but handle gracefully
+            let location = self.convert_location_with_source(&base.name.loc, file_path, Some(source));
+            Identifier::new(self.arena.alloc_str(""), location)
+        } else if base.name.identifiers.len() == 1 {
+            // Single identifier - typical case for modifiers
+            self.convert_identifier_with_source(&base.name.identifiers[0], source, file_path)?
+        } else {
+            // Multiple identifiers - join them with "."
+            let joined = base.name.identifiers.iter()
+                .map(|id| id.name.as_str())
+                .collect::<Vec<_>>()
+                .join(".");
+            let name_str = self.arena.alloc_str(&joined);
+            let location = self.convert_location_with_source(&base.name.loc, file_path, Some(source));
+            Identifier::new(name_str, location)
+        };
+
+        let location = self.convert_location_with_source(loc, file_path, Some(source));
+
+        let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
+
+        // Convert modifier arguments if present
+        if let Some(args) = &base.args {
+            for arg in args {
+                if let Ok(expr) = self.convert_expression(arg, source, file_path) {
+                    arguments.push(expr);
+                }
+            }
+        }
+
+        Ok(ast::ModifierInvocation {
+            name,
+            arguments,
+            location,
+        })
+    }
+
+    /// Convert type name
+    fn convert_type_name(
+        &self,
+        ty: &pt::Expression,
+        source: &str,
+        file_path: &str,
+    ) -> ParseResult<TypeName<'arena>> {
+        match ty {
+            pt::Expression::Type(_, ty) => match ty {
+                pt::Type::Address => Ok(TypeName::Elementary(ElementaryType::Address)),
+                pt::Type::Bool => Ok(TypeName::Elementary(ElementaryType::Bool)),
+                pt::Type::String => Ok(TypeName::Elementary(ElementaryType::String)),
+                pt::Type::Bytes(n) => Ok(TypeName::Elementary(ElementaryType::FixedBytes(*n))),
+                pt::Type::DynamicBytes => Ok(TypeName::Elementary(ElementaryType::Bytes)),
+                pt::Type::Uint(n) => Ok(TypeName::Elementary(ElementaryType::Uint(*n))),
+                pt::Type::Int(n) => Ok(TypeName::Elementary(ElementaryType::Int(*n))),
+                pt::Type::Mapping { key, value, .. } => {
+                    // Convert mapping type
+                    let key_type = self.arena.alloc(self.convert_type_name(key, source, file_path)?);
+                    let value_type = self.arena.alloc(self.convert_type_name(value, source, file_path)?);
+                    Ok(TypeName::Mapping {
+                        key_type,
+                        value_type,
+                    })
+                }
+                _ => {
+                    // Fallback for unhandled types
+                    Ok(TypeName::Elementary(ElementaryType::Uint(256)))
+                }
+            },
+            pt::Expression::Variable(ident) => {
+                // User-defined type
+                let name = self.convert_identifier_with_source(ident, source, file_path)?;
+                Ok(TypeName::UserDefined(name))
+            },
+            pt::Expression::ArraySubscript(_, base, length) => {
+                // Check if this is a mapping (denoted by special syntax in the parser)
+                // mappings look like: base[index] where if it's actually ArraySubscript
+                // But when mapping(K => V), solang represents this differently
+                // For now, treat as array
+                let base_type = self.arena.alloc(self.convert_type_name(base, source, file_path)?);
+                let length_expr = if let Some(len_expr) = length {
+                    Some(self.arena.alloc(self.convert_expression(len_expr, source, file_path)?))
+                } else {
+                    None
+                };
+                Ok(TypeName::Array {
+                    base_type,
+                    length: length_expr,
+                })
+            },
+            _ => {
+                // Fallback for other types
+                Ok(TypeName::Elementary(ElementaryType::Uint(256)))
+            }
         }
     }
 

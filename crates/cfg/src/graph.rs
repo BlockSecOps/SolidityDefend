@@ -178,6 +178,26 @@ impl ControlFlowGraph {
         node_index
     }
 
+    /// Remove a block from the CFG
+    pub fn remove_block(&mut self, block_id: BlockId) -> Result<()> {
+        if let Some(node_index) = self.block_to_node.get(&block_id).copied() {
+            // Remove from mappings
+            self.block_to_node.remove(&block_id);
+            self.node_to_block.remove(&node_index);
+
+            // Remove from exit blocks if present
+            self.exit_blocks.retain(|&idx| idx != node_index);
+
+            // Note: We don't actually remove from the petgraph Graph because that
+            // would invalidate node indices. Instead, we just remove from our mappings
+            // so the block won't be accessible via our API.
+
+            Ok(())
+        } else {
+            Err(anyhow!("Block {} not found in CFG", block_id))
+        }
+    }
+
     /// Add an edge between two blocks
     pub fn add_edge(&mut self, from: BlockId, to: BlockId, edge_type: EdgeType) -> Result<EdgeIndex> {
         let from_node = self.block_to_node.get(&from)

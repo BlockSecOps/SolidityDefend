@@ -36,11 +36,39 @@ impl MessageVerificationDetector {
             return issues;
         }
 
-        let source = &ctx.source_code.to_lowercase();
+        // Only check external/public functions
+        let is_external = matches!(
+            function.visibility,
+            ast::Visibility::External | ast::Visibility::Public
+        );
 
-        let has_sig = source.contains("ecrecover") || (source.contains("verify") && source.contains("sig"));
-        let has_merkle = source.contains("merkle") && (source.contains("verify") || source.contains("proof"));
-        let has_replay = source.contains("processed") || source.contains("executed") || source.contains("used");
+        if !is_external {
+            return issues;
+        }
+
+        // Get function source with comments stripped
+        let func_source = self.get_function_source(function, ctx).to_lowercase();
+
+        let has_sig = func_source.contains("ecrecover") || (func_source.contains("verify") && func_source.contains("sig"));
+        let has_merkle = func_source.contains("merkle") && (func_source.contains("verify") || func_source.contains("proof"));
+
+        // Check for replay protection more specifically - look for mapping/array access patterns
+        // Need to be more specific than just "executed" + "[" because that matches:
+        // - Event names like "emit MessageExecuted(...)"
+        // - Array parameters like "bytes32[] calldata proof"
+        // We want actual state variable access like "processedMessages[hash]"
+        let has_replay =
+            // Specific mapping names
+            func_source.contains("processedmessages[") ||
+            func_source.contains("executedmessages[") ||
+            func_source.contains("usedmessages[") ||
+            func_source.contains("processednonces[") ||
+            func_source.contains("usednonces[") ||
+            // Generic pattern: "processed" or "used" followed by "[" within reasonable distance
+            // But not "emit SomethingExecuted" - check for actual state variable patterns
+            (func_source.contains("processed[") ||
+             func_source.contains("used[") ||
+             func_source.contains("nonces["));
 
         if !has_sig && !has_merkle {
             issues.push((
@@ -59,6 +87,30 @@ impl MessageVerificationDetector {
         }
 
         issues
+    }
+
+    /// Get function source code with comments stripped to avoid false positives
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start >= source_lines.len() || end >= source_lines.len() {
+            return String::new();
+        }
+
+        // Strip single-line comments to avoid matching keywords in comments
+        source_lines[start..=end]
+            .iter()
+            .map(|line| {
+                if let Some(comment_pos) = line.find("//") {
+                    &line[..comment_pos]
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<&str>>()
+            .join("\n")
     }
 }
 
@@ -113,5 +165,19 @@ impl Detector for MessageVerificationDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = MessageVerificationDetector::new();
+        assert_eq!(detector.name(), "Bridge Message Verification");
+        assert_eq!(detector.default_severity(), Severity::Critical);
+        assert!(detector.is_enabled());
+        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
     }
 }

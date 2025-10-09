@@ -36,14 +36,30 @@ impl TokenMintingDetector {
             return issues;
         }
 
-        let source = &ctx.source_code.to_lowercase();
+        // Only check external/public functions
+        let is_external = matches!(
+            function.visibility,
+            ast::Visibility::External | ast::Visibility::Public
+        );
 
-        let has_access = source.contains("onlybridge") || source.contains("onlyowner") ||
-            source.contains("onlyrole") || source.contains("require(msg.sender");
+        if !is_external {
+            return issues;
+        }
 
-        let validates_message = source.contains("verify") && (source.contains("message") || source.contains("proof") || source.contains("signature"));
+        // Get function source with comments stripped
+        let func_source = self.get_function_source(function, ctx).to_lowercase();
 
-        let has_limits = source.contains("max") && source.contains("amount");
+        // Check for access control modifiers (now that AST parser populates them!)
+        let has_modifier = !function.modifiers.is_empty();
+
+        // Also check for inline require statements as additional validation
+        let has_inline_check = func_source.contains("require(msg.sender");
+
+        let has_access = has_modifier || has_inline_check;
+
+        let validates_message = func_source.contains("verify") && (func_source.contains("message") || func_source.contains("proof") || func_source.contains("signature"));
+
+        let has_limits = func_source.contains("max") && func_source.contains("amount");
 
         if !has_access {
             issues.push((
@@ -70,6 +86,30 @@ impl TokenMintingDetector {
         }
 
         issues
+    }
+
+    /// Get function source code with comments stripped to avoid false positives
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start >= source_lines.len() || end >= source_lines.len() {
+            return String::new();
+        }
+
+        // Strip single-line comments to avoid matching keywords in comments
+        source_lines[start..=end]
+            .iter()
+            .map(|line| {
+                if let Some(comment_pos) = line.find("//") {
+                    &line[..comment_pos]
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<&str>>()
+            .join("\n")
     }
 }
 
@@ -124,5 +164,20 @@ impl Detector for TokenMintingDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = TokenMintingDetector::new();
+        assert_eq!(detector.name(), "Bridge Token Minting Control");
+        assert_eq!(detector.default_severity(), Severity::Critical);
+        assert!(detector.is_enabled());
+        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
+        assert!(detector.categories().contains(&DetectorCategory::AccessControl));
     }
 }

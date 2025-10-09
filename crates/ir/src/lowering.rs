@@ -120,6 +120,51 @@ impl Lowering {
         Ok(ir_functions)
     }
 
+    /// Register Solidity global variables (msg, block, tx, etc.)
+    fn register_global_variables(&mut self, context: &mut LoweringContext) {
+        // msg global variable with address sender, uint256 value, bytes data, etc.
+        let msg_type = IrType::Struct {
+            name: "msg".to_string(),
+            fields: vec![
+                ("sender".to_string(), IrType::Address),
+                ("value".to_string(), IrType::Uint(256)),
+                ("data".to_string(), IrType::Bytes),
+                ("sig".to_string(), IrType::FixedBytes(4)),
+            ],
+        };
+        let msg_value = context.create_value(msg_type.clone());
+        context.register_variable("msg".to_string(), msg_value, msg_type);
+
+        // block global variable
+        let block_type = IrType::Struct {
+            name: "block".to_string(),
+            fields: vec![
+                ("number".to_string(), IrType::Uint(256)),
+                ("timestamp".to_string(), IrType::Uint(256)),
+                ("difficulty".to_string(), IrType::Uint(256)),
+                ("gaslimit".to_string(), IrType::Uint(256)),
+                ("coinbase".to_string(), IrType::Address),
+            ],
+        };
+        let block_value = context.create_value(block_type.clone());
+        context.register_variable("block".to_string(), block_value, block_type);
+
+        // tx global variable
+        let tx_type = IrType::Struct {
+            name: "tx".to_string(),
+            fields: vec![
+                ("origin".to_string(), IrType::Address),
+                ("gasprice".to_string(), IrType::Uint(256)),
+            ],
+        };
+        let tx_value = context.create_value(tx_type.clone());
+        context.register_variable("tx".to_string(), tx_value, tx_type);
+
+        // this (contract address)
+        let this_value = context.create_value(IrType::Address);
+        context.register_variable("this".to_string(), this_value, IrType::Address);
+    }
+
     /// Lower a single function with contract context (public API)
     pub fn lower_contract_function(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
         self.lower_function_with_contract(function, contract)
@@ -128,6 +173,9 @@ impl Lowering {
     /// Lower a function with contract context
     fn lower_function_with_contract(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
         let mut context = LoweringContext::new();
+
+        // Register Solidity global variables
+        self.register_global_variables(&mut context);
 
         // Register state variables from the contract
         for state_var in &contract.state_variables {
@@ -273,7 +321,7 @@ impl Lowering {
                     } else {
                         // Infer type from initial value
                         if let Some(init_expr) = initial_value {
-                            self.infer_expression_type(init_expr)?
+                            self.infer_expression_type(context, init_expr)?
                         } else {
                             return Err(anyhow!("Cannot infer type for variable {}", var_name));
                         }
@@ -554,7 +602,7 @@ impl Lowering {
 
             Expression::UnaryOperation { operator, operand, .. } => {
                 let operand_val = self.lower_expression(context, operand)?;
-                let result_type = self.infer_expression_type(operand)?;
+                let result_type = self.infer_expression_type(context, operand)?;
                 let result_value = context.create_value(result_type);
 
                 let instruction = match operator {
@@ -593,7 +641,7 @@ impl Lowering {
                     _ => {
                         // Compound assignments: a += b becomes a = a + b
                         let left_val = self.lower_expression(context, left)?;
-                        let result_type = self.infer_expression_type(left)?;
+                        let result_type = self.infer_expression_type(context, left)?;
                         let result_value = context.create_value(result_type);
 
                         let op_instruction = match operator {
@@ -627,7 +675,7 @@ impl Lowering {
                     let result_value = context.create_value(result_type);
 
                     // Determine if this is array or mapping access
-                    let base_type = self.infer_expression_type(base)?;
+                    let base_type = self.infer_expression_type(context, base)?;
                     let instruction = match base_type {
                         IrType::Array { .. } => Instruction::ArrayAccess(result_value, base_val, index_val),
                         IrType::Mapping { .. } => Instruction::MappingAccess(result_value, base_val, index_val),
@@ -771,9 +819,44 @@ impl Lowering {
     }
 
     /// Helper methods for type inference and analysis
-    fn infer_expression_type(&self, _expr: &Expression) -> Result<IrType> {
-        // Simplified type inference - for now, default to uint256
-        Ok(IrType::Uint(256))
+    fn infer_expression_type(&self, context: &LoweringContext, expr: &Expression) -> Result<IrType> {
+        match expr {
+            Expression::Identifier(id) => {
+                // Look up variable type from context
+                if let Some(ty) = context.lookup_variable_type(id.name) {
+                    Ok(ty.clone())
+                } else {
+                    // Return default instead of error for now
+                    Ok(IrType::Uint(256))
+                }
+            }
+            Expression::Literal { value, .. } => {
+                // Infer type from literal value
+                match value {
+                    ast::LiteralValue::Boolean(_) => Ok(IrType::Bool),
+                    ast::LiteralValue::Number(_) => Ok(IrType::Uint(256)),
+                    ast::LiteralValue::String(_) => Ok(IrType::String),
+                    ast::LiteralValue::Address(_) => Ok(IrType::Address),
+                    ast::LiteralValue::HexString(_) => Ok(IrType::Bytes),
+                    _ => Ok(IrType::Uint(256)),
+                }
+            }
+            Expression::MemberAccess { expression, member, .. } => {
+                // Get the type of the base expression
+                let base_type = self.infer_expression_type(context, expression)?;
+                match base_type {
+                    IrType::Struct { fields, .. } => {
+                        // Look up field type
+                        fields.iter()
+                            .find(|(name, _)| name == member.name)
+                            .map(|(_, ty)| ty.clone())
+                            .ok_or_else(|| anyhow!("Unknown field: {}", member.name))
+                    }
+                    _ => Ok(IrType::Uint(256)), // Simplified
+                }
+            }
+            _ => Ok(IrType::Uint(256)), // Default fallback
+        }
     }
 
     fn infer_binary_result_type(&self, _left: &Expression, _right: &Expression) -> Result<IrType> {
