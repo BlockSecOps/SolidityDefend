@@ -423,6 +423,10 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::amm_liquidity_manipulation::AmmLiquidityManipulationDetector::new()));
         self.register(Arc::new(crate::lending_liquidation_abuse::LendingLiquidationAbuseDetector::new()));
         self.register(Arc::new(crate::vault_share_inflation::VaultShareInflationDetector::new()));
+        self.register(Arc::new(crate::vault_donation_attack::VaultDonationAttackDetector::new()));
+        self.register(Arc::new(crate::vault_withdrawal_dos::VaultWithdrawalDosDetector::new()));
+        self.register(Arc::new(crate::vault_fee_manipulation::VaultFeeManipulationDetector::new()));
+        self.register(Arc::new(crate::vault_hook_reentrancy::VaultHookReentrancyDetector::new()));
         self.register(Arc::new(crate::price_impact_manipulation::PriceImpactManipulationDetector::new()));
         self.register(Arc::new(crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new()));
         self.register(Arc::new(crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new()));
@@ -493,6 +497,12 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::defi_liquidity_pool_manipulation::LiquidityPoolManipulationDetector::new()));
         self.register(Arc::new(crate::defi_jit_liquidity::JitLiquidityDetector::new()));
         self.register(Arc::new(crate::defi_yield_farming::YieldFarmingDetector::new()));
+
+        // Token Standard Edge Cases (Phase 17 - 2025)
+        self.register(Arc::new(crate::erc20_approve_race::Erc20ApproveRaceDetector::new()));
+        self.register(Arc::new(crate::erc20_infinite_approval::Erc20InfiniteApprovalDetector::new()));
+        self.register(Arc::new(crate::erc777_reentrancy_hooks::Erc777ReentrancyHooksDetector::new()));
+        self.register(Arc::new(crate::erc721_callback_reentrancy::Erc721CallbackReentrancyDetector::new()));
     }
 }
 

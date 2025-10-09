@@ -2,7 +2,6 @@
 ///
 /// This module contains the implementation functions for derived queries
 /// that are called by the Salsa framework for incremental computation.
-
 use anyhow::Result;
 use crate::database::{Database, SourceFileId};
 

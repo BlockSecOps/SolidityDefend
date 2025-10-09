@@ -20,4 +20,5 @@ tracing.workspace = true
 
 [dev-dependencies]
 parser = { path = "../parser" }
+detectors = { path = "../detectors" }
 chrono = "0.4"

@@ -179,6 +179,12 @@ fn validate_file_path(input: &SourceFileInput) -> Result<&str> {
         .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
 }
 
+impl Default for Database {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Database {
 
     /// Create a new database instance
@@ -285,7 +291,7 @@ impl Database {
         total += self.arena.allocated_bytes();
 
         // File registry memory
-        for (_file_id, input) in &self.file_registry {
+        for input in self.file_registry.values() {
             // SourceFileId overhead
             total += std::mem::size_of::<SourceFileId>();
 
@@ -311,7 +317,7 @@ impl Database {
         total += std::mem::size_of::<HashMap<SourceFileId, SourceFileInput>>();
 
         // Cache memory
-        for (_file_id, result) in &self.cache {
+        for result in self.cache.values() {
             // Key overhead
             total += std::mem::size_of::<SourceFileId>();
 
@@ -473,11 +479,7 @@ impl Database {
             if let Some(end) = import_line[start + 1..].find('"') {
                 let path = &import_line[start + 1..start + 1 + end];
                 // Normalize path - remove leading "./"
-                let normalized = if path.starts_with("./") {
-                    &path[2..]
-                } else {
-                    path
-                };
+                let normalized = path.strip_prefix("./").unwrap_or(path);
                 return Some(normalized.to_string());
             }
         }
@@ -487,8 +489,8 @@ impl Database {
     /// Check if two paths refer to the same file
     fn paths_match(&self, import_path: &str, file_path: &str) -> bool {
         // Simple path matching - in practice would need more sophisticated resolution
-        let import_file = import_path.split('/').last().unwrap_or(import_path);
-        let file_name = file_path.split('/').last().unwrap_or(file_path);
+        let import_file = import_path.split('/').next_back().unwrap_or(import_path);
+        let file_name = file_path.split('/').next_back().unwrap_or(file_path);
         import_file == file_name
     }
 

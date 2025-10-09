@@ -378,6 +378,7 @@ impl<'a> TypeResolver<'a> {
     }
 
     /// Get the size in bytes of a type (for value types)
+    #[allow(clippy::only_used_in_recursion)]
     pub fn get_type_size(&self, resolved_type: &ResolvedType) -> Option<u32> {
         match resolved_type {
             ResolvedType::Elementary(elem_type) => {
@@ -391,11 +392,7 @@ impl<'a> TypeResolver<'a> {
                 }
             }
             ResolvedType::Array { length: Some(len), base_type } => {
-                if let Some(base_size) = self.get_type_size(base_type) {
-                    Some(base_size * (*len as u32))
-                } else {
-                    None
-                }
+                self.get_type_size(base_type).map(|base_size| base_size * (*len as u32))
             }
             _ => None, // Reference types or dynamic types don't have fixed size
         }

@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.8.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 
@@ -9,7 +9,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 ## Features
 
 🔍 **Comprehensive Security Analysis**
-- **93 vulnerability detectors** covering all major security categories
+- **74 vulnerability detectors** covering all major security categories
 - Advanced taint tracking and data flow analysis framework
 - Control flow graph analysis for complex vulnerability patterns
 - Multi-layered security detection (access control, reentrancy, validation, MEV protection, DeFi, governance, gas optimization, advanced security, code quality)
@@ -40,20 +40,20 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 
 ## Production Status
 
-🎯 **PRODUCTION READY - Version 0.8.0 Complete**
+🎯 **PRE-RELEASE - Version 0.9.0 Feature Complete**
 
 ✅ **Core Infrastructure (COMPLETE)**
-- ✅ Rust workspace with 18 crates (27,000+ lines of optimized code)
+- ✅ Rust workspace with 18 crates (28,000+ lines of optimized code)
 - ✅ Arena-allocated parser with comprehensive error recovery
 - ✅ Incremental computation database with intelligent caching
 - ✅ Symbol resolution and type checking (comprehensive test coverage)
 - ✅ SSA-form intermediate representation with optimization
 - ✅ Control flow graph construction with dominance analysis
 
-✅ **Security Analysis Engine (COMPLETE)** 🎉
-- ✅ **Detector Registry**: Fully functional with all 93 detectors properly initialized
+✅ **Security Analysis Engine (FEATURE COMPLETE)** 🎉
+- ✅ **Detector Registry**: Fully functional with 74 production-ready detectors
 - ✅ **Modern Vulnerability Detection**: Comprehensive coverage for 2024/2025-era attack patterns
-- ✅ **93 detectors across 15 phases:**
+- ✅ **74 detectors across 17 phases:**
   - **Access Control** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin authentication
   - **Reentrancy** (2): Classic and read-only reentrancy detection
   - **Logic Bugs** (2): Division order, state machine validation
@@ -78,7 +78,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - ✅ Comprehensive detector registry and framework
 - ✅ Dataflow analysis with taint tracking (834 lines)
 - ✅ Advanced pattern matching and AST traversal
-- ✅ **Achievement**: Increased from 21 to 93 detectors (+343% growth)
+- ✅ **Achievement**: Increased from 21 to 74 detectors (+252% growth), with additional detectors in development
 
 ✅ **Output & Integration (95% Complete)**
 - ✅ Console formatter with color support and code snippets (11/11 tests passing)
@@ -109,18 +109,18 @@ SolidityDefend Community Edition has **successfully achieved production readines
 - **Production Ready**: ✅ **CONFIRMED** - See detailed `smartbugs_validation_report.md`
 
 ### ✅ **Production Features Complete**
-- **93 Detectors**: Comprehensive vulnerability coverage across 15 security phases
+- **74 Detectors**: Comprehensive vulnerability coverage across 17 security phases
 - **High-Performance Analysis**: Sub-second analysis with intelligent caching
 - **Multiple Output Formats**: Console, JSON with comprehensive configuration
 - **CI/CD Integration**: Exit codes, incremental scanning, GitHub Actions templates
 - **Comprehensive Testing**: SmartBugs validation framework with accuracy measurement
 
-### 📊 **Production Statistics**
-- **Total Code**: 27,000+ lines of production-optimized Rust
-- **Test Infrastructure**: Comprehensive validation framework with SmartBugs integration
-- **Detectors**: 93 security detectors across 15 phases (100% functional)
+### 📊 **Release Statistics**
+- **Total Code**: 28,000+ lines of production-optimized Rust
+- **Test Infrastructure**: Comprehensive validation framework with 333+ tests passing
+- **Detectors**: 74 production-ready security detectors across 17 phases
 - **Crates**: 18 modular components with clean architecture
-- **Status**: ✅ **PRODUCTION READY FOR PUBLIC RELEASE**
+- **Status**: ✅ **PRE-RELEASE (0.9.0) - FEATURE COMPLETE**
 
 ## Architecture
 
@@ -213,7 +213,7 @@ docker run -v $(pwd):/analysis soliditydefend /analysis/*.sol
 
 ## Security Detectors
 
-SolidityDefend includes 93 security detectors across 15 phases:
+SolidityDefend includes 74 production-ready security detectors across 17 phases:
 
 ### Phases 1-5: Core Security (45 detectors)
 - **Access Control & Authentication** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin
@@ -295,6 +295,14 @@ SolidityDefend includes 93 security detectors across 15 phases:
 - **Liquidity Pool Manipulation**: Pool manipulation attacks
 - **JIT Liquidity**: Just-in-time liquidity exploits
 - **Yield Farming**: Yield farming vulnerabilities
+
+### Phase 16: ERC-4626 Vault Security (1 detector) - ⚠️ In Progress
+- **Vault Share Inflation**: First depositor share manipulation (ERC-4626 inflation attacks)
+- **Note**: Additional vault security detectors (donation attack, withdrawal DOS, fee manipulation, hook reentrancy) implemented but registration pending for 1.0.0
+
+### Phase 17: Token Standard Edge Cases (0 detectors registered) - ⚠️ In Progress
+- **ERC-721/1155 Callback Reentrancy**: NFT receiver callback vulnerabilities (implemented, registration pending)
+- **Note**: Additional token standard detectors (ERC-20 approve race, infinite approval, ERC-777 hooks) implemented but registration pending for 1.0.0
 
 For detailed detector documentation, see [docs/DETECTORS.md](docs/DETECTORS.md).
 

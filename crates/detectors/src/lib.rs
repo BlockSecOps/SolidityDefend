@@ -63,6 +63,10 @@ pub mod validation;
 pub mod validator_front_running;
 pub mod validator_griefing;
 pub mod vault_share_inflation;
+pub mod vault_donation_attack;
+pub mod vault_withdrawal_dos;
+pub mod vault_fee_manipulation;
+pub mod vault_hook_reentrancy;
 pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
 pub mod withdrawal_delay;
@@ -95,6 +99,12 @@ pub mod aa_nonce_management;
 pub mod defi_liquidity_pool_manipulation;
 pub mod defi_jit_liquidity;
 pub mod defi_yield_farming;
+
+// Phase 17: Token Standard Edge Cases (2025)
+pub mod erc20_approve_race;
+pub mod erc20_infinite_approval;
+pub mod erc777_reentrancy_hooks;
+pub mod erc721_callback_reentrancy;
 
 // DeFi-specific detectors
 pub mod defi;

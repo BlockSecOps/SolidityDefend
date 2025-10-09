@@ -193,8 +193,8 @@ impl<'arena> ArenaParser<'arena> {
             let full_loc = self.convert_location_with_source(&func.loc, file_path, Some(source));
             ast::SourceLocation::new(
                 file_path.into(),
-                proto_loc.start().clone(),
-                full_loc.end().clone(),
+                *proto_loc.start(),
+                *full_loc.end(),
             )
         } else {
             // Fallback to full location if prototype location is not available
@@ -314,7 +314,7 @@ impl<'arena> ArenaParser<'arena> {
         } else {
             Err(ParseError::SyntaxError {
                 message: "Missing parameter definition".into(),
-                location: self.convert_location_with_source(&_loc, file_path, Some(source)),
+                location: self.convert_location_with_source(_loc, file_path, Some(source)),
             })
         }
     }
@@ -751,7 +751,7 @@ impl<'arena> ArenaParser<'arena> {
             _ => {
                 // For unimplemented statement types, create a placeholder
                 let dummy_expr = Expression::Literal {
-                    value: ast::LiteralValue::Number("0".into()),
+                    value: ast::LiteralValue::Number("0"),
                     location: location.clone(),
                 };
                 Ok(Statement::Expression(dummy_expr))
@@ -1040,7 +1040,7 @@ impl<'arena> ArenaParser<'arena> {
                 // For unimplemented expression types, create a literal placeholder
                 // TODO: Add proper logging here to debug what expression types are being missed
                 Ok(Expression::Literal {
-                    value: ast::LiteralValue::Number("0".into()),
+                    value: ast::LiteralValue::Number("0"),
                     location,
                 })
             }

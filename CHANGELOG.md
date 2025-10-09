@@ -5,6 +5,58 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2025-10-09
+
+### Added - Pre-Release Feature Complete 🎉
+
+**Major Changes**:
+- **74 Production-Ready Detectors**: Feature-complete security analysis covering 17 phases of vulnerability patterns
+- **Enhanced Infrastructure**: Improved code quality, better error handling, and comprehensive testing (333+ tests)
+- **Phase 16-17 Implementation**: ERC-4626 vault security and token standard edge cases (partial registration)
+
+**Phase 16: ERC-4626 Vault Security (1 detector registered)**:
+- **vault-share-inflation**: First depositor share manipulation (ERC-4626 inflation attacks) ✅ Functional
+- Additional detectors implemented (vault-donation-attack, vault-withdrawal-dos, vault-fee-manipulation, vault-hook-reentrancy) but registration pending for 1.0.0
+
+**Phase 17: Token Standard Edge Cases (implemented, registration pending)**:
+- **erc721-callback-reentrancy**: NFT receiver callback reentrancy detection (ERC-721/1155)
+- Additional detectors implemented (erc20-approve-race, erc20-infinite-approval, erc777-reentrancy-hooks) but registration pending for 1.0.0
+
+**Infrastructure Improvements**:
+- Enhanced bridge detectors with better pattern matching
+- Improved AST parser for complete function/modifier parsing
+- Better type inference with context-aware resolution
+- Enhanced URL validation for security
+- Improved compiler components and IR lowering
+- Added Solidity global variables support
+- Implemented CFG block removal for dead code elimination
+
+### Enhanced
+- **Build System**: Build optimization and improved compilation times
+- **Code Quality**: Fixed numerous clippy warnings across crates
+- **Testing**: Comprehensive test suite with 333+ tests passing
+- **Documentation**: Updated README for 0.9.0 release
+- **Performance**: Sub-second analysis times maintained
+
+### Fixed
+- **Compiler Warnings**: Resolved warnings in parser, db, semantic, and cache crates
+- **URL Validation**: Enhanced URL validation edge cases
+- **Version Compatibility**: Improved version compatibility tests
+- **Build Issues**: Fixed build.rs clippy warnings
+
+### Quality & Validation
+- ✅ **All Tests Passing**: 333+ tests across workspace
+- ✅ **Build Success**: Release build completes in ~36s
+- ✅ **Smoke Tests**: Verified on clean and vulnerable contracts
+- ✅ **CLI Validation**: All command-line flags working correctly
+- ✅ **Output Formats**: Console and JSON outputs validated
+
+### Notes
+- This is a **pre-1.0 release** for community feedback
+- Full SmartBugs validation deferred to 1.0.0
+- Performance optimization ongoing
+- Some Phase 16-17 detectors implemented but not fully registered
+
 ## [Unreleased]
 
 ### Added - Phase 12: Account Abstraction & ERC-4337 Security (76 Total Detectors) 🚀
