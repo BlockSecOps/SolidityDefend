@@ -166,10 +166,9 @@ impl CfgBuilder {
 
         if !unreachable_blocks.is_empty() {
             tracing::info!("Eliminating {} unreachable blocks", unreachable_blocks.len());
-            // In a real implementation, we would remove these blocks from the graph
-            // For now, just log them
             for block_id in unreachable_blocks {
-                tracing::debug!("Unreachable block: {}", block_id);
+                tracing::debug!("Removing unreachable block: {}", block_id);
+                cfg.remove_block(block_id)?;
             }
         }
 
