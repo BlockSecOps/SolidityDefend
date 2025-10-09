@@ -550,7 +550,7 @@ impl SymbolTable {
         self.scopes.get(&scope)
             .and_then(|info| info.overloads.get(name))
             .map(|overloads| overloads.iter().collect())
-            .unwrap_or_else(Vec::new)
+            .unwrap_or_default()
     }
 
     /// Resolve function by signature

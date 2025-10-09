@@ -4,6 +4,7 @@ pub mod integration_tests;
 pub mod test_fixtures;
 pub mod performance_benchmarks;
 pub mod regression_tests;
+pub mod vault_inflation_detector_tests;
 
 use anyhow::Result;
 use std::time::Instant;

@@ -57,7 +57,7 @@ fn main() {
 
 fn get_git_hash() -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("git")
-        .args(&["rev-parse", "--short=8", "HEAD"])
+        .args(["rev-parse", "--short=8", "HEAD"])
         .output()?;
 
     if output.status.success() {
@@ -69,7 +69,7 @@ fn get_git_hash() -> Result<String, Box<dyn std::error::Error>> {
 
 fn get_git_branch() -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("git")
-        .args(&["rev-parse", "--abbrev-ref", "HEAD"])
+        .args(["rev-parse", "--abbrev-ref", "HEAD"])
         .output()?;
 
     if output.status.success() {
@@ -81,7 +81,7 @@ fn get_git_branch() -> Result<String, Box<dyn std::error::Error>> {
 
 fn is_git_dirty() -> Result<bool, Box<dyn std::error::Error>> {
     let output = Command::new("git")
-        .args(&["status", "--porcelain"])
+        .args(["status", "--porcelain"])
         .output()?;
 
     if output.status.success() {
@@ -94,7 +94,7 @@ fn is_git_dirty() -> Result<bool, Box<dyn std::error::Error>> {
 fn get_build_number() -> Result<String, Box<dyn std::error::Error>> {
     // Get number of commits since last tag
     let output = Command::new("git")
-        .args(&["rev-list", "--count", "HEAD"])
+        .args(["rev-list", "--count", "HEAD"])
         .output()?;
 
     if output.status.success() {
@@ -106,7 +106,7 @@ fn get_build_number() -> Result<String, Box<dyn std::error::Error>> {
 
 fn get_rust_version() -> Result<String, Box<dyn std::error::Error>> {
     let output = Command::new("rustc")
-        .args(&["--version"])
+        .args(["--version"])
         .output()?;
 
     if output.status.success() {

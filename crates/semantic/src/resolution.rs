@@ -177,7 +177,7 @@ impl<'a> NameResolver<'a> {
                     // Look for symbol in ancestor's scope
                     if let Some(symbol) = self.symbol_table.lookup_symbol(ancestor.scope, name) {
                         // Check if symbol is accessible (not private)
-                        if self.is_symbol_accessible_from_inheritance(&symbol, distance) {
+                        if self.is_symbol_accessible_from_inheritance(symbol, distance) {
                             return Ok(Some(ResolutionResult {
                                 symbol: symbol.clone(),
                                 resolution_scope: ancestor.scope,
@@ -521,7 +521,7 @@ impl<'a> NameResolver<'a> {
             if let Ok(ancestors) = self.inheritance_graph.get_all_ancestors(&contract_info.name) {
                 for ancestor in ancestors {
                     if let Some(inherited_symbol) = self.symbol_table.lookup_symbol(ancestor.scope, name) {
-                        if self.is_symbol_accessible_from_inheritance(&inherited_symbol, 1) {
+                        if self.is_symbol_accessible_from_inheritance(inherited_symbol, 1) {
                             conflicts.push(inherited_symbol.clone());
                         }
                     }

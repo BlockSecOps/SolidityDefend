@@ -146,6 +146,10 @@ impl AnalysisCache {
         self.cache.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.cache.is_empty()
+    }
+
     pub fn memory_usage(&self) -> usize {
         *self.memory_usage.read().unwrap()
     }
@@ -202,7 +206,7 @@ impl AnalysisCache {
     fn update_memory_usage(&self) {
         let mut total = 0;
         for entry in self.cache.iter() {
-            total += estimate_analysis_entry_size(&entry.value());
+            total += estimate_analysis_entry_size(entry.value());
         }
         *self.memory_usage.write().unwrap() = total;
     }
@@ -271,8 +275,8 @@ fn estimate_analysis_entry_size(entry: &CacheEntry<CachedAnalysisResult>) -> usi
     let metadata_size = entry.data.metadata.detectors_run.iter()
         .map(|d| d.len())
         .sum::<usize>() +
-        entry.data.metadata.stats.findings_by_severity.iter()
-        .map(|(k, _)| k.len() + 8) // usize size
+        entry.data.metadata.stats.findings_by_severity.keys()
+        .map(|k| k.len() + 8) // usize size
         .sum::<usize>() +
         64; // Other metadata overhead
 

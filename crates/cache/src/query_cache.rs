@@ -164,6 +164,10 @@ impl QueryCache {
         self.cache.len()
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.cache.is_empty()
+    }
+
     pub fn memory_usage(&self) -> usize {
         *self.memory_usage.read().unwrap()
     }
@@ -230,7 +234,7 @@ impl QueryCache {
     fn update_memory_usage(&self) {
         let mut total = 0;
         for entry in self.cache.iter() {
-            total += estimate_query_entry_size(&entry.value());
+            total += estimate_query_entry_size(entry.value());
         }
         *self.memory_usage.write().unwrap() = total;
     }

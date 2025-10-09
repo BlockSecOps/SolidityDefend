@@ -182,7 +182,7 @@ pub struct SessionStats {
 impl<'arena> ParseSession<'arena> {
     /// Check if parsing was successful (no fatal errors)
     pub fn is_successful(&self) -> bool {
-        self.source_files.len() > 0 || self.errors.was_recovered()
+        !self.source_files.is_empty() || self.errors.was_recovered()
     }
 
     /// Get all contracts from all parsed files
