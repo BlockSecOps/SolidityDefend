@@ -460,6 +460,11 @@ impl CliApp {
             ("missing-input-validation", "Missing Input Validation", "Medium"),
             ("deprecated-functions", "Deprecated Functions", "Low"),
             ("unsafe-type-casting", "Unsafe Type Casting", "Medium"),
+            // Phase 17: Token Standard Edge Cases (2025)
+            ("erc20-approve-race", "ERC-20 Approve Race Condition", "Medium"),
+            ("erc20-infinite-approval", "ERC-20 Infinite Approval Risk", "Low"),
+            ("erc777-reentrancy-hooks", "ERC-777 Reentrancy via Hooks", "High"),
+            ("erc721-callback-reentrancy", "ERC-721/1155 Callback Reentrancy", "High"),
         ];
 
         for (id, name, severity) in detector_info {

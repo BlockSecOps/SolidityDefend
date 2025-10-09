@@ -10,17 +10,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added - Pre-Release Feature Complete 🎉
 
 **Major Changes**:
-- **74 Production-Ready Detectors**: Feature-complete security analysis covering 17 phases of vulnerability patterns
+- **78 Production-Ready Detectors**: Feature-complete security analysis covering 17 phases of vulnerability patterns
 - **Enhanced Infrastructure**: Improved code quality, better error handling, and comprehensive testing (333+ tests)
-- **Phase 16-17 Implementation**: ERC-4626 vault security and token standard edge cases (partial registration)
+- **Phase 16-17 Implementation**: ERC-4626 vault security and token standard edge cases (Phase 17 complete)
 
 **Phase 16: ERC-4626 Vault Security (1 detector registered)**:
 - **vault-share-inflation**: First depositor share manipulation (ERC-4626 inflation attacks) ✅ Functional
 - Additional detectors implemented (vault-donation-attack, vault-withdrawal-dos, vault-fee-manipulation, vault-hook-reentrancy) but registration pending for 1.0.0
 
-**Phase 17: Token Standard Edge Cases (implemented, registration pending)**:
-- **erc721-callback-reentrancy**: NFT receiver callback reentrancy detection (ERC-721/1155)
-- Additional detectors implemented (erc20-approve-race, erc20-infinite-approval, erc777-reentrancy-hooks) but registration pending for 1.0.0
+**Phase 17: Token Standard Edge Cases (4 detectors registered)** ✅:
+- **erc721-callback-reentrancy**: NFT receiver callback reentrancy detection (ERC-721/1155) - High severity ✅ Functional
+- **erc20-approve-race**: ERC-20 approve race condition front-running detection - Medium severity ✅ Functional
+- **erc20-infinite-approval**: ERC-20 infinite approval security risk detection - Low severity ✅ Functional
+- **erc777-reentrancy-hooks**: ERC-777 tokensReceived callback reentrancy detection - High severity ✅ Functional
 
 **Infrastructure Improvements**:
 - Enhanced bridge detectors with better pattern matching
@@ -55,7 +57,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - This is a **pre-1.0 release** for community feedback
 - Full SmartBugs validation deferred to 1.0.0
 - Performance optimization ongoing
-- Some Phase 16-17 detectors implemented but not fully registered
+- Phase 17 complete with all 4 detectors registered and functional
+- Some Phase 16 detectors implemented but registration pending for 1.0.0
 
 ## [Unreleased]
 
