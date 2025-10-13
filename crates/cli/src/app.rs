@@ -640,6 +640,32 @@ impl CliApp {
                 "Unused State Variables",
                 "Low",
             ),
+            // Phase 20: L2/Rollup Security (2025)
+            (
+                "l2-bridge-message-validation",
+                "L2 Bridge Message Validation",
+                "Critical",
+            ),
+            (
+                "optimistic-challenge-bypass",
+                "Optimistic Rollup Challenge Period Bypass",
+                "Critical",
+            ),
+            (
+                "zk-proof-bypass",
+                "ZK Proof Verification Bypass",
+                "Critical",
+            ),
+            (
+                "l2-data-availability",
+                "L2 Data Availability Failure",
+                "High",
+            ),
+            (
+                "l2-fee-manipulation",
+                "L2 Fee Manipulation",
+                "Medium",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
