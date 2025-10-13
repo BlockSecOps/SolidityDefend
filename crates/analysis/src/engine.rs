@@ -1,11 +1,11 @@
-use std::collections::HashMap;
 use anyhow::Result;
+use std::collections::HashMap;
 
-use ast::{SourceFile, Function};
-use cfg::{ControlFlowGraph, CfgBuilder, CfgAnalysisEngine};
+use ast::{Function, SourceFile};
+use cfg::{CfgAnalysisEngine, CfgBuilder, ControlFlowGraph};
 use dataflow::DataFlowResult;
 use dataflow::framework::{DataFlowFramework, DefUseChains};
-use dataflow::framework::{ReachingDefinitionsState, LiveVariablesState};
+use dataflow::framework::{LiveVariablesState, ReachingDefinitionsState};
 use ir::{IrFunction, Lowering};
 
 /// Complete analysis engine that orchestrates AST → IR → CFG → Dataflow analysis
@@ -26,7 +26,10 @@ impl AnalysisEngine {
     }
 
     /// Run complete analysis on a source file
-    pub fn analyze_source_file(&mut self, source_file: &SourceFile) -> Result<SourceFileAnalysisResult> {
+    pub fn analyze_source_file(
+        &mut self,
+        source_file: &SourceFile,
+    ) -> Result<SourceFileAnalysisResult> {
         let mut function_results = Vec::new();
 
         // Analyze each contract in the source file
@@ -43,7 +46,11 @@ impl AnalysisEngine {
     }
 
     /// Run complete analysis on a single function with contract context
-    fn analyze_function_with_contract(&mut self, function: &Function, contract: &ast::Contract) -> Result<FunctionAnalysisResult> {
+    fn analyze_function_with_contract(
+        &mut self,
+        function: &Function,
+        contract: &ast::Contract,
+    ) -> Result<FunctionAnalysisResult> {
         // Step 1: Lower AST to IR with contract context
         tracing::debug!("Lowering function {} to IR", function.name.name);
         let ir_function = self.lowering.lower_contract_function(function, contract)?;
@@ -58,7 +65,10 @@ impl AnalysisEngine {
         let cfg_analysis = cfg_analysis_engine.analyze()?;
 
         // Step 4: Perform dataflow analysis
-        tracing::debug!("Performing dataflow analysis for function {}", ir_function.name);
+        tracing::debug!(
+            "Performing dataflow analysis for function {}",
+            ir_function.name
+        );
         let dataflow_framework = DataFlowFramework::new(&cfg, &ir_function);
         let reaching_defs = dataflow_framework.reaching_definitions()?;
         let live_vars = dataflow_framework.live_variables()?;
@@ -91,7 +101,10 @@ impl AnalysisEngine {
         let cfg_analysis = cfg_analysis_engine.analyze()?;
 
         // Step 4: Perform dataflow analysis
-        tracing::debug!("Performing dataflow analysis for function {}", ir_function.name);
+        tracing::debug!(
+            "Performing dataflow analysis for function {}",
+            ir_function.name
+        );
         let dataflow_framework = DataFlowFramework::new(&cfg, &ir_function);
         let reaching_defs = dataflow_framework.reaching_definitions()?;
         let live_vars = dataflow_framework.live_variables()?;
@@ -109,7 +122,10 @@ impl AnalysisEngine {
     }
 
     /// Analyze multiple functions and build cross-function analysis
-    pub fn analyze_functions(&mut self, functions: &[Function]) -> Result<CrossFunctionAnalysisResult> {
+    pub fn analyze_functions(
+        &mut self,
+        functions: &[Function],
+    ) -> Result<CrossFunctionAnalysisResult> {
         let mut function_results = Vec::new();
         let mut call_graph = HashMap::new();
 
@@ -125,7 +141,8 @@ impl AnalysisEngine {
         }
 
         // Second pass: perform interprocedural analysis
-        let interprocedural_results = self.analyze_interprocedural(&function_results, &call_graph)?;
+        let interprocedural_results =
+            self.analyze_interprocedural(&function_results, &call_graph)?;
 
         Ok(CrossFunctionAnalysisResult {
             function_analyses: function_results,
@@ -157,7 +174,7 @@ impl AnalysisEngine {
     fn analyze_interprocedural(
         &self,
         _function_results: &[FunctionAnalysisResult],
-        _call_graph: &HashMap<String, Vec<String>>
+        _call_graph: &HashMap<String, Vec<String>>,
     ) -> Result<InterproceduralAnalysisResult> {
         // Simplified interprocedural analysis
         // In a full implementation, this would include:
@@ -218,14 +235,29 @@ impl FunctionAnalysisResult {
     pub fn generate_report(&self) -> String {
         let mut report = String::new();
 
-        report.push_str(&format!("=== Analysis Report for Function '{}' ===\n\n", self.function_name));
+        report.push_str(&format!(
+            "=== Analysis Report for Function '{}' ===\n\n",
+            self.function_name
+        ));
 
         // IR Statistics
         report.push_str("IR Statistics:\n");
-        report.push_str(&format!("  Instructions: {}\n", self.ir_function.get_instructions().len()));
-        report.push_str(&format!("  Basic Blocks: {}\n", self.ir_function.basic_blocks.len()));
-        report.push_str(&format!("  Parameters: {}\n", self.ir_function.parameters.len()));
-        report.push_str(&format!("  Return Types: {}\n", self.ir_function.return_types.len()));
+        report.push_str(&format!(
+            "  Instructions: {}\n",
+            self.ir_function.get_instructions().len()
+        ));
+        report.push_str(&format!(
+            "  Basic Blocks: {}\n",
+            self.ir_function.basic_blocks.len()
+        ));
+        report.push_str(&format!(
+            "  Parameters: {}\n",
+            self.ir_function.parameters.len()
+        ));
+        report.push_str(&format!(
+            "  Return Types: {}\n",
+            self.ir_function.return_types.len()
+        ));
         report.push_str("\n");
 
         // CFG Analysis
@@ -235,18 +267,28 @@ impl FunctionAnalysisResult {
 
         // Dataflow Analysis
         report.push_str("Dataflow Analysis:\n");
-        report.push_str(&format!("  Reaching Definitions: {} blocks analyzed\n",
-            self.reaching_definitions.entry_states.len()));
-        report.push_str(&format!("  Live Variables: {} blocks analyzed\n",
-            self.live_variables.entry_states.len()));
-        report.push_str(&format!("  Def-Use Chains: {} definitions tracked\n",
-            self.def_use_chains.def_to_uses.len()));
+        report.push_str(&format!(
+            "  Reaching Definitions: {} blocks analyzed\n",
+            self.reaching_definitions.entry_states.len()
+        ));
+        report.push_str(&format!(
+            "  Live Variables: {} blocks analyzed\n",
+            self.live_variables.entry_states.len()
+        ));
+        report.push_str(&format!(
+            "  Def-Use Chains: {} definitions tracked\n",
+            self.def_use_chains.def_to_uses.len()
+        ));
 
         // Convergence Information
-        report.push_str(&format!("  Reaching Definitions Converged: {}\n",
-            self.reaching_definitions.converged));
-        report.push_str(&format!("  Live Variables Converged: {}\n",
-            self.live_variables.converged));
+        report.push_str(&format!(
+            "  Reaching Definitions Converged: {}\n",
+            self.reaching_definitions.converged
+        ));
+        report.push_str(&format!(
+            "  Live Variables Converged: {}\n",
+            self.live_variables.converged
+        ));
 
         report
     }
@@ -276,18 +318,30 @@ impl FunctionAnalysisResult {
         if self.cfg_analysis.complexity_metrics.cyclomatic_complexity > 10 {
             issues.push(AnalysisIssue {
                 severity: IssueSeverity::Info,
-                message: format!("High cyclomatic complexity: {}",
-                    self.cfg_analysis.complexity_metrics.cyclomatic_complexity),
+                message: format!(
+                    "High cyclomatic complexity: {}",
+                    self.cfg_analysis.complexity_metrics.cyclomatic_complexity
+                ),
                 location: None,
             });
         }
 
         // Check for unreachable code
-        if !self.cfg_analysis.optimization_opportunities.dead_code_blocks.is_empty() {
+        if !self
+            .cfg_analysis
+            .optimization_opportunities
+            .dead_code_blocks
+            .is_empty()
+        {
             issues.push(AnalysisIssue {
                 severity: IssueSeverity::Warning,
-                message: format!("Found {} unreachable basic blocks",
-                    self.cfg_analysis.optimization_opportunities.dead_code_blocks.len()),
+                message: format!(
+                    "Found {} unreachable basic blocks",
+                    self.cfg_analysis
+                        .optimization_opportunities
+                        .dead_code_blocks
+                        .len()
+                ),
                 location: None,
             });
         }
