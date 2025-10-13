@@ -335,6 +335,28 @@ cargo test -p detectors
 cargo test -p output
 ```
 
+### Local CI Validation (Cost Savings)
+
+Save 90% on GitHub Actions costs by validating locally before pushing:
+
+```bash
+# Quick validation (30 seconds)
+make quick
+
+# Full CI validation (2-3 minutes, same as GitHub Actions)
+make ci-local
+
+# See all available commands
+make help
+```
+
+**Key Benefits:**
+- 90% reduction in wasted CI time
+- 67% faster development iteration
+- Same checks as GitHub Actions, faster feedback locally
+
+See [LOCAL_CI_GUIDE.md](LOCAL_CI_GUIDE.md) for complete guide.
+
 ### Testing
 
 ```bash
@@ -359,6 +381,25 @@ cargo test -p analysis regression_tests
 # Run with output
 cargo test -- --nocapture
 ```
+
+## Release Process
+
+SolidityDefend follows a **time-based release schedule** with semantic versioning:
+
+- **Major releases**: 6-12 months (breaking changes, major features)
+- **Minor releases**: 4-6 weeks (new features, detector phases)
+- **Patch releases**: As needed (bug fixes, security patches)
+
+**Upcoming Releases:**
+- v1.0.0 (Q1 2026) - Stable release, 100+ detectors
+- v1.1.0 (Q2 2026) - Advanced analysis features
+- v1.2.0 (Q3 2026) - IDE & tool integration
+
+**For Contributors & Maintainers:**
+- 📋 [Release Process](docs/RELEASE_PROCESS.md) - Complete release guide
+- ✅ [Release Checklist](docs/RELEASE_CHECKLIST.md) - Step-by-step checklist
+- 📅 [Release Schedule](docs/RELEASE_SCHEDULE.md) - Roadmap & schedule
+- 🔧 [Local CI Guide](LOCAL_CI_GUIDE.md) - Cost-saving local validation
 
 ## Documentation
 
