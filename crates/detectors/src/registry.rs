@@ -710,6 +710,23 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::l2_fee_manipulation::L2FeeManipulationDetector::new(),
         ));
+
+        // Phase 21: Diamond Proxy & Advanced Upgrades (2025)
+        self.register(Arc::new(
+            crate::diamond_storage_collision::DiamondStorageCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::diamond_selector_collision::DiamondSelectorCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::diamond_init_reentrancy::DiamondInitReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::diamond_loupe_violation::DiamondLoupeViolationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::diamond_delegatecall_zero::DiamondDelegatecallZeroDetector::new(),
+        ));
     }
 }
 

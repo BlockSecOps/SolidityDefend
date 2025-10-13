@@ -96,6 +96,10 @@ pub enum DetectorCategory {
     ZKRollup,
     /// Data availability issues
     DataAvailability,
+    /// Diamond proxy (ERC-2535) vulnerabilities
+    Diamond,
+    /// Upgradeable contract vulnerabilities
+    Upgradeable,
 }
 
 impl DetectorCategory {
@@ -120,6 +124,8 @@ impl DetectorCategory {
             Self::L2,
             Self::ZKRollup,
             Self::DataAvailability,
+            Self::Diamond,
+            Self::Upgradeable,
         ]
     }
 
@@ -144,6 +150,8 @@ impl DetectorCategory {
             Self::L2 => "Layer 2 Rollups",
             Self::ZKRollup => "ZK Rollups",
             Self::DataAvailability => "Data Availability",
+            Self::Diamond => "Diamond Proxy (ERC-2535)",
+            Self::Upgradeable => "Upgradeable Contracts",
         }
     }
 }

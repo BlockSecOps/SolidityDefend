@@ -666,6 +666,32 @@ impl CliApp {
                 "L2 Fee Manipulation",
                 "Medium",
             ),
+            // Phase 21: Diamond Proxy & Advanced Upgrades (2025)
+            (
+                "diamond-storage-collision",
+                "Diamond Storage Collision",
+                "Critical",
+            ),
+            (
+                "diamond-selector-collision",
+                "Diamond Function Selector Collision",
+                "High",
+            ),
+            (
+                "diamond-init-reentrancy",
+                "Diamond Initialization Reentrancy",
+                "High",
+            ),
+            (
+                "diamond-loupe-violation",
+                "Diamond Loupe Standard Violation",
+                "Medium",
+            ),
+            (
+                "diamond-delegatecall-zero",
+                "Diamond Delegatecall to Zero Address",
+                "Critical",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
