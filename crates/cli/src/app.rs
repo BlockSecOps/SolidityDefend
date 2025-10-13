@@ -613,6 +613,22 @@ impl CliApp {
                 "ERC-721/1155 Callback Reentrancy",
                 "High",
             ),
+            // Phase 18: DeFi Protocol-Specific (2025)
+            (
+                "uniswapv4-hook-issues",
+                "Uniswap V4 Hook Vulnerabilities",
+                "High",
+            ),
+            (
+                "amm-k-invariant-violation",
+                "AMM Constant Product Violation",
+                "Critical",
+            ),
+            (
+                "lending-borrow-bypass",
+                "Lending Protocol Borrow Bypass",
+                "Critical",
+            ),
         ];
 
         for (id, name, severity) in detector_info {

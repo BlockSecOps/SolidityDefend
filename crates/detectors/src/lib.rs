@@ -106,6 +106,11 @@ pub mod erc20_infinite_approval;
 pub mod erc721_callback_reentrancy;
 pub mod erc777_reentrancy_hooks;
 
+// Phase 18: DeFi Protocol-Specific (2025)
+pub mod amm_k_invariant_violation;
+pub mod lending_borrow_bypass;
+pub mod uniswapv4_hook_issues;
+
 // DeFi-specific detectors
 pub mod defi;
 

@@ -674,6 +674,17 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::erc721_callback_reentrancy::Erc721CallbackReentrancyDetector::new(),
         ));
+
+        // DeFi Protocol-Specific (Phase 18 - 2025)
+        self.register(Arc::new(
+            crate::uniswapv4_hook_issues::UniswapV4HookIssuesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::amm_k_invariant_violation::AmmKInvariantViolationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lending_borrow_bypass::LendingBorrowBypassDetector::new(),
+        ));
     }
 }
 
