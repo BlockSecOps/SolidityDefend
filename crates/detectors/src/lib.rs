@@ -122,6 +122,13 @@ pub mod l2_fee_manipulation;
 pub mod optimistic_challenge_bypass;
 pub mod zk_proof_bypass;
 
+// Phase 21: Diamond Proxy & Advanced Upgrades (2025)
+pub mod diamond_storage_collision;
+pub mod diamond_selector_collision;
+pub mod diamond_init_reentrancy;
+pub mod diamond_loupe_violation;
+pub mod diamond_delegatecall_zero;
+
 // DeFi-specific detectors
 pub mod defi;
 
