@@ -1,6 +1,6 @@
 # Detector Documentation
 
-Complete reference for all 93 security detectors available in SolidityDefend across 15 implementation phases.
+Complete reference for all 93 security detectors available in SolidityDefend across 21 implementation phases.
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ Complete reference for all 93 security detectors available in SolidityDefend acr
 
 ## Overview
 
-SolidityDefend includes **93 security detectors** across 15 implementation phases, covering all critical vulnerability classes in modern smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been validated and is functional with standardized Finding format and CWE mappings.
+SolidityDefend includes **93 security detectors** across 21 implementation phases, covering all critical vulnerability classes in modern smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been validated and is functional with standardized Finding format and CWE mappings.
 
 ### Detector Statistics
 
@@ -52,6 +52,11 @@ SolidityDefend includes **93 security detectors** across 15 implementation phase
 | Cross-Chain & Bridge Security | 8 | High - Critical | ✅ Phase 13 |
 | Account Abstraction Advanced | 5 | High - Critical | ✅ Phase 14 |
 | DeFi Protocol Security | 3 | High - Critical | ✅ Phase 15 |
+| Token Standard Edge Cases | 4 | Medium - High | ✅ Phase 17 |
+| DeFi Protocol-Specific | 3 | High - Critical | ✅ Phase 18 |
+| Code Quality & Best Practices | 2 | Low | ✅ Phase 19 |
+| L2 & Rollup Security | 5 | High - Critical | ✅ Phase 20 |
+| Diamond Proxy & Upgrades | 5 | Medium - Critical | ✅ Phase 21 |
 
 **Total: 93 detectors** (+343% from baseline) 🎉
 
@@ -68,6 +73,11 @@ SolidityDefend includes **93 security detectors** across 15 implementation phase
 - **Phase 13** (8 detectors): Cross-chain & bridge security - ✅ Complete
 - **Phase 14** (5 detectors): Account abstraction advanced - ✅ Complete
 - **Phase 15** (3 detectors): DeFi protocol security - ✅ Complete
+- **Phase 17** (4 detectors): Token standard edge cases - ✅ Complete
+- **Phase 18** (3 detectors): DeFi protocol-specific - ✅ Complete
+- **Phase 19** (2 detectors): Code quality & best practices - ✅ Complete
+- **Phase 20** (5 detectors): L2 & rollup security - ✅ Complete
+- **Phase 21** (5 detectors): Diamond proxy & advanced upgrades - ✅ Complete
 
 **Functional Status**: 93/93 detectors (100%) fully implemented and validated
 
@@ -2326,11 +2336,16 @@ Detects unsafe type conversions that can lead to data loss.
 | 13 | Cross-Chain & Bridges | 8 | ✅ Complete |
 | 14 | AA Advanced | 5 | ✅ Complete |
 | 15 | DeFi Protocol | 3 | ✅ Complete |
+| 17 | Token Edge Cases | 4 | ✅ Complete |
+| 18 | DeFi Protocol-Specific | 3 | ✅ Complete |
+| 19 | Code Quality II | 2 | ✅ Complete |
+| 20 | L2 & Rollup | 5 | ✅ Complete |
+| 21 | Diamond Proxy | 5 | ✅ Complete |
 | **Total** | **All Categories** | **93** | **✅ 100% Complete** |
 
 ### Functional Detectors (93)
 
-All 93 detectors across all 15 phases are fully functional and validated:
+All 93 detectors across all 21 phases are fully functional and validated:
 - Phases 1-5: All 46 core security detectors working
 - Phase 6: All 5 MEV timing detectors working
 - Phase 7: All 4 staking/validator detectors working
@@ -2342,15 +2357,23 @@ All 93 detectors across all 15 phases are fully functional and validated:
 - Phase 13: All 8 cross-chain/bridge detectors working
 - Phase 14: All 5 AA advanced detectors working
 - Phase 15: All 3 DeFi protocol detectors working
+- Phase 17: All 4 token standard edge case detectors working
+- Phase 18: All 3 DeFi protocol-specific detectors working
+- Phase 19: All 2 code quality detectors working
+- Phase 20: All 5 L2/rollup security detectors working
+- Phase 21: All 5 Diamond proxy detectors working
 
 ### Recent Enhancements
 
-**Phases 13-15 (2025)**: Added comprehensive coverage for modern attack vectors:
-- ERC-7683 cross-chain intent security
-- ERC-4337 account abstraction vulnerabilities
-- Bridge security (token minting, message verification, chain ID validation)
-- Advanced paymaster and session key attacks
-- DeFi protocol-specific vulnerabilities (liquidity manipulation, JIT attacks, yield farming)
+**Phases 13-21 (2025)**: Added comprehensive coverage for modern attack vectors:
+- **Phase 13**: ERC-7683 cross-chain intent security, bridge message verification
+- **Phase 14**: Advanced ERC-4337 paymaster and session key vulnerabilities
+- **Phase 15**: DeFi liquidity manipulation, JIT attacks, yield farming
+- **Phase 17**: Token standard edge cases (ERC-20 approve race, ERC-721/777 reentrancy)
+- **Phase 18**: AMM K-invariant, lending borrow bypass, Uniswap V4 hook issues
+- **Phase 19**: Floating pragma, unused state variables
+- **Phase 20**: L2/Rollup security (bridge validation, challenge bypass, ZK proof, data availability)
+- **Phase 21**: Diamond proxy security (ERC-2535 storage collision, selector collision, initialization, loupe standard)
 
 ### Test Results
 
