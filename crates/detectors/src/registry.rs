@@ -685,6 +685,14 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::lending_borrow_bypass::LendingBorrowBypassDetector::new(),
         ));
+
+        // Code Quality & Best Practices (Phase 19 - 2025)
+        self.register(Arc::new(
+            crate::floating_pragma::FloatingPragmaDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::unused_state_variables::UnusedStateVariablesDetector::new(),
+        ));
     }
 }
 

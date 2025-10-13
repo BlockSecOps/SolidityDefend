@@ -629,6 +629,17 @@ impl CliApp {
                 "Lending Protocol Borrow Bypass",
                 "Critical",
             ),
+            // Phase 19: Code Quality & Best Practices (2025)
+            (
+                "floating-pragma",
+                "Floating Pragma",
+                "Low",
+            ),
+            (
+                "unused-state-variables",
+                "Unused State Variables",
+                "Low",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
