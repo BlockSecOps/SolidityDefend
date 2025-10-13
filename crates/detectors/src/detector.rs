@@ -90,6 +90,12 @@ pub enum DetectorCategory {
     CrossChain,
     /// DeFi protocol vulnerabilities
     DeFi,
+    /// Layer 2 and rollup vulnerabilities
+    L2,
+    /// ZK rollup specific vulnerabilities
+    ZKRollup,
+    /// Data availability issues
+    DataAvailability,
 }
 
 impl DetectorCategory {
@@ -111,6 +117,9 @@ impl DetectorCategory {
             Self::BestPractices,
             Self::CrossChain,
             Self::DeFi,
+            Self::L2,
+            Self::ZKRollup,
+            Self::DataAvailability,
         ]
     }
 
@@ -132,6 +141,9 @@ impl DetectorCategory {
             Self::BestPractices => "Best Practices",
             Self::CrossChain => "Cross-Chain Bridges",
             Self::DeFi => "DeFi Protocols",
+            Self::L2 => "Layer 2 Rollups",
+            Self::ZKRollup => "ZK Rollups",
+            Self::DataAvailability => "Data Availability",
         }
     }
 }

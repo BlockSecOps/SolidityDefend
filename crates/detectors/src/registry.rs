@@ -693,6 +693,23 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::unused_state_variables::UnusedStateVariablesDetector::new(),
         ));
+
+        // L2/Rollup Security (Phase 20 - 2025)
+        self.register(Arc::new(
+            crate::l2_bridge_message_validation::L2BridgeMessageValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::optimistic_challenge_bypass::OptimisticChallengeBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::zk_proof_bypass::ZkProofBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_data_availability::L2DataAvailabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_fee_manipulation::L2FeeManipulationDetector::new(),
+        ));
     }
 }
 

@@ -115,6 +115,13 @@ pub mod uniswapv4_hook_issues;
 pub mod floating_pragma;
 pub mod unused_state_variables;
 
+// Phase 20: L2/Rollup Security (2025)
+pub mod l2_bridge_message_validation;
+pub mod l2_data_availability;
+pub mod l2_fee_manipulation;
+pub mod optimistic_challenge_bypass;
+pub mod zk_proof_bypass;
+
 // DeFi-specific detectors
 pub mod defi;
 
