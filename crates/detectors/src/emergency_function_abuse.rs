@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for emergency function abuse vulnerabilities
 pub struct EmergencyFunctionAbuseDetector {
@@ -60,21 +60,23 @@ impl Detector for EmergencyFunctionAbuseDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(269) // CWE-269: Improper Privilege Management
-                .with_cwe(284) // CWE-284: Improper Access Control
-                .with_fix_suggestion(format!(
-                    "Add time-lock and multi-sig protection to emergency function '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(269) // CWE-269: Improper Privilege Management
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_fix_suggestion(format!(
+                        "Add time-lock and multi-sig protection to emergency function '{}'. \
                     Example: Require time-lock delay (e.g., 24-48 hours) and multi-signature \
                     approval before emergency actions can be executed.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -99,13 +101,16 @@ impl EmergencyFunctionAbuseDetector {
         // Check if this is an emergency function
         let function_name = function.name.name.to_lowercase();
         let emergency_patterns = [
-            "emergency", "emergencypause", "emergencywithdraw",
-            "emergencyreward", "pause"
+            "emergency",
+            "emergencypause",
+            "emergencywithdraw",
+            "emergencyreward",
+            "pause",
         ];
 
-        let is_emergency_function = emergency_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_emergency_function = emergency_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_emergency_function {
             return false;
@@ -123,10 +128,10 @@ impl EmergencyFunctionAbuseDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if it's an emergency operation
-        let is_emergency_op = func_source.contains("emergency") ||
-                             func_source.contains("pause") ||
-                             (func_source.contains("onlyOwner") &&
-                              (func_source.contains("withdraw") || func_source.contains("transfer")));
+        let is_emergency_op = func_source.contains("emergency")
+            || func_source.contains("pause")
+            || (func_source.contains("onlyOwner")
+                && (func_source.contains("withdraw") || func_source.contains("transfer")));
 
         if !is_emergency_op {
             return false;
@@ -139,37 +144,37 @@ impl EmergencyFunctionAbuseDetector {
     /// Check for missing protection mechanisms
     fn check_protection_mechanisms(&self, source: &str, function: &ast::Function<'_>) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("No time lock") ||
-                                        source.contains("no time-lock") ||
-                                        source.contains("no multi-sig") ||
-                                        source.contains("No time lock or governance"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("No time lock")
+                || source.contains("no time-lock")
+                || source.contains("no multi-sig")
+                || source.contains("No time lock or governance"));
 
         // Pattern 2: Has admin access (onlyOwner, onlyGuardian)
-        let has_admin_access = source.contains("onlyOwner") ||
-                              source.contains("onlyGuardian") ||
-                              source.contains("onlyAdmin");
+        let has_admin_access = source.contains("onlyOwner")
+            || source.contains("onlyGuardian")
+            || source.contains("onlyAdmin");
 
         // Pattern 3: Missing time-lock protection
-        let has_timelock = source.contains("timelock") ||
-                          source.contains("delay") ||
-                          source.contains("queuedTime") ||
-                          source.contains("executeTime");
+        let has_timelock = source.contains("timelock")
+            || source.contains("delay")
+            || source.contains("queuedTime")
+            || source.contains("executeTime");
 
         // Pattern 4: Missing multi-sig protection
-        let has_multisig = source.contains("multisig") ||
-                          source.contains("multiSig") ||
-                          source.contains("signatures") ||
-                          source.contains("approvers");
+        let has_multisig = source.contains("multisig")
+            || source.contains("multiSig")
+            || source.contains("signatures")
+            || source.contains("approvers");
 
         // Pattern 5: Emergency actions without governance
-        let no_governance = !source.contains("governance") &&
-                           !source.contains("vote") &&
-                           !source.contains("proposal");
+        let no_governance = !source.contains("governance")
+            && !source.contains("vote")
+            && !source.contains("proposal");
 
         // Check function visibility - must be external/public to be vulnerable
-        let is_public = function.visibility == ast::Visibility::Public ||
-                       function.visibility == ast::Visibility::External;
+        let is_public = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
 
         // Vulnerable if has explicit marker
         if has_vulnerability_marker {

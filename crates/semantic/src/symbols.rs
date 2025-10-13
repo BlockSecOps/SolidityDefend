@@ -1,8 +1,8 @@
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fmt;
-use anyhow::{Result, anyhow};
 
-use ast::{Contract, Function, SourceLocation, ContractType};
+use ast::{Contract, ContractType, Function, SourceLocation};
 
 /// Maximum depth for scope traversal to prevent infinite loops in circular parent relationships.
 ///
@@ -135,7 +135,7 @@ impl Symbol {
             Some("internal") => context == "internal" || context == "derived",
             Some("private") => context == "same_contract",
             Some(_) => false, // Unknown visibility
-            None => true, // Default visibility depends on context
+            None => true,     // Default visibility depends on context
         }
     }
 }
@@ -205,13 +205,16 @@ impl SymbolTable {
         let global_scope = Scope::new(0);
         let mut scopes = HashMap::new();
 
-        scopes.insert(global_scope, ScopeInfo {
-            parent: None,
-            kind: ScopeKind::Global,
-            symbols: HashMap::new(),
-            overloads: HashMap::new(),
-            inherited_scopes: Vec::new(),
-        });
+        scopes.insert(
+            global_scope,
+            ScopeInfo {
+                parent: None,
+                kind: ScopeKind::Global,
+                symbols: HashMap::new(),
+                overloads: HashMap::new(),
+                inherited_scopes: Vec::new(),
+            },
+        );
 
         let mut symbol_table = Self {
             scopes,
@@ -246,9 +249,7 @@ impl SymbolTable {
         }
 
         // Other built-in types
-        let other_types = [
-            "address", "bool", "string", "mapping", "array", "function",
-        ];
+        let other_types = ["address", "bool", "string", "mapping", "array", "function"];
 
         // Add all types to symbol table
         for type_name in &uint_types {
@@ -267,11 +268,7 @@ impl SymbolTable {
 
     /// Add a built-in symbol to global scope
     pub fn add_builtin_symbol(&mut self, name: &str, kind: SymbolKind) {
-        let symbol = Symbol::new(
-            name.to_string(),
-            kind,
-            SourceLocation::default(),
-        );
+        let symbol = Symbol::new(name.to_string(), kind, SourceLocation::default());
 
         if let Some(global_info) = self.scopes.get_mut(&self.global_scope) {
             global_info.symbols.insert(name.to_string(), symbol);
@@ -305,7 +302,9 @@ impl SymbolTable {
         );
 
         if let Some(global_info) = self.scopes.get_mut(&self.global_scope) {
-            global_info.symbols.insert(contract.name.name.to_string(), contract_symbol);
+            global_info
+                .symbols
+                .insert(contract.name.name.to_string(), contract_symbol);
         }
 
         Ok(scope)
@@ -358,7 +357,9 @@ impl SymbolTable {
         );
 
         if let Some(global_info) = self.scopes.get_mut(&self.global_scope) {
-            global_info.symbols.insert(contract.name.name.to_string(), symbol);
+            global_info
+                .symbols
+                .insert(contract.name.name.to_string(), symbol);
         }
     }
 
@@ -374,17 +375,15 @@ impl SymbolTable {
 
         // Add to global scope for now (would be contract scope in practice)
         if let Some(global_info) = self.scopes.get_mut(&self.global_scope) {
-            global_info.symbols.insert(function.name.name.to_string(), symbol);
+            global_info
+                .symbols
+                .insert(function.name.name.to_string(), symbol);
         }
     }
 
     /// Add a variable symbol to a scope
     pub fn add_variable_symbol(&mut self, scope: Scope, name: &str, kind: SymbolKind) {
-        let symbol = Symbol::new(
-            name.to_string(),
-            kind,
-            SourceLocation::default(),
-        );
+        let symbol = Symbol::new(name.to_string(), kind, SourceLocation::default());
 
         if let Some(scope_info) = self.scopes.get_mut(&scope) {
             scope_info.symbols.insert(name.to_string(), symbol);
@@ -392,15 +391,22 @@ impl SymbolTable {
     }
 
     /// Add a function symbol with signature for overloading
-    pub fn add_function_symbol_with_signature(&mut self, scope: Scope, name: &str, signature: &str) {
+    pub fn add_function_symbol_with_signature(
+        &mut self,
+        scope: Scope,
+        name: &str,
+        signature: &str,
+    ) {
         let symbol = Symbol::new(
             name.to_string(),
             SymbolKind::Function,
             SourceLocation::default(),
-        ).with_signature(signature);
+        )
+        .with_signature(signature);
 
         if let Some(scope_info) = self.scopes.get_mut(&scope) {
-            scope_info.overloads
+            scope_info
+                .overloads
                 .entry(name.to_string())
                 .or_insert_with(Vec::new)
                 .push(symbol);
@@ -408,12 +414,15 @@ impl SymbolTable {
     }
 
     /// Add a function symbol with visibility
-    pub fn add_function_symbol_with_visibility(&mut self, scope: Scope, name: &str, kind: SymbolKind, visibility: &str) {
-        let symbol = Symbol::new(
-            name.to_string(),
-            kind,
-            SourceLocation::default(),
-        ).with_visibility(visibility);
+    pub fn add_function_symbol_with_visibility(
+        &mut self,
+        scope: Scope,
+        name: &str,
+        kind: SymbolKind,
+        visibility: &str,
+    ) {
+        let symbol = Symbol::new(name.to_string(), kind, SourceLocation::default())
+            .with_visibility(visibility);
 
         if let Some(scope_info) = self.scopes.get_mut(&scope) {
             scope_info.symbols.insert(name.to_string(), symbol);
@@ -470,22 +479,36 @@ impl SymbolTable {
 
     /// Lookup a contract symbol
     pub fn lookup_contract(&self, name: &str) -> Option<&Symbol> {
-        self.lookup_global(name).filter(|s| matches!(s.kind, SymbolKind::Contract | SymbolKind::Interface | SymbolKind::Library))
+        self.lookup_global(name).filter(|s| {
+            matches!(
+                s.kind,
+                SymbolKind::Contract | SymbolKind::Interface | SymbolKind::Library
+            )
+        })
     }
 
     /// Lookup a function symbol
     pub fn lookup_function(&self, name: &str) -> Option<&Symbol> {
-        self.lookup_global(name).filter(|s| s.kind == SymbolKind::Function)
+        self.lookup_global(name)
+            .filter(|s| s.kind == SymbolKind::Function)
     }
 
     /// Lookup a modifier symbol in a scope
     pub fn lookup_modifier(&self, scope: Scope, name: &str) -> Option<&Symbol> {
-        self.scopes.get(&scope)?.symbols.get(name).filter(|s| s.kind == SymbolKind::Modifier)
+        self.scopes
+            .get(&scope)?
+            .symbols
+            .get(name)
+            .filter(|s| s.kind == SymbolKind::Modifier)
     }
 
     /// Lookup an event symbol in a scope
     pub fn lookup_event(&self, scope: Scope, name: &str) -> Option<&Symbol> {
-        self.scopes.get(&scope)?.symbols.get(name).filter(|s| s.kind == SymbolKind::Event)
+        self.scopes
+            .get(&scope)?
+            .symbols
+            .get(name)
+            .filter(|s| s.kind == SymbolKind::Event)
     }
 
     /// Resolve a variable in a scope (with scope chain traversal)
@@ -501,7 +524,12 @@ impl SymbolTable {
 
             if let Some(scope_info) = self.scopes.get(&scope_id) {
                 if let Some(symbol) = scope_info.symbols.get(name) {
-                    if matches!(symbol.kind, SymbolKind::StateVariable | SymbolKind::LocalVariable | SymbolKind::Parameter) {
+                    if matches!(
+                        symbol.kind,
+                        SymbolKind::StateVariable
+                            | SymbolKind::LocalVariable
+                            | SymbolKind::Parameter
+                    ) {
                         return Some(symbol);
                     }
                 }
@@ -522,7 +550,12 @@ impl SymbolTable {
     }
 
     /// Internal implementation with cycle detection
-    fn resolve_inherited_symbol_impl(&self, scope: Scope, name: &str, visited: &mut std::collections::HashSet<Scope>) -> Option<&Symbol> {
+    fn resolve_inherited_symbol_impl(
+        &self,
+        scope: Scope,
+        name: &str,
+        visited: &mut std::collections::HashSet<Scope>,
+    ) -> Option<&Symbol> {
         // Prevent infinite recursion in circular inheritance
         if visited.contains(&scope) {
             return None;
@@ -537,7 +570,9 @@ impl SymbolTable {
                     }
                 }
                 // Recursively check inherited scopes with cycle detection
-                if let Some(symbol) = self.resolve_inherited_symbol_impl(inherited_scope, name, visited) {
+                if let Some(symbol) =
+                    self.resolve_inherited_symbol_impl(inherited_scope, name, visited)
+                {
                     return Some(symbol);
                 }
             }
@@ -547,7 +582,8 @@ impl SymbolTable {
 
     /// Get function overloads
     pub fn get_function_overloads(&self, scope: Scope, name: &str) -> Vec<&Symbol> {
-        self.scopes.get(&scope)
+        self.scopes
+            .get(&scope)
             .and_then(|info| info.overloads.get(name))
             .map(|overloads| overloads.iter().collect())
             .unwrap_or_default()
@@ -575,7 +611,11 @@ impl SymbolTable {
                 if existing.kind == SymbolKind::Function && kind == SymbolKind::Function {
                     return Ok(());
                 }
-                return Err(anyhow!("Name collision: '{}' already defined as {} in this scope", name, existing.kind));
+                return Err(anyhow!(
+                    "Name collision: '{}' already defined as {} in this scope",
+                    name,
+                    existing.kind
+                ));
             }
         }
         Ok(())
@@ -624,7 +664,8 @@ impl SymbolTable {
 
     /// Get number of symbols in global scope
     pub fn global_symbol_count(&self) -> usize {
-        self.scopes.get(&self.global_scope)
+        self.scopes
+            .get(&self.global_scope)
             .map(|info| info.symbols.len())
             .unwrap_or(0)
     }
@@ -646,7 +687,8 @@ impl SymbolTable {
 
     /// Find all scopes that contain a symbol with the given name
     pub fn find_scopes_with_symbol(&self, name: &str) -> Vec<Scope> {
-        self.scopes.iter()
+        self.scopes
+            .iter()
             .filter_map(|(scope, info)| {
                 if info.symbols.contains_key(name) {
                     Some(*scope)

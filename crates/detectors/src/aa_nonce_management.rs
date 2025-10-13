@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct NonceManagementDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl NonceManagementDetector {
 
     fn is_nonce_management_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("nonce") && source.contains("userop")) ||
-        (source.contains("validateuserop") || source.contains("executeuserop"))
+        (source.contains("nonce") && source.contains("userop"))
+            || (source.contains("validateuserop") || source.contains("executeuserop"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,11 +42,11 @@ impl NonceManagementDetector {
         // Check validateUserOp or nonce validation functions
         if name.contains("validate") || name.contains("nonce") {
             // Check for sequential nonce enforcement (blocks parallel txs)
-            let has_sequential_only = source_lower.contains("nonce++") ||
-                (source_lower.contains("nonce") && source_lower.contains("== currentnonce"));
-            let has_parallel_support = source_lower.contains("key") ||
-                source_lower.contains("channel") ||
-                source_lower.contains("batch");
+            let has_sequential_only = source_lower.contains("nonce++")
+                || (source_lower.contains("nonce") && source_lower.contains("== currentnonce"));
+            let has_parallel_support = source_lower.contains("key")
+                || source_lower.contains("channel")
+                || source_lower.contains("batch");
 
             if has_sequential_only && !has_parallel_support {
                 issues.push((
@@ -62,22 +66,23 @@ impl NonceManagementDetector {
             }
 
             // Check for nonce overflow protection
-            let has_overflow_check = source_lower.contains("type(uint") ||
-                source_lower.contains("max") ||
-                source_lower.contains("overflow");
+            let has_overflow_check = source_lower.contains("type(uint")
+                || source_lower.contains("max")
+                || source_lower.contains("overflow");
 
             if !has_overflow_check && source_lower.contains("++") {
                 issues.push((
                     "No nonce overflow protection".to_string(),
                     Severity::Low,
-                    "Check overflow: require(nonce < type(uint64).max, \"Nonce overflow\");".to_string()
+                    "Check overflow: require(nonce < type(uint64).max, \"Nonce overflow\");"
+                        .to_string(),
                 ));
             }
 
             // Check for nonce invalidation mechanism
-            let has_invalidation = source_lower.contains("invalidate") ||
-                source_lower.contains("cancel") ||
-                source_lower.contains("skip");
+            let has_invalidation = source_lower.contains("invalidate")
+                || source_lower.contains("cancel")
+                || source_lower.contains("skip");
 
             if !has_invalidation {
                 issues.push((
@@ -91,8 +96,8 @@ impl NonceManagementDetector {
         // Check for getNonce function
         if name.contains("getnonce") {
             // Check if it supports key parameter
-            let has_key_param = source_lower.contains("key") &&
-                (source_lower.contains("uint192") || source_lower.contains("uint256"));
+            let has_key_param = source_lower.contains("key")
+                && (source_lower.contains("uint192") || source_lower.contains("uint256"));
 
             if !has_key_param {
                 issues.push((
@@ -106,8 +111,8 @@ impl NonceManagementDetector {
         // Check executeUserOp for nonce usage
         if name.contains("execute") && source_lower.contains("userop") {
             // Check for proper nonce extraction from userOp
-            let has_nonce_extraction = source_lower.contains("nonce") &&
-                (source_lower.contains("userop.nonce") || source_lower.contains("op.nonce"));
+            let has_nonce_extraction = source_lower.contains("nonce")
+                && (source_lower.contains("userop.nonce") || source_lower.contains("op.nonce"));
 
             if !has_nonce_extraction {
                 issues.push((
@@ -118,9 +123,9 @@ impl NonceManagementDetector {
             }
 
             // Check for nonce reuse protection
-            let has_used_check = source_lower.contains("used") ||
-                source_lower.contains("executed") ||
-                source_lower.contains("processed");
+            let has_used_check = source_lower.contains("used")
+                || source_lower.contains("executed")
+                || source_lower.contains("processed");
 
             if !has_used_check && !source_lower.contains("nonce++") {
                 issues.push((
@@ -134,8 +139,7 @@ impl NonceManagementDetector {
         // Check for batch operations
         if name.contains("batch") || name.contains("multi") {
             // Check for independent nonce channels
-            let has_batch_nonce = source_lower.contains("for") &&
-                source_lower.contains("nonce");
+            let has_batch_nonce = source_lower.contains("for") && source_lower.contains("nonce");
 
             if source_lower.contains("userop") && !has_batch_nonce {
                 issues.push((
@@ -148,8 +152,8 @@ impl NonceManagementDetector {
 
         // Check for cross-key nonce dependency
         if source_lower.contains("key") && source_lower.contains("nonce") {
-            let has_dependency = source_lower.contains("previouskey") ||
-                source_lower.contains("dependson");
+            let has_dependency =
+                source_lower.contains("previouskey") || source_lower.contains("dependson");
 
             if has_dependency {
                 issues.push((
@@ -205,15 +209,17 @@ impl Detector for NonceManagementDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

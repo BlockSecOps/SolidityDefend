@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for dangerous centralization of control
 pub struct CentralizationRiskDetector {
@@ -59,23 +59,20 @@ impl Detector for CentralizationRiskDetector {
                 contract_issue
             );
 
-            let finding = self.base.create_finding(
-                ctx,
-                message,
-                1,
-                0,
-                20,
-            )
-            .with_cwe(269) // CWE-269: Improper Privilege Management
-            .with_cwe(284) // CWE-284: Improper Access Control
-            .with_fix_suggestion(
-                "Implement decentralized governance. \
+            let finding = self
+                .base
+                .create_finding(ctx, message, 1, 0, 20)
+                .with_cwe(269) // CWE-269: Improper Privilege Management
+                .with_cwe(284) // CWE-284: Improper Access Control
+                .with_fix_suggestion(
+                    "Implement decentralized governance. \
                 Use: (1) Multi-signature wallet (Gnosis Safe), \
                 (2) Timelock delays for critical operations, \
                 (3) DAO governance with voting mechanisms, \
                 (4) Role-based access control (OpenZeppelin AccessControl), \
-                (5) Emergency pause with multiple approvers.".to_string()
-            );
+                (5) Emergency pause with multiple approvers."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -86,8 +83,7 @@ impl Detector for CentralizationRiskDetector {
                 let message = format!(
                     "Function '{}' has centralization risk. {} \
                     Critical function controlled by single address creates attack vector.",
-                    function.name.name,
-                    function_issue
+                    function.name.name, function_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -122,13 +118,13 @@ impl CentralizationRiskDetector {
         let contract_source = ctx.source_code.as_str();
 
         // Pattern 1: Single owner with no multi-sig
-        let has_owner = contract_source.contains("address public owner") ||
-                       contract_source.contains("address private owner");
+        let has_owner = contract_source.contains("address public owner")
+            || contract_source.contains("address private owner");
 
-        let has_multisig = contract_source.contains("multisig") ||
-                          contract_source.contains("MultiSig") ||
-                          contract_source.contains("Gnosis") ||
-                          contract_source.contains("threshold");
+        let has_multisig = contract_source.contains("multisig")
+            || contract_source.contains("MultiSig")
+            || contract_source.contains("Gnosis")
+            || contract_source.contains("threshold");
 
         if has_owner && !has_multisig {
             return Some(format!(
@@ -138,13 +134,13 @@ impl CentralizationRiskDetector {
         }
 
         // Pattern 2: Critical functions without timelock
-        let has_critical_ops = contract_source.contains("withdraw") ||
-                              contract_source.contains("pause") ||
-                              contract_source.contains("upgrade");
+        let has_critical_ops = contract_source.contains("withdraw")
+            || contract_source.contains("pause")
+            || contract_source.contains("upgrade");
 
-        let has_timelock = contract_source.contains("timelock") ||
-                          contract_source.contains("delay") ||
-                          contract_source.contains("TimeLock");
+        let has_timelock = contract_source.contains("timelock")
+            || contract_source.contains("delay")
+            || contract_source.contains("TimeLock");
 
         if has_critical_ops && !has_timelock && !has_multisig {
             return Some(format!(
@@ -156,7 +152,11 @@ impl CentralizationRiskDetector {
         None
     }
 
-    fn check_function_centralization(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_function_centralization(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -165,21 +165,21 @@ impl CentralizationRiskDetector {
         let func_name = &function.name.name;
 
         // Pattern 1: Owner-only critical functions
-        let is_owner_check = func_source.contains("msg.sender == owner") ||
-                            func_source.contains("onlyOwner");
+        let is_owner_check =
+            func_source.contains("msg.sender == owner") || func_source.contains("onlyOwner");
 
-        let is_critical_function = func_name.contains("withdraw") ||
-                                  func_name.contains("pause") ||
-                                  func_name.contains("unpause") ||
-                                  func_name.contains("upgrade") ||
-                                  func_name.contains("setOwner") ||
-                                  func_name.contains("destroy") ||
-                                  func_name.contains("kill");
+        let is_critical_function = func_name.contains("withdraw")
+            || func_name.contains("pause")
+            || func_name.contains("unpause")
+            || func_name.contains("upgrade")
+            || func_name.contains("setOwner")
+            || func_name.contains("destroy")
+            || func_name.contains("kill");
 
         if is_owner_check && is_critical_function {
-            let has_decentralization = func_source.contains("require(multisig") ||
-                                      func_source.contains("timelock") ||
-                                      func_source.contains("governance");
+            let has_decentralization = func_source.contains("require(multisig")
+                || func_source.contains("timelock")
+                || func_source.contains("governance");
 
             if !has_decentralization {
                 return Some(format!(
@@ -192,10 +192,10 @@ impl CentralizationRiskDetector {
 
         // Pattern 2: Emergency functions without safeguards
         if func_name.contains("emergency") || func_name.contains("Emergency") {
-            let has_safeguards = func_source.contains("multisig") ||
-                                func_source.contains("timelock") ||
-                                func_source.contains("governance") ||
-                                func_source.contains("threshold");
+            let has_safeguards = func_source.contains("multisig")
+                || func_source.contains("timelock")
+                || func_source.contains("governance")
+                || func_source.contains("threshold");
 
             if !has_safeguards {
                 return Some(format!(

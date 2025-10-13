@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for reward calculation manipulation vulnerabilities
 pub struct RewardCalculationDetector {
@@ -60,21 +60,23 @@ impl Detector for RewardCalculationDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_cwe(20)  // CWE-20: Improper Input Validation
-                .with_fix_suggestion(format!(
-                    "Refactor reward calculation in function '{}' to use TWAP prices instead \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_fix_suggestion(format!(
+                        "Refactor reward calculation in function '{}' to use TWAP prices instead \
                     of spot prices, and remove incentives for price deviation. Example: Use \
                     time-weighted average prices and cap multipliers based on deviation.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -99,13 +101,17 @@ impl RewardCalculationDetector {
         // Check if this is a reward-related function
         let function_name = function.name.name.to_lowercase();
         let reward_patterns = [
-            "reward", "multiplier", "calculate", "updatepool",
-            "getpricemultiplier", "getmultiplier"
+            "reward",
+            "multiplier",
+            "calculate",
+            "updatepool",
+            "getpricemultiplier",
+            "getmultiplier",
         ];
 
-        let is_reward_function = reward_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_reward_function = reward_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_reward_function {
             return false;
@@ -123,9 +129,9 @@ impl RewardCalculationDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if it's calculating rewards
-        let calculates_rewards = func_source.contains("reward") ||
-                                func_source.contains("multiplier") ||
-                                func_source.contains("accReward");
+        let calculates_rewards = func_source.contains("reward")
+            || func_source.contains("multiplier")
+            || func_source.contains("accReward");
 
         if !calculates_rewards {
             return false;
@@ -138,32 +144,31 @@ impl RewardCalculationDetector {
     /// Check for reward manipulation patterns
     fn check_manipulation_patterns(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("current price, can be manipulated") ||
-                                        source.contains("Incentivizes manipulation") ||
-                                        source.contains("deviation = higher rewards"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("current price, can be manipulated")
+                || source.contains("Incentivizes manipulation")
+                || source.contains("deviation = higher rewards"));
 
         // Pattern 2: Uses current/spot price instead of TWAP
-        let uses_spot_price = (source.contains("currentPrice") ||
-                              source.contains("getCurrentPrice") ||
-                              source.contains("getPrice()")) &&
-                             source.contains("multiplier");
+        let uses_spot_price = (source.contains("currentPrice")
+            || source.contains("getCurrentPrice")
+            || source.contains("getPrice()"))
+            && source.contains("multiplier");
 
         // Pattern 3: Incentivizes price deviation
-        let incentivizes_deviation = (source.contains("deviation") &&
-                                     source.contains("multiplier")) &&
-                                    (source.contains("deviation >") ||
-                                     source.contains("if (deviation"));
+        let incentivizes_deviation = (source.contains("deviation")
+            && source.contains("multiplier"))
+            && (source.contains("deviation >") || source.contains("if (deviation"));
 
         // Pattern 4: Reward calculation before state update
-        let calculation_before_update = source.contains("VULNERABILITY") &&
-                                       source.contains("Reward calculation before");
+        let calculation_before_update =
+            source.contains("VULNERABILITY") && source.contains("Reward calculation before");
 
         // Pattern 5: Higher deviation = higher rewards pattern
-        let deviation_reward_pattern = source.contains("Higher deviation") ||
-                                      (source.contains("deviation >") &&
-                                       source.contains("return") &&
-                                       source.contains("// 1."));
+        let deviation_reward_pattern = source.contains("Higher deviation")
+            || (source.contains("deviation >")
+                && source.contains("return")
+                && source.contains("// 1."));
 
         // Vulnerable if has explicit marker
         if has_vulnerability_marker {

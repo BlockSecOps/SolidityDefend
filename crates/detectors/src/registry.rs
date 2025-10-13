@@ -4,7 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use crate::detector::{Detector, DetectorCategory};
-use crate::types::{DetectorId, Finding, AnalysisContext, AnalysisResult};
+use crate::types::{AnalysisContext, AnalysisResult, DetectorId, Finding};
 
 /// Registry for managing and executing vulnerability detectors
 pub struct DetectorRegistry {
@@ -109,7 +109,8 @@ impl DetectorRegistry {
 
     /// Disable a detector by ID
     pub fn disable_detector(&mut self, id: &DetectorId) {
-        self.enabled_detectors.retain(|detector_id| detector_id != id);
+        self.enabled_detectors
+            .retain(|detector_id| detector_id != id);
     }
 
     /// Enable detectors by category
@@ -271,7 +272,9 @@ impl DetectorRegistry {
     ) -> Result<Vec<Vec<Finding>>> {
         // TODO: Implement parallel execution with thread-safe AST
         // For now, fallback to sequential execution
-        Err(anyhow!("Parallel execution not yet implemented - AST is not thread-safe"))
+        Err(anyhow!(
+            "Parallel execution not yet implemented - AST is not thread-safe"
+        ))
     }
 
     /// Run a single detector with timeout handling
@@ -350,22 +353,40 @@ impl DetectorRegistry {
     /// Register all built-in detectors
     fn register_built_in_detectors(&mut self) {
         // Access Control Detectors
-        self.register(Arc::new(crate::access_control::MissingModifiersDetector::new()));
-        self.register(Arc::new(crate::access_control::UnprotectedInitializerDetector::new()));
-        self.register(Arc::new(crate::access_control::DefaultVisibilityDetector::new()));
+        self.register(Arc::new(
+            crate::access_control::MissingModifiersDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control::UnprotectedInitializerDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control::DefaultVisibilityDetector::new(),
+        ));
 
         // Reentrancy Detectors
         self.register(Arc::new(crate::reentrancy::ClassicReentrancyDetector::new()));
-        self.register(Arc::new(crate::reentrancy::ReadOnlyReentrancyDetector::new()));
+        self.register(Arc::new(
+            crate::reentrancy::ReadOnlyReentrancyDetector::new(),
+        ));
 
         // Logic Detectors
-        self.register(Arc::new(crate::logic::division_order::DivisionOrderDetector::new()));
-        self.register(Arc::new(crate::logic::state_machine::StateMachineDetector::new()));
+        self.register(Arc::new(
+            crate::logic::division_order::DivisionOrderDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::logic::state_machine::StateMachineDetector::new(),
+        ));
 
         // Validation Detectors
-        self.register(Arc::new(crate::validation::zero_address::ZeroAddressDetector::new()));
-        self.register(Arc::new(crate::validation::array_bounds::ArrayBoundsDetector::new()));
-        self.register(Arc::new(crate::validation::parameter_check::ParameterConsistencyDetector::new()));
+        self.register(Arc::new(
+            crate::validation::zero_address::ZeroAddressDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::validation::array_bounds::ArrayBoundsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::validation::parameter_check::ParameterConsistencyDetector::new(),
+        ));
 
         // Oracle Detectors
         self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
@@ -391,118 +412,268 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::governance::GovernanceDetector::new()));
         self.register(Arc::new(crate::governance::ExternalCallsLoopDetector::new()));
         self.register(Arc::new(crate::governance::SignatureReplayDetector::new()));
-        self.register(Arc::new(crate::governance::EmergencyPauseCentralizationDetector::new()));
+        self.register(Arc::new(
+            crate::governance::EmergencyPauseCentralizationDetector::new(),
+        ));
 
         // Critical Priority Detectors (2025 Vulnerabilities - Phase 1)
-        self.register(Arc::new(crate::cross_chain_replay::CrossChainReplayDetector::new()));
-        self.register(Arc::new(crate::flash_loan_staking::FlashLoanStakingDetector::new()));
-        self.register(Arc::new(crate::oracle_manipulation::OracleManipulationDetector::new()));
+        self.register(Arc::new(
+            crate::cross_chain_replay::CrossChainReplayDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flash_loan_staking::FlashLoanStakingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_manipulation::OracleManipulationDetector::new(),
+        ));
 
         // High Priority Detectors (2025 Vulnerabilities - Phase 2)
-        self.register(Arc::new(crate::slippage_protection::SlippageProtectionDetector::new()));
-        self.register(Arc::new(crate::delegation_loop::DelegationLoopDetector::new()));
-        self.register(Arc::new(crate::weak_signature_validation::WeakSignatureValidationDetector::new()));
+        self.register(Arc::new(
+            crate::slippage_protection::SlippageProtectionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegation_loop::DelegationLoopDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::weak_signature_validation::WeakSignatureValidationDetector::new(),
+        ));
         self.register(Arc::new(crate::auction_timing::AuctionTimingDetector::new()));
 
         // Medium Priority Detectors (2025 Vulnerabilities - Phase 3)
-        self.register(Arc::new(crate::weak_commit_reveal::WeakCommitRevealDetector::new()));
-        self.register(Arc::new(crate::reward_calculation::RewardCalculationDetector::new()));
-        self.register(Arc::new(crate::emergency_function_abuse::EmergencyFunctionAbuseDetector::new()));
-        self.register(Arc::new(crate::gas_price_manipulation::GasPriceManipulationDetector::new()));
-        self.register(Arc::new(crate::emergency_withdrawal_abuse::EmergencyWithdrawalAbuseDetector::new()));
+        self.register(Arc::new(
+            crate::weak_commit_reveal::WeakCommitRevealDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::reward_calculation::RewardCalculationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::emergency_function_abuse::EmergencyFunctionAbuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::gas_price_manipulation::GasPriceManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::emergency_withdrawal_abuse::EmergencyWithdrawalAbuseDetector::new(),
+        ));
 
         // Critical Infrastructure Detectors (Phase 4)
-        self.register(Arc::new(crate::storage_collision::StorageCollisionDetector::new()));
-        self.register(Arc::new(crate::dangerous_delegatecall::DangerousDelegatecallDetector::new()));
-        self.register(Arc::new(crate::selfdestruct_abuse::SelfdestructAbuseDetector::new()));
-        self.register(Arc::new(crate::integer_overflow::IntegerOverflowDetector::new()));
-        self.register(Arc::new(crate::uninitialized_storage::UninitializedStorageDetector::new()));
-        self.register(Arc::new(crate::signature_malleability::SignatureMalleabilityDetector::new()));
+        self.register(Arc::new(
+            crate::storage_collision::StorageCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dangerous_delegatecall::DangerousDelegatecallDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::selfdestruct_abuse::SelfdestructAbuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::integer_overflow::IntegerOverflowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::uninitialized_storage::UninitializedStorageDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::signature_malleability::SignatureMalleabilityDetector::new(),
+        ));
 
         // DeFi Advanced Protocols (Phase 5)
-        self.register(Arc::new(crate::amm_liquidity_manipulation::AmmLiquidityManipulationDetector::new()));
-        self.register(Arc::new(crate::lending_liquidation_abuse::LendingLiquidationAbuseDetector::new()));
-        self.register(Arc::new(crate::vault_share_inflation::VaultShareInflationDetector::new()));
-        self.register(Arc::new(crate::vault_donation_attack::VaultDonationAttackDetector::new()));
-        self.register(Arc::new(crate::vault_withdrawal_dos::VaultWithdrawalDosDetector::new()));
-        self.register(Arc::new(crate::vault_fee_manipulation::VaultFeeManipulationDetector::new()));
-        self.register(Arc::new(crate::vault_hook_reentrancy::VaultHookReentrancyDetector::new()));
-        self.register(Arc::new(crate::price_impact_manipulation::PriceImpactManipulationDetector::new()));
-        self.register(Arc::new(crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new()));
-        self.register(Arc::new(crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new()));
+        self.register(Arc::new(
+            crate::amm_liquidity_manipulation::AmmLiquidityManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lending_liquidation_abuse::LendingLiquidationAbuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::vault_share_inflation::VaultShareInflationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::vault_donation_attack::VaultDonationAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::vault_withdrawal_dos::VaultWithdrawalDosDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::vault_fee_manipulation::VaultFeeManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::vault_hook_reentrancy::VaultHookReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::price_impact_manipulation::PriceImpactManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new(),
+        ));
 
         // MEV & Timing Attacks (Phase 6)
-        self.register(Arc::new(crate::timestamp_manipulation::TimestampManipulationDetector::new()));
-        self.register(Arc::new(crate::block_stuffing_vulnerable::BlockStuffingVulnerableDetector::new()));
-        self.register(Arc::new(crate::mev_extractable_value::MevExtractableValueDetector::new()));
-        self.register(Arc::new(crate::deadline_manipulation::DeadlineManipulationDetector::new()));
+        self.register(Arc::new(
+            crate::timestamp_manipulation::TimestampManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::block_stuffing_vulnerable::BlockStuffingVulnerableDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::mev_extractable_value::MevExtractableValueDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::deadline_manipulation::DeadlineManipulationDetector::new(),
+        ));
         self.register(Arc::new(crate::nonce_reuse::NonceReuseDetector::new()));
 
         // Staking & Validator Security (Phase 7)
-        self.register(Arc::new(crate::slashing_mechanism::SlashingMechanismDetector::new()));
-        self.register(Arc::new(crate::validator_griefing::ValidatorGriefingDetector::new()));
-        self.register(Arc::new(crate::withdrawal_delay::WithdrawalDelayDetector::new()));
-        self.register(Arc::new(crate::validator_front_running::ValidatorFrontRunningDetector::new()));
+        self.register(Arc::new(
+            crate::slashing_mechanism::SlashingMechanismDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::validator_griefing::ValidatorGriefingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::withdrawal_delay::WithdrawalDelayDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::validator_front_running::ValidatorFrontRunningDetector::new(),
+        ));
 
         // Upgradeable Contracts & Dependencies (Phase 8)
-        self.register(Arc::new(crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new()));
-        self.register(Arc::new(crate::token_supply_manipulation::TokenSupplyManipulationDetector::new()));
-        self.register(Arc::new(crate::circular_dependency::CircularDependencyDetector::new()));
+        self.register(Arc::new(
+            crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_supply_manipulation::TokenSupplyManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::circular_dependency::CircularDependencyDetector::new(),
+        ));
 
         // Gas & Optimization Issues (Phase 9)
         self.register(Arc::new(crate::gas_griefing::GasGriefingDetector::new()));
-        self.register(Arc::new(crate::dos_unbounded_operation::DosUnboundedOperationDetector::new()));
-        self.register(Arc::new(crate::excessive_gas_usage::ExcessiveGasUsageDetector::new()));
-        self.register(Arc::new(crate::inefficient_storage::InefficientStorageDetector::new()));
-        self.register(Arc::new(crate::redundant_checks::RedundantChecksDetector::new()));
+        self.register(Arc::new(
+            crate::dos_unbounded_operation::DosUnboundedOperationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::excessive_gas_usage::ExcessiveGasUsageDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::inefficient_storage::InefficientStorageDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::redundant_checks::RedundantChecksDetector::new(),
+        ));
 
         // Advanced Security (Phase 10)
-        self.register(Arc::new(crate::front_running_mitigation::FrontRunningMitigationDetector::new()));
-        self.register(Arc::new(crate::price_oracle_stale::PriceOracleStaleDetector::new()));
-        self.register(Arc::new(crate::centralization_risk::CentralizationRiskDetector::new()));
-        self.register(Arc::new(crate::insufficient_randomness::InsufficientRandomnessDetector::new()));
+        self.register(Arc::new(
+            crate::front_running_mitigation::FrontRunningMitigationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::price_oracle_stale::PriceOracleStaleDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::centralization_risk::CentralizationRiskDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::insufficient_randomness::InsufficientRandomnessDetector::new(),
+        ));
 
         // Code Quality & Best Practices (Phase 11)
-        self.register(Arc::new(crate::shadowing_variables::ShadowingVariablesDetector::new()));
+        self.register(Arc::new(
+            crate::shadowing_variables::ShadowingVariablesDetector::new(),
+        ));
         self.register(Arc::new(crate::unchecked_math::UncheckedMathDetector::new()));
-        self.register(Arc::new(crate::missing_input_validation::MissingInputValidationDetector::new()));
-        self.register(Arc::new(crate::deprecated_functions::DeprecatedFunctionsDetector::new()));
-        self.register(Arc::new(crate::unsafe_type_casting::UnsafeTypeCastingDetector::new()));
+        self.register(Arc::new(
+            crate::missing_input_validation::MissingInputValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::deprecated_functions::DeprecatedFunctionsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::unsafe_type_casting::UnsafeTypeCastingDetector::new(),
+        ));
 
         // Account Abstraction & ERC-4337 (Phase 12 - 2025)
-        self.register(Arc::new(crate::erc4337_entrypoint_trust::Erc4337EntrypointTrustDetector::new()));
-        self.register(Arc::new(crate::aa_initialization_vulnerability::AaInitializationVulnerabilityDetector::new()));
-        self.register(Arc::new(crate::aa_account_takeover::AaAccountTakeoverDetector::new()));
+        self.register(Arc::new(
+            crate::erc4337_entrypoint_trust::Erc4337EntrypointTrustDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_initialization_vulnerability::AaInitializationVulnerabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_account_takeover::AaAccountTakeoverDetector::new(),
+        ));
         self.register(Arc::new(crate::aa_bundler_dos::AaBundlerDosDetector::new()));
-        self.register(Arc::new(crate::hardware_wallet_delegation::HardwareWalletDelegationDetector::new()));
+        self.register(Arc::new(
+            crate::hardware_wallet_delegation::HardwareWalletDelegationDetector::new(),
+        ));
 
         // Cross-Chain Intent & Bridge Security (Phase 13 - 2025)
-        self.register(Arc::new(crate::erc7683_settlement_validation::SettlementValidationDetector::new()));
-        self.register(Arc::new(crate::erc7683_replay_attack::ReplayAttackDetector::new()));
-        self.register(Arc::new(crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new()));
-        self.register(Arc::new(crate::erc7683_oracle_dependency::OracleDependencyDetector::new()));
-        self.register(Arc::new(crate::erc7683_permit2_integration::Permit2IntegrationDetector::new()));
-        self.register(Arc::new(crate::bridge_token_minting::TokenMintingDetector::new()));
-        self.register(Arc::new(crate::bridge_message_verification::MessageVerificationDetector::new()));
-        self.register(Arc::new(crate::bridge_chain_id_validation::ChainIdValidationDetector::new()));
+        self.register(Arc::new(
+            crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_replay_attack::ReplayAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::bridge_token_minting::TokenMintingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::bridge_message_verification::MessageVerificationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::bridge_chain_id_validation::ChainIdValidationDetector::new(),
+        ));
 
         // Account Abstraction Advanced (Phase 14 - 2025)
-        self.register(Arc::new(crate::erc4337_paymaster_abuse::PaymasterAbuseDetector::new()));
-        self.register(Arc::new(crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new()));
-        self.register(Arc::new(crate::aa_signature_aggregation::SignatureAggregationDetector::new()));
-        self.register(Arc::new(crate::aa_social_recovery::SocialRecoveryDetector::new()));
-        self.register(Arc::new(crate::aa_nonce_management::NonceManagementDetector::new()));
+        self.register(Arc::new(
+            crate::erc4337_paymaster_abuse::PaymasterAbuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_signature_aggregation::SignatureAggregationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_social_recovery::SocialRecoveryDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_nonce_management::NonceManagementDetector::new(),
+        ));
 
         // DeFi Protocol Security (Phase 15 - 2025)
-        self.register(Arc::new(crate::defi_liquidity_pool_manipulation::LiquidityPoolManipulationDetector::new()));
-        self.register(Arc::new(crate::defi_jit_liquidity::JitLiquidityDetector::new()));
-        self.register(Arc::new(crate::defi_yield_farming::YieldFarmingDetector::new()));
+        self.register(Arc::new(
+            crate::defi_liquidity_pool_manipulation::LiquidityPoolManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_jit_liquidity::JitLiquidityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_yield_farming::YieldFarmingDetector::new(),
+        ));
 
         // Token Standard Edge Cases (Phase 17 - 2025)
-        self.register(Arc::new(crate::erc20_approve_race::Erc20ApproveRaceDetector::new()));
-        self.register(Arc::new(crate::erc20_infinite_approval::Erc20InfiniteApprovalDetector::new()));
-        self.register(Arc::new(crate::erc777_reentrancy_hooks::Erc777ReentrancyHooksDetector::new()));
-        self.register(Arc::new(crate::erc721_callback_reentrancy::Erc721CallbackReentrancyDetector::new()));
+        self.register(Arc::new(
+            crate::erc20_approve_race::Erc20ApproveRaceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc20_infinite_approval::Erc20InfiniteApprovalDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc777_reentrancy_hooks::Erc777ReentrancyHooksDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc721_callback_reentrancy::Erc721CallbackReentrancyDetector::new(),
+        ));
     }
 }
 

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault reentrancy via token callback hooks
 pub struct VaultHookReentrancyDetector {
@@ -56,28 +56,29 @@ impl Detector for VaultHookReentrancyDetector {
                 let message = format!(
                     "Function '{}' is vulnerable to hook reentrancy attack. {} \
                     ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
-                    function.name.name,
-                    reentrancy_issue
+                    function.name.name, reentrancy_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_cwe(362) // CWE-362: Race Condition
-                .with_fix_suggestion(format!(
-                    "Protect '{}' from hook reentrancy. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_cwe(362) // CWE-362: Race Condition
+                    .with_fix_suggestion(format!(
+                        "Protect '{}' from hook reentrancy. \
                     Solutions: (1) Add nonReentrant modifier from OpenZeppelin, \
                     (2) Follow checks-effects-interactions pattern, \
                     (3) Update state before external calls with callbacks, \
                     (4) Validate token doesn't implement hooks (ERC-777/ERC-1363), \
                     (5) Use reentrancy guard on all vault entry points.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for VaultHookReentrancyDetector {
 
 impl VaultHookReentrancyDetector {
     /// Check for hook reentrancy vulnerabilities
-    fn check_hook_reentrancy(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_hook_reentrancy(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,29 +106,29 @@ impl VaultHookReentrancyDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify vault operations that interact with tokens
-        let is_vault_operation = function.name.name.to_lowercase().contains("deposit") ||
-                                function.name.name.to_lowercase().contains("withdraw") ||
-                                function.name.name.to_lowercase().contains("mint") ||
-                                function.name.name.to_lowercase().contains("redeem") ||
-                                function.name.name.to_lowercase().contains("claim");
+        let is_vault_operation = function.name.name.to_lowercase().contains("deposit")
+            || function.name.name.to_lowercase().contains("withdraw")
+            || function.name.name.to_lowercase().contains("mint")
+            || function.name.name.to_lowercase().contains("redeem")
+            || function.name.name.to_lowercase().contains("claim");
 
         if !is_vault_operation {
             return None;
         }
 
         // Check for reentrancy guard
-        let has_reentrancy_guard = func_source.contains("nonReentrant") ||
-                                  function.modifiers.iter().any(|m| {
-                                      m.name.name.to_lowercase().contains("nonreentrant") ||
-                                      m.name.name.to_lowercase().contains("reentrant")
-                                  });
+        let has_reentrancy_guard = func_source.contains("nonReentrant")
+            || function.modifiers.iter().any(|m| {
+                m.name.name.to_lowercase().contains("nonreentrant")
+                    || m.name.name.to_lowercase().contains("reentrant")
+            });
 
         // Pattern 1: Token transfer with potential callback (ERC-777/ERC-1363)
-        let has_token_transfer = func_source.contains(".transferFrom(") ||
-                                func_source.contains(".transfer(") ||
-                                func_source.contains(".safeTransfer") ||
-                                func_source.contains("transferAndCall") ||
-                                func_source.contains("transferFromAndCall");
+        let has_token_transfer = func_source.contains(".transferFrom(")
+            || func_source.contains(".transfer(")
+            || func_source.contains(".safeTransfer")
+            || func_source.contains("transferAndCall")
+            || func_source.contains("transferFromAndCall");
 
         // Pattern 2: State changes after token transfer
         let state_changes_after_transfer = self.has_state_change_after_call(&func_source);
@@ -136,9 +141,8 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 3: totalAssets() or totalSupply() read after transfer
-        let reads_accounting_after_transfer = has_token_transfer &&
-                                             (func_source.contains("totalAssets()") ||
-                                              func_source.contains("totalSupply()"));
+        let reads_accounting_after_transfer = has_token_transfer
+            && (func_source.contains("totalAssets()") || func_source.contains("totalSupply()"));
 
         if reads_accounting_after_transfer && !has_reentrancy_guard {
             return Some(format!(
@@ -148,11 +152,11 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 4: Balance updates after transfer
-        let updates_balance_after = has_token_transfer &&
-                                   (func_source.contains("balanceOf[") ||
-                                    func_source.contains("shares[") ||
-                                    func_source.contains("balance +=") ||
-                                    func_source.contains("balance -="));
+        let updates_balance_after = has_token_transfer
+            && (func_source.contains("balanceOf[")
+                || func_source.contains("shares[")
+                || func_source.contains("balance +=")
+                || func_source.contains("balance -="));
 
         if updates_balance_after && !has_reentrancy_guard {
             return Some(format!(
@@ -162,8 +166,8 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 5: Multiple external calls in same function
-        let transfer_count = func_source.matches(".transfer").count() +
-                            func_source.matches(".safeTransfer").count();
+        let transfer_count =
+            func_source.matches(".transfer").count() + func_source.matches(".safeTransfer").count();
 
         if transfer_count > 1 && !has_reentrancy_guard {
             return Some(format!(
@@ -183,11 +187,11 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 7: SafeERC20 not used (doesn't prevent hooks but good practice)
-        let uses_safe_erc20 = func_source.contains("safeTransfer") ||
-                             func_source.contains("SafeERC20");
+        let uses_safe_erc20 =
+            func_source.contains("safeTransfer") || func_source.contains("SafeERC20");
 
-        let uses_raw_transfer = func_source.contains(".transfer(") &&
-                               !func_source.contains("safeTransfer");
+        let uses_raw_transfer =
+            func_source.contains(".transfer(") && !func_source.contains("safeTransfer");
 
         if uses_raw_transfer && !uses_safe_erc20 && !has_reentrancy_guard {
             return Some(format!(
@@ -197,13 +201,14 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 8: Deposit/mint before state update
-        let is_deposit_mint = function.name.name.to_lowercase().contains("deposit") ||
-                             function.name.name.to_lowercase().contains("mint");
+        let is_deposit_mint = function.name.name.to_lowercase().contains("deposit")
+            || function.name.name.to_lowercase().contains("mint");
 
         if is_deposit_mint && has_token_transfer {
             // Check if shares/balances updated before transfer
             let transfer_pos = func_source.find(".transfer");
-            let balance_update_pos = func_source.find("balanceOf[")
+            let balance_update_pos = func_source
+                .find("balanceOf[")
                 .or_else(|| func_source.find("shares +="))
                 .or_else(|| func_source.find("totalSupply +="));
 
@@ -218,10 +223,11 @@ impl VaultHookReentrancyDetector {
         }
 
         // Pattern 9: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("reentrancy") ||
-            func_source.contains("hook") ||
-            func_source.contains("callback")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("reentrancy")
+                || func_source.contains("hook")
+                || func_source.contains("callback"))
+        {
             return Some(format!(
                 "Vault hook reentrancy vulnerability marker detected"
             ));
@@ -265,9 +271,10 @@ impl VaultHookReentrancyDetector {
 
             if found_external_call {
                 // Check for state changes after external call
-                if (line.contains("totalSupply") && line.contains("=")) ||
-                   (line.contains("balanceOf") && line.contains("=")) ||
-                   (line.contains("shares") && (line.contains("+=") || line.contains("-="))) {
+                if (line.contains("totalSupply") && line.contains("="))
+                    || (line.contains("balanceOf") && line.contains("="))
+                    || (line.contains("shares") && (line.contains("+=") || line.contains("-=")))
+                {
                     return true;
                 }
             }

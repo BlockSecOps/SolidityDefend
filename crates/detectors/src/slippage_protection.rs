@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing slippage protection in DEX trades
 pub struct SlippageProtectionDetector {
@@ -60,22 +60,24 @@ impl Detector for SlippageProtectionDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line as u32,
-                    0,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(20) // CWE-20: Improper Input Validation
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_fix_suggestion(format!(
-                    "Calculate minimum acceptable output amount based on current price and \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        line as u32,
+                        0,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_fix_suggestion(format!(
+                        "Calculate minimum acceptable output amount based on current price and \
                     acceptable slippage (e.g., 0.5-1%). Example: \
                     uint256 minOut = expectedAmount * 99 / 100; \
                     Then use minOut instead of 0 in swap call in function '{}'",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +93,11 @@ impl Detector for SlippageProtectionDetector {
 
 impl SlippageProtectionDetector {
     /// Check if function has missing slippage protection, returns line number if found
-    fn has_missing_slippage_protection(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<usize> {
+    fn has_missing_slippage_protection(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<usize> {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return None;
@@ -110,15 +116,21 @@ impl SlippageProtectionDetector {
 
         // Check if this function contains DEX swap calls
         let swap_patterns = [
-            "swap", "Swap", "exchange", "Exchange",
-            "swapExactTokensForTokens", "swapTokensForExactTokens",
-            "swapExactETHForTokens", "swapTokensForExactETH",
-            "swapExactTokensForETH", "swapETHForExactTokens"
+            "swap",
+            "Swap",
+            "exchange",
+            "Exchange",
+            "swapExactTokensForTokens",
+            "swapTokensForExactTokens",
+            "swapExactETHForTokens",
+            "swapTokensForExactETH",
+            "swapExactTokensForETH",
+            "swapETHForExactTokens",
         ];
 
-        let has_swap_call = swap_patterns.iter().any(|pattern|
-            func_source.contains(pattern)
-        );
+        let has_swap_call = swap_patterns
+            .iter()
+            .any(|pattern| func_source.contains(pattern));
 
         if !has_swap_call {
             return None;
@@ -162,13 +174,18 @@ impl SlippageProtectionDetector {
 
                 // Pattern 3: Multi-line swap call with 0
                 let window = lines[idx..std::cmp::min(idx + 10, lines.len())].join("\n");
-                if window.contains("swap") && window.contains("0,") && window.contains("VULNERABILITY") {
+                if window.contains("swap")
+                    && window.contains("0,")
+                    && window.contains("VULNERABILITY")
+                {
                     return Some(func_start + idx);
                 }
             }
 
             // Check for explicit vulnerability markers
-            if line.contains("VULNERABILITY") && (line.contains("slippage") || line.contains("minimum amount")) {
+            if line.contains("VULNERABILITY")
+                && (line.contains("slippage") || line.contains("minimum amount"))
+            {
                 return Some(func_start + idx);
             }
         }

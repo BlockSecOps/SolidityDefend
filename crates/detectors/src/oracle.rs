@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for single oracle source dependencies
 pub struct SingleSourceDetector {
@@ -29,19 +29,17 @@ impl SingleSourceDetector {
 
     fn _is_oracle_call(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
-            ast::Expression::FunctionCall { function, .. } => {
-                match function {
-                    ast::Expression::MemberAccess { member, .. } => {
-                        let member_name = &member.name;
-                        member_name.contains("price") ||
-                        member_name.contains("rate") ||
-                        *member_name == "latestRoundData" ||
-                        *member_name == "getPrice" ||
-                        *member_name == "decimals"
-                    }
-                    _ => false,
+            ast::Expression::FunctionCall { function, .. } => match function {
+                ast::Expression::MemberAccess { member, .. } => {
+                    let member_name = &member.name;
+                    member_name.contains("price")
+                        || member_name.contains("rate")
+                        || *member_name == "latestRoundData"
+                        || *member_name == "getPrice"
+                        || *member_name == "decimals"
                 }
-            }
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -56,7 +54,11 @@ impl SingleSourceDetector {
         oracle_sources.len()
     }
 
-    fn collect_oracle_sources(&self, statements: &[ast::Statement<'_>], sources: &mut std::collections::HashSet<String>) {
+    fn collect_oracle_sources(
+        &self,
+        statements: &[ast::Statement<'_>],
+        sources: &mut std::collections::HashSet<String>,
+    ) {
         for stmt in statements {
             match stmt {
                 ast::Statement::Expression(expr) => {
@@ -70,7 +72,11 @@ impl SingleSourceDetector {
         }
     }
 
-    fn extract_oracle_source(&self, expr: &ast::Expression<'_>, sources: &mut std::collections::HashSet<String>) {
+    fn extract_oracle_source(
+        &self,
+        expr: &ast::Expression<'_>,
+        sources: &mut std::collections::HashSet<String>,
+    ) {
         match expr {
             ast::Expression::FunctionCall { function, .. } => {
                 if let ast::Expression::MemberAccess { expression, .. } = function {
@@ -219,17 +225,15 @@ impl PriceValidationDetector {
 
     fn expression_uses_oracle(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
-            ast::Expression::FunctionCall { function, .. } => {
-                match function {
-                    ast::Expression::MemberAccess { member, .. } => {
-                        let member_name = &member.name;
-                        member_name.contains("price") ||
-                        member_name.contains("rate") ||
-                        *member_name == "latestRoundData"
-                    }
-                    _ => false,
+            ast::Expression::FunctionCall { function, .. } => match function {
+                ast::Expression::MemberAccess { member, .. } => {
+                    let member_name = &member.name;
+                    member_name.contains("price")
+                        || member_name.contains("rate")
+                        || *member_name == "latestRoundData"
                 }
-            }
+                _ => false,
+            },
             _ => false,
         }
     }
@@ -270,18 +274,20 @@ impl Detector for PriceValidationDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(20) // CWE-20: Improper Input Validation
-                .with_fix_suggestion(format!(
-                    "Add validation checks for oracle price data in function '{}'",
-                    function.name.name
-                ));
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_fix_suggestion(format!(
+                        "Add validation checks for oracle price data in function '{}'",
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }

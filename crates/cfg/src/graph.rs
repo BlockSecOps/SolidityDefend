@@ -1,10 +1,10 @@
+use anyhow::{Result, anyhow};
+use petgraph::graph::{EdgeIndex, NodeIndex};
+use petgraph::visit::EdgeRef;
+use petgraph::{Directed, Direction, Graph};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
-use petgraph::{Graph, Directed, Direction};
-use petgraph::graph::{NodeIndex, EdgeIndex};
-use petgraph::visit::EdgeRef;
-use anyhow::{Result, anyhow};
-use serde::{Serialize, Deserialize};
 
 use ir::{BlockId, Instruction};
 
@@ -57,12 +57,13 @@ impl CfgNode {
     /// Check if this block ends with a terminator instruction
     pub fn has_terminator(&self) -> bool {
         if let Some(last_instruction) = self.instructions.last() {
-            matches!(last_instruction,
-                Instruction::Branch(_) |
-                Instruction::ConditionalBranch(_, _, _) |
-                Instruction::Return(_) |
-                Instruction::Revert(_) |
-                Instruction::SelfDestruct(_)
+            matches!(
+                last_instruction,
+                Instruction::Branch(_)
+                    | Instruction::ConditionalBranch(_, _, _)
+                    | Instruction::Return(_)
+                    | Instruction::Revert(_)
+                    | Instruction::SelfDestruct(_)
             )
         } else {
             false
@@ -104,7 +105,11 @@ impl CfgEdge {
 
     pub fn conditional(condition: String, is_true_branch: bool) -> Self {
         Self {
-            edge_type: if is_true_branch { EdgeType::True } else { EdgeType::False },
+            edge_type: if is_true_branch {
+                EdgeType::True
+            } else {
+                EdgeType::False
+            },
             condition: Some(condition),
         }
     }
@@ -161,13 +166,13 @@ impl ControlFlowGraph {
 
         // Check if this is an exit block based on terminator
         if let Some(terminator) = node.terminator() {
-            node.is_exit = matches!(terminator,
-                Instruction::Return(_) |
-                Instruction::Revert(_) |
-                Instruction::SelfDestruct(_)
+            node.is_exit = matches!(
+                terminator,
+                Instruction::Return(_) | Instruction::Revert(_) | Instruction::SelfDestruct(_)
             );
             if node.is_exit {
-                self.exit_blocks.push(petgraph::graph::NodeIndex::new(self.graph.node_count()));
+                self.exit_blocks
+                    .push(petgraph::graph::NodeIndex::new(self.graph.node_count()));
             }
         }
 
@@ -199,10 +204,19 @@ impl ControlFlowGraph {
     }
 
     /// Add an edge between two blocks
-    pub fn add_edge(&mut self, from: BlockId, to: BlockId, edge_type: EdgeType) -> Result<EdgeIndex> {
-        let from_node = self.block_to_node.get(&from)
+    pub fn add_edge(
+        &mut self,
+        from: BlockId,
+        to: BlockId,
+        edge_type: EdgeType,
+    ) -> Result<EdgeIndex> {
+        let from_node = self
+            .block_to_node
+            .get(&from)
             .ok_or_else(|| anyhow!("Source block {} not found", from))?;
-        let to_node = self.block_to_node.get(&to)
+        let to_node = self
+            .block_to_node
+            .get(&to)
             .ok_or_else(|| anyhow!("Target block {} not found", to))?;
 
         let edge = CfgEdge::new(edge_type);
@@ -226,7 +240,9 @@ impl ControlFlowGraph {
 
     /// Set the entry block
     pub fn set_entry_block(&mut self, block_id: BlockId) -> Result<()> {
-        let node_index = self.block_to_node.get(&block_id)
+        let node_index = self
+            .block_to_node
+            .get(&block_id)
             .ok_or_else(|| anyhow!("Entry block {} not found", block_id))?;
 
         self.entry_block = Some(*node_index);
@@ -240,21 +256,27 @@ impl ControlFlowGraph {
 
     /// Get the entry block ID
     pub fn entry_block_id(&self) -> Option<BlockId> {
-        self.entry_block.and_then(|node| self.node_to_block.get(&node)).copied()
+        self.entry_block
+            .and_then(|node| self.node_to_block.get(&node))
+            .copied()
     }
 
     /// Get all exit block IDs
     pub fn exit_block_ids(&self) -> Vec<BlockId> {
-        self.exit_blocks.iter()
+        self.exit_blocks
+            .iter()
             .filter_map(|node| self.node_to_block.get(node).copied())
             .collect()
     }
 
     /// Get basic blocks as a map
     pub fn basic_blocks(&self) -> HashMap<BlockId, &CfgNode> {
-        self.block_to_node.iter()
+        self.block_to_node
+            .iter()
             .filter_map(|(block_id, node_index)| {
-                self.graph.node_weight(*node_index).map(|node| (*block_id, node))
+                self.graph
+                    .node_weight(*node_index)
+                    .map(|node| (*block_id, node))
             })
             .collect()
     }
@@ -262,7 +284,8 @@ impl ControlFlowGraph {
     /// Get predecessors of a block
     pub fn predecessors(&self, block_id: BlockId) -> Vec<BlockId> {
         if let Some(node_index) = self.block_to_node.get(&block_id) {
-            self.graph.neighbors_directed(*node_index, Direction::Incoming)
+            self.graph
+                .neighbors_directed(*node_index, Direction::Incoming)
                 .filter_map(|pred_node| self.node_to_block.get(&pred_node).copied())
                 .collect()
         } else {
@@ -273,7 +296,8 @@ impl ControlFlowGraph {
     /// Get successors of a block
     pub fn successors(&self, block_id: BlockId) -> Vec<BlockId> {
         if let Some(node_index) = self.block_to_node.get(&block_id) {
-            self.graph.neighbors_directed(*node_index, Direction::Outgoing)
+            self.graph
+                .neighbors_directed(*node_index, Direction::Outgoing)
                 .filter_map(|succ_node| self.node_to_block.get(&succ_node).copied())
                 .collect()
         } else {
@@ -284,7 +308,8 @@ impl ControlFlowGraph {
     /// Check if there's an edge between two blocks
     pub fn has_edge(&self, from: BlockId, to: BlockId) -> bool {
         if let (Some(from_node), Some(to_node)) =
-            (self.block_to_node.get(&from), self.block_to_node.get(&to)) {
+            (self.block_to_node.get(&from), self.block_to_node.get(&to))
+        {
             self.graph.find_edge(*from_node, *to_node).is_some()
         } else {
             false
@@ -294,8 +319,8 @@ impl ControlFlowGraph {
     /// Check if a block is reachable from the entry block
     pub fn is_reachable_from_entry(&self, block_id: BlockId) -> bool {
         if let (Some(entry_node), Some(target_node)) =
-            (self.entry_block, self.block_to_node.get(&block_id)) {
-
+            (self.entry_block, self.block_to_node.get(&block_id))
+        {
             if entry_node == *target_node {
                 return true;
             }
@@ -329,8 +354,8 @@ impl ControlFlowGraph {
     /// Check if target is reachable from source
     pub fn can_reach(&self, from: BlockId, to: BlockId) -> bool {
         if let (Some(from_node), Some(to_node)) =
-            (self.block_to_node.get(&from), self.block_to_node.get(&to)) {
-
+            (self.block_to_node.get(&from), self.block_to_node.get(&to))
+        {
             if from_node == to_node {
                 return true;
             }
@@ -381,7 +406,7 @@ impl ControlFlowGraph {
         node: NodeIndex,
         visited: &mut HashSet<NodeIndex>,
         in_stack: &mut HashSet<NodeIndex>,
-        back_edges: &mut Vec<(BlockId, BlockId)>
+        back_edges: &mut Vec<(BlockId, BlockId)>,
     ) {
         visited.insert(node);
         in_stack.insert(node);
@@ -391,8 +416,10 @@ impl ControlFlowGraph {
                 self.dfs_back_edges(neighbor, visited, in_stack, back_edges);
             } else if in_stack.contains(&neighbor) {
                 // Found a back edge
-                if let (Some(from_block), Some(to_block)) =
-                    (self.node_to_block.get(&node), self.node_to_block.get(&neighbor)) {
+                if let (Some(from_block), Some(to_block)) = (
+                    self.node_to_block.get(&node),
+                    self.node_to_block.get(&neighbor),
+                ) {
                     back_edges.push((*from_block, *to_block));
                 }
             }
@@ -424,10 +451,10 @@ impl ControlFlowGraph {
             // 2. It has exactly one predecessor
             // 3. The predecessor has exactly one successor (this block)
             // 4. It doesn't start with a label that might be a jump target
-            if self.entry_block_id() != Some(block_id) &&
-               node.predecessors.len() == 1 &&
-               node.successors.len() <= 1 {
-
+            if self.entry_block_id() != Some(block_id)
+                && node.predecessors.len() == 1
+                && node.successors.len() <= 1
+            {
                 let pred_id = node.predecessors[0];
                 let pred_successors = self.successors(pred_id);
 
@@ -514,7 +541,8 @@ impl ControlFlowGraph {
                         if successors.len() != 1 {
                             return Err(anyhow!(
                                 "Block {} has branch instruction but {} successors",
-                                block_id, successors.len()
+                                block_id,
+                                successors.len()
                             ));
                         }
                     }
@@ -522,11 +550,14 @@ impl ControlFlowGraph {
                         if successors.len() != 2 {
                             return Err(anyhow!(
                                 "Block {} has conditional branch but {} successors",
-                                block_id, successors.len()
+                                block_id,
+                                successors.len()
                             ));
                         }
                     }
-                    Instruction::Return(_) | Instruction::Revert(_) | Instruction::SelfDestruct(_) => {
+                    Instruction::Return(_)
+                    | Instruction::Revert(_)
+                    | Instruction::SelfDestruct(_) => {
                         if !successors.is_empty() {
                             return Err(anyhow!(
                                 "Block {} has terminating instruction but has successors",
@@ -551,10 +582,7 @@ impl ControlFlowGraph {
 
         // Add nodes
         for (block_id, node) in self.basic_blocks() {
-            let label = format!("{}\\l{} instructions",
-                block_id,
-                node.instructions.len()
-            );
+            let label = format!("{}\\l{} instructions", block_id, node.instructions.len());
 
             let style = if node.is_entry {
                 "style=filled,fillcolor=lightgreen"
@@ -564,8 +592,10 @@ impl ControlFlowGraph {
                 ""
             };
 
-            dot.push_str(&format!("    \"{}\" [label=\"{}\",{}];\n",
-                block_id, label, style));
+            dot.push_str(&format!(
+                "    \"{}\" [label=\"{}\",{}];\n",
+                block_id, label, style
+            ));
         }
 
         dot.push_str("\n");
@@ -594,8 +624,10 @@ impl ControlFlowGraph {
                 EdgeType::Unconditional => "",
             };
 
-            dot.push_str(&format!("    \"{}\" -> \"{}\" [label=\"{}\",{}];\n",
-                source, target, label, style));
+            dot.push_str(&format!(
+                "    \"{}\" -> \"{}\" [label=\"{}\",{}];\n",
+                source, target, label, style
+            ));
         }
 
         dot.push_str("}\n");
@@ -605,9 +637,15 @@ impl ControlFlowGraph {
     /// Export CFG to human-readable text format
     pub fn to_text(&self) -> String {
         let mut text = String::new();
-        text.push_str(&format!("Control Flow Graph for function '{}'\n", self.function_name));
-        text.push_str(&format!("Blocks: {}, Edges: {}\n\n",
-            self.graph.node_count(), self.graph.edge_count()));
+        text.push_str(&format!(
+            "Control Flow Graph for function '{}'\n",
+            self.function_name
+        ));
+        text.push_str(&format!(
+            "Blocks: {}, Edges: {}\n\n",
+            self.graph.node_count(),
+            self.graph.edge_count()
+        ));
 
         if let Some(entry_id) = self.entry_block_id() {
             text.push_str(&format!("Entry Block: {}\n", entry_id));
@@ -673,9 +711,15 @@ pub struct CfgStatistics {
 
 impl fmt::Display for CfgStatistics {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "CFG Statistics: {} blocks, {} edges, {} exit blocks, {} loops, {} unreachable",
-            self.block_count, self.edge_count, self.exit_blocks,
-            self.back_edges, self.unreachable_blocks)
+        write!(
+            f,
+            "CFG Statistics: {} blocks, {} edges, {} exit blocks, {} loops, {} unreachable",
+            self.block_count,
+            self.edge_count,
+            self.exit_blocks,
+            self.back_edges,
+            self.unreachable_blocks
+        )
     }
 }
 
@@ -697,9 +741,11 @@ mod tests {
     fn test_add_block() {
         let mut cfg = ControlFlowGraph::new("test".to_string());
         let block_id = BlockId(0);
-        let instructions = vec![
-            Instruction::Add(ValueId(0), IrValue::ConstantInt(1), IrValue::ConstantInt(2))
-        ];
+        let instructions = vec![Instruction::Add(
+            ValueId(0),
+            IrValue::ConstantInt(1),
+            IrValue::ConstantInt(2),
+        )];
 
         let node_index = cfg.add_block(block_id, instructions);
         assert_eq!(cfg.graph.node_count(), 1);
@@ -745,7 +791,8 @@ mod tests {
         cfg.add_block(block3, vec![]);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         assert!(cfg.is_reachable_from_entry(block1));
         assert!(cfg.is_reachable_from_entry(block2));
@@ -767,8 +814,10 @@ mod tests {
         cfg.add_block(block3, vec![]);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
         cfg.add_edge(block3, block2, EdgeType::Back).unwrap(); // Back edge creating loop
 
         let back_edges = cfg.back_edges();
@@ -786,7 +835,8 @@ mod tests {
         cfg.add_block(exit_block, vec![Instruction::Return(None)]);
 
         cfg.set_entry_block(entry_block).unwrap();
-        cfg.add_edge(entry_block, exit_block, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(entry_block, exit_block, EdgeType::Unconditional)
+            .unwrap();
 
         assert!(cfg.validate().is_ok());
     }
@@ -800,7 +850,8 @@ mod tests {
         cfg.add_block(block1, vec![]);
         cfg.add_block(block2, vec![]);
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         let dot = cfg.to_dot();
         assert!(dot.contains("digraph"));
@@ -819,7 +870,8 @@ mod tests {
         cfg.add_block(block1, vec![]);
         cfg.add_block(block2, vec![]);
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         let stats = cfg.statistics();
         assert_eq!(stats.block_count, 2);

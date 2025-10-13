@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing front-running protection mechanisms
 pub struct FrontRunningMitigationDetector {
@@ -56,29 +56,30 @@ impl Detector for FrontRunningMitigationDetector {
                 let message = format!(
                     "Function '{}' lacks front-running protection. {} \
                     Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
-                    function.name.name,
-                    frontrun_issue
+                    function.name.name, frontrun_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Add front-running protection to '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Add front-running protection to '{}'. \
                     Implement: (1) Commit-reveal scheme with time delay, \
                     (2) Deadline parameter for transaction validity, \
                     (3) Minimum output amount (slippage protection), \
                     (4) Batch auctions or frequent batch auctions (FBA), \
                     (5) Private mempool (Flashbots Protect), \
                     (6) Time-weighted average pricing (TWAP).",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for FrontRunningMitigationDetector {
 }
 
 impl FrontRunningMitigationDetector {
-    fn check_frontrunning_risk(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_frontrunning_risk(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -102,15 +107,14 @@ impl FrontRunningMitigationDetector {
         let func_name = &function.name.name;
 
         // Pattern 1: Bid/auction functions without commit-reveal
-        let is_bidding = func_name.contains("bid") ||
-                        func_name.contains("Bid") ||
-                        func_name.contains("auction");
+        let is_bidding =
+            func_name.contains("bid") || func_name.contains("Bid") || func_name.contains("auction");
 
         if is_bidding {
-            let has_commit_reveal = func_source.contains("commit") ||
-                                   func_source.contains("reveal") ||
-                                   func_source.contains("hash") ||
-                                   func_source.contains("secret");
+            let has_commit_reveal = func_source.contains("commit")
+                || func_source.contains("reveal")
+                || func_source.contains("hash")
+                || func_source.contains("secret");
 
             if !has_commit_reveal {
                 return Some(format!(
@@ -122,21 +126,21 @@ impl FrontRunningMitigationDetector {
         }
 
         // Pattern 2: Swap/trade functions without slippage protection
-        let is_trading = func_name.contains("swap") ||
-                        func_name.contains("trade") ||
-                        func_name.contains("exchange") ||
-                        func_name.contains("buy") ||
-                        func_name.contains("sell");
+        let is_trading = func_name.contains("swap")
+            || func_name.contains("trade")
+            || func_name.contains("exchange")
+            || func_name.contains("buy")
+            || func_name.contains("sell");
 
         if is_trading {
-            let has_slippage = func_source.contains("minAmount") ||
-                              func_source.contains("minOut") ||
-                              func_source.contains("slippage") ||
-                              func_source.contains("amountOutMin");
+            let has_slippage = func_source.contains("minAmount")
+                || func_source.contains("minOut")
+                || func_source.contains("slippage")
+                || func_source.contains("amountOutMin");
 
-            let has_deadline = func_source.contains("deadline") ||
-                              func_source.contains("expiry") ||
-                              func_source.contains("block.timestamp");
+            let has_deadline = func_source.contains("deadline")
+                || func_source.contains("expiry")
+                || func_source.contains("block.timestamp");
 
             if !has_slippage {
                 return Some(format!(
@@ -156,20 +160,20 @@ impl FrontRunningMitigationDetector {
         }
 
         // Pattern 3: Price-sensitive operations without protection
-        let uses_price = func_source.contains("price") ||
-                        func_source.contains("getPrice") ||
-                        func_source.contains("rate");
+        let uses_price = func_source.contains("price")
+            || func_source.contains("getPrice")
+            || func_source.contains("rate");
 
-        let is_vulnerable_operation = func_name.contains("liquidate") ||
-                                     func_name.contains("mint") ||
-                                     func_name.contains("redeem") ||
-                                     func_name.contains("borrow");
+        let is_vulnerable_operation = func_name.contains("liquidate")
+            || func_name.contains("mint")
+            || func_name.contains("redeem")
+            || func_name.contains("borrow");
 
         if uses_price && is_vulnerable_operation {
-            let has_protection = func_source.contains("TWAP") ||
-                                func_source.contains("timeWeighted") ||
-                                func_source.contains("oracle") ||
-                                func_source.contains("minAmount");
+            let has_protection = func_source.contains("TWAP")
+                || func_source.contains("timeWeighted")
+                || func_source.contains("oracle")
+                || func_source.contains("minAmount");
 
             if !has_protection {
                 return Some(format!(
@@ -181,25 +185,26 @@ impl FrontRunningMitigationDetector {
         }
 
         // Pattern 4: State changes visible in mempool
-        let changes_critical_state = func_source.contains("approve") ||
-                                     func_source.contains("transfer") ||
-                                     func_source.contains("withdraw");
+        let changes_critical_state = func_source.contains("approve")
+            || func_source.contains("transfer")
+            || func_source.contains("withdraw");
 
         if changes_critical_state {
-            let has_nonce_or_commitment = func_source.contains("nonce") ||
-                                         func_source.contains("commitment") ||
-                                         func_source.contains("signature");
+            let has_nonce_or_commitment = func_source.contains("nonce")
+                || func_source.contains("commitment")
+                || func_source.contains("signature");
 
             // Only flag if it's a high-value operation
-            let is_high_value = func_source.contains("balance") ||
-                               func_source.contains("amount") ||
-                               func_source.contains("value");
+            let is_high_value = func_source.contains("balance")
+                || func_source.contains("amount")
+                || func_source.contains("value");
 
             if is_high_value && !has_nonce_or_commitment {
                 // Don't flag simple transfers, focus on complex operations
-                if func_source.contains("calculate") ||
-                   func_source.contains("swap") ||
-                   func_source.contains("convert") {
+                if func_source.contains("calculate")
+                    || func_source.contains("swap")
+                    || func_source.contains("convert")
+                {
                     return Some(format!(
                         "Function '{}' performs high-value state changes observable in mempool. \
                         Consider commit-reveal or private transactions",

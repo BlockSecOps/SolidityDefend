@@ -1,6 +1,11 @@
-use ast::{AstArena, SourceFile, SourceLocation, Position, Contract, Function, Identifier, ContractType, Visibility, Block, Statement, Expression, AssignmentOperator, BinaryOperator, UnaryOperator, Parameter, TypeName, ElementaryType, StorageLocation, StateVariable, StateMutability};
-use crate::error::{ParseError, ParseResult, ParseErrors};
-use solang_parser::{pt, parse, diagnostics};
+use crate::error::{ParseError, ParseErrors, ParseResult};
+use ast::{
+    AssignmentOperator, AstArena, BinaryOperator, Block, Contract, ContractType, ElementaryType,
+    Expression, Function, Identifier, Parameter, Position, SourceFile, SourceLocation,
+    StateMutability, StateVariable, Statement, StorageLocation, TypeName, UnaryOperator,
+    Visibility,
+};
+use solang_parser::{diagnostics, parse, pt};
 
 /// Arena-based parser for converting solang AST to our arena-allocated AST
 pub struct ArenaParser<'arena> {
@@ -114,7 +119,8 @@ impl<'arena> ArenaParser<'arena> {
         let name = match &contract.name {
             Some(name) => self.convert_identifier_with_source(name, source, file_path)?,
             None => {
-                let location = self.convert_location_with_source(&contract.loc, file_path, Some(source));
+                let location =
+                    self.convert_location_with_source(&contract.loc, file_path, Some(source));
                 Identifier::new(self.arena.alloc_str(""), location)
             }
         };
@@ -178,7 +184,8 @@ impl<'arena> ArenaParser<'arena> {
             Some(name) => self.convert_identifier_with_source(name, source, file_path)?,
             None => {
                 // Anonymous function (constructor, fallback, etc.)
-                let location = self.convert_location_with_source(&func.loc, file_path, Some(source));
+                let location =
+                    self.convert_location_with_source(&func.loc, file_path, Some(source));
                 Identifier::new(self.arena.alloc_str(""), location)
             }
         };
@@ -189,13 +196,10 @@ impl<'arena> ArenaParser<'arena> {
         // We need to span from the start of prototype to the end of the body
         let location = if matches!(func.loc_prototype, pt::Loc::File(..)) {
             // Create location spanning from prototype start to body end
-            let proto_loc = self.convert_location_with_source(&func.loc_prototype, file_path, Some(source));
+            let proto_loc =
+                self.convert_location_with_source(&func.loc_prototype, file_path, Some(source));
             let full_loc = self.convert_location_with_source(&func.loc, file_path, Some(source));
-            ast::SourceLocation::new(
-                file_path.into(),
-                *proto_loc.start(),
-                *full_loc.end(),
-            )
+            ast::SourceLocation::new(file_path.into(), *proto_loc.start(), *full_loc.end())
         } else {
             // Fallback to full location if prototype location is not available
             self.convert_location_with_source(&func.loc, file_path, Some(source))
@@ -214,7 +218,9 @@ impl<'arena> ArenaParser<'arena> {
                 }
                 pt::FunctionAttribute::BaseOrModifier(loc, base) => {
                     // CRITICAL FIX: Populate modifiers field
-                    if let Ok(modifier_invocation) = self.convert_modifier_invocation(loc, base, source, file_path) {
+                    if let Ok(modifier_invocation) =
+                        self.convert_modifier_invocation(loc, base, source, file_path)
+                    {
                         function.modifiers.push(modifier_invocation);
                     }
                 }
@@ -302,8 +308,12 @@ impl<'arena> ArenaParser<'arena> {
             };
 
             let type_name = self.convert_type_name(&pt_param.ty, source, file_path)?;
-            let storage_location = pt_param.storage.as_ref().map(|s| self.convert_storage_location(s));
-            let location = self.convert_location_with_source(&pt_param.loc, file_path, Some(source));
+            let storage_location = pt_param
+                .storage
+                .as_ref()
+                .map(|s| self.convert_storage_location(s));
+            let location =
+                self.convert_location_with_source(&pt_param.loc, file_path, Some(source));
 
             Ok(Parameter {
                 name,
@@ -361,19 +371,24 @@ impl<'arena> ArenaParser<'arena> {
         // For inheritance it can be a path (e.g., "A.B.C"), but we join them
         let name = if base.name.identifiers.is_empty() {
             // Shouldn't happen, but handle gracefully
-            let location = self.convert_location_with_source(&base.name.loc, file_path, Some(source));
+            let location =
+                self.convert_location_with_source(&base.name.loc, file_path, Some(source));
             Identifier::new(self.arena.alloc_str(""), location)
         } else if base.name.identifiers.len() == 1 {
             // Single identifier - typical case for modifiers
             self.convert_identifier_with_source(&base.name.identifiers[0], source, file_path)?
         } else {
             // Multiple identifiers - join them with "."
-            let joined = base.name.identifiers.iter()
+            let joined = base
+                .name
+                .identifiers
+                .iter()
                 .map(|id| id.name.as_str())
                 .collect::<Vec<_>>()
                 .join(".");
             let name_str = self.arena.alloc_str(&joined);
-            let location = self.convert_location_with_source(&base.name.loc, file_path, Some(source));
+            let location =
+                self.convert_location_with_source(&base.name.loc, file_path, Some(source));
             Identifier::new(name_str, location)
         };
 
@@ -415,8 +430,12 @@ impl<'arena> ArenaParser<'arena> {
                 pt::Type::Int(n) => Ok(TypeName::Elementary(ElementaryType::Int(*n))),
                 pt::Type::Mapping { key, value, .. } => {
                     // Convert mapping type
-                    let key_type = self.arena.alloc(self.convert_type_name(key, source, file_path)?);
-                    let value_type = self.arena.alloc(self.convert_type_name(value, source, file_path)?);
+                    let key_type = self
+                        .arena
+                        .alloc(self.convert_type_name(key, source, file_path)?);
+                    let value_type = self
+                        .arena
+                        .alloc(self.convert_type_name(value, source, file_path)?);
                     Ok(TypeName::Mapping {
                         key_type,
                         value_type,
@@ -431,15 +450,20 @@ impl<'arena> ArenaParser<'arena> {
                 // User-defined type
                 let name = self.convert_identifier_with_source(ident, source, file_path)?;
                 Ok(TypeName::UserDefined(name))
-            },
+            }
             pt::Expression::ArraySubscript(_, base, length) => {
                 // Check if this is a mapping (denoted by special syntax in the parser)
                 // mappings look like: base[index] where if it's actually ArraySubscript
                 // But when mapping(K => V), solang represents this differently
                 // For now, treat as array
-                let base_type = self.arena.alloc(self.convert_type_name(base, source, file_path)?);
+                let base_type = self
+                    .arena
+                    .alloc(self.convert_type_name(base, source, file_path)?);
                 let length_expr = if let Some(len_expr) = length {
-                    Some(self.arena.alloc(self.convert_expression(len_expr, source, file_path)?))
+                    Some(
+                        self.arena
+                            .alloc(self.convert_expression(len_expr, source, file_path)?),
+                    )
                 } else {
                     None
                 };
@@ -447,7 +471,7 @@ impl<'arena> ArenaParser<'arena> {
                     base_type,
                     length: length_expr,
                 })
-            },
+            }
             _ => {
                 // Fallback for other types
                 Ok(TypeName::Elementary(ElementaryType::Uint(256)))
@@ -487,7 +511,12 @@ impl<'arena> ArenaParser<'arena> {
     }
 
     /// Convert solang location to our SourceLocation with optional source for position calculation
-    fn convert_location_with_source(&self, loc: &pt::Loc, file_path: &str, source: Option<&str>) -> SourceLocation {
+    fn convert_location_with_source(
+        &self,
+        loc: &pt::Loc,
+        file_path: &str,
+        source: Option<&str>,
+    ) -> SourceLocation {
         match loc {
             pt::Loc::File(_file_no, start, end) => {
                 // Calculate actual line/column positions from byte offsets if source is available
@@ -509,14 +538,16 @@ impl<'arena> ArenaParser<'arena> {
             pt::Loc::Builtin => {
                 SourceLocation::new(file_path.into(), Position::start(), Position::start())
             }
-            _ => {
-                SourceLocation::new(file_path.into(), Position::start(), Position::start())
-            }
+            _ => SourceLocation::new(file_path.into(), Position::start(), Position::start()),
         }
     }
 
     /// Convert diagnostic location for error reporting
-    fn convert_diagnostic_location(&self, _error: &diagnostics::Diagnostic, file_path: &str) -> SourceLocation {
+    fn convert_diagnostic_location(
+        &self,
+        _error: &diagnostics::Diagnostic,
+        file_path: &str,
+    ) -> SourceLocation {
         let start_pos = Position::new(1, 1, 0);
         let end_pos = Position::new(1, 1, 0);
         SourceLocation::new(file_path.into(), start_pos, end_pos)
@@ -530,7 +561,9 @@ impl<'arena> ArenaParser<'arena> {
         file_path: &str,
     ) -> ParseResult<Block<'arena>> {
         match stmt {
-            pt::Statement::Block { loc, statements, .. } => {
+            pt::Statement::Block {
+                loc, statements, ..
+            } => {
                 let location = self.convert_location_with_source(loc, file_path, Some(source));
                 let mut block = Block::new(self.arena, location);
 
@@ -544,7 +577,11 @@ impl<'arena> ArenaParser<'arena> {
             }
             _ => {
                 // For non-block statements, wrap in a block
-                let location = self.convert_location_with_source(&self.get_statement_location(stmt), file_path, Some(source));
+                let location = self.convert_location_with_source(
+                    &self.get_statement_location(stmt),
+                    file_path,
+                    Some(source),
+                );
                 let mut block = Block::new(self.arena, location);
 
                 if let Ok(converted) = self.convert_statement(stmt, source, file_path) {
@@ -563,7 +600,11 @@ impl<'arena> ArenaParser<'arena> {
         source: &str,
         file_path: &str,
     ) -> ParseResult<Statement<'arena>> {
-        let location = self.convert_location_with_source(&self.get_statement_location(stmt), file_path, Some(source));
+        let location = self.convert_location_with_source(
+            &self.get_statement_location(stmt),
+            file_path,
+            Some(source),
+        );
 
         match stmt {
             pt::Statement::Block { statements, .. } => {
@@ -585,30 +626,55 @@ impl<'arena> ArenaParser<'arena> {
                 } else {
                     None
                 };
-                Ok(Statement::Return { value: expr, location })
+                Ok(Statement::Return {
+                    value: expr,
+                    location,
+                })
             }
             pt::Statement::If(_, condition, then_stmt, else_stmt) => {
                 let condition_expr = self.convert_expression(condition, source, file_path)?;
-                let then_branch = self.arena.alloc(self.convert_statement(then_stmt, source, file_path)?);
+                let then_branch = self
+                    .arena
+                    .alloc(self.convert_statement(then_stmt, source, file_path)?);
                 let else_branch = if let Some(else_stmt) = else_stmt {
-                    Some(self.arena.alloc(self.convert_statement(else_stmt, source, file_path)?))
+                    Some(
+                        self.arena
+                            .alloc(self.convert_statement(else_stmt, source, file_path)?),
+                    )
                 } else {
                     None
                 };
-                Ok(Statement::If { condition: condition_expr, then_branch, else_branch, location })
+                Ok(Statement::If {
+                    condition: condition_expr,
+                    then_branch,
+                    else_branch,
+                    location,
+                })
             }
             pt::Statement::While(_, condition, body) => {
                 let condition_expr = self.convert_expression(condition, source, file_path)?;
-                let body_stmt = self.arena.alloc(self.convert_statement(body, source, file_path)?);
-                Ok(Statement::While { condition: condition_expr, body: body_stmt, location })
+                let body_stmt = self
+                    .arena
+                    .alloc(self.convert_statement(body, source, file_path)?);
+                Ok(Statement::While {
+                    condition: condition_expr,
+                    body: body_stmt,
+                    location,
+                })
             }
             pt::Statement::DoWhile(_, body, condition) => {
                 // Convert do-while statement
                 let condition_expr = self.convert_expression(condition, source, file_path)?;
-                let body_stmt = self.arena.alloc(self.convert_statement(body, source, file_path)?);
+                let body_stmt = self
+                    .arena
+                    .alloc(self.convert_statement(body, source, file_path)?);
 
                 // Create a while statement (our AST doesn't distinguish do-while from while)
-                Ok(Statement::While { condition: condition_expr, body: body_stmt, location })
+                Ok(Statement::While {
+                    condition: condition_expr,
+                    body: body_stmt,
+                    location,
+                })
             }
             pt::Statement::Assembly { .. } => {
                 // Convert assembly statement to a placeholder
@@ -621,7 +687,10 @@ impl<'arena> ArenaParser<'arena> {
             }
             pt::Statement::For(_, init, condition, increment, body) => {
                 let init_stmt = if let Some(init) = init {
-                    Some(self.arena.alloc(self.convert_statement(init, source, file_path)?))
+                    Some(
+                        self.arena
+                            .alloc(self.convert_statement(init, source, file_path)?),
+                    )
                 } else {
                     None
                 };
@@ -636,7 +705,8 @@ impl<'arena> ArenaParser<'arena> {
                     None
                 };
                 let body_stmt = if let Some(body) = body {
-                    self.arena.alloc(self.convert_statement(body, source, file_path)?)
+                    self.arena
+                        .alloc(self.convert_statement(body, source, file_path)?)
                 } else {
                     // Create empty block if no body
                     let dummy_block = Block::new(self.arena, location.clone());
@@ -647,7 +717,7 @@ impl<'arena> ArenaParser<'arena> {
                     condition: condition_expr,
                     update: update_expr,
                     body: body_stmt,
-                    location
+                    location,
                 })
             }
             pt::Statement::VariableDefinition(_, var_def, initial_value) => {
@@ -659,9 +729,13 @@ impl<'arena> ArenaParser<'arena> {
                     self.convert_identifier_with_source(name, source, file_path)?
                 } else {
                     // Create dummy identifier if name is None
-                    ast::Identifier::new("_unnamed", self.convert_location_with_source(&var_def.loc, file_path, Some(source)))
+                    ast::Identifier::new(
+                        "_unnamed",
+                        self.convert_location_with_source(&var_def.loc, file_path, Some(source)),
+                    )
                 };
-                let var_location = self.convert_location_with_source(&var_def.loc, file_path, Some(source));
+                let var_location =
+                    self.convert_location_with_source(&var_def.loc, file_path, Some(source));
 
                 let var_decl = ast::VariableDeclaration {
                     name: var_name,
@@ -697,7 +771,8 @@ impl<'arena> ArenaParser<'arena> {
                 };
 
                 // Convert catch clauses
-                let mut converted_catch_clauses = bumpalo::collections::Vec::new_in(&self.arena.bump);
+                let mut converted_catch_clauses =
+                    bumpalo::collections::Vec::new_in(&self.arena.bump);
                 for catch_clause in catch_clauses {
                     let (catch_location, catch_body) = match catch_clause {
                         pt::CatchClause::Simple(loc, _param, stmt) => {
@@ -715,7 +790,11 @@ impl<'arena> ArenaParser<'arena> {
                         identifier: None, // TODO: Convert identifier if needed
                         parameters: bumpalo::collections::Vec::new_in(&self.arena.bump),
                         body: catch_body,
-                        location: self.convert_location_with_source(&catch_location, file_path, Some(source)),
+                        location: self.convert_location_with_source(
+                            &catch_location,
+                            file_path,
+                            Some(source),
+                        ),
                     };
                     converted_catch_clauses.push(catch);
                 }
@@ -766,13 +845,19 @@ impl<'arena> ArenaParser<'arena> {
         source: &str,
         file_path: &str,
     ) -> ParseResult<Expression<'arena>> {
-        let location = self.convert_location_with_source(&self.get_expression_location(expr), file_path, Some(source));
+        let location = self.convert_location_with_source(
+            &self.get_expression_location(expr),
+            file_path,
+            Some(source),
+        );
 
         match expr {
             pt::Expression::FunctionCall(_, function, args) => {
                 // Handle regular function calls, including those where the function
                 // might be a FunctionCallBlock (like call{value: amount}(""))
-                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let function_expr = self
+                    .arena
+                    .alloc(self.convert_expression(function, source, file_path)?);
                 let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
                 // Convert the regular arguments
@@ -793,7 +878,9 @@ impl<'arena> ArenaParser<'arena> {
             }
             pt::Expression::FunctionCallBlock(_, function, block) => {
                 // Handle function calls with blocks like msg.sender.call{value: amount}
-                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let function_expr = self
+                    .arena
+                    .alloc(self.convert_expression(function, source, file_path)?);
                 let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
                 let names = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
@@ -822,8 +909,11 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             pt::Expression::MemberAccess(_, expr, member) => {
-                let expr_converted = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
-                let member_converted = self.convert_identifier_with_source(member, source, file_path)?;
+                let expr_converted = self
+                    .arena
+                    .alloc(self.convert_expression(expr, source, file_path)?);
+                let member_converted =
+                    self.convert_identifier_with_source(member, source, file_path)?;
 
                 Ok(Expression::MemberAccess {
                     expression: expr_converted,
@@ -836,8 +926,12 @@ impl<'arena> ArenaParser<'arena> {
                 Ok(Expression::Identifier(identifier))
             }
             pt::Expression::Assign(_, left, right) => {
-                let left_expr = self.arena.alloc(self.convert_expression(left, source, file_path)?);
-                let right_expr = self.arena.alloc(self.convert_expression(right, source, file_path)?);
+                let left_expr = self
+                    .arena
+                    .alloc(self.convert_expression(left, source, file_path)?);
+                let right_expr = self
+                    .arena
+                    .alloc(self.convert_expression(right, source, file_path)?);
 
                 Ok(Expression::Assignment {
                     left: left_expr,
@@ -848,15 +942,23 @@ impl<'arena> ArenaParser<'arena> {
             }
             pt::Expression::NamedFunctionCall(_, function, named_args) => {
                 // Handle named function calls like function({name: value})
-                let function_expr = self.arena.alloc(self.convert_expression(function, source, file_path)?);
+                let function_expr = self
+                    .arena
+                    .alloc(self.convert_expression(function, source, file_path)?);
                 let mut arguments = bumpalo::collections::Vec::new_in(&self.arena.bump);
                 let mut names = bumpalo::collections::Vec::new_in(&self.arena.bump);
 
                 // Convert named arguments
                 for named_arg in named_args {
-                    if let Ok(arg_expr) = self.convert_expression(&named_arg.expr, source, file_path) {
+                    if let Ok(arg_expr) =
+                        self.convert_expression(&named_arg.expr, source, file_path)
+                    {
                         arguments.push(arg_expr);
-                        let name_ident = self.convert_identifier_with_source(&named_arg.name, source, file_path)?;
+                        let name_ident = self.convert_identifier_with_source(
+                            &named_arg.name,
+                            source,
+                            file_path,
+                        )?;
                         names.push(name_ident);
                     }
                 }
@@ -868,12 +970,10 @@ impl<'arena> ArenaParser<'arena> {
                     location,
                 })
             }
-            pt::Expression::BoolLiteral(_, value) => {
-                Ok(Expression::Literal {
-                    value: ast::LiteralValue::Boolean(*value),
-                    location,
-                })
-            }
+            pt::Expression::BoolLiteral(_, value) => Ok(Expression::Literal {
+                value: ast::LiteralValue::Boolean(*value),
+                location,
+            }),
             pt::Expression::NumberLiteral(_, value, _exp, _unit) => {
                 let number_str = self.arena.alloc_str(value);
                 Ok(Expression::Literal {
@@ -897,7 +997,8 @@ impl<'arena> ArenaParser<'arena> {
             }
             pt::Expression::StringLiteral(string_lits) => {
                 // Concatenate multiple string literals
-                let combined = string_lits.iter()
+                let combined = string_lits
+                    .iter()
                     .map(|s| s.string.as_str())
                     .collect::<Vec<_>>()
                     .join("");
@@ -909,7 +1010,8 @@ impl<'arena> ArenaParser<'arena> {
             }
             pt::Expression::HexLiteral(hex_lits) => {
                 // Concatenate multiple hex literals
-                let combined = hex_lits.iter()
+                let combined = hex_lits
+                    .iter()
                     .map(|h| h.hex.as_str())
                     .collect::<Vec<_>>()
                     .join("");
@@ -927,68 +1029,168 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             // Binary operations
-            pt::Expression::Add(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Add, source, file_path, location)
-            }
-            pt::Expression::Subtract(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Sub, source, file_path, location)
-            }
-            pt::Expression::Multiply(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Mul, source, file_path, location)
-            }
-            pt::Expression::Divide(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Div, source, file_path, location)
-            }
-            pt::Expression::Modulo(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Mod, source, file_path, location)
-            }
-            pt::Expression::Power(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Pow, source, file_path, location)
-            }
-            pt::Expression::Equal(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Equal, source, file_path, location)
-            }
-            pt::Expression::NotEqual(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::NotEqual, source, file_path, location)
-            }
-            pt::Expression::Less(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Less, source, file_path, location)
-            }
-            pt::Expression::LessEqual(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::LessEqual, source, file_path, location)
-            }
-            pt::Expression::More(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Greater, source, file_path, location)
-            }
-            pt::Expression::MoreEqual(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::GreaterEqual, source, file_path, location)
-            }
-            pt::Expression::And(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::And, source, file_path, location)
-            }
-            pt::Expression::Or(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::Or, source, file_path, location)
-            }
-            pt::Expression::BitwiseAnd(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::BitwiseAnd, source, file_path, location)
-            }
-            pt::Expression::BitwiseOr(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::BitwiseOr, source, file_path, location)
-            }
-            pt::Expression::BitwiseXor(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::BitwiseXor, source, file_path, location)
-            }
-            pt::Expression::ShiftLeft(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::ShiftLeft, source, file_path, location)
-            }
-            pt::Expression::ShiftRight(_, left, right) => {
-                self.convert_binary_operation(left, right, BinaryOperator::ShiftRight, source, file_path, location)
-            }
+            pt::Expression::Add(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Add,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Subtract(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Sub,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Multiply(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Mul,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Divide(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Div,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Modulo(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Mod,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Power(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Pow,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Equal(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Equal,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::NotEqual(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::NotEqual,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Less(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Less,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::LessEqual(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::LessEqual,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::More(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Greater,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::MoreEqual(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::GreaterEqual,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::And(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::And,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::Or(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::Or,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::BitwiseAnd(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::BitwiseAnd,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::BitwiseOr(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::BitwiseOr,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::BitwiseXor(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::BitwiseXor,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::ShiftLeft(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::ShiftLeft,
+                source,
+                file_path,
+                location,
+            ),
+            pt::Expression::ShiftRight(_, left, right) => self.convert_binary_operation(
+                left,
+                right,
+                BinaryOperator::ShiftRight,
+                source,
+                file_path,
+                location,
+            ),
             // Array access
             pt::Expression::ArraySubscript(_, array, index) => {
-                let array_expr = self.arena.alloc(self.convert_expression(array, source, file_path)?);
+                let array_expr = self
+                    .arena
+                    .alloc(self.convert_expression(array, source, file_path)?);
                 let index_expr = if let Some(idx) = index {
-                    Some(self.arena.alloc(self.convert_expression(idx, source, file_path)?))
+                    Some(
+                        self.arena
+                            .alloc(self.convert_expression(idx, source, file_path)?),
+                    )
                 } else {
                     None
                 };
@@ -1001,7 +1203,9 @@ impl<'arena> ArenaParser<'arena> {
             }
             // Unary operations
             pt::Expression::Not(_, expr) => {
-                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                let operand = self
+                    .arena
+                    .alloc(self.convert_expression(expr, source, file_path)?);
                 Ok(Expression::UnaryOperation {
                     operator: UnaryOperator::Not,
                     operand,
@@ -1010,7 +1214,9 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             pt::Expression::BitwiseNot(_, expr) => {
-                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                let operand = self
+                    .arena
+                    .alloc(self.convert_expression(expr, source, file_path)?);
                 Ok(Expression::UnaryOperation {
                     operator: UnaryOperator::BitwiseNot,
                     operand,
@@ -1019,7 +1225,9 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             pt::Expression::Negate(_, expr) => {
-                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                let operand = self
+                    .arena
+                    .alloc(self.convert_expression(expr, source, file_path)?);
                 Ok(Expression::UnaryOperation {
                     operator: UnaryOperator::Minus,
                     operand,
@@ -1028,7 +1236,9 @@ impl<'arena> ArenaParser<'arena> {
                 })
             }
             pt::Expression::UnaryPlus(_, expr) => {
-                let operand = self.arena.alloc(self.convert_expression(expr, source, file_path)?);
+                let operand = self
+                    .arena
+                    .alloc(self.convert_expression(expr, source, file_path)?);
                 Ok(Expression::UnaryOperation {
                     operator: UnaryOperator::Plus,
                     operand,
@@ -1057,8 +1267,12 @@ impl<'arena> ArenaParser<'arena> {
         file_path: &str,
         location: SourceLocation,
     ) -> ParseResult<Expression<'arena>> {
-        let left_expr = self.arena.alloc(self.convert_expression(left, source, file_path)?);
-        let right_expr = self.arena.alloc(self.convert_expression(right, source, file_path)?);
+        let left_expr = self
+            .arena
+            .alloc(self.convert_expression(left, source, file_path)?);
+        let right_expr = self
+            .arena
+            .alloc(self.convert_expression(right, source, file_path)?);
 
         Ok(Expression::BinaryOperation {
             left: left_expr,

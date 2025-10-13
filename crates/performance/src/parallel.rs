@@ -1,12 +1,12 @@
 use anyhow::Result;
 use crossbeam_channel::{Receiver, Sender, bounded, unbounded};
 // use rayon::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::{Arc, atomic::AtomicUsize, atomic::Ordering};
-use std::time::{Duration, Instant};
 use std::thread;
+use std::time::{Duration, Instant};
 
-use detectors::types::{Finding, AnalysisResult};
+use detectors::types::{AnalysisResult, Finding};
 
 /// Parallel execution framework for detector analysis
 pub struct ParallelExecutor {
@@ -118,9 +118,7 @@ pub enum TaskData {
         data: Option<String>,
     },
     /// Batch operation data
-    Batch {
-        sub_tasks: Vec<AnalysisTask>,
-    },
+    Batch { sub_tasks: Vec<AnalysisTask> },
 }
 
 /// Result of task execution
@@ -367,7 +365,10 @@ impl ParallelExecutor {
         }
 
         let total_duration = start_time.elapsed();
-        let successful_tasks = results.iter().filter(|r| matches!(r.status, TaskStatus::Completed)).count();
+        let successful_tasks = results
+            .iter()
+            .filter(|r| matches!(r.status, TaskStatus::Completed))
+            .count();
         let failed_tasks = total_tasks - successful_tasks;
 
         let average_task_duration = if total_tasks > 0 {
@@ -413,7 +414,10 @@ impl ParallelExecutor {
 
         let total_duration = start_time.elapsed();
         let total_tasks = results.len();
-        let successful_tasks = results.iter().filter(|r| matches!(r.status, TaskStatus::Completed)).count();
+        let successful_tasks = results
+            .iter()
+            .filter(|r| matches!(r.status, TaskStatus::Completed))
+            .count();
         let failed_tasks = total_tasks - successful_tasks;
 
         let summary = ExecutionSummary {
@@ -421,8 +425,16 @@ impl ParallelExecutor {
             successful_tasks,
             failed_tasks,
             total_duration,
-            average_task_duration: if total_tasks > 0 { total_duration / total_tasks as u32 } else { Duration::ZERO },
-            throughput: if total_duration.as_secs_f64() > 0.0 { total_tasks as f64 / total_duration.as_secs_f64() } else { 0.0 },
+            average_task_duration: if total_tasks > 0 {
+                total_duration / total_tasks as u32
+            } else {
+                Duration::ZERO
+            },
+            throughput: if total_duration.as_secs_f64() > 0.0 {
+                total_tasks as f64 / total_duration.as_secs_f64()
+            } else {
+                0.0
+            },
         };
 
         let performance = ParallelPerformanceMetrics {
@@ -647,7 +659,8 @@ impl ParallelExecutor {
         let tasks_failed = self.stats.tasks_failed.load(Ordering::Relaxed);
         let active_tasks = self.active_tasks.load(Ordering::Relaxed);
 
-        let worker_stats: Vec<_> = self.workers
+        let worker_stats: Vec<_> = self
+            .workers
             .iter()
             .map(|w| WorkerStatsSnapshot {
                 worker_id: w.id,
@@ -676,7 +689,10 @@ impl ParallelExecutor {
 
         // Wait for workers to finish
         for worker in self.workers {
-            worker.handle.join().map_err(|_| anyhow::anyhow!("Worker thread panicked"))?;
+            worker
+                .handle
+                .join()
+                .map_err(|_| anyhow::anyhow!("Worker thread panicked"))?;
         }
 
         Ok(())

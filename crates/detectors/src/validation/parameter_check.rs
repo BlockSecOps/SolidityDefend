@@ -1,10 +1,10 @@
 use anyhow::Result;
+use ast;
 use std::any::Any;
 use std::collections::HashSet;
-use ast;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector, AstAnalyzer};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -17,7 +17,8 @@ impl ParameterConsistencyDetector {
             base: BaseDetector::new(
                 DetectorId::new("parameter-consistency"),
                 "Parameter Consistency Check".to_string(),
-                "Detects inconsistent parameter validation and mismatched array lengths".to_string(),
+                "Detects inconsistent parameter validation and mismatched array lengths"
+                    .to_string(),
                 vec![DetectorCategory::Validation],
                 Severity::Medium,
             ),
@@ -25,7 +26,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Analyze a function for parameter consistency issues
-    fn analyze_function_for_parameter_consistency(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> Vec<Finding> {
+    fn analyze_function_for_parameter_consistency(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         // Extract parameter information
@@ -74,17 +79,15 @@ impl ParameterConsistencyDetector {
     /// Analyze parameter type to extract useful information
     fn analyze_parameter_type(&self, type_name: &ast::TypeName<'_>) -> ParameterType {
         match type_name {
-            ast::TypeName::Elementary(elementary) => {
-                match elementary {
-                    ast::ElementaryType::Address => ParameterType::Address,
-                    ast::ElementaryType::Bool => ParameterType::Bool,
-                    ast::ElementaryType::Uint(_) => ParameterType::Uint,
-                    ast::ElementaryType::Int(_) => ParameterType::Int,
-                    ast::ElementaryType::Bytes => ParameterType::Bytes,
-                    ast::ElementaryType::String => ParameterType::String,
-                    _ => ParameterType::Other,
-                }
-            }
+            ast::TypeName::Elementary(elementary) => match elementary {
+                ast::ElementaryType::Address => ParameterType::Address,
+                ast::ElementaryType::Bool => ParameterType::Bool,
+                ast::ElementaryType::Uint(_) => ParameterType::Uint,
+                ast::ElementaryType::Int(_) => ParameterType::Int,
+                ast::ElementaryType::Bytes => ParameterType::Bytes,
+                ast::ElementaryType::String => ParameterType::String,
+                _ => ParameterType::Other,
+            },
             ast::TypeName::Array { .. } => ParameterType::Array,
             ast::TypeName::Mapping { .. } => ParameterType::Mapping,
             ast::TypeName::UserDefined(_) => ParameterType::UserDefined,
@@ -97,12 +100,13 @@ impl ParameterConsistencyDetector {
         &self,
         params: &[ParameterInfo],
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         // Find array parameters
-        let array_params: Vec<_> = params.iter()
+        let array_params: Vec<_> = params
+            .iter()
             .filter(|p| matches!(p.type_info, ParameterType::Array))
             .collect();
 
@@ -116,7 +120,11 @@ impl ParameterConsistencyDetector {
                     let message = format!(
                         "Function '{}' has multiple array parameters ({}) but no length consistency validation",
                         function.name.name,
-                        array_names.iter().map(|s| s.as_str()).collect::<Vec<_>>().join(", ")
+                        array_names
+                            .iter()
+                            .map(|s| s.as_str())
+                            .collect::<Vec<_>>()
+                            .join(", ")
                     );
 
                     let finding = self.base.create_finding(
@@ -153,7 +161,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if statement validates array lengths
-    fn statement_validates_array_lengths(&self, stmt: &ast::Statement<'_>, array_names: &[&String]) -> bool {
+    fn statement_validates_array_lengths(
+        &self,
+        stmt: &ast::Statement<'_>,
+        array_names: &[&String],
+    ) -> bool {
         match stmt {
             ast::Statement::Expression(expr) => {
                 self.expression_validates_array_lengths(expr, array_names)
@@ -171,9 +183,17 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if expression validates array lengths
-    fn expression_validates_array_lengths(&self, expr: &ast::Expression<'_>, array_names: &[&String]) -> bool {
+    fn expression_validates_array_lengths(
+        &self,
+        expr: &ast::Expression<'_>,
+        array_names: &[&String],
+    ) -> bool {
         match expr {
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 // Check for require() calls
                 if let ast::Expression::Identifier(id) = function {
                     if id.name == "require" && !arguments.is_empty() {
@@ -188,16 +208,26 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if condition compares array lengths
-    fn condition_compares_array_lengths(&self, condition: &ast::Expression<'_>, array_names: &[&String]) -> bool {
+    fn condition_compares_array_lengths(
+        &self,
+        condition: &ast::Expression<'_>,
+        array_names: &[&String],
+    ) -> bool {
         match condition {
-            ast::Expression::BinaryOperation { operator, left, right, .. } => {
+            ast::Expression::BinaryOperation {
+                operator,
+                left,
+                right,
+                ..
+            } => {
                 if matches!(operator, ast::BinaryOperator::Equal) {
                     // Check if both sides are array.length references
                     let left_array = self.get_array_length_reference(left);
                     let right_array = self.get_array_length_reference(right);
 
                     if let (Some(left_name), Some(right_name)) = (left_array, right_array) {
-                        return array_names.contains(&&left_name) && array_names.contains(&&right_name);
+                        return array_names.contains(&&left_name)
+                            && array_names.contains(&&right_name);
                     }
                 }
             }
@@ -209,7 +239,9 @@ impl ParameterConsistencyDetector {
     /// Get array name if expression is array.length
     fn get_array_length_reference(&self, expr: &ast::Expression<'_>) -> Option<String> {
         match expr {
-            ast::Expression::MemberAccess { expression, member, .. } => {
+            ast::Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 if member.name == "length" {
                     if let ast::Expression::Identifier(id) = expression {
                         return Some(id.name.to_string());
@@ -226,7 +258,7 @@ impl ParameterConsistencyDetector {
         &self,
         params: &[ParameterInfo],
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
@@ -241,20 +273,26 @@ impl ParameterConsistencyDetector {
         ];
 
         for (first_pattern, second_pattern) in &related_pairs {
-            let first_params: Vec<_> = params.iter()
-                .filter(|p| p.name.to_lowercase().contains(first_pattern) && matches!(p.type_info, ParameterType::Array))
+            let first_params: Vec<_> = params
+                .iter()
+                .filter(|p| {
+                    p.name.to_lowercase().contains(first_pattern)
+                        && matches!(p.type_info, ParameterType::Array)
+                })
                 .collect();
 
-            let second_params: Vec<_> = params.iter()
-                .filter(|p| p.name.to_lowercase().contains(second_pattern) && matches!(p.type_info, ParameterType::Array))
+            let second_params: Vec<_> = params
+                .iter()
+                .filter(|p| {
+                    p.name.to_lowercase().contains(second_pattern)
+                        && matches!(p.type_info, ParameterType::Array)
+                })
                 .collect();
 
             if !first_params.is_empty() && !second_params.is_empty() {
                 let message = format!(
                     "Function '{}' has related array parameters '{}' and '{}' that should be validated for equal length",
-                    function.name.name,
-                    first_params[0].name,
-                    second_params[0].name
+                    function.name.name, first_params[0].name, second_params[0].name
                 );
 
                 let finding = self.base.create_finding(
@@ -281,7 +319,7 @@ impl ParameterConsistencyDetector {
         &self,
         params: &[ParameterInfo],
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
@@ -289,7 +327,8 @@ impl ParameterConsistencyDetector {
             let validated_params = self.find_validated_parameters(body);
 
             for param in params {
-                if self.parameter_needs_validation(param) && !validated_params.contains(&param.name) {
+                if self.parameter_needs_validation(param) && !validated_params.contains(&param.name)
+                {
                     let severity = self.determine_validation_severity(param, function);
                     let message = format!(
                         "Parameter '{}' of type '{}' may need validation",
@@ -297,18 +336,18 @@ impl ParameterConsistencyDetector {
                         self.type_to_string(&param.type_info)
                     );
 
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        message,
-                        param.location.start().line() as u32,
-                        param.location.start().column() as u32,
-                        param.location.byte_length() as u32,
-                        severity,
-                    )
-                    .with_cwe(20)
-                    .with_fix_suggestion(
-                        self.suggest_validation_for_parameter(param)
-                    );
+                    let finding = self
+                        .base
+                        .create_finding_with_severity(
+                            ctx,
+                            message,
+                            param.location.start().line() as u32,
+                            param.location.start().column() as u32,
+                            param.location.byte_length() as u32,
+                            severity,
+                        )
+                        .with_cwe(20)
+                        .with_fix_suggestion(self.suggest_validation_for_parameter(param));
                     findings.push(finding);
                 }
             }
@@ -323,11 +362,11 @@ impl ParameterConsistencyDetector {
             ParameterType::Address => true,
             ParameterType::Uint | ParameterType::Int => {
                 // Numeric parameters often need range validation
-                param.name.to_lowercase().contains("amount") ||
-                param.name.to_lowercase().contains("value") ||
-                param.name.to_lowercase().contains("price") ||
-                param.name.to_lowercase().contains("rate") ||
-                param.name.to_lowercase().contains("percent")
+                param.name.to_lowercase().contains("amount")
+                    || param.name.to_lowercase().contains("value")
+                    || param.name.to_lowercase().contains("price")
+                    || param.name.to_lowercase().contains("rate")
+                    || param.name.to_lowercase().contains("percent")
             }
             ParameterType::Array => true,
             _ => false,
@@ -335,12 +374,17 @@ impl ParameterConsistencyDetector {
     }
 
     /// Determine severity for missing validation
-    fn determine_validation_severity(&self, param: &ParameterInfo, function: &ast::Function<'_>) -> Severity {
+    fn determine_validation_severity(
+        &self,
+        param: &ParameterInfo,
+        function: &ast::Function<'_>,
+    ) -> Severity {
         // Critical parameters in critical functions
         if matches!(param.type_info, ParameterType::Address) {
-            if param.name.to_lowercase().contains("owner") ||
-               param.name.to_lowercase().contains("admin") ||
-               function.name.name.to_lowercase().contains("transfer") {
+            if param.name.to_lowercase().contains("owner")
+                || param.name.to_lowercase().contains("admin")
+                || function.name.name.to_lowercase().contains("transfer")
+            {
                 return Severity::High;
             }
         }
@@ -373,7 +417,10 @@ impl ParameterConsistencyDetector {
     fn suggest_validation_for_parameter(&self, param: &ParameterInfo) -> String {
         match param.type_info {
             ParameterType::Address => {
-                format!("require({} != address(0), \"Invalid address\");", param.name)
+                format!(
+                    "require({} != address(0), \"Invalid address\");",
+                    param.name
+                )
             }
             ParameterType::Uint | ParameterType::Int => {
                 if param.name.to_lowercase().contains("amount") {
@@ -383,7 +430,10 @@ impl ParameterConsistencyDetector {
                 }
             }
             ParameterType::Array => {
-                format!("require({}.length > 0, \"Array cannot be empty\");", param.name)
+                format!(
+                    "require({}.length > 0, \"Array cannot be empty\");",
+                    param.name
+                )
             }
             _ => "Add appropriate validation".to_string(),
         }
@@ -401,7 +451,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect validated parameters from statement
-    fn collect_validated_parameters_from_stmt(&self, stmt: &ast::Statement<'_>, validated: &mut HashSet<String>) {
+    fn collect_validated_parameters_from_stmt(
+        &self,
+        stmt: &ast::Statement<'_>,
+        validated: &mut HashSet<String>,
+    ) {
         match stmt {
             ast::Statement::Expression(expr) => {
                 self.collect_validated_parameters_from_expr(expr, validated);
@@ -416,9 +470,17 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect validated parameters from expression
-    fn collect_validated_parameters_from_expr(&self, expr: &ast::Expression<'_>, validated: &mut HashSet<String>) {
+    fn collect_validated_parameters_from_expr(
+        &self,
+        expr: &ast::Expression<'_>,
+        validated: &mut HashSet<String>,
+    ) {
         match expr {
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 // Check for require() calls
                 if let ast::Expression::Identifier(id) = function {
                     if id.name == "require" && !arguments.is_empty() {
@@ -431,7 +493,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Extract validated parameters from require condition
-    fn extract_validated_params_from_condition(&self, condition: &ast::Expression<'_>, validated: &mut HashSet<String>) {
+    fn extract_validated_params_from_condition(
+        &self,
+        condition: &ast::Expression<'_>,
+        validated: &mut HashSet<String>,
+    ) {
         match condition {
             ast::Expression::BinaryOperation { left, right, .. } => {
                 self.extract_param_names_from_expr(left, validated);
@@ -442,7 +508,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Extract parameter names from expression
-    fn extract_param_names_from_expr(&self, expr: &ast::Expression<'_>, validated: &mut HashSet<String>) {
+    fn extract_param_names_from_expr(
+        &self,
+        expr: &ast::Expression<'_>,
+        validated: &mut HashSet<String>,
+    ) {
         match expr {
             ast::Expression::Identifier(id) => {
                 validated.insert(id.name.to_string());
@@ -459,7 +529,7 @@ impl ParameterConsistencyDetector {
         &self,
         params: &[ParameterInfo],
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
@@ -467,26 +537,32 @@ impl ParameterConsistencyDetector {
         if params.len() >= 2 {
             // Address parameters should typically come before amount parameters
             for i in 0..params.len() - 1 {
-                if matches!(params[i].type_info, ParameterType::Uint | ParameterType::Int) &&
-                   matches!(params[i + 1].type_info, ParameterType::Address) &&
-                   params[i].name.to_lowercase().contains("amount") {
-
+                if matches!(
+                    params[i].type_info,
+                    ParameterType::Uint | ParameterType::Int
+                ) && matches!(params[i + 1].type_info, ParameterType::Address)
+                    && params[i].name.to_lowercase().contains("amount")
+                {
                     let message = format!(
                         "Parameter ordering in function '{}': address parameter '{}' should typically come before amount parameter '{}'",
-                        function.name.name, params[i + 1].name, params[i].name
+                        function.name.name,
+                        params[i + 1].name,
+                        params[i].name
                     );
 
-                    let finding = self.base.create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.location.byte_length() as u32,
-                    )
-                    .with_cwe(1188) // CWE-1188: Insecure Default Initialization of Resource
-                    .with_fix_suggestion(
-                        "Consider reordering parameters: address before amount".to_string()
-                    );
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            function.name.location.start().line() as u32,
+                            function.name.location.start().column() as u32,
+                            function.name.location.byte_length() as u32,
+                        )
+                        .with_cwe(1188) // CWE-1188: Insecure Default Initialization of Resource
+                        .with_fix_suggestion(
+                            "Consider reordering parameters: address before amount".to_string(),
+                        );
                     findings.push(finding);
                 }
             }
@@ -500,14 +576,22 @@ impl ParameterConsistencyDetector {
         &self,
         params: &[ParameterInfo],
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         // Check for parameters with names that might shadow state variables
         let common_state_var_names = [
-            "owner", "admin", "balance", "token", "paused", "initialized",
-            "totalSupply", "decimals", "name", "symbol"
+            "owner",
+            "admin",
+            "balance",
+            "token",
+            "paused",
+            "initialized",
+            "totalSupply",
+            "decimals",
+            "name",
+            "symbol",
         ];
 
         for param in params {
@@ -517,17 +601,20 @@ impl ParameterConsistencyDetector {
                     param.name, function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    param.location.start().line() as u32,
-                    param.location.start().column() as u32,
-                    param.location.byte_length() as u32,
-                )
-                .with_cwe(1177) // CWE-1177: Use of Prohibited Code
-                .with_fix_suggestion(
-                    format!("Consider renaming parameter '{}' to avoid shadowing", param.name)
-                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        param.location.start().line() as u32,
+                        param.location.start().column() as u32,
+                        param.location.byte_length() as u32,
+                    )
+                    .with_cwe(1177) // CWE-1177: Use of Prohibited Code
+                    .with_fix_suggestion(format!(
+                        "Consider renaming parameter '{}' to avoid shadowing",
+                        param.name
+                    ));
                 findings.push(finding);
             }
         }
@@ -540,7 +627,7 @@ impl ParameterConsistencyDetector {
         &self,
         block: &ast::Block<'_>,
         params: &[ParameterInfo],
-        ctx: &AnalysisContext<'_>
+        ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
@@ -549,17 +636,20 @@ impl ParameterConsistencyDetector {
         for param in params {
             if !used_params.contains(&param.name) {
                 let message = format!("Parameter '{}' is declared but never used", param.name);
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    param.location.start().line() as u32,
-                    param.location.start().column() as u32,
-                    param.location.byte_length() as u32,
-                )
-                .with_cwe(563) // CWE-563: Assignment to Variable without Use
-                .with_fix_suggestion(
-                    format!("Remove unused parameter '{}' or use it in the function", param.name)
-                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        param.location.start().line() as u32,
+                        param.location.start().column() as u32,
+                        param.location.byte_length() as u32,
+                    )
+                    .with_cwe(563) // CWE-563: Assignment to Variable without Use
+                    .with_fix_suggestion(format!(
+                        "Remove unused parameter '{}' or use it in the function",
+                        param.name
+                    ));
                 findings.push(finding);
             }
         }
@@ -579,15 +669,27 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect used identifiers from statement
-    fn collect_used_identifiers_from_stmt(&self, stmt: &ast::Statement<'_>, used: &mut HashSet<String>) {
+    fn collect_used_identifiers_from_stmt(
+        &self,
+        stmt: &ast::Statement<'_>,
+        used: &mut HashSet<String>,
+    ) {
         match stmt {
             ast::Statement::Expression(expr) => {
                 self.collect_used_identifiers_from_expr(expr, used);
             }
-            ast::Statement::VariableDeclaration { initial_value: Some(expr), .. } => {
+            ast::Statement::VariableDeclaration {
+                initial_value: Some(expr),
+                ..
+            } => {
                 self.collect_used_identifiers_from_expr(expr, used);
             }
-            ast::Statement::If { condition, then_branch, else_branch, .. } => {
+            ast::Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 self.collect_used_identifiers_from_expr(condition, used);
                 self.collect_used_identifiers_from_stmt(then_branch, used);
                 if let Some(else_stmt) = else_branch {
@@ -604,7 +706,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect used identifiers from expression
-    fn collect_used_identifiers_from_expr(&self, expr: &ast::Expression<'_>, used: &mut HashSet<String>) {
+    fn collect_used_identifiers_from_expr(
+        &self,
+        expr: &ast::Expression<'_>,
+        used: &mut HashSet<String>,
+    ) {
         match expr {
             ast::Expression::Identifier(id) => {
                 used.insert(id.name.to_string());
@@ -617,7 +723,11 @@ impl ParameterConsistencyDetector {
                 self.collect_used_identifiers_from_expr(left, used);
                 self.collect_used_identifiers_from_expr(right, used);
             }
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 self.collect_used_identifiers_from_expr(function, used);
                 for arg in arguments {
                     self.collect_used_identifiers_from_expr(arg, used);
@@ -700,21 +810,37 @@ impl Detector for ParameterConsistencyDetector {
 }
 
 impl AstAnalyzer for ParameterConsistencyDetector {
-    fn analyze_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         Ok(self.analyze_function_for_parameter_consistency(function, ctx))
     }
 
-    fn analyze_statement(&self, _statement: &ast::Statement<'_>, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_statement(
+        &self,
+        _statement: &ast::Statement<'_>,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         // Parameter consistency is primarily a function-level analysis
         Ok(Vec::new())
     }
 
-    fn analyze_expression(&self, _expression: &ast::Expression<'_>, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_expression(
+        &self,
+        _expression: &ast::Expression<'_>,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         // Parameter consistency is primarily a function-level analysis
         Ok(Vec::new())
     }
 
-    fn analyze_modifier(&self, _modifier: &ast::Modifier<'_>, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_modifier(
+        &self,
+        _modifier: &ast::Modifier<'_>,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         // Parameter consistency is primarily a function-level analysis
         Ok(Vec::new())
     }

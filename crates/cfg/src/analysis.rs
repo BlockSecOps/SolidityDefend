@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 
-use ir::BlockId;
-use crate::graph::ControlFlowGraph;
+use crate::blocks::{BasicBlockAnalyzer, BasicBlockInfo};
 use crate::builder::{LoopAnalysis, NaturalLoop};
 use crate::dominance::DominatorTree;
-use crate::blocks::{BasicBlockAnalyzer, BasicBlockInfo};
+use crate::graph::ControlFlowGraph;
+use ir::BlockId;
 
 /// Comprehensive CFG analysis combining multiple analysis types
 pub struct CfgAnalysisEngine<'a> {
@@ -69,7 +69,10 @@ impl<'a> CfgAnalysisEngine<'a> {
         // McCabe's cyclomatic complexity: E - N + 2P
         // where E = edges, N = nodes, P = connected components (assume 1)
         let cyclomatic_complexity = if stats.block_count > 0 {
-            stats.edge_count.saturating_sub(stats.block_count).saturating_add(2)
+            stats
+                .edge_count
+                .saturating_sub(stats.block_count)
+                .saturating_add(2)
         } else {
             0
         };
@@ -119,12 +122,15 @@ impl<'a> CfgAnalysisEngine<'a> {
     }
 
     /// Compute nesting depth for a specific loop
-    fn compute_loop_nesting_depth(&self, target_loop: &NaturalLoop, all_loops: &[NaturalLoop]) -> usize {
+    fn compute_loop_nesting_depth(
+        &self,
+        target_loop: &NaturalLoop,
+        all_loops: &[NaturalLoop],
+    ) -> usize {
         let mut depth = 1; // The loop itself
 
         for other_loop in all_loops {
-            if other_loop.header != target_loop.header &&
-               other_loop.contains(target_loop.header) {
+            if other_loop.header != target_loop.header && other_loop.contains(target_loop.header) {
                 depth += 1;
             }
         }
@@ -264,7 +270,8 @@ impl<'a> CfgAnalysisEngine<'a> {
                     optimizations.push(LoopOptimization {
                         loop_header: loop_info.header,
                         optimization_type: LoopOptimizationType::InvariantCodeMotion,
-                        description: "Large loop may benefit from invariant code motion".to_string(),
+                        description: "Large loop may benefit from invariant code motion"
+                            .to_string(),
                     });
                 }
 
@@ -331,7 +338,11 @@ pub struct ComplexityMetrics {
 
 impl std::fmt::Display for ComplexityMetrics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "  Cyclomatic Complexity: {}\n", self.cyclomatic_complexity)?;
+        write!(
+            f,
+            "  Cyclomatic Complexity: {}\n",
+            self.cyclomatic_complexity
+        )?;
         write!(f, "  Essential Complexity: {}\n", self.essential_complexity)?;
         write!(f, "  Max Nesting Depth: {}\n", self.max_nesting_depth)?;
         write!(f, "  Estimated Total Paths: {}", self.total_paths)
@@ -376,7 +387,11 @@ impl std::fmt::Display for OptimizationOpportunities {
         write!(f, "  Mergeable Blocks: {:?}\n", self.mergeable_blocks)?;
         write!(f, "  Empty Blocks: {:?}\n", self.empty_blocks)?;
         write!(f, "  Redundant Branches: {:?}\n", self.redundant_branches)?;
-        write!(f, "  Loop Optimizations: {} opportunities", self.loop_optimizations.len())
+        write!(
+            f,
+            "  Loop Optimizations: {} opportunities",
+            self.loop_optimizations.len()
+        )
     }
 }
 
@@ -414,8 +429,10 @@ mod tests {
         cfg.add_block(block3, vec![]);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }

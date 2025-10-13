@@ -1,10 +1,10 @@
+use anyhow::Result;
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::sync::RwLock;
-use dashmap::DashMap;
-use anyhow::Result;
-use serde::{Serialize, Deserialize};
 
-use crate::{CacheKey, CacheEntry, CacheConfig};
+use crate::{CacheConfig, CacheEntry, CacheKey};
 
 /// Cached file content and metadata
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -165,7 +165,9 @@ impl FileCache {
     /// Evict least recently used entries
     fn evict_lru_entries(&self) {
         // Collect entries with their access times
-        let mut entries: Vec<_> = self.cache.iter()
+        let mut entries: Vec<_> = self
+            .cache
+            .iter()
             .map(|entry| (entry.key().clone(), entry.value().accessed_at))
             .collect();
 
@@ -193,10 +195,10 @@ impl FileCache {
 
 /// Estimate memory usage of a cache entry
 fn estimate_entry_size(entry: &CacheEntry<CachedFile>) -> usize {
-    entry.data.content.len() +
-    entry.data.path.to_string_lossy().len() +
-    entry.key.content_hash.len() +
-    entry.key.file_path.len() +
-    entry.key.config_hash.len() +
-    64 // Approximate overhead
+    entry.data.content.len()
+        + entry.data.path.to_string_lossy().len()
+        + entry.key.content_hash.len()
+        + entry.key.file_path.len()
+        + entry.key.config_hash.len()
+        + 64 // Approximate overhead
 }

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for unchecked arithmetic operations that can overflow/underflow
 pub struct UncheckedMathDetector {
@@ -57,8 +57,7 @@ impl Detector for UncheckedMathDetector {
                     let message = format!(
                         "Function '{}' contains unchecked arithmetic operations. {} \
                         Unchecked math can silently overflow/underflow leading to incorrect calculations and potential exploits.",
-                        function.name.name,
-                        issue_desc
+                        function.name.name, issue_desc
                     );
 
                     let finding = self.base.create_finding(
@@ -92,7 +91,11 @@ impl Detector for UncheckedMathDetector {
 }
 
 impl UncheckedMathDetector {
-    fn check_unchecked_math(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<Vec<String>> {
+    fn check_unchecked_math(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<Vec<String>> {
         if function.body.is_none() {
             return None;
         }
@@ -108,10 +111,16 @@ impl UncheckedMathDetector {
             let has_exponentiation = func_source.contains("**");
 
             if has_addition {
-                issues.push("Unchecked addition detected. Addition can overflow without reversion".to_string());
+                issues.push(
+                    "Unchecked addition detected. Addition can overflow without reversion"
+                        .to_string(),
+                );
             }
             if has_subtraction {
-                issues.push("Unchecked subtraction detected. Subtraction can underflow without reversion".to_string());
+                issues.push(
+                    "Unchecked subtraction detected. Subtraction can underflow without reversion"
+                        .to_string(),
+                );
             }
             if has_multiplication {
                 issues.push("Unchecked multiplication detected. Multiplication can overflow without reversion".to_string());
@@ -123,27 +132,30 @@ impl UncheckedMathDetector {
 
         // Pattern 2: Pre-0.8 Solidity without SafeMath
         let contract_source = ctx.source_code.as_str();
-        let is_pre_08 = contract_source.contains("pragma solidity ^0.7") ||
-                       contract_source.contains("pragma solidity 0.7") ||
-                       contract_source.contains("pragma solidity ^0.6") ||
-                       contract_source.contains("pragma solidity 0.6") ||
-                       contract_source.contains("pragma solidity ^0.5") ||
-                       contract_source.contains("pragma solidity 0.5");
+        let is_pre_08 = contract_source.contains("pragma solidity ^0.7")
+            || contract_source.contains("pragma solidity 0.7")
+            || contract_source.contains("pragma solidity ^0.6")
+            || contract_source.contains("pragma solidity 0.6")
+            || contract_source.contains("pragma solidity ^0.5")
+            || contract_source.contains("pragma solidity 0.5");
 
         if is_pre_08 {
-            let uses_safemath = contract_source.contains("SafeMath") ||
-                               func_source.contains(".add(") ||
-                               func_source.contains(".sub(") ||
-                               func_source.contains(".mul(") ||
-                               func_source.contains(".div(");
+            let uses_safemath = contract_source.contains("SafeMath")
+                || func_source.contains(".add(")
+                || func_source.contains(".sub(")
+                || func_source.contains(".mul(")
+                || func_source.contains(".div(");
 
             if !uses_safemath {
-                let has_arithmetic = func_source.contains(" + ") ||
-                                   func_source.contains(" - ") ||
-                                   func_source.contains(" * ");
+                let has_arithmetic = func_source.contains(" + ")
+                    || func_source.contains(" - ")
+                    || func_source.contains(" * ");
 
                 if has_arithmetic {
-                    issues.push("Pre-Solidity 0.8 arithmetic without SafeMath. No overflow protection".to_string());
+                    issues.push(
+                        "Pre-Solidity 0.8 arithmetic without SafeMath. No overflow protection"
+                            .to_string(),
+                    );
                 }
             }
         }

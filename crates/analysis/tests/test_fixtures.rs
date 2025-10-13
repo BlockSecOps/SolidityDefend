@@ -1,7 +1,7 @@
 use anyhow::Result;
 use ast::AstArena;
-use parser::Parser;
 use ast::SourceFile;
+use parser::Parser;
 
 /// Arena-allocated AST test fixtures for realistic scenarios
 pub struct TestFixtures<'a> {
@@ -19,7 +19,8 @@ impl<'a> TestFixtures<'a> {
 
     /// Parse Solidity source code into arena-allocated AST
     pub fn parse_source(&self, source: &str) -> Result<SourceFile<'a>> {
-        self.parser.parse(self.arena, source, "test.sol")
+        self.parser
+            .parse(self.arena, source, "test.sol")
             .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))
     }
 
@@ -512,7 +513,11 @@ mod tests {
         for (i, source) in sources.iter().enumerate() {
             match fixtures.parse_source(source) {
                 Ok(ast) => {
-                    assert!(!ast.contracts.is_empty(), "Source {} should have contracts", i);
+                    assert!(
+                        !ast.contracts.is_empty(),
+                        "Source {} should have contracts",
+                        i
+                    );
                     println!("✅ Successfully parsed test fixture {}", i);
                 }
                 Err(e) => {
@@ -534,7 +539,10 @@ mod tests {
             ("DeFi", TestFixtures::complex_defi_source()),
             ("MultiSig", TestFixtures::vulnerable_multisig_source()),
             ("Auction", TestFixtures::vulnerable_auction_source()),
-            ("NFT Marketplace", TestFixtures::vulnerable_nft_marketplace_source()),
+            (
+                "NFT Marketplace",
+                TestFixtures::vulnerable_nft_marketplace_source(),
+            ),
         ];
 
         for (name, source) in vulnerable_sources.iter() {
@@ -542,12 +550,17 @@ mod tests {
                 assert!(!ast.contracts.is_empty(), "{} should have contracts", name);
 
                 // Verify the contract has functions (most vulnerabilities are in functions)
-                let has_functions = ast.contracts.iter()
+                let has_functions = ast
+                    .contracts
+                    .iter()
                     .any(|contract| !contract.functions.is_empty());
                 assert!(has_functions, "{} should have functions to analyze", name);
 
-                println!("✅ {} contract parsed successfully with {} contracts",
-                    name, ast.contracts.len());
+                println!(
+                    "✅ {} contract parsed successfully with {} contracts",
+                    name,
+                    ast.contracts.len()
+                );
             }
         }
     }
@@ -565,7 +578,9 @@ mod tests {
                 assert!(!contract.functions.is_empty());
 
                 // Should have functions with complex control flow
-                let complex_function = contract.functions.iter()
+                let complex_function = contract
+                    .functions
+                    .iter()
                     .find(|f| f.name.name.contains("complexFunction"));
                 assert!(complex_function.is_some(), "Should have complexFunction");
 

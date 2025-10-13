@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::url_fetcher::{UrlFetcher, ExplorerPlatform, UrlType, ContractSource};
+    use crate::url_fetcher::{ContractSource, ExplorerPlatform, UrlFetcher, UrlType};
     use std::env;
 
     const SAMPLE_CONTRACT_ADDRESS: &str = "0x8a90CAb2b38dba80c64b7734e58Ee1dB38B8992e";
@@ -50,7 +50,10 @@ mod tests {
                 UrlType::Contract(SAMPLE_CONTRACT_ADDRESS.to_string()),
             ),
             (
-                format!("https://polygonscan.com/address/{}", SAMPLE_CONTRACT_ADDRESS),
+                format!(
+                    "https://polygonscan.com/address/{}",
+                    SAMPLE_CONTRACT_ADDRESS
+                ),
                 ExplorerPlatform::Polygonscan,
                 UrlType::Contract(SAMPLE_CONTRACT_ADDRESS.to_string()),
             ),
@@ -86,7 +89,7 @@ mod tests {
             "not_a_url_at_all",
             "ftp://etherscan.io/address/0x123",
             "https://etherscan.io/address/", // Missing address
-            "https://etherscan.io/tx/", // Missing transaction hash
+            "https://etherscan.io/tx/",      // Missing transaction hash
         ];
 
         for url in invalid_urls {
@@ -101,14 +104,35 @@ mod tests {
 
         let platform_tests = vec![
             ("https://etherscan.io/tx/0x123", ExplorerPlatform::Etherscan),
-            ("https://goerli.etherscan.io/tx/0x123", ExplorerPlatform::Etherscan),
-            ("https://sepolia.etherscan.io/tx/0x123", ExplorerPlatform::Etherscan),
-            ("https://polygonscan.com/address/0x123", ExplorerPlatform::Polygonscan),
-            ("https://mumbai.polygonscan.com/address/0x123", ExplorerPlatform::Polygonscan),
+            (
+                "https://goerli.etherscan.io/tx/0x123",
+                ExplorerPlatform::Etherscan,
+            ),
+            (
+                "https://sepolia.etherscan.io/tx/0x123",
+                ExplorerPlatform::Etherscan,
+            ),
+            (
+                "https://polygonscan.com/address/0x123",
+                ExplorerPlatform::Polygonscan,
+            ),
+            (
+                "https://mumbai.polygonscan.com/address/0x123",
+                ExplorerPlatform::Polygonscan,
+            ),
             ("https://bscscan.com/tx/0x123", ExplorerPlatform::BscScan),
-            ("https://testnet.bscscan.com/tx/0x123", ExplorerPlatform::BscScan),
-            ("https://arbiscan.io/address/0x123", ExplorerPlatform::Arbiscan),
-            ("https://goerli.arbiscan.io/address/0x123", ExplorerPlatform::Arbiscan),
+            (
+                "https://testnet.bscscan.com/tx/0x123",
+                ExplorerPlatform::BscScan,
+            ),
+            (
+                "https://arbiscan.io/address/0x123",
+                ExplorerPlatform::Arbiscan,
+            ),
+            (
+                "https://goerli.arbiscan.io/address/0x123",
+                ExplorerPlatform::Arbiscan,
+            ),
         ];
 
         for (url, expected_platform) in platform_tests {
@@ -116,7 +140,11 @@ mod tests {
             assert!(result.is_ok(), "Failed to parse URL: {}", url);
 
             let (platform, _) = result.unwrap();
-            assert_eq!(platform, expected_platform, "Wrong platform for URL: {}", url);
+            assert_eq!(
+                platform, expected_platform,
+                "Wrong platform for URL: {}",
+                url
+            );
         }
     }
 
@@ -181,7 +209,8 @@ contract TestContract {
         return "Hello, World!";
     }
 }
-"#.to_string(),
+"#
+            .to_string(),
             compiler_version: "v0.8.19+commit.7dd6d404".to_string(),
             optimization: true,
             optimization_runs: 200,
@@ -198,13 +227,28 @@ contract TestContract {
         let temp_path = result.unwrap();
 
         // Verify file exists and contains expected content
-        assert!(std::path::Path::new(&temp_path).exists(), "Temporary file does not exist");
+        assert!(
+            std::path::Path::new(&temp_path).exists(),
+            "Temporary file does not exist"
+        );
 
         let content = std::fs::read_to_string(&temp_path).unwrap();
-        assert!(content.contains("TestContract"), "File content missing contract name");
-        assert!(content.contains(SAMPLE_CONTRACT_ADDRESS), "File content missing contract address");
-        assert!(content.contains("pragma solidity"), "File content missing Solidity pragma");
-        assert!(content.contains("Hello, World!"), "File content missing contract code");
+        assert!(
+            content.contains("TestContract"),
+            "File content missing contract name"
+        );
+        assert!(
+            content.contains(SAMPLE_CONTRACT_ADDRESS),
+            "File content missing contract address"
+        );
+        assert!(
+            content.contains("pragma solidity"),
+            "File content missing Solidity pragma"
+        );
+        assert!(
+            content.contains("Hello, World!"),
+            "File content missing contract code"
+        );
 
         // Clean up
         let _ = std::fs::remove_file(&temp_path);
@@ -237,8 +281,14 @@ contract TestContract {
         assert!(result.is_ok(), "Failed to extract main contract from JSON");
 
         let extracted = result.unwrap();
-        assert!(extracted.contains("contract TestContract"), "Extracted content missing main contract");
-        assert!(extracted.contains("Hello World"), "Extracted content missing contract content");
+        assert!(
+            extracted.contains("contract TestContract"),
+            "Extracted content missing main contract"
+        );
+        assert!(
+            extracted.contains("Hello World"),
+            "Extracted content missing contract content"
+        );
     }
 
     // Integration test - requires API key to run
@@ -254,8 +304,7 @@ contract TestContract {
             }
         };
 
-        let fetcher = UrlFetcher::new()
-            .with_api_key(ExplorerPlatform::Etherscan, api_key);
+        let fetcher = UrlFetcher::new().with_api_key(ExplorerPlatform::Etherscan, api_key);
 
         let test_url = format!("https://etherscan.io/address/{}", SAMPLE_CONTRACT_ADDRESS);
 
@@ -267,8 +316,14 @@ contract TestContract {
                 assert!(!contracts.is_empty(), "No contracts found");
 
                 let contract = &contracts[0];
-                assert_eq!(contract.address.to_lowercase(), SAMPLE_CONTRACT_ADDRESS.to_lowercase());
-                assert!(!contract.source_code.is_empty(), "Contract source code is empty");
+                assert_eq!(
+                    contract.address.to_lowercase(),
+                    SAMPLE_CONTRACT_ADDRESS.to_lowercase()
+                );
+                assert!(
+                    !contract.source_code.is_empty(),
+                    "Contract source code is empty"
+                );
                 assert!(!contract.name.is_empty(), "Contract name is empty");
                 assert!(contract.is_verified, "Contract should be verified");
 
@@ -281,9 +336,10 @@ contract TestContract {
             Err(e) => {
                 // Allow certain errors that don't indicate test failure
                 let error_msg = e.to_string();
-                if error_msg.contains("not verified") ||
-                   error_msg.contains("rate limit") ||
-                   error_msg.contains("API error") {
+                if error_msg.contains("not verified")
+                    || error_msg.contains("rate limit")
+                    || error_msg.contains("API error")
+                {
                     println!("⚠️  Test skipped due to expected API limitation: {}", e);
                 } else {
                     panic!("Unexpected error fetching contract: {}", e);
@@ -294,25 +350,46 @@ contract TestContract {
 
     #[test]
     fn test_api_url_building() {
-        let fetcher = UrlFetcher::new()
-            .with_api_key(ExplorerPlatform::Etherscan, "test_key".to_string());
+        let fetcher =
+            UrlFetcher::new().with_api_key(ExplorerPlatform::Etherscan, "test_key".to_string());
 
         // Test building API URLs for different platforms
         let test_cases = vec![
             (ExplorerPlatform::Etherscan, "https://api.etherscan.io/api"),
-            (ExplorerPlatform::Polygonscan, "https://api.polygonscan.com/api"),
+            (
+                ExplorerPlatform::Polygonscan,
+                "https://api.polygonscan.com/api",
+            ),
             (ExplorerPlatform::BscScan, "https://api.bscscan.com/api"),
             (ExplorerPlatform::Arbiscan, "https://api.arbiscan.io/api"),
         ];
 
         for (platform, expected_base) in test_cases {
-            let result = fetcher.build_api_url(&platform, "getsourcecode", &[("address", SAMPLE_CONTRACT_ADDRESS)]);
-            assert!(result.is_ok(), "Failed to build API URL for platform: {:?}", platform);
+            let result = fetcher.build_api_url(
+                &platform,
+                "getsourcecode",
+                &[("address", SAMPLE_CONTRACT_ADDRESS)],
+            );
+            assert!(
+                result.is_ok(),
+                "Failed to build API URL for platform: {:?}",
+                platform
+            );
 
             let url = result.unwrap();
-            assert!(url.starts_with(expected_base), "URL doesn't start with expected base for {:?}", platform);
-            assert!(url.contains("getsourcecode"), "URL missing action parameter");
-            assert!(url.contains(SAMPLE_CONTRACT_ADDRESS), "URL missing address parameter");
+            assert!(
+                url.starts_with(expected_base),
+                "URL doesn't start with expected base for {:?}",
+                platform
+            );
+            assert!(
+                url.contains("getsourcecode"),
+                "URL missing action parameter"
+            );
+            assert!(
+                url.contains(SAMPLE_CONTRACT_ADDRESS),
+                "URL missing address parameter"
+            );
         }
     }
 

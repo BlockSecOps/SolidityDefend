@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::{Result, anyhow};
+use std::collections::{HashMap, HashSet};
 
-use crate::symbols::{SymbolTable, Scope, Symbol, SymbolKind};
-use crate::types::{TypeResolver, ResolvedType, TypeCompatibility};
 use crate::inheritance::{InheritanceGraph, InheritanceNode};
+use crate::symbols::{Scope, Symbol, SymbolKind, SymbolTable};
+use crate::types::{ResolvedType, TypeCompatibility, TypeResolver};
 
 /// Result of name resolution containing the resolved symbol and additional context
 #[derive(Debug, Clone)]
@@ -52,7 +52,11 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Resolve a name starting from a specific scope
-    pub fn resolve_name_in_scope(&mut self, name: &str, scope: Scope) -> Result<Option<ResolutionResult>> {
+    pub fn resolve_name_in_scope(
+        &mut self,
+        name: &str,
+        scope: Scope,
+    ) -> Result<Option<ResolutionResult>> {
         let cache_key = (scope, name.to_string());
 
         // Check cache first
@@ -62,7 +66,11 @@ impl<'a> NameResolver<'a> {
 
         // Check for circular resolution
         if self.resolution_path.contains(&cache_key) {
-            return Err(anyhow!("Circular name resolution detected for '{}' in scope {:?}", name, scope));
+            return Err(anyhow!(
+                "Circular name resolution detected for '{}' in scope {:?}",
+                name,
+                scope
+            ));
         }
 
         self.resolution_path.push(cache_key.clone());
@@ -78,7 +86,11 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Internal name resolution implementation
-    fn resolve_name_internal(&mut self, name: &str, start_scope: Scope) -> Result<Option<ResolutionResult>> {
+    fn resolve_name_internal(
+        &mut self,
+        name: &str,
+        start_scope: Scope,
+    ) -> Result<Option<ResolutionResult>> {
         let mut resolution_path = vec![format!("scope:{:?}", start_scope)];
 
         // 1. Look in the current scope
@@ -93,12 +105,16 @@ impl<'a> NameResolver<'a> {
         }
 
         // 2. Look in parent scopes (lexical scoping)
-        if let Some(result) = self.resolve_in_parent_scopes(name, start_scope, &mut resolution_path)? {
+        if let Some(result) =
+            self.resolve_in_parent_scopes(name, start_scope, &mut resolution_path)?
+        {
             return Ok(Some(result));
         }
 
         // 3. Look in inherited contracts (for contract scopes)
-        if let Some(result) = self.resolve_in_inherited_contracts(name, start_scope, &mut resolution_path)? {
+        if let Some(result) =
+            self.resolve_in_inherited_contracts(name, start_scope, &mut resolution_path)?
+        {
             return Ok(Some(result));
         }
 
@@ -170,7 +186,10 @@ impl<'a> NameResolver<'a> {
             resolution_path.push(format!("inheritance:{}", contract_info.name));
 
             // Get all ancestors in inheritance order
-            if let Ok(ancestors) = self.inheritance_graph.get_all_ancestors(&contract_info.name) {
+            if let Ok(ancestors) = self
+                .inheritance_graph
+                .get_all_ancestors(&contract_info.name)
+            {
                 for (distance, ancestor) in ancestors.iter().enumerate() {
                     resolution_path.push(format!("ancestor:{}", ancestor.name));
 
@@ -204,15 +223,20 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Check if a symbol is accessible through inheritance based on Solidity visibility rules
-    fn is_symbol_accessible_from_inheritance(&self, symbol: &Symbol, _inheritance_distance: usize) -> bool {
+    fn is_symbol_accessible_from_inheritance(
+        &self,
+        symbol: &Symbol,
+        _inheritance_distance: usize,
+    ) -> bool {
         match symbol.kind {
             // Functions and state variables: check actual visibility modifiers
             SymbolKind::StateVariable | SymbolKind::Function => {
                 match symbol.visibility.as_deref() {
-                    Some("private") => false,  // Private symbols are not accessible through inheritance
-                    Some("internal") => true,  // Internal symbols are accessible through inheritance
-                    Some("public") => true,    // Public symbols are accessible through inheritance
-                    Some("external") => {      // External functions are callable but not accessible in derived contracts
+                    Some("private") => false, // Private symbols are not accessible through inheritance
+                    Some("internal") => true, // Internal symbols are accessible through inheritance
+                    Some("public") => true,   // Public symbols are accessible through inheritance
+                    Some("external") => {
+                        // External functions are callable but not accessible in derived contracts
                         // External functions can be called but not overridden in derived contracts
                         symbol.kind == SymbolKind::Function
                     }
@@ -247,7 +271,10 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Resolve a qualified name (e.g., "ContractName.functionName")
-    pub fn resolve_qualified_name(&mut self, qualified_name: &str) -> Result<Option<ResolutionResult>> {
+    pub fn resolve_qualified_name(
+        &mut self,
+        qualified_name: &str,
+    ) -> Result<Option<ResolutionResult>> {
         let parts: Vec<&str> = qualified_name.split('.').collect();
 
         if parts.len() < 2 {
@@ -271,7 +298,10 @@ impl<'a> NameResolver<'a> {
                             return Ok(Some(ResolutionResult {
                                 symbol: symbol.clone(),
                                 resolution_scope: scope,
-                                resolution_path: vec![container_name.to_string(), member_name.to_string()],
+                                resolution_path: vec![
+                                    container_name.to_string(),
+                                    member_name.to_string(),
+                                ],
                                 is_inherited: false,
                                 inheritance_distance: 0,
                             }));
@@ -280,7 +310,10 @@ impl<'a> NameResolver<'a> {
                     return Ok(None);
                 }
                 _ => {
-                    return Err(anyhow!("'{}' is not a contract, interface, or library", container_name));
+                    return Err(anyhow!(
+                        "'{}' is not a contract, interface, or library",
+                        container_name
+                    ));
                 }
             }
         }
@@ -295,7 +328,9 @@ impl<'a> NameResolver<'a> {
         argument_types: &[ResolvedType],
     ) -> Result<Option<ResolutionResult>> {
         // Get all function overloads with the given name
-        let overloads = self.symbol_table.get_function_overloads(self.current_scope, function_name);
+        let overloads = self
+            .symbol_table
+            .get_function_overloads(self.current_scope, function_name);
 
         if overloads.is_empty() {
             return self.resolve_name(function_name);
@@ -309,7 +344,8 @@ impl<'a> NameResolver<'a> {
             if let Some(signature) = &overload.signature {
                 // Parse signature and check compatibility
                 // This is simplified - in practice, we'd need full signature parsing
-                let compatibility = self.check_function_signature_compatibility(signature, argument_types)?;
+                let compatibility =
+                    self.check_function_signature_compatibility(signature, argument_types)?;
 
                 match compatibility {
                     TypeCompatibility::Identical => {
@@ -324,7 +360,10 @@ impl<'a> NameResolver<'a> {
                     }
                     TypeCompatibility::ImplicitlyConvertible => {
                         // Better than explicit conversion
-                        if best_match.is_none() || best_match.as_ref().unwrap().1 == TypeCompatibility::ExplicitlyConvertible {
+                        if best_match.is_none()
+                            || best_match.as_ref().unwrap().1
+                                == TypeCompatibility::ExplicitlyConvertible
+                        {
                             best_match = Some((overload, compatibility));
                         }
                     }
@@ -421,7 +460,11 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Resolve using directive (e.g., "using LibraryName for Type")
-    pub fn resolve_using_directive(&mut self, type_name: &str, function_name: &str) -> Result<Option<ResolutionResult>> {
+    pub fn resolve_using_directive(
+        &mut self,
+        type_name: &str,
+        function_name: &str,
+    ) -> Result<Option<ResolutionResult>> {
         // Look for using directives in current scope and parent scopes
         // This is a simplified implementation
 
@@ -436,14 +479,24 @@ impl<'a> NameResolver<'a> {
         let mut visited_scopes = HashSet::new();
 
         // Collect symbols from current scope and parent scopes
-        self.collect_symbols_from_scope_chain(self.current_scope, &mut visible_symbols, &mut visited_scopes)?;
+        self.collect_symbols_from_scope_chain(
+            self.current_scope,
+            &mut visible_symbols,
+            &mut visited_scopes,
+        )?;
 
         // Collect symbols from inherited contracts
         if let Some(contract_info) = self.get_contract_for_scope(self.current_scope) {
-            if let Ok(ancestors) = self.inheritance_graph.get_all_ancestors(&contract_info.name) {
+            if let Ok(ancestors) = self
+                .inheritance_graph
+                .get_all_ancestors(&contract_info.name)
+            {
                 for ancestor in ancestors {
                     if !visited_scopes.contains(&ancestor.scope) {
-                        self.collect_accessible_inherited_symbols(ancestor.scope, &mut visible_symbols)?;
+                        self.collect_accessible_inherited_symbols(
+                            ancestor.scope,
+                            &mut visible_symbols,
+                        )?;
                         visited_scopes.insert(ancestor.scope);
                     }
                 }
@@ -493,7 +546,11 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Collect accessible symbols from inherited contracts
-    fn collect_accessible_inherited_symbols(&self, scope: Scope, visible_symbols: &mut Vec<Symbol>) -> Result<()> {
+    fn collect_accessible_inherited_symbols(
+        &self,
+        scope: Scope,
+        visible_symbols: &mut Vec<Symbol>,
+    ) -> Result<()> {
         if let Some(scope_symbols) = self.symbol_table.get_scope_symbols(scope) {
             for symbol in scope_symbols.values() {
                 if self.is_symbol_accessible_from_inheritance(symbol, 1) {
@@ -505,22 +562,33 @@ impl<'a> NameResolver<'a> {
     }
 
     /// Check for name conflicts in the current resolution context
-    pub fn check_name_conflicts(&self, name: &str, new_symbol_kind: SymbolKind) -> Result<Vec<Symbol>> {
+    pub fn check_name_conflicts(
+        &self,
+        name: &str,
+        new_symbol_kind: SymbolKind,
+    ) -> Result<Vec<Symbol>> {
         let mut conflicts = Vec::new();
 
         // Check for conflicts in current scope
         if let Some(existing_symbol) = self.symbol_table.lookup_symbol(self.current_scope, name) {
             // Allow function overloading
-            if !(existing_symbol.kind == SymbolKind::Function && new_symbol_kind == SymbolKind::Function) {
+            if !(existing_symbol.kind == SymbolKind::Function
+                && new_symbol_kind == SymbolKind::Function)
+            {
                 conflicts.push(existing_symbol.clone());
             }
         }
 
         // Check for conflicts with inherited symbols
         if let Some(contract_info) = self.get_contract_for_scope(self.current_scope) {
-            if let Ok(ancestors) = self.inheritance_graph.get_all_ancestors(&contract_info.name) {
+            if let Ok(ancestors) = self
+                .inheritance_graph
+                .get_all_ancestors(&contract_info.name)
+            {
                 for ancestor in ancestors {
-                    if let Some(inherited_symbol) = self.symbol_table.lookup_symbol(ancestor.scope, name) {
+                    if let Some(inherited_symbol) =
+                        self.symbol_table.lookup_symbol(ancestor.scope, name)
+                    {
                         if self.is_symbol_accessible_from_inheritance(inherited_symbol, 1) {
                             conflicts.push(inherited_symbol.clone());
                         }
@@ -536,8 +604,16 @@ impl<'a> NameResolver<'a> {
     pub fn get_resolution_statistics(&self) -> ResolutionStatistics {
         ResolutionStatistics {
             cache_size: self.resolution_cache.len(),
-            cache_hits: self.resolution_cache.values().filter(|v| v.is_some()).count(),
-            cache_misses: self.resolution_cache.values().filter(|v| v.is_none()).count(),
+            cache_hits: self
+                .resolution_cache
+                .values()
+                .filter(|v| v.is_some())
+                .count(),
+            cache_misses: self
+                .resolution_cache
+                .values()
+                .filter(|v| v.is_none())
+                .count(),
             max_resolution_path_length: self.resolution_path.len(),
         }
     }
@@ -605,7 +681,13 @@ impl<'a> BatchNameResolver<'a> {
     pub fn get_resolved_names(&self) -> Vec<&str> {
         self.results
             .iter()
-            .filter_map(|(name, result)| if result.is_some() { Some(name.as_str()) } else { None })
+            .filter_map(|(name, result)| {
+                if result.is_some() {
+                    Some(name.as_str())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 
@@ -613,7 +695,13 @@ impl<'a> BatchNameResolver<'a> {
     pub fn get_unresolved_names(&self) -> Vec<&str> {
         self.results
             .iter()
-            .filter_map(|(name, result)| if result.is_none() { Some(name.as_str()) } else { None })
+            .filter_map(|(name, result)| {
+                if result.is_none() {
+                    Some(name.as_str())
+                } else {
+                    None
+                }
+            })
             .collect()
     }
 }
@@ -622,7 +710,7 @@ impl<'a> BatchNameResolver<'a> {
 mod tests {
     use super::*;
     use crate::symbols::SymbolTable;
-    use ast::{SourceLocation, Position};
+    use ast::{Position, SourceLocation};
 
     #[test]
     fn test_basic_name_resolution() {
@@ -637,7 +725,7 @@ mod tests {
             SourceLocation::new(
                 std::path::PathBuf::from("test.sol"),
                 Position::new(1, 1, 0),
-                Position::new(1, 10, 9)
+                Position::new(1, 10, 9),
             ),
         );
         symbol_table.add_symbol(global_scope, symbol).unwrap();
@@ -670,10 +758,12 @@ mod tests {
             SourceLocation::new(
                 std::path::PathBuf::from("test.sol"),
                 Position::new(1, 1, 0),
-                Position::new(5, 1, 50)
+                Position::new(5, 1, 50),
             ),
         );
-        symbol_table.add_symbol(global_scope, contract_symbol).unwrap();
+        symbol_table
+            .add_symbol(global_scope, contract_symbol)
+            .unwrap();
 
         // Add function to contract scope
         let function_symbol = Symbol::new(
@@ -682,15 +772,19 @@ mod tests {
             SourceLocation::new(
                 std::path::PathBuf::from("test.sol"),
                 Position::new(2, 5, 20),
-                Position::new(4, 5, 40)
+                Position::new(4, 5, 40),
             ),
         );
-        symbol_table.add_symbol(contract_scope, function_symbol).unwrap();
+        symbol_table
+            .add_symbol(contract_scope, function_symbol)
+            .unwrap();
 
         let mut resolver = NameResolver::new(&symbol_table, &inheritance_graph, global_scope);
 
         // Resolve qualified name
-        let result = resolver.resolve_qualified_name("TestContract.testFunction").unwrap();
+        let result = resolver
+            .resolve_qualified_name("TestContract.testFunction")
+            .unwrap();
         assert!(result.is_some());
 
         let resolution = result.unwrap();
@@ -710,7 +804,7 @@ mod tests {
             SourceLocation::new(
                 std::path::PathBuf::from("test.sol"),
                 Position::new(1, 1, 0),
-                Position::new(1, 12, 11)
+                Position::new(1, 12, 11),
             ),
         );
         symbol_table.add_symbol(global_scope, symbol).unwrap();
@@ -743,13 +837,14 @@ mod tests {
                 SourceLocation::new(
                     std::path::PathBuf::from("test.sol"),
                     Position::new(i, 1, i * 10),
-                    Position::new(i, 10, i * 10 + 10)
+                    Position::new(i, 10, i * 10 + 10),
                 ),
             );
             symbol_table.add_symbol(global_scope, symbol).unwrap();
         }
 
-        let mut batch_resolver = BatchNameResolver::new(&symbol_table, &inheritance_graph, global_scope);
+        let mut batch_resolver =
+            BatchNameResolver::new(&symbol_table, &inheritance_graph, global_scope);
 
         // Add names to resolve
         for i in 0..5 {
@@ -785,39 +880,71 @@ mod tests {
             ("uint256,address", 2, "two simple parameters"),
             ("uint256, address", 2, "two simple parameters with space"),
             ("uint256 , address", 2, "two simple parameters with spaces"),
-
             // Complex types with commas inside
             ("mapping(address => uint256)", 1, "mapping type"),
-            ("mapping(address => uint256),uint256", 2, "mapping and simple type"),
-            ("uint256[],mapping(address => uint256)", 2, "array and mapping"),
-            ("mapping(address => mapping(uint256 => bool))", 1, "nested mapping"),
-            ("mapping(address => mapping(uint256 => bool)),uint256", 2, "nested mapping and simple type"),
-
+            (
+                "mapping(address => uint256),uint256",
+                2,
+                "mapping and simple type",
+            ),
+            (
+                "uint256[],mapping(address => uint256)",
+                2,
+                "array and mapping",
+            ),
+            (
+                "mapping(address => mapping(uint256 => bool))",
+                1,
+                "nested mapping",
+            ),
+            (
+                "mapping(address => mapping(uint256 => bool)),uint256",
+                2,
+                "nested mapping and simple type",
+            ),
             // Array types
             ("uint256[]", 1, "dynamic array"),
             ("uint256[10]", 1, "fixed array"),
             ("uint256[][],address", 2, "nested array and address"),
             ("mapping(address => uint256[])", 1, "mapping to array"),
-
             // Complex combinations
-            ("mapping(address => uint256),uint256[],bool", 3, "mapping, array, and bool"),
-            ("mapping(address => mapping(uint256 => bool)),uint256[],address", 3, "complex nested types"),
-            ("uint256,mapping(address => uint256),bool", 3, "simple, mapping, simple"),
-
+            (
+                "mapping(address => uint256),uint256[],bool",
+                3,
+                "mapping, array, and bool",
+            ),
+            (
+                "mapping(address => mapping(uint256 => bool)),uint256[],address",
+                3,
+                "complex nested types",
+            ),
+            (
+                "uint256,mapping(address => uint256),bool",
+                3,
+                "simple, mapping, simple",
+            ),
             // Edge cases
             ("mapping(address=>uint256)", 1, "mapping without spaces"),
             ("uint256  ,  address", 2, "multiple spaces around comma"),
-            ("mapping(address => uint256)  ,  uint256[]", 2, "complex types with spaces"),
+            (
+                "mapping(address => uint256)  ,  uint256[]",
+                2,
+                "complex types with spaces",
+            ),
         ];
 
         for (signature, expected_count, description) in test_cases {
             let result = resolver.parse_function_signature_parameters(signature);
-            assert!(result.is_ok(), "Failed to parse signature '{}': {:?}", signature, result.err());
+            assert!(
+                result.is_ok(),
+                "Failed to parse signature '{}': {:?}",
+                signature,
+                result.err()
+            );
 
             let actual_count = result.unwrap();
             assert_eq!(
-                actual_count,
-                expected_count,
+                actual_count, expected_count,
                 "Parameter count mismatch for '{}' ({}): expected {}, got {}",
                 signature, description, expected_count, actual_count
             );
@@ -850,12 +977,16 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
 
-        let result = resolver.check_function_signature_compatibility("mapping(address => uint256),uint256", &two_args);
+        let result = resolver.check_function_signature_compatibility(
+            "mapping(address => uint256),uint256",
+            &two_args,
+        );
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), TypeCompatibility::ImplicitlyConvertible);
 
         // Incompatible cases (wrong parameter count)
-        let result = resolver.check_function_signature_compatibility("uint256,address", &single_arg);
+        let result =
+            resolver.check_function_signature_compatibility("uint256,address", &single_arg);
         assert!(result.is_ok());
         assert_eq!(result.unwrap(), TypeCompatibility::Incompatible);
 

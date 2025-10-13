@@ -9,7 +9,7 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 ## Features
 
 🔍 **Comprehensive Security Analysis**
-- **74 vulnerability detectors** covering all major security categories
+- **78 vulnerability detectors** covering all major security categories
 - Advanced taint tracking and data flow analysis framework
 - Control flow graph analysis for complex vulnerability patterns
 - Multi-layered security detection (access control, reentrancy, validation, MEV protection, DeFi, governance, gas optimization, advanced security, code quality)
@@ -51,9 +51,9 @@ A high-performance static analysis security tool for Solidity smart contracts, b
 - ✅ Control flow graph construction with dominance analysis
 
 ✅ **Security Analysis Engine (FEATURE COMPLETE)** 🎉
-- ✅ **Detector Registry**: Fully functional with 74 production-ready detectors
+- ✅ **Detector Registry**: Fully functional with 78 production-ready detectors
 - ✅ **Modern Vulnerability Detection**: Comprehensive coverage for 2024/2025-era attack patterns
-- ✅ **74 detectors across 17 phases:**
+- ✅ **78 detectors across 17 phases:**
   - **Access Control** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin authentication
   - **Reentrancy** (2): Classic and read-only reentrancy detection
   - **Logic Bugs** (2): Division order, state machine validation
@@ -75,10 +75,11 @@ A high-performance static analysis security tool for Solidity smart contracts, b
   - **Cross-Chain & Bridges** (8): Settlement validation, replay attacks, filler front-running, oracle dependency, Permit2 integration, token minting, message verification, chain ID validation
   - **Account Abstraction Advanced** (5): Paymaster abuse, session key vulnerabilities, signature aggregation, social recovery, nonce management
   - **DeFi Protocol Security** (3): Liquidity pool manipulation, JIT liquidity, yield farming
+  - **Token Standard Edge Cases** (4): ERC-20 approve race, infinite approval risks, ERC-777 reentrancy hooks, ERC-721/1155 callback reentrancy
 - ✅ Comprehensive detector registry and framework
 - ✅ Dataflow analysis with taint tracking (834 lines)
 - ✅ Advanced pattern matching and AST traversal
-- ✅ **Achievement**: Increased from 21 to 74 detectors (+252% growth), with additional detectors in development
+- ✅ **Achievement**: Increased from 21 to 78 detectors (+271% growth), with additional detectors in development
 
 ✅ **Output & Integration (95% Complete)**
 - ✅ Console formatter with color support and code snippets (11/11 tests passing)
@@ -109,7 +110,7 @@ SolidityDefend Community Edition has **successfully achieved production readines
 - **Production Ready**: ✅ **CONFIRMED** - See detailed `smartbugs_validation_report.md`
 
 ### ✅ **Production Features Complete**
-- **74 Detectors**: Comprehensive vulnerability coverage across 17 security phases
+- **78 Detectors**: Comprehensive vulnerability coverage across 17 security phases
 - **High-Performance Analysis**: Sub-second analysis with intelligent caching
 - **Multiple Output Formats**: Console, JSON with comprehensive configuration
 - **CI/CD Integration**: Exit codes, incremental scanning, GitHub Actions templates
@@ -118,7 +119,7 @@ SolidityDefend Community Edition has **successfully achieved production readines
 ### 📊 **Release Statistics**
 - **Total Code**: 28,000+ lines of production-optimized Rust
 - **Test Infrastructure**: Comprehensive validation framework with 333+ tests passing
-- **Detectors**: 74 production-ready security detectors across 17 phases
+- **Detectors**: 78 production-ready security detectors across 17 phases
 - **Crates**: 18 modular components with clean architecture
 - **Status**: ✅ **PRE-RELEASE (0.9.0) - FEATURE COMPLETE**
 
@@ -213,7 +214,7 @@ docker run -v $(pwd):/analysis soliditydefend /analysis/*.sol
 
 ## Security Detectors
 
-SolidityDefend includes 74 production-ready security detectors across 17 phases:
+SolidityDefend includes 78 production-ready security detectors across 17 phases:
 
 ### Phases 1-5: Core Security (45 detectors)
 - **Access Control & Authentication** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin
@@ -300,9 +301,11 @@ SolidityDefend includes 74 production-ready security detectors across 17 phases:
 - **Vault Share Inflation**: First depositor share manipulation (ERC-4626 inflation attacks)
 - **Note**: Additional vault security detectors (donation attack, withdrawal DOS, fee manipulation, hook reentrancy) implemented but registration pending for 1.0.0
 
-### Phase 17: Token Standard Edge Cases (0 detectors registered) - ⚠️ In Progress
-- **ERC-721/1155 Callback Reentrancy**: NFT receiver callback vulnerabilities (implemented, registration pending)
-- **Note**: Additional token standard detectors (ERC-20 approve race, infinite approval, ERC-777 hooks) implemented but registration pending for 1.0.0
+### Phase 17: Token Standard Edge Cases (4 detectors) - ✅ Complete
+- **ERC-20 Approve Race Condition**: Front-running approve() changes
+- **ERC-20 Infinite Approval Risk**: Unlimited approval security implications
+- **ERC-777 Reentrancy via Hooks**: tokensReceived callback attacks
+- **ERC-721/1155 Callback Reentrancy**: NFT safeTransfer callback exploitation
 
 For detailed detector documentation, see [docs/DETECTORS.md](docs/DETECTORS.md).
 
@@ -332,6 +335,28 @@ cargo test -p detectors
 cargo test -p output
 ```
 
+### Local CI Validation (Cost Savings)
+
+Save 90% on GitHub Actions costs by validating locally before pushing:
+
+```bash
+# Quick validation (30 seconds)
+make quick
+
+# Full CI validation (2-3 minutes, same as GitHub Actions)
+make ci-local
+
+# See all available commands
+make help
+```
+
+**Key Benefits:**
+- 90% reduction in wasted CI time
+- 67% faster development iteration
+- Same checks as GitHub Actions, faster feedback locally
+
+See [LOCAL_CI_GUIDE.md](LOCAL_CI_GUIDE.md) for complete guide.
+
 ### Testing
 
 ```bash
@@ -356,6 +381,25 @@ cargo test -p analysis regression_tests
 # Run with output
 cargo test -- --nocapture
 ```
+
+## Release Process
+
+SolidityDefend follows a **time-based release schedule** with semantic versioning:
+
+- **Major releases**: 6-12 months (breaking changes, major features)
+- **Minor releases**: 4-6 weeks (new features, detector phases)
+- **Patch releases**: As needed (bug fixes, security patches)
+
+**Upcoming Releases:**
+- v1.0.0 (Q1 2026) - Stable release, 100+ detectors
+- v1.1.0 (Q2 2026) - Advanced analysis features
+- v1.2.0 (Q3 2026) - IDE & tool integration
+
+**For Contributors & Maintainers:**
+- 📋 [Release Process](docs/RELEASE_PROCESS.md) - Complete release guide
+- ✅ [Release Checklist](docs/RELEASE_CHECKLIST.md) - Step-by-step checklist
+- 📅 [Release Schedule](docs/RELEASE_SCHEDULE.md) - Roadmap & schedule
+- 🔧 [Local CI Guide](LOCAL_CI_GUIDE.md) - Cost-saving local validation
 
 ## Documentation
 

@@ -2,8 +2,8 @@ use anyhow::Result;
 use ast::AstArena;
 
 use analysis::AnalysisEngine;
-use parser::Parser;
 use ast::SourceFile;
+use parser::Parser;
 
 /// Test fixtures for comprehensive analysis pipeline testing
 pub struct TestFixtures<'a> {
@@ -21,7 +21,8 @@ impl<'a> TestFixtures<'a> {
 
     /// Parse Solidity source code into arena-allocated AST
     pub fn parse_source(&self, source: &str) -> Result<SourceFile<'a>> {
-        self.parser.parse(self.arena, source, "test.sol")
+        self.parser
+            .parse(self.arena, source, "test.sol")
             .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))
     }
 
@@ -109,39 +110,58 @@ mod tests {
         let mut engine = AnalysisEngine::new();
 
         // Parse source
-        let source = fixtures.parse_source(TestFixtures::simple_function_source())
+        let source = fixtures
+            .parse_source(TestFixtures::simple_function_source())
             .expect("Failed to parse simple function source");
 
         // Run analysis on each function
-        let results = engine.analyze_source_file(&source)
+        let results = engine
+            .analyze_source_file(&source)
             .expect("Failed to analyze source file");
 
-        assert!(!results.function_analyses.is_empty(), "Should have analyzed functions");
+        assert!(
+            !results.function_analyses.is_empty(),
+            "Should have analyzed functions"
+        );
 
         // Verify each function analysis
         for function_result in &results.function_analyses {
             // Check IR generation
-            assert!(!function_result.ir_function.basic_blocks.is_empty(),
-                "IR should have basic blocks");
-            assert!(!function_result.ir_function.get_instructions().is_empty(),
-                "IR should have instructions");
+            assert!(
+                !function_result.ir_function.basic_blocks.is_empty(),
+                "IR should have basic blocks"
+            );
+            assert!(
+                !function_result.ir_function.get_instructions().is_empty(),
+                "IR should have instructions"
+            );
 
             // Check CFG construction
-            assert!(function_result.cfg.statistics().block_count > 0,
-                "CFG should have blocks");
+            assert!(
+                function_result.cfg.statistics().block_count > 0,
+                "CFG should have blocks"
+            );
 
             // Check dataflow convergence
-            assert!(function_result.reaching_definitions.converged,
-                "Reaching definitions should converge");
-            assert!(function_result.live_variables.converged,
-                "Live variables should converge");
+            assert!(
+                function_result.reaching_definitions.converged,
+                "Reaching definitions should converge"
+            );
+            assert!(
+                function_result.live_variables.converged,
+                "Live variables should converge"
+            );
 
             // Validate analysis results
             let issues = function_result.validate_analysis();
-            let errors: Vec<_> = issues.iter()
+            let errors: Vec<_> = issues
+                .iter()
                 .filter(|issue| matches!(issue.severity, analysis::IssueSeverity::Error))
                 .collect();
-            assert!(errors.is_empty(), "Simple function should have no analysis errors");
+            assert!(
+                errors.is_empty(),
+                "Simple function should have no analysis errors"
+            );
         }
     }
 
@@ -151,24 +171,32 @@ mod tests {
         let fixtures = TestFixtures::new(&arena);
         let mut engine = AnalysisEngine::new();
 
-        let source = fixtures.parse_source(TestFixtures::control_flow_function_source())
+        let source = fixtures
+            .parse_source(TestFixtures::control_flow_function_source())
             .expect("Failed to parse control flow source");
 
-        let results = engine.analyze_source_file(&source)
+        let results = engine
+            .analyze_source_file(&source)
             .expect("Failed to analyze control flow");
 
         // Find the complexFunction analysis
-        let complex_function = results.function_analyses.iter()
+        let complex_function = results
+            .function_analyses
+            .iter()
             .find(|f| f.function_name.contains("complexFunction"))
             .expect("Should find complexFunction analysis");
 
         // Verify CFG complexity - use more lenient checks for development
         let complexity = &complex_function.cfg_analysis.complexity_metrics;
-        assert!(complexity.cyclomatic_complexity >= 1,
-            "Complex function should have cyclomatic complexity >= 1");
+        assert!(
+            complexity.cyclomatic_complexity >= 1,
+            "Complex function should have cyclomatic complexity >= 1"
+        );
         // Note: essential_complexity might be 0 for simple cases during development
-        println!("Cyclomatic complexity: {}, Essential complexity: {}",
-            complexity.cyclomatic_complexity, complexity.essential_complexity);
+        println!(
+            "Cyclomatic complexity: {}, Essential complexity: {}",
+            complexity.cyclomatic_complexity, complexity.essential_complexity
+        );
 
         // Verify control flow structures
         let structural_props = &complex_function.cfg_analysis.structural_properties;
@@ -184,27 +212,37 @@ mod tests {
         let fixtures = TestFixtures::new(&arena);
         let mut engine = AnalysisEngine::new();
 
-        let source = fixtures.parse_source(TestFixtures::dataflow_function_source())
+        let source = fixtures
+            .parse_source(TestFixtures::dataflow_function_source())
             .expect("Failed to parse dataflow source");
 
-        let results = engine.analyze_source_file(&source)
+        let results = engine
+            .analyze_source_file(&source)
             .expect("Failed to analyze dataflow");
 
         // Find the transfer function analysis
-        let transfer_function = results.function_analyses.iter()
+        let transfer_function = results
+            .function_analyses
+            .iter()
             .find(|f| f.function_name.contains("transfer"))
             .expect("Should find transfer function analysis");
 
         // Verify dataflow analysis results
-        assert!(transfer_function.reaching_definitions.converged,
-            "Reaching definitions should converge");
-        assert!(transfer_function.live_variables.converged,
-            "Live variables should converge");
+        assert!(
+            transfer_function.reaching_definitions.converged,
+            "Reaching definitions should converge"
+        );
+        assert!(
+            transfer_function.live_variables.converged,
+            "Live variables should converge"
+        );
 
         // Check that we have def-use chains - use more lenient checks for development
-        println!("Def-to-uses: {}, Use-to-defs: {}",
+        println!(
+            "Def-to-uses: {}, Use-to-defs: {}",
             transfer_function.def_use_chains.def_to_uses.len(),
-            transfer_function.def_use_chains.use_to_defs.len());
+            transfer_function.def_use_chains.use_to_defs.len()
+        );
         // Note: def-use chains might be empty during development phase
         // assert!(!transfer_function.def_use_chains.def_to_uses.is_empty() ||
         //         !transfer_function.def_use_chains.use_to_defs.is_empty(),
@@ -212,9 +250,18 @@ mod tests {
 
         // Verify we can generate reports
         let report = transfer_function.generate_report();
-        assert!(report.contains("Dataflow Analysis"), "Report should contain dataflow section");
-        assert!(report.contains("Reaching Definitions"), "Report should mention reaching definitions");
-        assert!(report.contains("Live Variables"), "Report should mention live variables");
+        assert!(
+            report.contains("Dataflow Analysis"),
+            "Report should contain dataflow section"
+        );
+        assert!(
+            report.contains("Reaching Definitions"),
+            "Report should mention reaching definitions"
+        );
+        assert!(
+            report.contains("Live Variables"),
+            "Report should mention live variables"
+        );
     }
 
     #[test]
@@ -223,10 +270,12 @@ mod tests {
         let fixtures = TestFixtures::new(&arena);
         let mut engine = AnalysisEngine::new();
 
-        let source = fixtures.parse_source(TestFixtures::simple_function_source())
+        let source = fixtures
+            .parse_source(TestFixtures::simple_function_source())
             .expect("Failed to parse source");
 
-        let _results = engine.analyze_source_file(&source)
+        let _results = engine
+            .analyze_source_file(&source)
             .expect("Failed to analyze source");
 
         let stats = engine.get_statistics();

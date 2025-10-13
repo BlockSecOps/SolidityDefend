@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use ir::{BlockId, ValueId, Instruction};
+use crate::analysis::{DataFlowResult, utils};
+use crate::reaching_definitions::{DefinitionSite, ReachingDefinitionsState};
 use cfg::ControlFlowGraph;
-use crate::analysis::{utils, DataFlowResult};
-use crate::reaching_definitions::{ReachingDefinitionsState, DefinitionSite};
+use ir::{BlockId, Instruction, ValueId};
 
 /// Def-Use chain analysis
 ///
@@ -96,7 +96,7 @@ impl DefUseChain {
     /// Build def-use chains using reaching definitions analysis
     pub fn build_with_reaching_definitions(
         cfg: &ControlFlowGraph,
-        reaching_defs: &DataFlowResult<ReachingDefinitionsState>
+        reaching_defs: &DataFlowResult<ReachingDefinitionsState>,
     ) -> Self {
         let builder = DefUseChainBuilder::new(cfg);
         builder.build_with_reaching_definitions(reaching_defs)
@@ -127,17 +127,24 @@ impl DefUseChain {
 
     /// Get all uses that a definition reaches
     pub fn get_uses(&self, definition: &DefinitionSite) -> Vec<UseSite> {
-        self.def_to_uses.get(definition).cloned().unwrap_or_default()
+        self.def_to_uses
+            .get(definition)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Check if a definition has any uses
     pub fn has_uses(&self, definition: &DefinitionSite) -> bool {
-        self.def_to_uses.get(definition).map(|uses| !uses.is_empty()).unwrap_or(false)
+        self.def_to_uses
+            .get(definition)
+            .map(|uses| !uses.is_empty())
+            .unwrap_or(false)
     }
 
     /// Find dead definitions (definitions with no uses)
     pub fn find_dead_definitions(&self) -> Vec<DefinitionSite> {
-        self.def_to_uses.iter()
+        self.def_to_uses
+            .iter()
             .filter(|(_, uses)| uses.is_empty())
             .map(|(def, _)| def.clone())
             .collect()
@@ -145,7 +152,8 @@ impl DefUseChain {
 
     /// Find variables with multiple definitions reaching a single use
     pub fn find_multi_def_uses(&self) -> Vec<(UseSite, Vec<DefinitionSite>)> {
-        self.use_to_defs.iter()
+        self.use_to_defs
+            .iter()
             .filter(|(_, defs)| defs.len() > 1)
             .map(|(use_site, defs)| (use_site.clone(), defs.clone()))
             .collect()
@@ -179,13 +187,13 @@ impl DefUseChain {
     pub fn compute_statistics(&self) -> DefUseStatistics {
         let total_definitions = self.def_to_uses.len();
         let total_uses = self.use_to_defs.len();
-        let total_chains = self.variable_definitions.values()
+        let total_chains = self
+            .variable_definitions
+            .values()
             .map(|defs| defs.len())
             .sum();
 
-        let total_chain_length: usize = self.def_to_uses.values()
-            .map(|uses| uses.len())
-            .sum();
+        let total_chain_length: usize = self.def_to_uses.values().map(|uses| uses.len()).sum();
 
         let average_chain_length = if total_chains > 0 {
             total_chain_length as f64 / total_chains as f64
@@ -193,7 +201,9 @@ impl DefUseChain {
             0.0
         };
 
-        let multi_def_variables = self.variable_definitions.values()
+        let multi_def_variables = self
+            .variable_definitions
+            .values()
             .filter(|defs| defs.len() > 1)
             .count();
 
@@ -220,21 +230,35 @@ impl DefUseChain {
 
         // Overall statistics
         report.push_str("Statistics:\n");
-        report.push_str(&format!("  Total definitions: {}\n", stats.total_definitions));
+        report.push_str(&format!(
+            "  Total definitions: {}\n",
+            stats.total_definitions
+        ));
         report.push_str(&format!("  Total uses: {}\n", stats.total_uses));
         report.push_str(&format!("  Total chains: {}\n", stats.total_chains));
-        report.push_str(&format!("  Average chain length: {:.2}\n", stats.average_chain_length));
-        report.push_str(&format!("  Variables with multiple definitions: {}\n", stats.multi_def_variables));
+        report.push_str(&format!(
+            "  Average chain length: {:.2}\n",
+            stats.average_chain_length
+        ));
+        report.push_str(&format!(
+            "  Variables with multiple definitions: {}\n",
+            stats.multi_def_variables
+        ));
         report.push_str(&format!("  Unused variables: {}\n", stats.unused_variables));
-        report.push_str(&format!("  Undefined variables: {}\n", stats.undefined_variables));
+        report.push_str(&format!(
+            "  Undefined variables: {}\n",
+            stats.undefined_variables
+        ));
 
         // Dead definitions
         let dead_defs = self.find_dead_definitions();
         if !dead_defs.is_empty() {
             report.push_str("\nDead Definitions (no uses):\n");
             for dead_def in dead_defs {
-                report.push_str(&format!("  Variable {} at Block {}, Instruction {}\n",
-                    dead_def.variable.0, dead_def.block_id.0, dead_def.instruction_index));
+                report.push_str(&format!(
+                    "  Variable {} at Block {}, Instruction {}\n",
+                    dead_def.variable.0, dead_def.block_id.0, dead_def.instruction_index
+                ));
             }
         }
 
@@ -243,8 +267,13 @@ impl DefUseChain {
         if !multi_def_uses.is_empty() {
             report.push_str("\nUses with Multiple Reaching Definitions:\n");
             for (use_site, defs) in multi_def_uses {
-                report.push_str(&format!("  Variable {} used at Block {}, Instruction {} has {} reaching definitions\n",
-                    use_site.variable.0, use_site.block_id.0, use_site.instruction_index, defs.len()));
+                report.push_str(&format!(
+                    "  Variable {} used at Block {}, Instruction {} has {} reaching definitions\n",
+                    use_site.variable.0,
+                    use_site.block_id.0,
+                    use_site.instruction_index,
+                    defs.len()
+                ));
             }
         }
 
@@ -303,7 +332,12 @@ impl DefUseChain {
     }
 
     /// Find the shortest path between a definition and a use
-    pub fn find_def_use_path(&self, definition: &DefinitionSite, use_site: &UseSite, cfg: &ControlFlowGraph) -> Option<Vec<BlockId>> {
+    pub fn find_def_use_path(
+        &self,
+        definition: &DefinitionSite,
+        use_site: &UseSite,
+        cfg: &ControlFlowGraph,
+    ) -> Option<Vec<BlockId>> {
         if definition.variable != use_site.variable {
             return None;
         }
@@ -380,7 +414,10 @@ impl<'a> DefUseChainBuilder<'a> {
         }
     }
 
-    fn build_with_reaching_definitions(mut self, reaching_defs: &DataFlowResult<ReachingDefinitionsState>) -> DefUseChain {
+    fn build_with_reaching_definitions(
+        mut self,
+        reaching_defs: &DataFlowResult<ReachingDefinitionsState>,
+    ) -> DefUseChain {
         // First pass: collect all definitions and uses
         self.collect_definitions_and_uses();
 
@@ -437,12 +474,15 @@ impl<'a> DefUseChainBuilder<'a> {
         }
     }
 
-    fn classify_definition(&self, instruction: &Instruction) -> crate::reaching_definitions::DefinitionType {
+    fn classify_definition(
+        &self,
+        instruction: &Instruction,
+    ) -> crate::reaching_definitions::DefinitionType {
         match instruction {
-            Instruction::Add(_, _, _) |
-            Instruction::Sub(_, _, _) |
-            Instruction::Mul(_, _, _) |
-            Instruction::Div(_, _, _) => crate::reaching_definitions::DefinitionType::Assignment,
+            Instruction::Add(_, _, _)
+            | Instruction::Sub(_, _, _)
+            | Instruction::Mul(_, _, _)
+            | Instruction::Div(_, _, _) => crate::reaching_definitions::DefinitionType::Assignment,
             Instruction::Load(_, _) => crate::reaching_definitions::DefinitionType::Load,
             Instruction::Phi(_, _) => crate::reaching_definitions::DefinitionType::Phi,
             _ => crate::reaching_definitions::DefinitionType::Other,
@@ -451,24 +491,25 @@ impl<'a> DefUseChainBuilder<'a> {
 
     fn classify_use(&self, instruction: &Instruction, variable: ValueId) -> UseType {
         match instruction {
-            Instruction::Add(_, lhs, rhs) |
-            Instruction::Sub(_, lhs, rhs) |
-            Instruction::Mul(_, lhs, rhs) |
-            Instruction::Div(_, lhs, rhs) => {
-                if utils::extract_variable_id(lhs) == Some(variable) ||
-                   utils::extract_variable_id(rhs) == Some(variable) {
+            Instruction::Add(_, lhs, rhs)
+            | Instruction::Sub(_, lhs, rhs)
+            | Instruction::Mul(_, lhs, rhs)
+            | Instruction::Div(_, lhs, rhs) => {
+                if utils::extract_variable_id(lhs) == Some(variable)
+                    || utils::extract_variable_id(rhs) == Some(variable)
+                {
                     UseType::Arithmetic
                 } else {
                     UseType::Other
                 }
-            },
+            }
             Instruction::Load(_, address) => {
                 if utils::extract_variable_id(address) == Some(variable) {
                     UseType::MemoryAddress
                 } else {
                     UseType::Other
                 }
-            },
+            }
             Instruction::Store(address, value) => {
                 if utils::extract_variable_id(address) == Some(variable) {
                     UseType::MemoryAddress
@@ -477,21 +518,21 @@ impl<'a> DefUseChainBuilder<'a> {
                 } else {
                     UseType::Other
                 }
-            },
+            }
             Instruction::ConditionalBranch(condition, _, _) => {
                 if utils::extract_variable_id(condition) == Some(variable) {
                     UseType::Conditional
                 } else {
                     UseType::Other
                 }
-            },
+            }
             Instruction::Return(Some(value)) => {
                 if utils::extract_variable_id(value) == Some(variable) {
                     UseType::Return
                 } else {
                     UseType::Other
                 }
-            },
+            }
             Instruction::Phi(_, phi_args) => {
                 for (value, _) in phi_args {
                     if utils::extract_variable_id(value) == Some(variable) {
@@ -499,7 +540,7 @@ impl<'a> DefUseChainBuilder<'a> {
                     }
                 }
                 UseType::Other
-            },
+            }
             _ => UseType::Other,
         }
     }
@@ -527,11 +568,16 @@ impl<'a> DefUseChainBuilder<'a> {
         }
     }
 
-    fn build_chains_with_reaching_definitions(&mut self, reaching_defs: &DataFlowResult<ReachingDefinitionsState>) {
+    fn build_chains_with_reaching_definitions(
+        &mut self,
+        reaching_defs: &DataFlowResult<ReachingDefinitionsState>,
+    ) {
         // Use reaching definitions to build precise def-use chains
         for (use_site, _) in self.use_to_defs.clone() {
             if let Some(entry_state) = reaching_defs.get_entry_state(use_site.block_id) {
-                let reaching_definitions: Vec<DefinitionSite> = entry_state.definitions.iter()
+                let reaching_definitions: Vec<DefinitionSite> = entry_state
+                    .definitions
+                    .iter()
                     .filter(|def| def.variable == use_site.variable)
                     .cloned()
                     .collect();
@@ -575,7 +621,11 @@ mod tests {
 
         // Block 2: z = x + y
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // z = x + y
+            Instruction::Add(
+                ValueId(3),
+                IrValue::Value(ValueId(1)),
+                IrValue::Value(ValueId(2)),
+            ), // z = x + y
         ];
 
         // Block 3: return z
@@ -588,8 +638,10 @@ mod tests {
         cfg.add_block(block3, instructions3);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }
@@ -619,7 +671,8 @@ mod tests {
 
         // Find uses of x in arithmetic operations
         if let Some(x_uses) = def_use_chain.variable_uses.get(&ValueId(1)) {
-            let arithmetic_uses: Vec<_> = x_uses.iter()
+            let arithmetic_uses: Vec<_> = x_uses
+                .iter()
                 .filter(|use_site| use_site.use_type == UseType::Arithmetic)
                 .collect();
             assert!(!arithmetic_uses.is_empty());
@@ -645,7 +698,8 @@ mod tests {
         let dead_defs = def_use_chain.find_dead_definitions();
 
         // Variable y should be identified as dead
-        let dead_y: Vec<_> = dead_defs.iter()
+        let dead_y: Vec<_> = dead_defs
+            .iter()
             .filter(|def| def.variable == ValueId(2))
             .collect();
         assert!(!dead_y.is_empty());
@@ -659,7 +713,11 @@ mod tests {
 
         let instructions = vec![
             // Use ValueId(1) without defining it first
-            Instruction::Add(ValueId(2), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)),
+            Instruction::Add(
+                ValueId(2),
+                IrValue::Value(ValueId(1)),
+                IrValue::ConstantInt(1),
+            ),
         ];
 
         cfg.add_block(block1, instructions);
@@ -694,21 +752,36 @@ mod tests {
         let merge = BlockId(3);
 
         cfg.add_block(entry, vec![]);
-        cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
-        ]);
-        cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2 (different ValueId but same logical variable)
-        ]);
-        cfg.add_block(merge, vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(0)), // use x
-        ]);
+        cfg.add_block(
+            branch1,
+            vec![
+                Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            ],
+        );
+        cfg.add_block(
+            branch2,
+            vec![
+                Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2 (different ValueId but same logical variable)
+            ],
+        );
+        cfg.add_block(
+            merge,
+            vec![
+                Instruction::Add(
+                    ValueId(3),
+                    IrValue::Value(ValueId(1)),
+                    IrValue::ConstantInt(0),
+                ), // use x
+            ],
+        );
 
         cfg.set_entry_block(entry).unwrap();
         cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
         cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
-        cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(branch1, merge, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(branch2, merge, EdgeType::Unconditional)
+            .unwrap();
 
         let def_use_chain = DefUseChain::build(&cfg);
         let stats = def_use_chain.compute_statistics();

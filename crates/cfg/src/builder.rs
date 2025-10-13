@@ -1,8 +1,8 @@
-use std::collections::HashSet;
 use anyhow::Result;
+use std::collections::HashSet;
 
-use ir::{IrFunction, BlockId, Instruction};
 use crate::graph::{ControlFlowGraph, EdgeType};
+use ir::{BlockId, Instruction, IrFunction};
 
 /// Builder for constructing Control Flow Graphs from IR functions
 pub struct CfgBuilder {
@@ -90,7 +90,11 @@ impl CfgBuilder {
     }
 
     /// Analyze control flow and add edges between blocks
-    fn add_control_flow_edges(&self, cfg: &mut ControlFlowGraph, ir_function: &IrFunction) -> Result<()> {
+    fn add_control_flow_edges(
+        &self,
+        cfg: &mut ControlFlowGraph,
+        ir_function: &IrFunction,
+    ) -> Result<()> {
         for (block_id, basic_block) in &ir_function.basic_blocks {
             self.analyze_block_control_flow(cfg, *block_id, basic_block)?;
         }
@@ -102,7 +106,7 @@ impl CfgBuilder {
         &self,
         cfg: &mut ControlFlowGraph,
         block_id: BlockId,
-        basic_block: &ir::BasicBlock
+        basic_block: &ir::BasicBlock,
     ) -> Result<()> {
         // Look at the last instruction to determine control flow
         if let Some(last_instruction) = basic_block.instructions.last() {
@@ -138,7 +142,7 @@ impl CfgBuilder {
         &self,
         _cfg: &mut ControlFlowGraph,
         _block_id: BlockId,
-        _basic_block: &ir::BasicBlock
+        _basic_block: &ir::BasicBlock,
     ) -> Result<()> {
         // For now, we don't add implicit fall-through edges
         // In a real implementation, this would analyze the block layout
@@ -165,7 +169,10 @@ impl CfgBuilder {
         let unreachable_blocks = cfg.find_unreachable_blocks();
 
         if !unreachable_blocks.is_empty() {
-            tracing::info!("Eliminating {} unreachable blocks", unreachable_blocks.len());
+            tracing::info!(
+                "Eliminating {} unreachable blocks",
+                unreachable_blocks.len()
+            );
             for block_id in unreachable_blocks {
                 tracing::debug!("Removing unreachable block: {}", block_id);
                 cfg.remove_block(block_id)?;
@@ -261,13 +268,16 @@ impl<'a> LoopAnalysis<'a> {
     /// Check if a block is inside a loop
     pub fn is_in_loop(&self, block_id: BlockId) -> bool {
         let natural_loops = self.find_natural_loops();
-        natural_loops.iter().any(|loop_info| loop_info.blocks.contains(&block_id))
+        natural_loops
+            .iter()
+            .any(|loop_info| loop_info.blocks.contains(&block_id))
     }
 
     /// Get the nesting depth of loops at a given block
     pub fn loop_nesting_depth(&self, block_id: BlockId) -> usize {
         let natural_loops = self.find_natural_loops();
-        natural_loops.iter()
+        natural_loops
+            .iter()
             .filter(|loop_info| loop_info.blocks.contains(&block_id))
             .count()
     }
@@ -277,7 +287,8 @@ impl<'a> LoopAnalysis<'a> {
         let natural_loops = self.find_natural_loops();
 
         // Find the loop with the smallest number of blocks that contains this block
-        natural_loops.into_iter()
+        natural_loops
+            .into_iter()
             .filter(|loop_info| loop_info.blocks.contains(&block_id))
             .min_by_key(|loop_info| loop_info.blocks.len())
     }
@@ -335,7 +346,12 @@ impl<'a> CfgAnalysis<'a> {
     }
 
     /// DFS visit helper
-    fn dfs_visit(&self, block_id: BlockId, visited: &mut HashSet<BlockId>, order: &mut Vec<BlockId>) {
+    fn dfs_visit(
+        &self,
+        block_id: BlockId,
+        visited: &mut HashSet<BlockId>,
+        order: &mut Vec<BlockId>,
+    ) {
         if visited.contains(&block_id) {
             return;
         }
@@ -420,7 +436,12 @@ impl<'a> CfgAnalysis<'a> {
     }
 
     /// Helper to collect strongly connected component
-    fn collect_scc(&self, block_id: BlockId, visited: &mut HashSet<BlockId>, component: &mut Vec<BlockId>) {
+    fn collect_scc(
+        &self,
+        block_id: BlockId,
+        visited: &mut HashSet<BlockId>,
+        component: &mut Vec<BlockId>,
+    ) {
         if visited.contains(&block_id) {
             return;
         }
@@ -444,28 +465,24 @@ mod tests {
     use ir::IrFunction;
 
     fn create_test_function() -> IrFunction {
-        let mut ir_function = IrFunction::new(
-            "test_function".to_string(),
-            vec![],
-            vec![],
-        );
+        let mut ir_function = IrFunction::new("test_function".to_string(), vec![], vec![]);
 
         // Add some basic blocks with simple control flow
         let block1 = ir_function.create_block();
         let block2 = ir_function.create_block();
 
         // Entry block branches to block1
-        ir_function.add_instruction(ir_function.entry_block,
-            Instruction::Branch(block1)
-        ).unwrap();
+        ir_function
+            .add_instruction(ir_function.entry_block, Instruction::Branch(block1))
+            .unwrap();
 
-        ir_function.add_instruction(block1,
-            Instruction::Branch(block2)
-        ).unwrap();
+        ir_function
+            .add_instruction(block1, Instruction::Branch(block2))
+            .unwrap();
 
-        ir_function.add_instruction(block2,
-            Instruction::Return(None)
-        ).unwrap();
+        ir_function
+            .add_instruction(block2, Instruction::Return(None))
+            .unwrap();
 
         ir_function
     }
@@ -520,8 +537,10 @@ mod tests {
         cfg.add_block(block3, vec![]);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
         cfg.add_edge(block3, block2, EdgeType::Back).unwrap(); // Create loop
 
         let loop_analysis = LoopAnalysis::new(&cfg);
@@ -543,7 +562,8 @@ mod tests {
         cfg.add_block(block1, vec![]);
         cfg.add_block(block2, vec![]);
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         let analysis = CfgAnalysis::new(&cfg);
         let dfs_order = analysis.dfs_order();

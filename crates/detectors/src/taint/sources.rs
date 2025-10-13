@@ -1,18 +1,18 @@
 /// Taint sources - origins of untrusted data
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum TaintSource {
-    MessageSender,        // msg.sender
-    TransactionOrigin,    // tx.origin
-    MessageData,          // msg.data
-    MessageValue,         // msg.value
-    BlockTimestamp,       // block.timestamp, now
-    BlockNumber,          // block.number
-    BlockHash,            // blockhash()
-    ExternalCall,         // External contract calls
-    Oracle,               // Oracle data feeds
-    UserInput,            // Function parameters
-    Storage,              // Storage reads
-    Custom(String),       // Custom taint source
+    MessageSender,     // msg.sender
+    TransactionOrigin, // tx.origin
+    MessageData,       // msg.data
+    MessageValue,      // msg.value
+    BlockTimestamp,    // block.timestamp, now
+    BlockNumber,       // block.number
+    BlockHash,         // blockhash()
+    ExternalCall,      // External contract calls
+    Oracle,            // Oracle data feeds
+    UserInput,         // Function parameters
+    Storage,           // Storage reads
+    Custom(String),    // Custom taint source
 }
 
 /// Detector for taint sources
@@ -48,7 +48,10 @@ impl TaintSourceDetector {
             if line.contains("blockhash") {
                 sources.push((line_number, TaintSource::BlockHash));
             }
-            if line.contains("call(") || line.contains("delegatecall(") || line.contains("staticcall(") {
+            if line.contains("call(")
+                || line.contains("delegatecall(")
+                || line.contains("staticcall(")
+            {
                 sources.push((line_number, TaintSource::ExternalCall));
             }
         }

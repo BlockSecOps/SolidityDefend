@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SocialRecoveryDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl SocialRecoveryDetector {
 
     fn is_social_recovery_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("guardian") || source.contains("recovery")) &&
-        (source.contains("recover") || source.contains("addguardian"))
+        (source.contains("guardian") || source.contains("recovery"))
+            && (source.contains("recover") || source.contains("addguardian"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,11 +42,10 @@ impl SocialRecoveryDetector {
         // Check recovery execution functions
         if name.contains("recover") || name.contains("executerecovery") {
             // Check for insufficient threshold
-            let has_threshold = source_lower.contains("threshold") &&
-                (source_lower.contains(">=") || source_lower.contains(">"));
+            let has_threshold = source_lower.contains("threshold")
+                && (source_lower.contains(">=") || source_lower.contains(">"));
             let has_quorum = source_lower.contains("quorum");
-            let has_count_check = source_lower.contains("count") &&
-                source_lower.contains(">=");
+            let has_count_check = source_lower.contains("count") && source_lower.contains(">=");
 
             if !has_threshold && !has_quorum && !has_count_check {
                 issues.push((
@@ -53,10 +56,11 @@ impl SocialRecoveryDetector {
             }
 
             // Check for missing timelock delay
-            let has_timelock = (source_lower.contains("timelock") || source_lower.contains("delay")) &&
-                source_lower.contains("timestamp");
-            let has_recovery_period = source_lower.contains("recoveryperiod") ||
-                source_lower.contains("waitingperiod");
+            let has_timelock = (source_lower.contains("timelock")
+                || source_lower.contains("delay"))
+                && source_lower.contains("timestamp");
+            let has_recovery_period =
+                source_lower.contains("recoveryperiod") || source_lower.contains("waitingperiod");
 
             if !has_timelock && !has_recovery_period {
                 issues.push((
@@ -79,14 +83,15 @@ impl SocialRecoveryDetector {
             }
 
             // Check for guardian validation
-            let has_guardian_check = source_lower.contains("isguardian") ||
-                (source_lower.contains("guardian") && source_lower.contains("mapping"));
+            let has_guardian_check = source_lower.contains("isguardian")
+                || (source_lower.contains("guardian") && source_lower.contains("mapping"));
 
             if !has_guardian_check {
                 issues.push((
                     "No guardian validation (anyone can participate in recovery)".to_string(),
                     Severity::Critical,
-                    "Validate guardians: require(isGuardian[msg.sender], \"Not a guardian\");".to_string()
+                    "Validate guardians: require(isGuardian[msg.sender], \"Not a guardian\");"
+                        .to_string(),
                 ));
             }
 
@@ -105,8 +110,8 @@ impl SocialRecoveryDetector {
         // Check guardian addition/removal functions
         if name.contains("addguardian") || name.contains("removeguardian") {
             // Check for owner-only access
-            let has_owner_check = source_lower.contains("owner") &&
-                (source_lower.contains("require") || source_lower.contains("onlyowner"));
+            let has_owner_check = source_lower.contains("owner")
+                && (source_lower.contains("require") || source_lower.contains("onlyowner"));
 
             if !has_owner_check {
                 issues.push((
@@ -117,8 +122,8 @@ impl SocialRecoveryDetector {
             }
 
             // Check for minimum guardian count
-            let has_min_count = source_lower.contains("min") &&
-                (source_lower.contains("guardian") || source_lower.contains("count"));
+            let has_min_count = source_lower.contains("min")
+                && (source_lower.contains("guardian") || source_lower.contains("count"));
 
             if name.contains("remove") && !has_min_count {
                 issues.push((
@@ -129,14 +134,15 @@ impl SocialRecoveryDetector {
             }
 
             // Check for duplicate guardian prevention
-            let has_duplicate_check = source_lower.contains("!isguardian") ||
-                source_lower.contains("require(!guardian");
+            let has_duplicate_check =
+                source_lower.contains("!isguardian") || source_lower.contains("require(!guardian");
 
             if name.contains("add") && !has_duplicate_check {
                 issues.push((
                     "No duplicate guardian prevention".to_string(),
                     Severity::Low,
-                    "Prevent duplicates: require(!isGuardian[guardian], \"Already a guardian\");".to_string()
+                    "Prevent duplicates: require(!isGuardian[guardian], \"Already a guardian\");"
+                        .to_string(),
                 ));
             }
         }
@@ -144,8 +150,8 @@ impl SocialRecoveryDetector {
         // Check recovery initiation
         if name.contains("initiate") && name.contains("recovery") {
             // Check for rate limiting
-            let has_rate_limit = source_lower.contains("lastrecovery") ||
-                (source_lower.contains("timestamp") && source_lower.contains("cooldown"));
+            let has_rate_limit = source_lower.contains("lastrecovery")
+                || (source_lower.contains("timestamp") && source_lower.contains("cooldown"));
 
             if !has_rate_limit {
                 issues.push((
@@ -212,15 +218,17 @@ impl Detector for SocialRecoveryDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

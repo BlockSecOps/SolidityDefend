@@ -1,10 +1,10 @@
 pub mod console;
 pub mod json;
 
-pub use console::{ConsoleFormatter, ConsoleConfig};
-pub use json::{JsonFormatter, JsonOutputBuilder, JsonError};
+pub use console::{ConsoleConfig, ConsoleFormatter};
+pub use json::{JsonError, JsonFormatter, JsonOutputBuilder};
 
-use detectors::types::{Finding, AnalysisContext};
+use detectors::types::{AnalysisContext, Finding};
 
 /// Unified output formatter that supports multiple formats
 #[derive(Debug)]
@@ -28,15 +28,23 @@ impl OutputFormatter {
     pub fn format(&self, findings: &[Finding]) -> Result<String, anyhow::Error> {
         match self {
             Self::Console(formatter) => formatter.format_simple(findings),
-            Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
+            Self::Json(formatter) => formatter
+                .format(findings)
+                .map_err(|e| anyhow::anyhow!("{:?}", e)),
         }
     }
 
     /// Format findings with full context information
-    pub fn format_with_context(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String, anyhow::Error> {
+    pub fn format_with_context(
+        &self,
+        findings: &[Finding],
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<String, anyhow::Error> {
         match self {
             Self::Console(formatter) => formatter.format_findings(findings, ctx),
-            Self::Json(formatter) => formatter.format(findings).map_err(|e| anyhow::anyhow!("{:?}", e)),
+            Self::Json(formatter) => formatter
+                .format(findings)
+                .map_err(|e| anyhow::anyhow!("{:?}", e)),
         }
     }
 }
@@ -91,7 +99,11 @@ impl OutputFormatterBuilder {
         match self.format_type {
             OutputFormat::Console => {
                 let config = ConsoleConfig {
-                    color_mode: if self.color_output { console::ColorMode::Always } else { console::ColorMode::Never },
+                    color_mode: if self.color_output {
+                        console::ColorMode::Always
+                    } else {
+                        console::ColorMode::Never
+                    },
                     output_level: console::OutputLevel::All,
                     show_code_snippets: true,
                     show_fix_suggestions: true,
@@ -123,11 +135,17 @@ impl OutputManager {
     }
 
     pub fn with_formatter(formatter: OutputFormatter) -> Self {
-        Self { _formatter: formatter }
+        Self {
+            _formatter: formatter,
+        }
     }
 
     /// Write findings to stdout with the configured format
-    pub fn write_to_stdout(&self, findings: &[Finding], format: OutputFormat) -> anyhow::Result<()> {
+    pub fn write_to_stdout(
+        &self,
+        findings: &[Finding],
+        format: OutputFormat,
+    ) -> anyhow::Result<()> {
         let formatter = match format {
             OutputFormat::Console => OutputFormatter::console(),
             OutputFormat::Json => OutputFormatter::json(),
@@ -139,7 +157,12 @@ impl OutputManager {
     }
 
     /// Write findings to a file with the configured format
-    pub fn write_to_file(&self, findings: &[Finding], format: OutputFormat, path: &std::path::Path) -> anyhow::Result<()> {
+    pub fn write_to_file(
+        &self,
+        findings: &[Finding],
+        format: OutputFormat,
+        path: &std::path::Path,
+    ) -> anyhow::Result<()> {
         let formatter = match format {
             OutputFormat::Console => OutputFormatter::console(),
             OutputFormat::Json => OutputFormatter::json(),

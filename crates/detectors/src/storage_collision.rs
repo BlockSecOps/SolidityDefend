@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for storage collision vulnerabilities in upgradeable contracts
 pub struct StorageCollisionDetector {
@@ -58,25 +58,26 @@ impl Detector for StorageCollisionDetector {
                     "Function '{}' uses delegatecall which can cause storage collision. \
                     {} Delegatecall executes code in the context of the calling contract's storage, \
                     and mismatched storage layouts can corrupt state.",
-                    function.name.name,
-                    delegatecall_issue
+                    function.name.name, delegatecall_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(662) // CWE-662: Improper Synchronization
-                .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
-                .with_fix_suggestion(format!(
-                    "Ensure storage layout compatibility in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(662) // CWE-662: Improper Synchronization
+                    .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_fix_suggestion(format!(
+                        "Ensure storage layout compatibility in '{}'. \
                     Verify that delegatecall targets have identical storage layout, \
                     use storage slots explicitly, or implement storage layout versioning.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -97,17 +98,21 @@ impl StorageCollisionDetector {
         let contract_source = self.get_contract_source(contract, ctx);
 
         // Look for proxy pattern indicators
-        contract_source.contains("Initializable") ||
-        contract_source.contains("UUPSUpgradeable") ||
-        contract_source.contains("TransparentUpgradeableProxy") ||
-        contract_source.contains("upgradeTo") ||
-        contract_source.contains("initialize(") ||
-        (contract_source.contains("delegatecall") && contract_source.contains("implementation"))
+        contract_source.contains("Initializable")
+            || contract_source.contains("UUPSUpgradeable")
+            || contract_source.contains("TransparentUpgradeableProxy")
+            || contract_source.contains("upgradeTo")
+            || contract_source.contains("initialize(")
+            || (contract_source.contains("delegatecall")
+                && contract_source.contains("implementation"))
     }
 
-
     /// Check delegatecall for storage collision risks
-    fn check_delegatecall_storage(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_delegatecall_storage(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -115,29 +120,28 @@ impl StorageCollisionDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for delegatecall usage
-        let has_delegatecall = func_source.contains("delegatecall") ||
-                              func_source.contains(".delegatecall");
+        let has_delegatecall =
+            func_source.contains("delegatecall") || func_source.contains(".delegatecall");
 
         if !has_delegatecall {
             return None;
         }
 
         // Pattern 1: Delegatecall without storage layout verification
-        let has_storage_check = func_source.contains("storage") ||
-                               func_source.contains("layout") ||
-                               func_source.contains("compatible");
+        let has_storage_check = func_source.contains("storage")
+            || func_source.contains("layout")
+            || func_source.contains("compatible");
 
         // Pattern 2: Delegatecall with variable target
-        let has_variable_target = (func_source.contains("delegatecall(") ||
-                                   func_source.contains(".delegatecall(")) &&
-                                  (func_source.contains("address(") ||
-                                   func_source.contains("target") ||
-                                   func_source.contains("implementation"));
+        let has_variable_target = (func_source.contains("delegatecall(")
+            || func_source.contains(".delegatecall("))
+            && (func_source.contains("address(")
+                || func_source.contains("target")
+                || func_source.contains("implementation"));
 
         // Pattern 3: Vulnerability marker
-        let has_vulnerability_marker = func_source.contains("VULNERABILITY") &&
-                                       (func_source.contains("storage collision") ||
-                                        func_source.contains("delegatecall"));
+        let has_vulnerability_marker = func_source.contains("VULNERABILITY")
+            && (func_source.contains("storage collision") || func_source.contains("delegatecall"));
 
         if has_vulnerability_marker {
             return Some(format!(

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for block stuffing vulnerabilities
 pub struct BlockStuffingVulnerableDetector {
@@ -56,8 +56,7 @@ impl Detector for BlockStuffingVulnerableDetector {
                 let message = format!(
                     "Function '{}' is vulnerable to block stuffing attacks. {} \
                     Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
-                    function.name.name,
-                    stuffing_issue
+                    function.name.name, stuffing_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -91,7 +90,11 @@ impl Detector for BlockStuffingVulnerableDetector {
 
 impl BlockStuffingVulnerableDetector {
     /// Check for block stuffing vulnerabilities
-    fn check_block_stuffing_vulnerability(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_block_stuffing_vulnerability(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,18 +102,18 @@ impl BlockStuffingVulnerableDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Pattern 1: Single-block deadline without grace period
-        let has_deadline = func_source.contains("deadline") ||
-                          func_source.contains("endTime") ||
-                          func_source.contains("expiresAt");
+        let has_deadline = func_source.contains("deadline")
+            || func_source.contains("endTime")
+            || func_source.contains("expiresAt");
 
-        let uses_exact_block = has_deadline &&
-                              (func_source.contains("block.number ==") ||
-                               func_source.contains("block.timestamp =="));
+        let uses_exact_block = has_deadline
+            && (func_source.contains("block.number ==")
+                || func_source.contains("block.timestamp =="));
 
-        let lacks_grace_period = uses_exact_block &&
-                                !func_source.contains("GRACE_PERIOD") &&
-                                !func_source.contains("grace") &&
-                                !func_source.contains("extension");
+        let lacks_grace_period = uses_exact_block
+            && !func_source.contains("GRACE_PERIOD")
+            && !func_source.contains("grace")
+            && !func_source.contains("extension");
 
         if lacks_grace_period {
             return Some(format!(
@@ -120,15 +123,14 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 2: First-come-first-served with strict ordering
-        let is_fcfs = func_source.contains("first") ||
-                     func_source.contains("queue") ||
-                     func_source.contains("order");
+        let is_fcfs = func_source.contains("first")
+            || func_source.contains("queue")
+            || func_source.contains("order");
 
-        let has_strict_ordering = is_fcfs &&
-                                 (func_source.contains("require(") ||
-                                  func_source.contains("revert")) &&
-                                 !func_source.contains("batch") &&
-                                 !func_source.contains("multiple");
+        let has_strict_ordering = is_fcfs
+            && (func_source.contains("require(") || func_source.contains("revert"))
+            && !func_source.contains("batch")
+            && !func_source.contains("multiple");
 
         if has_strict_ordering {
             return Some(format!(
@@ -138,19 +140,19 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 3: Auction close without multi-block finalization
-        let is_auction = func_source.contains("auction") ||
-                        func_source.contains("bid") ||
-                        function.name.name.to_lowercase().contains("auction");
+        let is_auction = func_source.contains("auction")
+            || func_source.contains("bid")
+            || function.name.name.to_lowercase().contains("auction");
 
-        let has_close = func_source.contains("close") ||
-                       func_source.contains("finalize") ||
-                       func_source.contains("end");
+        let has_close = func_source.contains("close")
+            || func_source.contains("finalize")
+            || func_source.contains("end");
 
-        let single_block_close = is_auction &&
-                                has_close &&
-                                !func_source.contains("FINALIZATION_PERIOD") &&
-                                !func_source.contains("multi") &&
-                                !func_source.contains("extended");
+        let single_block_close = is_auction
+            && has_close
+            && !func_source.contains("FINALIZATION_PERIOD")
+            && !func_source.contains("multi")
+            && !func_source.contains("extended");
 
         if single_block_close {
             return Some(format!(
@@ -160,21 +162,21 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 4: Critical operation with narrow time window
-        let is_critical = func_source.contains("claim") ||
-                         func_source.contains("withdraw") ||
-                         func_source.contains("redeem") ||
-                         func_source.contains("execute");
+        let is_critical = func_source.contains("claim")
+            || func_source.contains("withdraw")
+            || func_source.contains("redeem")
+            || func_source.contains("execute");
 
-        let has_time_check = func_source.contains("block.number <") ||
-                             func_source.contains("block.number <=") ||
-                             func_source.contains("block.timestamp <") ||
-                             func_source.contains("block.timestamp <=");
+        let has_time_check = func_source.contains("block.number <")
+            || func_source.contains("block.number <=")
+            || func_source.contains("block.timestamp <")
+            || func_source.contains("block.timestamp <=");
 
-        let narrow_window = is_critical &&
-                           has_time_check &&
-                           !func_source.contains("WINDOW") &&
-                           !func_source.contains("extended") &&
-                           !func_source.contains("flexible");
+        let narrow_window = is_critical
+            && has_time_check
+            && !func_source.contains("WINDOW")
+            && !func_source.contains("extended")
+            && !func_source.contains("flexible");
 
         if narrow_window {
             return Some(format!(
@@ -184,17 +186,15 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 5: Liquidation or time-sensitive financial operation
-        let is_liquidation = func_source.contains("liquidat") ||
-                            func_source.contains("Liquidat");
+        let is_liquidation = func_source.contains("liquidat") || func_source.contains("Liquidat");
 
-        let time_dependent = is_liquidation &&
-                            (func_source.contains("block.timestamp") ||
-                             func_source.contains("block.number"));
+        let time_dependent = is_liquidation
+            && (func_source.contains("block.timestamp") || func_source.contains("block.number"));
 
-        let no_protection = time_dependent &&
-                           !func_source.contains("grace") &&
-                           !func_source.contains("buffer") &&
-                           !func_source.contains("extended");
+        let no_protection = time_dependent
+            && !func_source.contains("grace")
+            && !func_source.contains("buffer")
+            && !func_source.contains("extended");
 
         if no_protection {
             return Some(format!(
@@ -204,15 +204,14 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 6: Voting or governance with single-block window
-        let is_governance = func_source.contains("vote") ||
-                           func_source.contains("govern") ||
-                           func_source.contains("propose");
+        let is_governance = func_source.contains("vote")
+            || func_source.contains("govern")
+            || func_source.contains("propose");
 
-        let single_block_vote = is_governance &&
-                               (func_source.contains("block.number ==") ||
-                                func_source.contains("deadline ==")) &&
-                               !func_source.contains("VOTING_PERIOD") &&
-                               !func_source.contains("extended");
+        let single_block_vote = is_governance
+            && (func_source.contains("block.number ==") || func_source.contains("deadline =="))
+            && !func_source.contains("VOTING_PERIOD")
+            && !func_source.contains("extended");
 
         if single_block_vote {
             return Some(format!(
@@ -222,14 +221,14 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 7: First-in mechanism without queue protection
-        let is_first_in = function.name.name.to_lowercase().contains("first") ||
-                         func_source.contains("firstCome") ||
-                         func_source.contains("first-in");
+        let is_first_in = function.name.name.to_lowercase().contains("first")
+            || func_source.contains("firstCome")
+            || func_source.contains("first-in");
 
-        let lacks_queue = is_first_in &&
-                         !func_source.contains("queue") &&
-                         !func_source.contains("waiting") &&
-                         !func_source.contains("batch");
+        let lacks_queue = is_first_in
+            && !func_source.contains("queue")
+            && !func_source.contains("waiting")
+            && !func_source.contains("batch");
 
         if lacks_queue {
             return Some(format!(
@@ -239,13 +238,12 @@ impl BlockStuffingVulnerableDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("block stuffing") ||
-            func_source.contains("censorship") ||
-            func_source.contains("ordering")) {
-            return Some(format!(
-                "Block stuffing vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("block stuffing")
+                || func_source.contains("censorship")
+                || func_source.contains("ordering"))
+        {
+            return Some(format!("Block stuffing vulnerability marker detected"));
         }
 
         None

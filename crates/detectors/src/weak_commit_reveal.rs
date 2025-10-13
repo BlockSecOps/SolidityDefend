@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for weak commit-reveal scheme vulnerabilities
 pub struct WeakCommitRevealDetector {
@@ -60,21 +60,23 @@ impl Detector for WeakCommitRevealDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Increase commit-reveal delay in function '{}' to at least 5 minutes and \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Increase commit-reveal delay in function '{}' to at least 5 minutes and \
                     add randomization. Example: Use VRF for unpredictable reveal windows or \
                     implement variable delays based on block hash.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -98,13 +100,11 @@ impl WeakCommitRevealDetector {
 
         // Check if this is a commit-related function
         let function_name = function.name.name.to_lowercase();
-        let commit_patterns = [
-            "commit", "reveal", "commitorder", "revealorder"
-        ];
+        let commit_patterns = ["commit", "reveal", "commitorder", "revealorder"];
 
-        let is_commit_function = commit_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_commit_function = commit_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_commit_function {
             return false;
@@ -122,9 +122,9 @@ impl WeakCommitRevealDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if it's implementing commit-reveal
-        let has_commit_reveal = func_source.contains("commitment") ||
-                               func_source.contains("reveal") ||
-                               (func_source.contains("commit") && func_source.contains("timestamp"));
+        let has_commit_reveal = func_source.contains("commitment")
+            || func_source.contains("reveal")
+            || (func_source.contains("commit") && func_source.contains("timestamp"));
 
         if !has_commit_reveal {
             return false;
@@ -137,30 +137,28 @@ impl WeakCommitRevealDetector {
     /// Check if commit-reveal has weak parameters
     fn check_weak_parameters(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("delay is too short") ||
-                                        source.contains("Commit-reveal delay") ||
-                                        source.contains("too short and predictable"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("delay is too short")
+                || source.contains("Commit-reveal delay")
+                || source.contains("too short and predictable"));
 
         // Pattern 2: Uses short delay (< 5 minutes)
-        let has_short_delay = (source.contains("1 minutes") ||
-                              source.contains("2 minutes") ||
-                              source.contains("3 minutes") ||
-                              source.contains("30 seconds") ||
-                              source.contains("1 minute")) &&
-                             (source.contains("commitRevealDelay") ||
-                              source.contains("revealDeadline"));
+        let has_short_delay = (source.contains("1 minutes")
+            || source.contains("2 minutes")
+            || source.contains("3 minutes")
+            || source.contains("30 seconds")
+            || source.contains("1 minute"))
+            && (source.contains("commitRevealDelay") || source.contains("revealDeadline"));
 
         // Pattern 3: Predictable timing without randomization
-        let uses_predictable_timing = source.contains("block.timestamp +") &&
-                                      !source.contains("random") &&
-                                      !source.contains("VRF") &&
-                                      !source.contains("blockhash");
+        let uses_predictable_timing = source.contains("block.timestamp +")
+            && !source.contains("random")
+            && !source.contains("VRF")
+            && !source.contains("blockhash");
 
         // Pattern 4: Immediate execution after reveal
-        let immediate_execution = source.contains("_executeOrder") ||
-                                 (source.contains("revealed = true") &&
-                                  source.contains("execute"));
+        let immediate_execution = source.contains("_executeOrder")
+            || (source.contains("revealed = true") && source.contains("execute"));
 
         // Vulnerable if has explicit marker
         if has_vulnerability_marker {

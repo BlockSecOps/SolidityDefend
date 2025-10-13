@@ -1,6 +1,6 @@
 //use anyhow::Result;
-use ast::AstArena;
 use analysis::AnalysisEngine;
+use ast::AstArena;
 use parser::Parser;
 
 /// Basic smoke tests for the analysis engine
@@ -42,14 +42,19 @@ mod tests {
         let analysis_result = engine.analyze_source_file(&ast);
         match analysis_result {
             Ok(results) => {
-                println!("✅ Analysis succeeded with {} functions", results.function_analyses.len());
+                println!(
+                    "✅ Analysis succeeded with {} functions",
+                    results.function_analyses.len()
+                );
 
                 // Verify basic properties
                 for (i, func) in results.function_analyses.iter().enumerate() {
-                    println!("Function {}: {} basic blocks, {} instructions",
+                    println!(
+                        "Function {}: {} basic blocks, {} instructions",
                         i,
                         func.cfg.statistics().block_count,
-                        func.ir_function.get_instructions().len());
+                        func.ir_function.get_instructions().len()
+                    );
                 }
             }
             Err(e) => {

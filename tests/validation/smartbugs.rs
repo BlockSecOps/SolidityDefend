@@ -259,7 +259,9 @@ contract IntegerOverflow {
     }
 
     /// Load test cases from the dataset
-    fn load_test_cases(dataset_path: &Path) -> Result<Vec<SmartBugsTestCase>, Box<dyn std::error::Error>> {
+    fn load_test_cases(
+        dataset_path: &Path,
+    ) -> Result<Vec<SmartBugsTestCase>, Box<dyn std::error::Error>> {
         let mut test_cases = Vec::new();
 
         // Load reentrancy test cases
@@ -349,16 +351,17 @@ contract IntegerOverflow {
             "soliditydefend",
         ];
 
-        let binary_exists = binary_paths.iter().any(|path| {
-            std::path::Path::new(path).exists()
-        });
+        let binary_exists = binary_paths
+            .iter()
+            .any(|path| std::path::Path::new(path).exists());
 
         if !binary_exists {
             return Err("SolidityDefend binary not found".into());
         }
 
         let mut results = Vec::new();
-        let mut category_stats: HashMap<SmartBugsCategory, (usize, usize, usize, usize)> = HashMap::new();
+        let mut category_stats: HashMap<SmartBugsCategory, (usize, usize, usize, usize)> =
+            HashMap::new();
 
         for test_case in &self.test_cases {
             println!("Running test case: {}", test_case.name);
@@ -378,7 +381,9 @@ contract IntegerOverflow {
             };
 
             // Update category statistics
-            let stats = category_stats.entry(test_case.category.clone()).or_insert((0, 0, 0, 0));
+            let stats = category_stats
+                .entry(test_case.category.clone())
+                .or_insert((0, 0, 0, 0));
             stats.0 += 1; // total
             stats.1 += test_result.true_positives.len(); // true positives
             stats.2 += test_result.false_positives.len(); // false positives
@@ -389,7 +394,10 @@ contract IntegerOverflow {
 
         // Calculate overall metrics
         let total_cases = results.len();
-        let passed = results.iter().filter(|r| matches!(r.status, TestStatus::Passed)).count();
+        let passed = results
+            .iter()
+            .filter(|r| matches!(r.status, TestStatus::Passed))
+            .count();
         let failed = total_cases - passed;
 
         let total_tp: usize = results.iter().map(|r| r.true_positives.len()).sum();
@@ -423,19 +431,34 @@ contract IntegerOverflow {
         // Calculate category results
         let mut category_results = HashMap::new();
         for (category, (total, tp, fp, fn_count)) in category_stats {
-            let cat_precision = if tp + fp > 0 { tp as f64 / (tp + fp) as f64 } else { 0.0 };
-            let cat_recall = if tp + fn_count > 0 { tp as f64 / (tp + fn_count) as f64 } else { 0.0 };
-            let cat_accuracy = if total > 0 { tp as f64 / total as f64 } else { 0.0 };
+            let cat_precision = if tp + fp > 0 {
+                tp as f64 / (tp + fp) as f64
+            } else {
+                0.0
+            };
+            let cat_recall = if tp + fn_count > 0 {
+                tp as f64 / (tp + fn_count) as f64
+            } else {
+                0.0
+            };
+            let cat_accuracy = if total > 0 {
+                tp as f64 / total as f64
+            } else {
+                0.0
+            };
 
-            category_results.insert(category, CategoryResults {
-                total,
-                true_positives: tp,
-                false_positives: fp,
-                false_negatives: fn_count,
-                accuracy: cat_accuracy,
-                precision: cat_precision,
-                recall: cat_recall,
-            });
+            category_results.insert(
+                category,
+                CategoryResults {
+                    total,
+                    true_positives: tp,
+                    false_positives: fp,
+                    false_negatives: fn_count,
+                    accuracy: cat_accuracy,
+                    precision: cat_precision,
+                    recall: cat_recall,
+                },
+            );
         }
 
         Ok(SmartBugsResults {
@@ -459,7 +482,8 @@ contract IntegerOverflow {
         let result = timeout(
             Duration::from_secs(30),
             self.execute_soliditydefend(&test_case.source_file),
-        ).await;
+        )
+        .await;
 
         match result {
             Ok(Ok(detected)) => {
@@ -480,12 +504,14 @@ contract IntegerOverflow {
                     false_negatives,
                     status,
                 }
-            },
+            }
             Ok(Err(e)) => SingleTestResult {
                 detected_vulnerabilities: Vec::new(),
                 true_positives: Vec::new(),
                 false_positives: Vec::new(),
-                false_negatives: test_case.expected_vulnerabilities.iter()
+                false_negatives: test_case
+                    .expected_vulnerabilities
+                    .iter()
                     .map(|v| v.detector_name.clone())
                     .collect(),
                 status: TestStatus::Error(e),
@@ -494,7 +520,9 @@ contract IntegerOverflow {
                 detected_vulnerabilities: Vec::new(),
                 true_positives: Vec::new(),
                 false_positives: Vec::new(),
-                false_negatives: test_case.expected_vulnerabilities.iter()
+                false_negatives: test_case
+                    .expected_vulnerabilities
+                    .iter()
                     .map(|v| v.detector_name.clone())
                     .collect(),
                 status: TestStatus::Timeout,
@@ -503,7 +531,10 @@ contract IntegerOverflow {
     }
 
     /// Execute SolidityDefend binary on a source file
-    async fn execute_soliditydefend(&self, source_file: &Path) -> Result<Vec<DetectedVulnerability>, String> {
+    async fn execute_soliditydefend(
+        &self,
+        source_file: &Path,
+    ) -> Result<Vec<DetectedVulnerability>, String> {
         // Check if the actual SolidityDefend binary exists
         let binary_paths = [
             "./target/release/soliditydefend",
@@ -511,9 +542,9 @@ contract IntegerOverflow {
             "soliditydefend",
         ];
 
-        let binary_exists = binary_paths.iter().any(|path| {
-            std::path::Path::new(path).exists()
-        });
+        let binary_exists = binary_paths
+            .iter()
+            .any(|path| std::path::Path::new(path).exists());
 
         if !binary_exists {
             return Err("SolidityDefend binary not found".to_string());
@@ -525,7 +556,9 @@ contract IntegerOverflow {
         let mut detected = Vec::new();
 
         // Simulate reentrancy detection
-        if source_content.contains("call.value") && source_content.contains("balances[msg.sender] = 0") {
+        if source_content.contains("call.value")
+            && source_content.contains("balances[msg.sender] = 0")
+        {
             detected.push(DetectedVulnerability {
                 detector_name: "reentrancy".to_string(),
                 message: "Potential reentrancy vulnerability detected".to_string(),
@@ -587,8 +620,8 @@ contract IntegerOverflow {
         // Check for true positives and false negatives
         for expected_vuln in expected {
             let found = detected.iter().any(|detected_vuln| {
-                detected_vuln.detector_name == expected_vuln.detector_name &&
-                detected_vuln.function_name == expected_vuln.function_name
+                detected_vuln.detector_name == expected_vuln.detector_name
+                    && detected_vuln.function_name == expected_vuln.function_name
             });
 
             if found {
@@ -601,8 +634,8 @@ contract IntegerOverflow {
         // Check for false positives
         for detected_vuln in detected {
             let expected_match = expected.iter().any(|expected_vuln| {
-                detected_vuln.detector_name == expected_vuln.detector_name &&
-                detected_vuln.function_name == expected_vuln.function_name
+                detected_vuln.detector_name == expected_vuln.detector_name
+                    && detected_vuln.function_name == expected_vuln.function_name
             });
 
             if !expected_match {
@@ -614,13 +647,21 @@ contract IntegerOverflow {
     }
 
     /// Get test cases by category
-    pub fn get_test_cases_by_category(&self, category: &SmartBugsCategory) -> Vec<&SmartBugsTestCase> {
-        self.test_cases.iter().filter(|tc| &tc.category == category).collect()
+    pub fn get_test_cases_by_category(
+        &self,
+        category: &SmartBugsCategory,
+    ) -> Vec<&SmartBugsTestCase> {
+        self.test_cases
+            .iter()
+            .filter(|tc| &tc.category == category)
+            .collect()
     }
 
     /// Get all available categories
     pub fn get_categories(&self) -> Vec<SmartBugsCategory> {
-        let mut categories: Vec<_> = self.test_cases.iter()
+        let mut categories: Vec<_> = self
+            .test_cases
+            .iter()
             .map(|tc| tc.category.clone())
             .collect::<std::collections::HashSet<_>>()
             .into_iter()
@@ -664,7 +705,10 @@ mod tests {
         let dataset = SmartBugsDataset::new(None).expect("Failed to create dataset");
         let reentrancy_cases = dataset.get_test_cases_by_category(&SmartBugsCategory::Reentrancy);
 
-        assert!(!reentrancy_cases.is_empty(), "Should have reentrancy test cases");
+        assert!(
+            !reentrancy_cases.is_empty(),
+            "Should have reentrancy test cases"
+        );
 
         // This should fail until reentrancy detector is implemented
         for test_case in reentrancy_cases {
@@ -682,7 +726,10 @@ mod tests {
         let dataset = SmartBugsDataset::new(None).expect("Failed to create dataset");
         let access_cases = dataset.get_test_cases_by_category(&SmartBugsCategory::AccessControl);
 
-        assert!(!access_cases.is_empty(), "Should have access control test cases");
+        assert!(
+            !access_cases.is_empty(),
+            "Should have access control test cases"
+        );
 
         // This should fail until access control detectors are implemented
         for test_case in access_cases {
@@ -700,7 +747,10 @@ mod tests {
         let dataset = SmartBugsDataset::new(None).expect("Failed to create dataset");
         let arithmetic_cases = dataset.get_test_cases_by_category(&SmartBugsCategory::Arithmetic);
 
-        assert!(!arithmetic_cases.is_empty(), "Should have arithmetic test cases");
+        assert!(
+            !arithmetic_cases.is_empty(),
+            "Should have arithmetic test cases"
+        );
 
         // This should fail until arithmetic detectors are implemented
         for test_case in arithmetic_cases {
@@ -718,7 +768,10 @@ mod tests {
         let dataset = SmartBugsDataset::new(None).expect("Failed to create dataset");
 
         assert!(!dataset.test_cases.is_empty(), "Should load test cases");
-        assert!(!dataset.get_categories().is_empty(), "Should have categories");
+        assert!(
+            !dataset.get_categories().is_empty(),
+            "Should have categories"
+        );
 
         // Check that we have expected categories
         let categories = dataset.get_categories();
@@ -738,7 +791,11 @@ mod tests {
 
         // Verify files were created
         assert!(dataset_path.join("reentrancy/dao.sol").exists());
-        assert!(dataset_path.join("access_control/unprotected_function.sol").exists());
+        assert!(
+            dataset_path
+                .join("access_control/unprotected_function.sol")
+                .exists()
+        );
         assert!(dataset_path.join("arithmetic/overflow.sol").exists());
     }
 
@@ -747,27 +804,23 @@ mod tests {
         // This should pass - comparison logic
         let dataset = SmartBugsDataset::new(None).expect("Failed to create dataset");
 
-        let expected = vec![
-            ExpectedVulnerability {
-                detector_name: "reentrancy".to_string(),
-                line_range: Some((10, 12)),
-                function_name: Some("withdraw".to_string()),
-                confidence: "high".to_string(),
-                severity: "high".to_string(),
-            }
-        ];
+        let expected = vec![ExpectedVulnerability {
+            detector_name: "reentrancy".to_string(),
+            line_range: Some((10, 12)),
+            function_name: Some("withdraw".to_string()),
+            confidence: "high".to_string(),
+            severity: "high".to_string(),
+        }];
 
-        let detected = vec![
-            DetectedVulnerability {
-                detector_name: "reentrancy".to_string(),
-                message: "Reentrancy detected".to_string(),
-                severity: "high".to_string(),
-                confidence: "high".to_string(),
-                line: 10,
-                column: 8,
-                function_name: Some("withdraw".to_string()),
-            }
-        ];
+        let detected = vec![DetectedVulnerability {
+            detector_name: "reentrancy".to_string(),
+            message: "Reentrancy detected".to_string(),
+            severity: "high".to_string(),
+            confidence: "high".to_string(),
+            line: 10,
+            column: 8,
+            function_name: Some("withdraw".to_string()),
+        }];
 
         let (tp, fp, fn_results) = dataset.compare_results(&expected, &detected);
         assert_eq!(tp.len(), 1);
@@ -782,7 +835,7 @@ pub mod utils {
 
     /// Generate a comprehensive SmartBugs validation report
     pub async fn generate_validation_report(
-        dataset_path: Option<PathBuf>
+        dataset_path: Option<PathBuf>,
     ) -> Result<String, Box<dyn std::error::Error>> {
         let dataset = SmartBugsDataset::new(dataset_path)?;
         let results = dataset.run_validation().await?;
@@ -793,7 +846,10 @@ pub mod utils {
         report.push_str(&format!("**Passed:** {}\n", results.passed));
         report.push_str(&format!("**Failed:** {}\n", results.failed));
         report.push_str(&format!("**Accuracy:** {:.2}%\n", results.accuracy * 100.0));
-        report.push_str(&format!("**Precision:** {:.2}%\n", results.precision * 100.0));
+        report.push_str(&format!(
+            "**Precision:** {:.2}%\n",
+            results.precision * 100.0
+        ));
         report.push_str(&format!("**Recall:** {:.2}%\n", results.recall * 100.0));
         report.push_str(&format!("**F1 Score:** {:.3}\n\n", results.f1_score));
 
@@ -801,11 +857,26 @@ pub mod utils {
         for (category, cat_results) in &results.category_results {
             report.push_str(&format!("### {:?}\n", category));
             report.push_str(&format!("- Total: {}\n", cat_results.total));
-            report.push_str(&format!("- True Positives: {}\n", cat_results.true_positives));
-            report.push_str(&format!("- False Positives: {}\n", cat_results.false_positives));
-            report.push_str(&format!("- False Negatives: {}\n", cat_results.false_negatives));
-            report.push_str(&format!("- Accuracy: {:.2}%\n", cat_results.accuracy * 100.0));
-            report.push_str(&format!("- Precision: {:.2}%\n", cat_results.precision * 100.0));
+            report.push_str(&format!(
+                "- True Positives: {}\n",
+                cat_results.true_positives
+            ));
+            report.push_str(&format!(
+                "- False Positives: {}\n",
+                cat_results.false_positives
+            ));
+            report.push_str(&format!(
+                "- False Negatives: {}\n",
+                cat_results.false_negatives
+            ));
+            report.push_str(&format!(
+                "- Accuracy: {:.2}%\n",
+                cat_results.accuracy * 100.0
+            ));
+            report.push_str(&format!(
+                "- Precision: {:.2}%\n",
+                cat_results.precision * 100.0
+            ));
             report.push_str(&format!("- Recall: {:.2}%\n\n", cat_results.recall * 100.0));
         }
 

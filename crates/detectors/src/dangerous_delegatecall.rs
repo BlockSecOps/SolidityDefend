@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for dangerous delegatecall to untrusted addresses
 pub struct DangerousDelegatecallDetector {
@@ -57,27 +57,28 @@ impl Detector for DangerousDelegatecallDetector {
                     "Function '{}' contains dangerous delegatecall pattern. {} \
                     Delegatecall executes arbitrary code in the context of the current contract, \
                     allowing complete control over contract state and funds.",
-                    function.name.name,
-                    risk_description
+                    function.name.name, risk_description
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
-                .with_cwe(494) // CWE-494: Download of Code Without Integrity Check
-                .with_fix_suggestion(format!(
-                    "Restrict delegatecall target in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_cwe(494) // CWE-494: Download of Code Without Integrity Check
+                    .with_fix_suggestion(format!(
+                        "Restrict delegatecall target in '{}'. \
                     Use whitelist of approved addresses, implement access control, \
                     or avoid delegatecall entirely. Example: \
                     mapping(address => bool) public approvedTargets; \
                     require(approvedTargets[target], \"Unauthorized target\");",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for DangerousDelegatecallDetector {
 
 impl DangerousDelegatecallDetector {
     /// Check if function has dangerous delegatecall
-    fn has_dangerous_delegatecall(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_dangerous_delegatecall(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,8 +106,8 @@ impl DangerousDelegatecallDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for delegatecall usage
-        let has_delegatecall = func_source.contains("delegatecall") ||
-                              func_source.contains(".delegatecall(");
+        let has_delegatecall =
+            func_source.contains("delegatecall") || func_source.contains(".delegatecall(");
 
         if !has_delegatecall {
             return None;
@@ -133,9 +138,9 @@ impl DangerousDelegatecallDetector {
         }
 
         // Pattern 4: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("delegatecall") ||
-            func_source.contains("arbitrary code")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("delegatecall") || func_source.contains("arbitrary code"))
+        {
             return Some(format!(
                 "Delegatecall vulnerability marker detected in function"
             ));
@@ -157,10 +162,11 @@ impl DangerousDelegatecallDetector {
 
                 if is_address_param {
                     // Check if this parameter is used in delegatecall
-                    if source.contains(&format!("{}.delegatecall", param_name_str)) ||
-                       source.contains(&format!("delegatecall({}", param_name_str)) ||
-                       source.contains(&format!("target = {}", param_name_str)) ||
-                       source.contains(&format!("_target = {}", param_name_str)) {
+                    if source.contains(&format!("{}.delegatecall", param_name_str))
+                        || source.contains(&format!("delegatecall({}", param_name_str))
+                        || source.contains(&format!("target = {}", param_name_str))
+                        || source.contains(&format!("_target = {}", param_name_str))
+                    {
                         return true;
                     }
                 }
@@ -168,29 +174,30 @@ impl DangerousDelegatecallDetector {
         }
 
         // Check for common user-controlled patterns
-        source.contains("msg.sender.delegatecall") ||
-        source.contains("_implementation).delegatecall") && source.contains("address _implementation") ||
-        source.contains("target).delegatecall") && source.contains("address target")
+        source.contains("msg.sender.delegatecall")
+            || source.contains("_implementation).delegatecall")
+                && source.contains("address _implementation")
+            || source.contains("target).delegatecall") && source.contains("address target")
     }
 
     /// Check if function lacks access control
     fn lacks_access_control(&self, source: &str, function: &ast::Function<'_>) -> bool {
         // Public or external function
-        let is_public = function.visibility == ast::Visibility::Public ||
-                       function.visibility == ast::Visibility::External;
+        let is_public = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
 
         if !is_public {
             return false;
         }
 
         // Check for access control modifiers/checks
-        let has_access_control = source.contains("onlyOwner") ||
-                                source.contains("onlyAdmin") ||
-                                source.contains("onlyGovernance") ||
-                                source.contains("onlyRole") ||
-                                source.contains("require(msg.sender ==") ||
-                                source.contains("require(msg.sender == owner") ||
-                                source.contains("if (msg.sender != owner)");
+        let has_access_control = source.contains("onlyOwner")
+            || source.contains("onlyAdmin")
+            || source.contains("onlyGovernance")
+            || source.contains("onlyRole")
+            || source.contains("require(msg.sender ==")
+            || source.contains("require(msg.sender == owner")
+            || source.contains("if (msg.sender != owner)");
 
         !has_access_control
     }
@@ -205,19 +212,19 @@ impl DangerousDelegatecallDetector {
         }
 
         // Check for target validation patterns
-        let has_whitelist = source.contains("whitelist") ||
-                           source.contains("approved") ||
-                           source.contains("authorized") ||
-                           source.contains("allowed") ||
-                           source.contains("mapping(address => bool)") ||
-                           source.contains("isApproved") ||
-                           source.contains("isAuthorized");
+        let has_whitelist = source.contains("whitelist")
+            || source.contains("approved")
+            || source.contains("authorized")
+            || source.contains("allowed")
+            || source.contains("mapping(address => bool)")
+            || source.contains("isApproved")
+            || source.contains("isAuthorized");
 
-        let has_target_check = source.contains("require(target") ||
-                              source.contains("require(_target") ||
-                              source.contains("require(_implementation") ||
-                              source.contains("if (target ==") ||
-                              source.contains("if (_target ==");
+        let has_target_check = source.contains("require(target")
+            || source.contains("require(_target")
+            || source.contains("require(_implementation")
+            || source.contains("if (target ==")
+            || source.contains("if (_target ==");
 
         !has_whitelist && !has_target_check
     }

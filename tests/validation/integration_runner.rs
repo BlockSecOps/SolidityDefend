@@ -1,12 +1,9 @@
 use chrono::Utc;
 
-use crate::validation::{
-    SmartBugsDataset,
-    FalsePositiveAnalyzer,
-    GoldenFileRegression,
-    ToleranceConfig
-};
 use crate::benchmarks::BenchmarkRunner;
+use crate::validation::{
+    FalsePositiveAnalyzer, GoldenFileRegression, SmartBugsDataset, ToleranceConfig,
+};
 // use crate::metrics::AccuracyCalculator; // Temporarily disabled
 
 pub struct ValidationSuite {
@@ -43,7 +40,8 @@ impl Default for ValidationConfig {
 
 impl ValidationSuite {
     pub fn new(config: ValidationConfig) -> Self {
-        let smartbugs_integration = SmartBugsDataset::new(Some(config.smartbugs_dataset_path.into())).unwrap();
+        let smartbugs_integration =
+            SmartBugsDataset::new(Some(config.smartbugs_dataset_path.into())).unwrap();
 
         let false_positive_analyzer = FalsePositiveAnalyzer::new(config.tolerance_threshold);
 
@@ -55,11 +53,10 @@ impl ValidationSuite {
             ignore_cosmetic_changes: true,
         };
 
-        let golden_file_regression = GoldenFileRegression::new(
-            &config.golden_files_path,
-            &config.test_inputs_path
-        ).with_tolerance(tolerance_config)
-         .with_update_mode(config.update_golden_files);
+        let golden_file_regression =
+            GoldenFileRegression::new(&config.golden_files_path, &config.test_inputs_path)
+                .with_tolerance(tolerance_config)
+                .with_update_mode(config.update_golden_files);
 
         let benchmark_runner = BenchmarkRunner::new(&config.output_directory);
         // let accuracy_calculator = AccuracyCalculator::new(); // Temporarily disabled
@@ -73,7 +70,9 @@ impl ValidationSuite {
         }
     }
 
-    pub fn run_comprehensive_validation(&self) -> Result<ValidationReport, Box<dyn std::error::Error>> {
+    pub fn run_comprehensive_validation(
+        &self,
+    ) -> Result<ValidationReport, Box<dyn std::error::Error>> {
         println!("🚀 Starting comprehensive validation suite...\n");
 
         let mut report = ValidationReport::new();
@@ -118,7 +117,9 @@ impl ValidationSuite {
         Ok(report)
     }
 
-    fn run_false_positive_analysis(&self) -> Result<crate::validation::FalsePositiveAnalysis, Box<dyn std::error::Error>> {
+    fn run_false_positive_analysis(
+        &self,
+    ) -> Result<crate::validation::FalsePositiveAnalysis, Box<dyn std::error::Error>> {
         // This would load actual findings and ground truth data
         // For now, we'll create a basic analysis structure
 
@@ -138,7 +139,10 @@ impl ValidationSuite {
         Ok(analysis)
     }
 
-    fn save_validation_report(&self, report: &ValidationReport) -> Result<(), Box<dyn std::error::Error>> {
+    fn save_validation_report(
+        &self,
+        report: &ValidationReport,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         std::fs::create_dir_all("validation_reports")?;
 
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
@@ -167,7 +171,9 @@ impl ValidationSuite {
         html.push_str("<html lang=\"en\">\n");
         html.push_str("<head>\n");
         html.push_str("    <meta charset=\"UTF-8\">\n");
-        html.push_str("    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n");
+        html.push_str(
+            "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n",
+        );
         html.push_str("    <title>SolidityDefend Validation Report</title>\n");
         html.push_str("    <style>\n");
         html.push_str("        body { font-family: Arial, sans-serif; margin: 40px; background-color: #f5f5f5; }\n");
@@ -175,13 +181,19 @@ impl ValidationSuite {
         html.push_str("        h1 { color: #2c3e50; border-bottom: 3px solid #3498db; padding-bottom: 10px; }\n");
         html.push_str("        h2 { color: #34495e; margin-top: 30px; }\n");
         html.push_str("        .metric { display: inline-block; margin: 10px; padding: 20px; background: #ecf0f1; border-radius: 5px; min-width: 150px; text-align: center; }\n");
-        html.push_str("        .metric-value { font-size: 24px; font-weight: bold; color: #3498db; }\n");
+        html.push_str(
+            "        .metric-value { font-size: 24px; font-weight: bold; color: #3498db; }\n",
+        );
         html.push_str("        .metric-label { font-size: 14px; color: #7f8c8d; }\n");
         html.push_str("        .status-pass { color: #27ae60; }\n");
         html.push_str("        .status-fail { color: #e74c3c; }\n");
         html.push_str("        .status-warn { color: #f39c12; }\n");
-        html.push_str("        table { width: 100%; border-collapse: collapse; margin: 20px 0; }\n");
-        html.push_str("        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }\n");
+        html.push_str(
+            "        table { width: 100%; border-collapse: collapse; margin: 20px 0; }\n",
+        );
+        html.push_str(
+            "        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }\n",
+        );
         html.push_str("        th { background-color: #3498db; color: white; }\n");
         html.push_str("        .timestamp { color: #7f8c8d; font-size: 14px; }\n");
         html.push_str("    </style>\n");
@@ -189,7 +201,10 @@ impl ValidationSuite {
         html.push_str("<body>\n");
         html.push_str("    <div class=\"container\">\n");
         html.push_str("        <h1>🛡️ SolidityDefend Validation Report</h1>\n");
-        html.push_str(&format!("        <p class=\"timestamp\">Generated at: {}</p>\n", report.generated_at));
+        html.push_str(&format!(
+            "        <p class=\"timestamp\">Generated at: {}</p>\n",
+            report.generated_at
+        ));
 
         // Summary metrics
         html.push_str("        <h2>📊 Summary Metrics</h2>\n");
@@ -211,9 +226,21 @@ impl ValidationSuite {
         }
 
         if let Some(regression_results) = &report.regression_results {
-            let passed = regression_results.iter().filter(|r| matches!(r.status, crate::validation::golden_file_testing::TestStatus::Passed)).count();
+            let passed = regression_results
+                .iter()
+                .filter(|r| {
+                    matches!(
+                        r.status,
+                        crate::validation::golden_file_testing::TestStatus::Passed
+                    )
+                })
+                .count();
             let total = regression_results.len();
-            let success_rate = if total > 0 { (passed as f64 / total as f64) * 100.0 } else { 0.0 };
+            let success_rate = if total > 0 {
+                (passed as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            };
 
             html.push_str(&format!(
                 "            <div class=\"metric\">\n                <div class=\"metric-value\">{:.1}%</div>\n                <div class=\"metric-label\">Regression Success</div>\n            </div>\n",
@@ -226,7 +253,9 @@ impl ValidationSuite {
         // SmartBugs Results
         if let Some(_smartbugs) = &report.smartbugs_results {
             html.push_str("        <h2>🧪 SmartBugs Integration</h2>\n");
-            html.push_str("        <p class=\"status-pass\">✅ SmartBugs tests completed successfully</p>\n");
+            html.push_str(
+                "        <p class=\"status-pass\">✅ SmartBugs tests completed successfully</p>\n",
+            );
         }
 
         // False Positive Analysis
@@ -234,10 +263,22 @@ impl ValidationSuite {
             html.push_str("        <h2>🔍 False Positive Analysis</h2>\n");
             html.push_str("        <table>\n");
             html.push_str("            <tr><th>Metric</th><th>Value</th></tr>\n");
-            html.push_str(&format!("            <tr><td>Total Findings</td><td>{}</td></tr>\n", fp_analysis.total_findings));
-            html.push_str(&format!("            <tr><td>True Positives</td><td>{}</td></tr>\n", fp_analysis.true_positives));
-            html.push_str(&format!("            <tr><td>False Positives</td><td>{}</td></tr>\n", fp_analysis.false_positives));
-            html.push_str(&format!("            <tr><td>False Positive Rate</td><td>{:.2}%</td></tr>\n", fp_analysis.false_positive_rate * 100.0));
+            html.push_str(&format!(
+                "            <tr><td>Total Findings</td><td>{}</td></tr>\n",
+                fp_analysis.total_findings
+            ));
+            html.push_str(&format!(
+                "            <tr><td>True Positives</td><td>{}</td></tr>\n",
+                fp_analysis.true_positives
+            ));
+            html.push_str(&format!(
+                "            <tr><td>False Positives</td><td>{}</td></tr>\n",
+                fp_analysis.false_positives
+            ));
+            html.push_str(&format!(
+                "            <tr><td>False Positive Rate</td><td>{:.2}%</td></tr>\n",
+                fp_analysis.false_positive_rate * 100.0
+            ));
             html.push_str("        </table>\n");
         }
 
@@ -245,7 +286,9 @@ impl ValidationSuite {
         if let Some(regression_results) = &report.regression_results {
             html.push_str("        <h2>📁 Regression Test Results</h2>\n");
             html.push_str("        <table>\n");
-            html.push_str("            <tr><th>Test Name</th><th>Status</th><th>Summary</th></tr>\n");
+            html.push_str(
+                "            <tr><th>Test Name</th><th>Status</th><th>Summary</th></tr>\n",
+            );
 
             for result in regression_results {
                 let status_class = match result.status {

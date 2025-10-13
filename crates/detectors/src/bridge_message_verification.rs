@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct MessageVerificationDetector {
     base: BaseDetector,
@@ -28,11 +28,19 @@ impl MessageVerificationDetector {
         source.contains("bridge") || source.contains("relay")
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let name = function.name.name.to_lowercase();
 
-        if !name.contains("process") && !name.contains("execute") && !name.contains("receive") && !name.contains("relay") {
+        if !name.contains("process")
+            && !name.contains("execute")
+            && !name.contains("receive")
+            && !name.contains("relay")
+        {
             return issues;
         }
 
@@ -49,8 +57,10 @@ impl MessageVerificationDetector {
         // Get function source with comments stripped
         let func_source = self.get_function_source(function, ctx).to_lowercase();
 
-        let has_sig = func_source.contains("ecrecover") || (func_source.contains("verify") && func_source.contains("sig"));
-        let has_merkle = func_source.contains("merkle") && (func_source.contains("verify") || func_source.contains("proof"));
+        let has_sig = func_source.contains("ecrecover")
+            || (func_source.contains("verify") && func_source.contains("sig"));
+        let has_merkle = func_source.contains("merkle")
+            && (func_source.contains("verify") || func_source.contains("proof"));
 
         // Check for replay protection more specifically - look for mapping/array access patterns
         // Need to be more specific than just "executed" + "[" because that matches:
@@ -82,7 +92,8 @@ impl MessageVerificationDetector {
             issues.push((
                 format!("Missing replay protection in '{}'", function.name.name),
                 Severity::Critical,
-                "Add: require(!processedMessages[msgHash]); processedMessages[msgHash] = true;".to_string()
+                "Add: require(!processedMessages[msgHash]); processedMessages[msgHash] = true;"
+                    .to_string(),
             ));
         }
 
@@ -154,7 +165,16 @@ impl Detector for MessageVerificationDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(ctx, title, function.name.location.start().line() as u32, 0, 20, severity)
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }
@@ -178,6 +198,10 @@ mod tests {
         assert_eq!(detector.name(), "Bridge Message Verification");
         assert_eq!(detector.default_severity(), Severity::Critical);
         assert!(detector.is_enabled());
-        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::CrossChain)
+        );
     }
 }

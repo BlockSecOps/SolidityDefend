@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for token supply manipulation vulnerabilities
 pub struct TokenSupplyManipulationDetector {
@@ -56,26 +56,27 @@ impl Detector for TokenSupplyManipulationDetector {
                 let message = format!(
                     "Function '{}' has token supply manipulation vulnerability. {} \
                     Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
-                    function.name.name,
-                    supply_issue
+                    function.name.name, supply_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_cwe(840) // CWE-840: Business Logic Errors
-                .with_fix_suggestion(format!(
-                    "Fix token supply controls in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(840) // CWE-840: Business Logic Errors
+                    .with_fix_suggestion(format!(
+                        "Fix token supply controls in '{}'. \
                     Implement maximum supply cap, add minting rate limits, \
                     require multi-signature for minting, add supply change events, \
                     validate burn amounts, and implement supply monitoring.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +92,11 @@ impl Detector for TokenSupplyManipulationDetector {
 
 impl TokenSupplyManipulationDetector {
     /// Check for token supply manipulation vulnerabilities
-    fn check_token_supply_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_token_supply_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,27 +104,27 @@ impl TokenSupplyManipulationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check if function affects token supply
-        let affects_supply = func_source.contains("mint") ||
-                            func_source.contains("burn") ||
-                            func_source.contains("totalSupply") ||
-                            func_source.contains("_mint") ||
-                            func_source.contains("_burn") ||
-                            function.name.name.to_lowercase().contains("mint") ||
-                            function.name.name.to_lowercase().contains("burn");
+        let affects_supply = func_source.contains("mint")
+            || func_source.contains("burn")
+            || func_source.contains("totalSupply")
+            || func_source.contains("_mint")
+            || func_source.contains("_burn")
+            || function.name.name.to_lowercase().contains("mint")
+            || function.name.name.to_lowercase().contains("burn");
 
         if !affects_supply {
             return None;
         }
 
         // Pattern 1: Mint function without max supply cap
-        let is_mint = func_source.contains("mint") ||
-                     func_source.contains("_mint") ||
-                     function.name.name.to_lowercase().contains("mint");
+        let is_mint = func_source.contains("mint")
+            || func_source.contains("_mint")
+            || function.name.name.to_lowercase().contains("mint");
 
-        let no_supply_cap = is_mint &&
-                           !func_source.contains("maxSupply") &&
-                           !func_source.contains("MAX_SUPPLY") &&
-                           !func_source.contains("cap()");
+        let no_supply_cap = is_mint
+            && !func_source.contains("maxSupply")
+            && !func_source.contains("MAX_SUPPLY")
+            && !func_source.contains("cap()");
 
         if no_supply_cap {
             return Some(format!(
@@ -129,11 +134,11 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 2: Mint without access control
-        let lacks_access_control = is_mint &&
-                                   !func_source.contains("onlyOwner") &&
-                                   !func_source.contains("onlyMinter") &&
-                                   !func_source.contains("hasRole") &&
-                                   !func_source.contains("require(msg.sender");
+        let lacks_access_control = is_mint
+            && !func_source.contains("onlyOwner")
+            && !func_source.contains("onlyMinter")
+            && !func_source.contains("hasRole")
+            && !func_source.contains("require(msg.sender");
 
         if lacks_access_control {
             return Some(format!(
@@ -143,14 +148,12 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 3: No minting rate limit
-        let has_rate_limit = func_source.contains("lastMint") ||
-                            func_source.contains("mintRate") ||
-                            func_source.contains("cooldown") ||
-                            func_source.contains("block.timestamp");
+        let has_rate_limit = func_source.contains("lastMint")
+            || func_source.contains("mintRate")
+            || func_source.contains("cooldown")
+            || func_source.contains("block.timestamp");
 
-        let no_rate_limit = is_mint &&
-                           !has_rate_limit &&
-                           func_source.contains("amount");
+        let no_rate_limit = is_mint && !has_rate_limit && func_source.contains("amount");
 
         if no_rate_limit {
             return Some(format!(
@@ -160,14 +163,14 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 4: Burn without balance check
-        let is_burn = func_source.contains("burn") ||
-                     func_source.contains("_burn") ||
-                     function.name.name.to_lowercase().contains("burn");
+        let is_burn = func_source.contains("burn")
+            || func_source.contains("_burn")
+            || function.name.name.to_lowercase().contains("burn");
 
-        let no_balance_check = is_burn &&
-                              !func_source.contains("balanceOf") &&
-                              !func_source.contains("require") &&
-                              func_source.contains("amount");
+        let no_balance_check = is_burn
+            && !func_source.contains("balanceOf")
+            && !func_source.contains("require")
+            && func_source.contains("amount");
 
         if no_balance_check {
             return Some(format!(
@@ -177,13 +180,11 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 5: TotalSupply can be manipulated directly
-        let modifies_total_supply = func_source.contains("totalSupply =") ||
-                                   func_source.contains("totalSupply +=") ||
-                                   func_source.contains("totalSupply -=");
+        let modifies_total_supply = func_source.contains("totalSupply =")
+            || func_source.contains("totalSupply +=")
+            || func_source.contains("totalSupply -=");
 
-        let direct_manipulation = modifies_total_supply &&
-                                 !is_mint &&
-                                 !is_burn;
+        let direct_manipulation = modifies_total_supply && !is_mint && !is_burn;
 
         if direct_manipulation {
             return Some(format!(
@@ -193,12 +194,11 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 6: Mint doesn't update totalSupply
-        let updates_balance = func_source.contains("balanceOf[") ||
-                             func_source.contains("_balances[");
+        let updates_balance =
+            func_source.contains("balanceOf[") || func_source.contains("_balances[");
 
-        let doesnt_update_supply = is_mint &&
-                                  updates_balance &&
-                                  !func_source.contains("totalSupply");
+        let doesnt_update_supply =
+            is_mint && updates_balance && !func_source.contains("totalSupply");
 
         if doesnt_update_supply {
             return Some(format!(
@@ -210,8 +210,7 @@ impl TokenSupplyManipulationDetector {
         // Pattern 7: No supply change events
         let emits_event = func_source.contains("emit");
 
-        let no_supply_event = (is_mint || is_burn) &&
-                             !emits_event;
+        let no_supply_event = (is_mint || is_burn) && !emits_event;
 
         if no_supply_event {
             return Some(format!(
@@ -221,13 +220,12 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 8: Mint to zero address
-        let mints_to_address = is_mint &&
-                              (func_source.contains("address to") ||
-                               func_source.contains("address recipient"));
+        let mints_to_address = is_mint
+            && (func_source.contains("address to") || func_source.contains("address recipient"));
 
-        let no_zero_check = mints_to_address &&
-                           !func_source.contains("require(to != address(0)") &&
-                           !func_source.contains("require(recipient != address(0)");
+        let no_zero_check = mints_to_address
+            && !func_source.contains("require(to != address(0)")
+            && !func_source.contains("require(recipient != address(0)");
 
         if no_zero_check {
             return Some(format!(
@@ -237,13 +235,12 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 9: Rebasing without proper controls
-        let is_rebasing = func_source.contains("rebase") ||
-                         func_source.contains("_rebase") ||
-                         function.name.name.to_lowercase().contains("rebase");
+        let is_rebasing = func_source.contains("rebase")
+            || func_source.contains("_rebase")
+            || function.name.name.to_lowercase().contains("rebase");
 
-        let uncontrolled_rebase = is_rebasing &&
-                                 !func_source.contains("maxRebase") &&
-                                 !func_source.contains("rebaseCap");
+        let uncontrolled_rebase =
+            is_rebasing && !func_source.contains("maxRebase") && !func_source.contains("rebaseCap");
 
         if uncontrolled_rebase {
             return Some(format!(
@@ -253,14 +250,14 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 10: Flash mint without fees or limits
-        let is_flash_mint = func_source.contains("flashMint") ||
-                           func_source.contains("flashLoan") ||
-                           function.name.name.to_lowercase().contains("flash");
+        let is_flash_mint = func_source.contains("flashMint")
+            || func_source.contains("flashLoan")
+            || function.name.name.to_lowercase().contains("flash");
 
-        let no_flash_controls = is_flash_mint &&
-                               affects_supply &&
-                               !func_source.contains("fee") &&
-                               !func_source.contains("maxFlash");
+        let no_flash_controls = is_flash_mint
+            && affects_supply
+            && !func_source.contains("fee")
+            && !func_source.contains("maxFlash");
 
         if no_flash_controls {
             return Some(format!(

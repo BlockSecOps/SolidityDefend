@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct PaymasterAbuseDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl PaymasterAbuseDetector {
 
     fn is_paymaster_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("ipaymaster") || source.contains("paymaster")) &&
-        (source.contains("validatepaymasteruserop") || source.contains("postop"))
+        (source.contains("ipaymaster") || source.contains("paymaster"))
+            && (source.contains("validatepaymasteruserop") || source.contains("postop"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,12 +42,12 @@ impl PaymasterAbuseDetector {
         // Check validatePaymasterUserOp function
         if name.contains("validatepaymaster") {
             // Check for unlimited sponsorship (no spending limits)
-            let has_balance_check = source_lower.contains("balance") &&
-                (source_lower.contains(">=") || source_lower.contains(">"));
-            let has_allowance = source_lower.contains("allowance") ||
-                source_lower.contains("spendinglimit");
-            let has_deposit_check = source_lower.contains("deposit") &&
-                (source_lower.contains("require") || source_lower.contains("revert"));
+            let has_balance_check = source_lower.contains("balance")
+                && (source_lower.contains(">=") || source_lower.contains(">"));
+            let has_allowance =
+                source_lower.contains("allowance") || source_lower.contains("spendinglimit");
+            let has_deposit_check = source_lower.contains("deposit")
+                && (source_lower.contains("require") || source_lower.contains("revert"));
 
             if !has_balance_check && !has_allowance && !has_deposit_check {
                 issues.push((
@@ -54,8 +58,8 @@ impl PaymasterAbuseDetector {
             }
 
             // Check for missing gas validation
-            let has_gas_check = (source_lower.contains("gaslimit") || source_lower.contains("gas")) &&
-                (source_lower.contains("require") || source_lower.contains("revert"));
+            let has_gas_check = (source_lower.contains("gaslimit") || source_lower.contains("gas"))
+                && (source_lower.contains("require") || source_lower.contains("revert"));
             let has_gas_cap = source_lower.contains("maxgas") || source_lower.contains("gaslimit");
 
             if !has_gas_check && !has_gas_cap {
@@ -67,8 +71,10 @@ impl PaymasterAbuseDetector {
             }
 
             // Check for missing user validation
-            let has_whitelist = source_lower.contains("whitelist") || source_lower.contains("allowed");
-            let has_user_validation = source_lower.contains("verify") && source_lower.contains("user");
+            let has_whitelist =
+                source_lower.contains("whitelist") || source_lower.contains("allowed");
+            let has_user_validation =
+                source_lower.contains("verify") && source_lower.contains("user");
 
             if !has_whitelist && !has_user_validation {
                 issues.push((
@@ -79,8 +85,8 @@ impl PaymasterAbuseDetector {
             }
 
             // Check for missing rate limiting
-            let has_rate_limit = source_lower.contains("ratelimit") ||
-                (source_lower.contains("timestamp") && source_lower.contains("last"));
+            let has_rate_limit = source_lower.contains("ratelimit")
+                || (source_lower.contains("timestamp") && source_lower.contains("last"));
 
             if !has_rate_limit {
                 issues.push((
@@ -93,14 +99,15 @@ impl PaymasterAbuseDetector {
 
         // Check postOp function for refund validation
         if name.contains("postop") {
-            let has_refund_validation = source_lower.contains("actualgas") &&
-                (source_lower.contains("<=") || source_lower.contains("<"));
+            let has_refund_validation = source_lower.contains("actualgas")
+                && (source_lower.contains("<=") || source_lower.contains("<"));
 
             if !has_refund_validation {
                 issues.push((
                     "Missing refund validation in postOp (overpayment risk)".to_string(),
                     Severity::Medium,
-                    "Validate refunds: require(refundAmount <= maxRefund, \"Invalid refund\");".to_string()
+                    "Validate refunds: require(refundAmount <= maxRefund, \"Invalid refund\");"
+                        .to_string(),
                 ));
             }
         }
@@ -150,15 +157,17 @@ impl Detector for PaymasterAbuseDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

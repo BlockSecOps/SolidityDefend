@@ -1,7 +1,7 @@
+use chrono::{DateTime, Utc};
 use detectors::types::{Finding, Severity};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use chrono::{DateTime, Utc};
 
 /// JSON output formatter for SolidityDefend findings
 #[derive(Debug)]
@@ -44,11 +44,9 @@ impl JsonFormatter {
         let output = self.create_output(findings)?;
 
         if self.pretty_print {
-            serde_json::to_string_pretty(&output)
-                .map_err(JsonError::SerializationError)
+            serde_json::to_string_pretty(&output).map_err(JsonError::SerializationError)
         } else {
-            serde_json::to_string(&output)
-                .map_err(JsonError::SerializationError)
+            serde_json::to_string(&output).map_err(JsonError::SerializationError)
         }
     }
 
@@ -85,12 +83,15 @@ impl JsonFormatter {
                 length: finding.primary_location.length as usize,
             },
             cwe: finding.cwe_ids.first().map(|c| format!("CWE-{}", c)),
-            fix_suggestion: finding.fix_suggestion.as_ref().map(|description| JsonFixSuggestion {
-                description: description.clone(),
-                replacements: vec![], // TODO: Extract actual replacements from fix suggestion
-            }),
+            fix_suggestion: finding
+                .fix_suggestion
+                .as_ref()
+                .map(|description| JsonFixSuggestion {
+                    description: description.clone(),
+                    replacements: vec![], // TODO: Extract actual replacements from fix suggestion
+                }),
             related_findings: Vec::new(), // TODO: Implement if needed
-            code_snippet: None, // TODO: Add code snippet extraction
+            code_snippet: None,           // TODO: Add code snippet extraction
         }
     }
 
@@ -128,7 +129,8 @@ impl JsonFormatter {
         JsonStatistics {
             total_findings: findings.len(),
             severity_counts,
-            unique_detectors: findings.iter()
+            unique_detectors: findings
+                .iter()
                 .map(|f| f.detector_id.to_string())
                 .collect::<std::collections::HashSet<_>>()
                 .len(),
@@ -370,7 +372,7 @@ impl Default for JsonOutputBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use detectors::types::{DetectorId, Severity, Confidence, SourceLocation};
+    use detectors::types::{Confidence, DetectorId, Severity, SourceLocation};
     use std::collections::HashMap;
 
     fn create_test_finding() -> Finding {
@@ -453,11 +455,26 @@ mod tests {
 
     #[test]
     fn test_json_severity_conversion() {
-        assert!(matches!(JsonSeverity::from(&Severity::Critical), JsonSeverity::Critical));
-        assert!(matches!(JsonSeverity::from(&Severity::High), JsonSeverity::High));
-        assert!(matches!(JsonSeverity::from(&Severity::Medium), JsonSeverity::Medium));
-        assert!(matches!(JsonSeverity::from(&Severity::Low), JsonSeverity::Low));
-        assert!(matches!(JsonSeverity::from(&Severity::Info), JsonSeverity::Info));
+        assert!(matches!(
+            JsonSeverity::from(&Severity::Critical),
+            JsonSeverity::Critical
+        ));
+        assert!(matches!(
+            JsonSeverity::from(&Severity::High),
+            JsonSeverity::High
+        ));
+        assert!(matches!(
+            JsonSeverity::from(&Severity::Medium),
+            JsonSeverity::Medium
+        ));
+        assert!(matches!(
+            JsonSeverity::from(&Severity::Low),
+            JsonSeverity::Low
+        ));
+        assert!(matches!(
+            JsonSeverity::from(&Severity::Info),
+            JsonSeverity::Info
+        ));
     }
 
     #[test]

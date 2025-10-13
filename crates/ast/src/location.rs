@@ -242,9 +242,7 @@ impl SourceLocation {
 
     /// Check if this location overlaps with another
     pub fn overlaps(&self, other: &SourceLocation) -> bool {
-        self.file == other.file &&
-        self.start <= other.end &&
-        other.start <= self.end
+        self.file == other.file && self.start <= other.end && other.start <= self.end
     }
 
     /// Get context lines around this location
@@ -279,10 +277,12 @@ impl SourceLocation {
 
     /// Display position in "file:line:column" format
     pub fn display_position(&self) -> String {
-        format!("{}:{}:{}",
-                self.file.display(),
-                self.start.line,
-                self.start.column)
+        format!(
+            "{}:{}:{}",
+            self.file.display(),
+            self.start.line,
+            self.start.column
+        )
     }
 
     /// Get normalized file path (resolving relative paths)
@@ -311,10 +311,12 @@ impl SourceLocation {
         let normalized = self.normalized_path();
 
         match normalized.strip_prefix(base_path) {
-            Ok(relative) => format!("{}:{}:{}",
-                                  relative.display(),
-                                  self.start.line,
-                                  self.start.column),
+            Ok(relative) => format!(
+                "{}:{}:{}",
+                relative.display(),
+                self.start.line,
+                self.start.column
+            ),
             Err(_) => self.display_position(),
         }
     }
@@ -356,10 +358,13 @@ impl Default for SourceLocation {
 
 impl std::fmt::Display for SourceLocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}:{}:{}",
-               self.file.display(),
-               self.start.line,
-               self.start.column)
+        write!(
+            f,
+            "{}:{}:{}",
+            self.file.display(),
+            self.start.line,
+            self.start.column
+        )
     }
 }
 

@@ -4,18 +4,18 @@
 //! including flash loan vulnerabilities, MEV attacks, and protocol-specific risks.
 
 pub mod flash_loan;
+pub mod governance_attacks;
+pub mod liquidity_attacks;
 pub mod mev;
 pub mod price_manipulation;
-pub mod liquidity_attacks;
-pub mod governance_attacks;
 
 pub use flash_loan::FlashLoanDetector;
+pub use governance_attacks::GovernanceAttackDetector;
+pub use liquidity_attacks::LiquidityAttackDetector;
 pub use mev::MEVDetector;
 pub use price_manipulation::PriceManipulationDetector;
-pub use liquidity_attacks::LiquidityAttackDetector;
-pub use governance_attacks::GovernanceAttackDetector;
 
-use crate::types::{DetectorResult, AnalysisContext, Severity};
+use crate::types::{AnalysisContext, DetectorResult, Severity};
 
 /// Trait for DeFi-specific vulnerability detectors
 pub trait DeFiDetector {

@@ -1,10 +1,10 @@
+use crate::cross_contract::{CrossContractAnalyzer, CrossContractConfig, CrossContractContext};
 use crate::defi::{
-    FlashLoanDetector, MEVDetector, PriceManipulationDetector,
-    LiquidityAttackDetector, GovernanceAttackDetector, DeFiDetector
+    DeFiDetector, FlashLoanDetector, GovernanceAttackDetector, LiquidityAttackDetector,
+    MEVDetector, PriceManipulationDetector,
 };
-use crate::cross_contract::{CrossContractAnalyzer, CrossContractContext, CrossContractConfig};
-use crate::taint::{TaintAnalyzer, TaintAnalysisConfig};
-use crate::types::{DetectorResult, AnalysisContext, Severity};
+use crate::taint::{TaintAnalysisConfig, TaintAnalyzer};
+use crate::types::{AnalysisContext, DetectorResult, Severity};
 use std::collections::HashMap;
 
 /// Advanced security analysis engine combining DeFi, cross-contract, and taint analysis
@@ -114,9 +114,9 @@ pub enum Priority {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ImplementationEffort {
-    Low,     // < 1 day
-    Medium,  // 1-5 days
-    High,    // 1-2 weeks
+    Low,      // < 1 day
+    Medium,   // 1-5 days
+    High,     // 1-2 weeks
     VeryHigh, // > 2 weeks
 }
 
@@ -143,7 +143,10 @@ impl AdvancedSecurityEngine {
     }
 
     /// Run comprehensive advanced security analysis
-    pub fn analyze_comprehensive(&mut self, contexts: HashMap<String, &AnalysisContext>) -> AdvancedAnalysisResult {
+    pub fn analyze_comprehensive(
+        &mut self,
+        contexts: HashMap<String, &AnalysisContext>,
+    ) -> AdvancedAnalysisResult {
         let mut result = AdvancedAnalysisResult {
             defi_findings: Vec::new(),
             cross_contract_findings: Vec::new(),
@@ -187,7 +190,10 @@ impl AdvancedSecurityEngine {
     }
 
     /// Run DeFi-specific vulnerability detection
-    fn run_defi_analysis(&self, contexts: &HashMap<String, &AnalysisContext>) -> Vec<DetectorResult> {
+    fn run_defi_analysis(
+        &self,
+        contexts: &HashMap<String, &AnalysisContext>,
+    ) -> Vec<DetectorResult> {
         let mut all_findings = Vec::new();
 
         for (_contract_name, context) in contexts {
@@ -200,26 +206,31 @@ impl AdvancedSecurityEngine {
         }
 
         // Filter by severity threshold
-        all_findings.retain(|finding| {
-            self.severity_meets_threshold(&finding.finding.severity)
-        });
+        all_findings.retain(|finding| self.severity_meets_threshold(&finding.finding.severity));
 
         all_findings
     }
 
     /// Run cross-contract vulnerability analysis
-    fn run_cross_contract_analysis(&self, contexts: &HashMap<String, &AnalysisContext>) -> Vec<crate::cross_contract::CrossContractFinding> {
+    fn run_cross_contract_analysis(
+        &self,
+        contexts: &HashMap<String, &AnalysisContext>,
+    ) -> Vec<crate::cross_contract::CrossContractFinding> {
         let mut cross_contract_context = CrossContractContext::new(contexts.clone())
             .with_config(self.config.cross_contract_config.clone());
 
         cross_contract_context.build_interaction_graph();
         cross_contract_context.detect_protocol_patterns();
 
-        self.cross_contract_analyzer.analyze(&cross_contract_context)
+        self.cross_contract_analyzer
+            .analyze(&cross_contract_context)
     }
 
     /// Run taint analysis across contracts
-    fn run_taint_analysis(&mut self, contexts: &HashMap<String, &AnalysisContext>) -> Vec<crate::taint::TaintFinding> {
+    fn run_taint_analysis(
+        &mut self,
+        contexts: &HashMap<String, &AnalysisContext>,
+    ) -> Vec<crate::taint::TaintFinding> {
         let mut all_taint_findings = Vec::new();
 
         for (_contract_name, context) in contexts {
@@ -244,14 +255,21 @@ impl AdvancedSecurityEngine {
     }
 
     /// Detect flash loan + MEV attack combinations
-    fn detect_flash_loan_mev_combinations(&self, result: &AdvancedAnalysisResult) -> Vec<IntegratedFinding> {
+    fn detect_flash_loan_mev_combinations(
+        &self,
+        result: &AdvancedAnalysisResult,
+    ) -> Vec<IntegratedFinding> {
         let mut findings = Vec::new();
 
-        let flash_loan_findings: Vec<_> = result.defi_findings.iter()
+        let flash_loan_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("flash-loan"))
             .collect();
 
-        let mev_findings: Vec<_> = result.defi_findings.iter()
+        let mev_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("mev"))
             .collect();
 
@@ -294,11 +312,16 @@ impl AdvancedSecurityEngine {
     }
 
     /// Detect cross-contract taint flows
-    fn detect_cross_contract_taint_flows(&self, result: &AdvancedAnalysisResult) -> Vec<IntegratedFinding> {
+    fn detect_cross_contract_taint_flows(
+        &self,
+        result: &AdvancedAnalysisResult,
+    ) -> Vec<IntegratedFinding> {
         let mut findings = Vec::new();
 
         // Look for taint flows that cross contract boundaries
-        let cross_contract_taint_flows: Vec<_> = result.taint_findings.iter()
+        let cross_contract_taint_flows: Vec<_> = result
+            .taint_findings
+            .iter()
             .filter(|f| f.taint_path.len() > 3) // Likely cross-contract
             .collect();
 
@@ -339,14 +362,21 @@ impl AdvancedSecurityEngine {
     }
 
     /// Detect governance manipulation attack chains
-    fn detect_governance_manipulation_chains(&self, result: &AdvancedAnalysisResult) -> Vec<IntegratedFinding> {
+    fn detect_governance_manipulation_chains(
+        &self,
+        result: &AdvancedAnalysisResult,
+    ) -> Vec<IntegratedFinding> {
         let mut findings = Vec::new();
 
-        let governance_findings: Vec<_> = result.defi_findings.iter()
+        let governance_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("governance"))
             .collect();
 
-        let flash_loan_findings: Vec<_> = result.defi_findings.iter()
+        let flash_loan_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("flash-loan"))
             .collect();
 
@@ -389,14 +419,21 @@ impl AdvancedSecurityEngine {
     }
 
     /// Detect liquidity + oracle attack combinations
-    fn detect_liquidity_oracle_attacks(&self, result: &AdvancedAnalysisResult) -> Vec<IntegratedFinding> {
+    fn detect_liquidity_oracle_attacks(
+        &self,
+        result: &AdvancedAnalysisResult,
+    ) -> Vec<IntegratedFinding> {
         let mut findings = Vec::new();
 
-        let liquidity_findings: Vec<_> = result.defi_findings.iter()
+        let liquidity_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("liquidity"))
             .collect();
 
-        let price_findings: Vec<_> = result.defi_findings.iter()
+        let price_findings: Vec<_> = result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.detector_id.to_string().contains("price"))
             .collect();
 
@@ -446,35 +483,52 @@ impl AdvancedSecurityEngine {
         let mut systemic_risks = Vec::new();
 
         // Count critical vulnerabilities
-        critical_count += result.defi_findings.iter()
+        critical_count += result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.severity == Severity::Critical)
             .count();
 
-        critical_count += result.integrated_findings.iter()
+        critical_count += result
+            .integrated_findings
+            .iter()
             .filter(|f| f.severity == Severity::Critical)
             .count();
 
         // Calculate risk score
         risk_score += critical_count as f64 * 10.0;
-        risk_score += result.defi_findings.iter()
+        risk_score += result
+            .defi_findings
+            .iter()
             .filter(|f| f.finding.severity == Severity::High)
-            .count() as f64 * 5.0;
-        risk_score += result.cross_contract_findings.iter()
+            .count() as f64
+            * 5.0;
+        risk_score += result
+            .cross_contract_findings
+            .iter()
             .filter(|f| f.severity == Severity::High)
-            .count() as f64 * 3.0;
+            .count() as f64
+            * 3.0;
 
         // Identify systemic risks
         if result.cross_contract_findings.len() > 3 {
-            systemic_risks.push("Multiple cross-contract vulnerabilities indicate systemic design issues".to_string());
+            systemic_risks.push(
+                "Multiple cross-contract vulnerabilities indicate systemic design issues"
+                    .to_string(),
+            );
         }
 
         if result.integrated_findings.len() > 1 {
-            systemic_risks.push("Complex attack chains possible through vulnerability combinations".to_string());
+            systemic_risks.push(
+                "Complex attack chains possible through vulnerability combinations".to_string(),
+            );
         }
 
         // Identify high-risk components
         for finding in &result.defi_findings {
-            if finding.finding.severity == Severity::Critical || finding.finding.severity == Severity::High {
+            if finding.finding.severity == Severity::Critical
+                || finding.finding.severity == Severity::High
+            {
                 high_risk_components.insert(finding.finding.primary_location.file.clone());
             }
         }
@@ -489,7 +543,10 @@ impl AdvancedSecurityEngine {
     }
 
     /// Generate security recommendations
-    fn generate_recommendations(&self, result: &AdvancedAnalysisResult) -> Vec<SecurityRecommendation> {
+    fn generate_recommendations(
+        &self,
+        result: &AdvancedAnalysisResult,
+    ) -> Vec<SecurityRecommendation> {
         let mut recommendations = Vec::new();
 
         // Critical fixes
@@ -497,7 +554,8 @@ impl AdvancedSecurityEngine {
             recommendations.push(SecurityRecommendation {
                 category: RecommendationCategory::CodeFix,
                 priority: Priority::Critical,
-                description: "Immediately address all critical vulnerabilities before deployment".to_string(),
+                description: "Immediately address all critical vulnerabilities before deployment"
+                    .to_string(),
                 implementation_effort: ImplementationEffort::High,
                 business_impact: "Prevents potential total loss of funds".to_string(),
             });
@@ -508,7 +566,8 @@ impl AdvancedSecurityEngine {
             recommendations.push(SecurityRecommendation {
                 category: RecommendationCategory::ArchitecturalChange,
                 priority: Priority::High,
-                description: "Review and strengthen cross-contract interaction patterns".to_string(),
+                description: "Review and strengthen cross-contract interaction patterns"
+                    .to_string(),
                 implementation_effort: ImplementationEffort::VeryHigh,
                 business_impact: "Improves overall system security and reliability".to_string(),
             });
@@ -518,7 +577,8 @@ impl AdvancedSecurityEngine {
         recommendations.push(SecurityRecommendation {
             category: RecommendationCategory::Monitoring,
             priority: Priority::Medium,
-            description: "Implement real-time monitoring for detected vulnerability patterns".to_string(),
+            description: "Implement real-time monitoring for detected vulnerability patterns"
+                .to_string(),
             implementation_effort: ImplementationEffort::Medium,
             business_impact: "Enables early detection and response to attacks".to_string(),
         });
@@ -527,7 +587,8 @@ impl AdvancedSecurityEngine {
         recommendations.push(SecurityRecommendation {
             category: RecommendationCategory::Testing,
             priority: Priority::High,
-            description: "Develop comprehensive test suites covering identified attack scenarios".to_string(),
+            description: "Develop comprehensive test suites covering identified attack scenarios"
+                .to_string(),
             implementation_effort: ImplementationEffort::High,
             business_impact: "Prevents regression and validates security improvements".to_string(),
         });
@@ -590,18 +651,16 @@ mod tests {
             defi_findings: Vec::new(),
             cross_contract_findings: Vec::new(),
             taint_findings: Vec::new(),
-            integrated_findings: vec![
-                IntegratedFinding {
-                    finding_id: "TEST_001".to_string(),
-                    primary_vulnerability: "Test".to_string(),
-                    contributing_factors: Vec::new(),
-                    severity: Severity::Critical,
-                    confidence: 0.9,
-                    affected_components: Vec::new(),
-                    attack_scenarios: Vec::new(),
-                    mitigation_strategies: Vec::new(),
-                }
-            ],
+            integrated_findings: vec![IntegratedFinding {
+                finding_id: "TEST_001".to_string(),
+                primary_vulnerability: "Test".to_string(),
+                contributing_factors: Vec::new(),
+                severity: Severity::Critical,
+                confidence: 0.9,
+                affected_components: Vec::new(),
+                attack_scenarios: Vec::new(),
+                mitigation_strategies: Vec::new(),
+            }],
             risk_assessment: RiskAssessment {
                 overall_risk_score: 0.0,
                 critical_vulnerabilities: 0,

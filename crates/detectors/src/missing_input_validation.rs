@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing input parameter validation
 pub struct MissingInputValidationDetector {
@@ -56,28 +56,29 @@ impl Detector for MissingInputValidationDetector {
                 let message = format!(
                     "Function '{}' missing input validation. {} \
                     Missing validation can lead to unexpected behavior, zero address transfers, or invalid state.",
-                    function.name.name,
-                    validation_issue
+                    function.name.name, validation_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(20)   // CWE-20: Improper Input Validation
-                .with_cwe(1284) // CWE-1284: Improper Validation of Specified Quantity in Input
-                .with_fix_suggestion(format!(
-                    "Add input validation to '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(1284) // CWE-1284: Improper Validation of Specified Quantity in Input
+                    .with_fix_suggestion(format!(
+                        "Add input validation to '{}'. \
                     Implement: (1) Zero address checks for address parameters, \
                     (2) Bounds validation for numeric inputs, \
                     (3) Array length validation, \
                     (4) require() statements at function start, \
                     (5) OpenZeppelin Address library for address validation.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -92,7 +93,11 @@ impl Detector for MissingInputValidationDetector {
 }
 
 impl MissingInputValidationDetector {
-    fn check_missing_validation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_missing_validation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -103,21 +108,26 @@ impl MissingInputValidationDetector {
         // Simple pattern-based checks
 
         // Pattern 1: Function signature has address parameter but no zero check
-        let has_address_param = func_source.contains("address ") && !func_source.contains("returns");
-        let has_zero_check = func_source.contains("!= address(0)") ||
-                            func_source.contains("require(") ||
-                            func_source.contains("Address.isContract");
+        let has_address_param =
+            func_source.contains("address ") && !func_source.contains("returns");
+        let has_zero_check = func_source.contains("!= address(0)")
+            || func_source.contains("require(")
+            || func_source.contains("Address.isContract");
 
         if has_address_param && !has_zero_check && self.is_critical_function(func_name) {
-            return Some("Critical function with address parameter lacks zero address validation".to_string());
+            return Some(
+                "Critical function with address parameter lacks zero address validation"
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Transfer/withdraw functions without amount validation
-        if (func_name.contains("transfer") || func_name.contains("withdraw")) &&
-           func_source.contains("uint") {
-            let has_amount_check = func_source.contains("require(") ||
-                                   func_source.contains("amount > 0") ||
-                                   func_source.contains("value > 0");
+        if (func_name.contains("transfer") || func_name.contains("withdraw"))
+            && func_source.contains("uint")
+        {
+            let has_amount_check = func_source.contains("require(")
+                || func_source.contains("amount > 0")
+                || func_source.contains("value > 0");
 
             if !has_amount_check {
                 return Some("Transfer/withdraw function lacks amount validation".to_string());
@@ -126,8 +136,8 @@ impl MissingInputValidationDetector {
 
         // Pattern 3: Array parameter without length check
         if func_source.contains("memory") && func_source.contains("[]") {
-            let has_length_check = func_source.contains(".length") &&
-                                  (func_source.contains("require") || func_source.contains("if"));
+            let has_length_check = func_source.contains(".length")
+                && (func_source.contains("require") || func_source.contains("if"));
 
             if !has_length_check && self.is_critical_function(func_name) {
                 return Some("Function with array parameter lacks length validation".to_string());
@@ -139,13 +149,27 @@ impl MissingInputValidationDetector {
 
     fn is_critical_function(&self, func_name: &str) -> bool {
         let critical_names = [
-            "transfer", "transferFrom", "approve", "mint", "burn",
-            "withdraw", "deposit", "swap", "stake", "unstake",
-            "claim", "redeem", "liquidate", "borrow", "repay"
+            "transfer",
+            "transferFrom",
+            "approve",
+            "mint",
+            "burn",
+            "withdraw",
+            "deposit",
+            "swap",
+            "stake",
+            "unstake",
+            "claim",
+            "redeem",
+            "liquidate",
+            "borrow",
+            "repay",
         ];
 
         let name_lower = func_name.to_lowercase();
-        critical_names.iter().any(|&critical| name_lower.contains(critical))
+        critical_names
+            .iter()
+            .any(|&critical| name_lower.contains(critical))
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

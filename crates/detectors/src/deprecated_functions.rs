@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for deprecated Solidity functions and patterns
 pub struct DeprecatedFunctionsDetector {
@@ -54,15 +54,42 @@ impl Detector for DeprecatedFunctionsDetector {
 
         // Check for deprecated patterns in the entire contract
         let deprecated_patterns = vec![
-            (".send(", "Use .call{value: amount}(\"\") instead of .send() for better error handling"),
-            ("selfdestruct(", "selfdestruct is deprecated. Consider alternative contract upgrade patterns"),
-            ("block.difficulty", "block.difficulty deprecated post-merge. Use block.prevrandao instead"),
-            ("throw", "throw keyword removed. Use require(), assert(), or revert() instead"),
-            ("suicide(", "suicide renamed to selfdestruct (also deprecated). Use upgrade patterns"),
-            ("constant view", "constant keyword deprecated. Use view or pure instead"),
-            ("constant pure", "constant keyword deprecated. Use view or pure instead"),
-            ("var ", "var keyword removed. Use explicit types like uint256, address, etc."),
-            ("years", "time unit 'years' removed. Use explicit seconds calculation"),
+            (
+                ".send(",
+                "Use .call{value: amount}(\"\") instead of .send() for better error handling",
+            ),
+            (
+                "selfdestruct(",
+                "selfdestruct is deprecated. Consider alternative contract upgrade patterns",
+            ),
+            (
+                "block.difficulty",
+                "block.difficulty deprecated post-merge. Use block.prevrandao instead",
+            ),
+            (
+                "throw",
+                "throw keyword removed. Use require(), assert(), or revert() instead",
+            ),
+            (
+                "suicide(",
+                "suicide renamed to selfdestruct (also deprecated). Use upgrade patterns",
+            ),
+            (
+                "constant view",
+                "constant keyword deprecated. Use view or pure instead",
+            ),
+            (
+                "constant pure",
+                "constant keyword deprecated. Use view or pure instead",
+            ),
+            (
+                "var ",
+                "var keyword removed. Use explicit types like uint256, address, etc.",
+            ),
+            (
+                "years",
+                "time unit 'years' removed. Use explicit seconds calculation",
+            ),
         ];
 
         for (pattern, fix_msg) in deprecated_patterns {
@@ -73,19 +100,15 @@ impl Detector for DeprecatedFunctionsDetector {
                     fix_msg
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    1,
-                    0,
-                    20,
-                )
-                .with_cwe(477) // CWE-477: Use of Obsolete Function
-                .with_fix_suggestion(format!(
-                    "Replace deprecated '{}'. {}",
-                    pattern.trim_end_matches('('),
-                    fix_msg
-                ));
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, 1, 0, 20)
+                    .with_cwe(477) // CWE-477: Use of Obsolete Function
+                    .with_fix_suggestion(format!(
+                        "Replace deprecated '{}'. {}",
+                        pattern.trim_end_matches('('),
+                        fix_msg
+                    ));
 
                 findings.push(finding);
             }

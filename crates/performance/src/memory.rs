@@ -1,7 +1,7 @@
 use anyhow::Result;
-use parking_lot::{RwLock, Mutex};
-use serde::{Serialize, Deserialize};
-use std::collections::{HashMap, BTreeMap};
+use parking_lot::{Mutex, RwLock};
+use serde::{Deserialize, Serialize};
+use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, atomic::AtomicUsize, atomic::Ordering};
 use std::time::{Duration, Instant};
 
@@ -49,7 +49,7 @@ impl Default for MemoryConfig {
         Self {
             enable_pooling: true,
             max_memory_usage: 2 * 1024 * 1024 * 1024, // 2GB
-            pressure_threshold: 0.8, // 80%
+            pressure_threshold: 0.8,                  // 80%
             aggressive_gc: false,
             pool_sizes: vec![64, 256, 1024, 4096, 16384, 65536], // Common allocation sizes
             enable_tracking: true,
@@ -211,7 +211,8 @@ impl MemoryManager {
 
         // Try to allocate from pool first
         let memory = if self.config.enable_pooling {
-            self.allocate_from_pool(size).unwrap_or_else(|| vec![0; size])
+            self.allocate_from_pool(size)
+                .unwrap_or_else(|| vec![0; size])
         } else {
             vec![0; size]
         };
@@ -258,13 +259,17 @@ impl MemoryManager {
 
         // Update statistics
         self.stats.current_usage.fetch_sub(size, Ordering::Relaxed);
-        self.stats.total_deallocations.fetch_add(1, Ordering::Relaxed);
+        self.stats
+            .total_deallocations
+            .fetch_add(1, Ordering::Relaxed);
     }
 
     /// Allocate from memory pool
     fn allocate_from_pool(&self, size: usize) -> Option<Vec<u8>> {
         // Find the smallest pool that can accommodate the size
-        let pool_size = self.config.pool_sizes
+        let pool_size = self
+            .config
+            .pool_sizes
             .iter()
             .find(|&&pool_size| pool_size >= size)
             .copied()?;
@@ -311,7 +316,10 @@ impl MemoryManager {
             let new_usage = self.stats.current_usage.load(Ordering::Relaxed);
             let new_pressure = new_usage as f64 / self.config.max_memory_usage as f64;
             if new_pressure > self.config.pressure_threshold {
-                return Err(anyhow::anyhow!("Memory pressure too high: {:.2}%", new_pressure * 100.0));
+                return Err(anyhow::anyhow!(
+                    "Memory pressure too high: {:.2}%",
+                    new_pressure * 100.0
+                ));
             }
         }
 
@@ -347,7 +355,11 @@ impl MemoryManager {
 
         // Notify about GC completion
         if freed > 0 {
-            log::info!("Garbage collection freed {} bytes in {:?}", freed, start_time.elapsed());
+            log::info!(
+                "Garbage collection freed {} bytes in {:?}",
+                freed,
+                start_time.elapsed()
+            );
         }
 
         Ok(freed)
@@ -407,17 +419,20 @@ impl MemoryManager {
         let mut pool_stats = HashMap::new();
 
         for (&size, pool) in pools.iter() {
-            pool_stats.insert(size, PoolStatsReport {
-                allocation_size: size,
-                total_blocks: pool.total_blocks,
-                blocks_in_use: pool.blocks_in_use,
-                hit_ratio: pool.stats.hit_ratio,
-                efficiency: if pool.total_blocks > 0 {
-                    (pool.total_blocks - pool.blocks_in_use) as f64 / pool.total_blocks as f64
-                } else {
-                    0.0
+            pool_stats.insert(
+                size,
+                PoolStatsReport {
+                    allocation_size: size,
+                    total_blocks: pool.total_blocks,
+                    blocks_in_use: pool.blocks_in_use,
+                    hit_ratio: pool.stats.hit_ratio,
+                    efficiency: if pool.total_blocks > 0 {
+                        (pool.total_blocks - pool.blocks_in_use) as f64 / pool.total_blocks as f64
+                    } else {
+                        0.0
+                    },
                 },
-            });
+            );
         }
 
         let pressure_level = self.pressure_monitor.get_current_pressure();
@@ -445,7 +460,7 @@ impl MemoryManager {
                 total_runs: gc_runs,
                 total_freed: gc_freed,
                 average_duration: Duration::from_millis(50), // Placeholder
-                last_run: None, // Would track in real implementation
+                last_run: None,                              // Would track in real implementation
             },
         }
     }
@@ -456,9 +471,15 @@ impl MemoryManager {
         F: Fn(f64) + Send + Sync + 'static,
     {
         if threshold >= 0.9 {
-            self.pressure_monitor.critical_callbacks.lock().push(Arc::new(callback));
+            self.pressure_monitor
+                .critical_callbacks
+                .lock()
+                .push(Arc::new(callback));
         } else {
-            self.pressure_monitor.warning_callbacks.lock().push(Arc::new(callback));
+            self.pressure_monitor
+                .warning_callbacks
+                .lock()
+                .push(Arc::new(callback));
         }
     }
 
@@ -498,7 +519,8 @@ impl MemoryPool {
 
         if let Some(block) = self.available_blocks.pop() {
             self.blocks_in_use += 1;
-            self.stats.hit_ratio = self.stats.total_deallocations as f64 / self.stats.total_allocations as f64;
+            self.stats.hit_ratio =
+                self.stats.total_deallocations as f64 / self.stats.total_allocations as f64;
             Some(block)
         } else {
             // Create new block
@@ -513,7 +535,8 @@ impl MemoryPool {
             self.available_blocks.push(block);
             self.blocks_in_use = self.blocks_in_use.saturating_sub(1);
             self.stats.total_deallocations += 1;
-            self.stats.hit_ratio = self.stats.total_deallocations as f64 / self.stats.total_allocations as f64;
+            self.stats.hit_ratio =
+                self.stats.total_deallocations as f64 / self.stats.total_allocations as f64;
         }
     }
 

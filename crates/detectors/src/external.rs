@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct UncheckedCallDetector {
     base: BaseDetector,
@@ -23,25 +23,44 @@ impl UncheckedCallDetector {
 }
 
 impl Detector for UncheckedCallDetector {
-    fn id(&self) -> DetectorId { self.base.id.clone() }
-    fn name(&self) -> &str { &self.base.name }
-    fn description(&self) -> &str { &self.base.description }
-    fn default_severity(&self) -> Severity { self.base.default_severity }
-    fn categories(&self) -> Vec<DetectorCategory> { self.base.categories.clone() }
-    fn is_enabled(&self) -> bool { self.base.enabled }
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
         for function in ctx.get_functions() {
             if let Some(body) = &function.body {
-                self.check_statements_for_unchecked_calls(&body.statements, ctx, &mut findings, function);
+                self.check_statements_for_unchecked_calls(
+                    &body.statements,
+                    ctx,
+                    &mut findings,
+                    function,
+                );
             }
         }
 
         Ok(findings)
     }
 
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl UncheckedCallDetector {
@@ -55,31 +74,41 @@ impl UncheckedCallDetector {
     ) {
         for stmt in statements {
             match stmt {
-                ast::Statement::Expression(ast::Expression::FunctionCall { function: call_expr, .. }) => {
+                ast::Statement::Expression(ast::Expression::FunctionCall {
+                    function: call_expr,
+                    ..
+                }) => {
                     if self.is_external_call(call_expr) && !self.return_value_checked(stmt) {
                         let message = format!(
                             "External call in function '{}' does not check return value",
                             function.name.name
                         );
 
-                        let finding = self.base.create_finding(
-                            ctx,
-                            message,
-                            function.name.location.start().line() as u32,
-                            function.name.location.start().column() as u32,
-                            function.name.name.len() as u32,
-                        )
-                        .with_cwe(252) // CWE-252: Unchecked Return Value
-                        .with_fix_suggestion(format!(
-                            "Check the return value of external calls in function '{}'",
-                            function.name.name
-                        ));
+                        let finding = self
+                            .base
+                            .create_finding(
+                                ctx,
+                                message,
+                                function.name.location.start().line() as u32,
+                                function.name.location.start().column() as u32,
+                                function.name.name.len() as u32,
+                            )
+                            .with_cwe(252) // CWE-252: Unchecked Return Value
+                            .with_fix_suggestion(format!(
+                                "Check the return value of external calls in function '{}'",
+                                function.name.name
+                            ));
 
                         findings.push(finding);
                     }
                 }
                 ast::Statement::Block(block) => {
-                    self.check_statements_for_unchecked_calls(&block.statements, ctx, findings, function);
+                    self.check_statements_for_unchecked_calls(
+                        &block.statements,
+                        ctx,
+                        findings,
+                        function,
+                    );
                 }
                 _ => {}
             }
@@ -89,7 +118,9 @@ impl UncheckedCallDetector {
     /// Check if expression is an external call
     fn is_external_call(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
-            ast::Expression::MemberAccess { expression, member, .. } => {
+            ast::Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 // Common external call patterns
                 let method = member.name.to_lowercase();
                 if method == "call" || method == "send" || method == "transfer" {

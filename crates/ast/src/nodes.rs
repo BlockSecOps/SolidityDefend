@@ -1,6 +1,6 @@
-use bumpalo::collections::Vec as BumpVec;
-use crate::location::{SourceLocation, Located};
 use crate::arena::AstArena;
+use crate::location::{Located, SourceLocation};
+use bumpalo::collections::Vec as BumpVec;
 
 /// Identifier with source location
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -49,7 +49,12 @@ pub struct SourceFile<'arena> {
 }
 
 impl<'arena> SourceFile<'arena> {
-    pub fn new(arena: &'arena AstArena, path: &'arena str, content: &'arena str, location: SourceLocation) -> Self {
+    pub fn new(
+        arena: &'arena AstArena,
+        path: &'arena str,
+        content: &'arena str,
+        location: SourceLocation,
+    ) -> Self {
         Self {
             path,
             content,
@@ -114,7 +119,12 @@ pub struct Contract<'arena> {
 }
 
 impl<'arena> Contract<'arena> {
-    pub fn new(arena: &'arena AstArena, name: Identifier<'arena>, contract_type: ContractType, location: SourceLocation) -> Self {
+    pub fn new(
+        arena: &'arena AstArena,
+        name: Identifier<'arena>,
+        contract_type: ContractType,
+        location: SourceLocation,
+    ) -> Self {
         Self {
             name,
             contract_type,
@@ -206,7 +216,11 @@ pub struct Function<'arena> {
 }
 
 impl<'arena> Function<'arena> {
-    pub fn new(arena: &'arena AstArena, name: Identifier<'arena>, location: SourceLocation) -> Self {
+    pub fn new(
+        arena: &'arena AstArena,
+        name: Identifier<'arena>,
+        location: SourceLocation,
+    ) -> Self {
         Self {
             name,
             function_type: FunctionType::Function,
@@ -622,18 +636,36 @@ pub enum LiteralValue<'arena> {
 /// Binary operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum BinaryOperator {
-    Add, Sub, Mul, Div, Mod, Pow,
-    Equal, NotEqual, Less, LessEqual, Greater, GreaterEqual,
-    And, Or,
-    BitwiseAnd, BitwiseOr, BitwiseXor,
-    ShiftLeft, ShiftRight,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Mod,
+    Pow,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    And,
+    Or,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    ShiftLeft,
+    ShiftRight,
 }
 
 /// Unary operators
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UnaryOperator {
-    Plus, Minus, Not, BitwiseNot,
-    Increment, Decrement,
+    Plus,
+    Minus,
+    Not,
+    BitwiseNot,
+    Increment,
+    Decrement,
     Delete,
 }
 
@@ -641,9 +673,16 @@ pub enum UnaryOperator {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AssignmentOperator {
     Assign,
-    AddAssign, SubAssign, MulAssign, DivAssign, ModAssign,
-    AndAssign, OrAssign, XorAssign,
-    ShiftLeftAssign, ShiftRightAssign,
+    AddAssign,
+    SubAssign,
+    MulAssign,
+    DivAssign,
+    ModAssign,
+    AndAssign,
+    OrAssign,
+    XorAssign,
+    ShiftLeftAssign,
+    ShiftRightAssign,
 }
 
 /// Visibility modifiers

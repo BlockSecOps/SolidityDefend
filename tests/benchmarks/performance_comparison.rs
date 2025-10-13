@@ -40,10 +40,10 @@ pub struct TestDataset {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ComplexityLevel {
-    Simple,      // < 100 LOC
-    Medium,      // 100-1000 LOC
-    Large,       // 1000-10000 LOC
-    Enterprise,  // > 10000 LOC
+    Simple,     // < 100 LOC
+    Medium,     // 100-1000 LOC
+    Large,      // 1000-10000 LOC
+    Enterprise, // > 10000 LOC
 }
 
 impl PerformanceBenchmark {
@@ -126,7 +126,10 @@ impl PerformanceBenchmark {
         results
     }
 
-    fn benchmark_soliditydefend(&self, dataset: &TestDataset) -> Result<PerformanceMetrics, Box<dyn std::error::Error>> {
+    fn benchmark_soliditydefend(
+        &self,
+        dataset: &TestDataset,
+    ) -> Result<PerformanceMetrics, Box<dyn std::error::Error>> {
         let start_time = Instant::now();
         let start_memory = self.get_memory_usage()?;
 
@@ -145,7 +148,8 @@ impl PerformanceBenchmark {
         let memory_usage = end_memory.saturating_sub(start_memory);
 
         // Parse results to count findings
-        let findings_count = self.parse_soliditydefend_results("/tmp/soliditydefend_results.json")?;
+        let findings_count =
+            self.parse_soliditydefend_results("/tmp/soliditydefend_results.json")?;
 
         Ok(PerformanceMetrics {
             tool_name: "SolidityDefend".to_string(),
@@ -158,7 +162,11 @@ impl PerformanceBenchmark {
         })
     }
 
-    fn benchmark_external_tool(&self, tool: &str, dataset: &TestDataset) -> Result<PerformanceMetrics, Box<dyn std::error::Error>> {
+    fn benchmark_external_tool(
+        &self,
+        tool: &str,
+        dataset: &TestDataset,
+    ) -> Result<PerformanceMetrics, Box<dyn std::error::Error>> {
         let start_time = Instant::now();
         let start_memory = self.get_memory_usage()?;
 
@@ -240,7 +248,10 @@ impl PerformanceBenchmark {
         ((base_findings as f64) * effectiveness_factor) as usize
     }
 
-    fn parse_soliditydefend_results(&self, path: &str) -> Result<usize, Box<dyn std::error::Error>> {
+    fn parse_soliditydefend_results(
+        &self,
+        path: &str,
+    ) -> Result<usize, Box<dyn std::error::Error>> {
         if Path::new(path).exists() {
             let content = std::fs::read_to_string(path)?;
             // Parse JSON to count findings
@@ -286,40 +297,47 @@ impl PerformanceBenchmark {
         }
     }
 
-    fn calculate_cpu_utilization(&self, duration: Duration) -> Result<f64, Box<dyn std::error::Error>> {
+    fn calculate_cpu_utilization(
+        &self,
+        duration: Duration,
+    ) -> Result<f64, Box<dyn std::error::Error>> {
         // Estimate CPU utilization based on analysis time
         let base_utilization = 75.0; // Base CPU usage percentage
         let time_factor = duration.as_secs_f64() / 10.0; // Normalize to 10 seconds
         Ok((base_utilization * (1.0 + time_factor)).min(100.0))
     }
 
-    fn calculate_relative_performance(&self, metrics: &[PerformanceMetrics]) -> HashMap<String, f64> {
+    fn calculate_relative_performance(
+        &self,
+        metrics: &[PerformanceMetrics],
+    ) -> HashMap<String, f64> {
         let mut relative_perf = HashMap::new();
 
-        if let Some(baseline) = metrics.iter().find(|m| m.tool_name.to_lowercase().contains("soliditydefend")) {
+        if let Some(baseline) = metrics
+            .iter()
+            .find(|m| m.tool_name.to_lowercase().contains("soliditydefend"))
+        {
             for metric in metrics {
                 if metric.tool_name != baseline.tool_name {
                     // Calculate relative speed (lower is better)
-                    let speed_ratio = baseline.analysis_time.as_secs_f64() / metric.analysis_time.as_secs_f64();
-                    relative_perf.insert(
-                        format!("{}_speed_ratio", metric.tool_name),
-                        speed_ratio
-                    );
+                    let speed_ratio =
+                        baseline.analysis_time.as_secs_f64() / metric.analysis_time.as_secs_f64();
+                    relative_perf.insert(format!("{}_speed_ratio", metric.tool_name), speed_ratio);
 
                     // Calculate relative memory efficiency (lower is better)
                     let memory_ratio = baseline.memory_usage as f64 / metric.memory_usage as f64;
-                    relative_perf.insert(
-                        format!("{}_memory_ratio", metric.tool_name),
-                        memory_ratio
-                    );
+                    relative_perf
+                        .insert(format!("{}_memory_ratio", metric.tool_name), memory_ratio);
 
                     // Calculate finding efficiency (findings per second)
-                    let baseline_efficiency = baseline.findings_count as f64 / baseline.analysis_time.as_secs_f64();
-                    let tool_efficiency = metric.findings_count as f64 / metric.analysis_time.as_secs_f64();
+                    let baseline_efficiency =
+                        baseline.findings_count as f64 / baseline.analysis_time.as_secs_f64();
+                    let tool_efficiency =
+                        metric.findings_count as f64 / metric.analysis_time.as_secs_f64();
                     let efficiency_ratio = baseline_efficiency / tool_efficiency;
                     relative_perf.insert(
                         format!("{}_efficiency_ratio", metric.tool_name),
-                        efficiency_ratio
+                        efficiency_ratio,
                     );
                 }
             }
@@ -375,12 +393,16 @@ mod tests {
     #[test]
     fn test_dataset_complexity_levels() {
         let benchmark = PerformanceBenchmark::new();
-        let simple_dataset = benchmark.test_datasets.iter()
+        let simple_dataset = benchmark
+            .test_datasets
+            .iter()
             .find(|d| d.expected_complexity == ComplexityLevel::Simple)
             .unwrap();
         assert!(simple_dataset.total_loc < 1000);
 
-        let enterprise_dataset = benchmark.test_datasets.iter()
+        let enterprise_dataset = benchmark
+            .test_datasets
+            .iter()
             .find(|d| d.expected_complexity == ComplexityLevel::Enterprise)
             .unwrap();
         assert!(enterprise_dataset.total_loc > 10000);
@@ -435,23 +457,19 @@ mod tests {
     #[test]
     fn test_report_generation() {
         let benchmark = PerformanceBenchmark::new();
-        let results = vec![
-            BenchmarkResult {
-                dataset_name: "TestDataset".to_string(),
-                metrics: vec![
-                    PerformanceMetrics {
-                        tool_name: "SolidityDefend".to_string(),
-                        analysis_time: Duration::from_secs(5),
-                        memory_usage: 25_000_000,
-                        file_count: 5,
-                        lines_of_code: 500,
-                        findings_count: 3,
-                        cpu_utilization: 70.0,
-                    },
-                ],
-                relative_performance: HashMap::new(),
-            },
-        ];
+        let results = vec![BenchmarkResult {
+            dataset_name: "TestDataset".to_string(),
+            metrics: vec![PerformanceMetrics {
+                tool_name: "SolidityDefend".to_string(),
+                analysis_time: Duration::from_secs(5),
+                memory_usage: 25_000_000,
+                file_count: 5,
+                lines_of_code: 500,
+                findings_count: 3,
+                cpu_utilization: 70.0,
+            }],
+            relative_performance: HashMap::new(),
+        }];
 
         let report = benchmark.generate_performance_report(&results);
         assert!(report.contains("SolidityDefend Performance Benchmark Report"));

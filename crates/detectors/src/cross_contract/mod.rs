@@ -10,7 +10,7 @@ pub mod interaction_graph;
 // pub mod dependency_analyzer;
 
 pub use analyzer::CrossContractAnalyzer;
-pub use interaction_graph::{InteractionGraph, ContractNode, InteractionEdge};
+pub use interaction_graph::{ContractNode, InteractionEdge, InteractionGraph};
 // pub use protocol_detector::ProtocolDetector;
 // pub use dependency_analyzer::DependencyAnalyzer;
 
@@ -187,14 +187,18 @@ impl CrossContractUtils {
     /// Check if a function makes external calls
     pub fn makes_external_calls(ctx: &AnalysisContext, _function_name: &str) -> bool {
         let external_call_patterns = [
-            ".call(", ".delegatecall(", ".staticcall(",
-            ".transfer(", ".send(",
-            "address(", "Contract("
+            ".call(",
+            ".delegatecall(",
+            ".staticcall(",
+            ".transfer(",
+            ".send(",
+            "address(",
+            "Contract(",
         ];
 
-        external_call_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        external_call_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     /// Extract external contract addresses from function calls
@@ -224,25 +228,34 @@ impl CrossContractUtils {
     /// Check if a contract uses proxy patterns
     pub fn uses_proxy_pattern(ctx: &AnalysisContext) -> bool {
         let proxy_patterns = [
-            "delegatecall", "implementation", "proxy", "upgrade",
-            "fallback", "_delegate", "_implementation"
+            "delegatecall",
+            "implementation",
+            "proxy",
+            "upgrade",
+            "fallback",
+            "_delegate",
+            "_implementation",
         ];
 
-        proxy_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
-        )
+        proxy_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.to_lowercase().contains(pattern))
     }
 
     /// Check if a contract is upgradeable
     pub fn is_upgradeable(ctx: &AnalysisContext) -> bool {
         let upgrade_patterns = [
-            "upgrade", "implementation", "initialize", "reinitializer",
-            "UUPSUpgradeable", "TransparentUpgradeableProxy"
+            "upgrade",
+            "implementation",
+            "initialize",
+            "reinitializer",
+            "UUPSUpgradeable",
+            "TransparentUpgradeableProxy",
         ];
 
-        upgrade_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        upgrade_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     /// Detect circular dependencies in contract calls
@@ -273,21 +286,17 @@ impl CrossContractUtils {
     }
 
     fn is_standard_interface(ctx: &AnalysisContext) -> bool {
-        let standard_patterns = [
-            "ERC20", "ERC721", "ERC1155", "IERC", "OpenZeppelin"
-        ];
-        standard_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let standard_patterns = ["ERC20", "ERC721", "ERC1155", "IERC", "OpenZeppelin"];
+        standard_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_complex_state_changes(ctx: &AnalysisContext) -> bool {
-        let complexity_indicators = [
-            "assembly", "delegatecall", "selfdestruct", "create2"
-        ];
-        complexity_indicators.iter().any(|&indicator|
-            ctx.source_code.contains(indicator)
-        )
+        let complexity_indicators = ["assembly", "delegatecall", "selfdestruct", "create2"];
+        complexity_indicators
+            .iter()
+            .any(|&indicator| ctx.source_code.contains(indicator))
     }
 }
 

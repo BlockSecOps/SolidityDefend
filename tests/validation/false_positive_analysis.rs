@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Finding {
@@ -105,7 +105,10 @@ impl FalsePositiveAnalyzer {
         }
     }
 
-    pub fn load_ground_truth(&mut self, ground_truth_file: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn load_ground_truth(
+        &mut self,
+        ground_truth_file: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let content = std::fs::read_to_string(ground_truth_file)?;
         let ground_truth_data: Vec<GroundTruth> = serde_json::from_str(&content)?;
 
@@ -142,7 +145,9 @@ impl FalsePositiveAnalyzer {
             }
 
             // Update detector statistics
-            let detector_entry = detector_stats.entry(finding.detector.clone()).or_insert((0, 0, 0));
+            let detector_entry = detector_stats
+                .entry(finding.detector.clone())
+                .or_insert((0, 0, 0));
             detector_entry.0 += 1; // total
             if is_true_positive {
                 detector_entry.1 += 1; // tp
@@ -151,7 +156,9 @@ impl FalsePositiveAnalyzer {
             }
 
             // Update severity statistics
-            let severity_entry = severity_stats.entry(finding.severity.clone()).or_insert((0, 0, 0));
+            let severity_entry = severity_stats
+                .entry(finding.severity.clone())
+                .or_insert((0, 0, 0));
             severity_entry.0 += 1; // total
             if is_true_positive {
                 severity_entry.1 += 1; // tp
@@ -182,35 +189,56 @@ impl FalsePositiveAnalyzer {
         };
 
         // Build detector analysis
-        let detector_analysis = detector_stats.into_iter().map(|(detector, (total, tp, fp))| {
-            let precision = if total > 0 { tp as f64 / total as f64 } else { 0.0 };
-            let recall = self.calculate_detector_recall(&detector);
-            let common_reasons = false_positive_reasons.get(&detector)
-                .cloned()
-                .unwrap_or_default();
+        let detector_analysis = detector_stats
+            .into_iter()
+            .map(|(detector, (total, tp, fp))| {
+                let precision = if total > 0 {
+                    tp as f64 / total as f64
+                } else {
+                    0.0
+                };
+                let recall = self.calculate_detector_recall(&detector);
+                let common_reasons = false_positive_reasons
+                    .get(&detector)
+                    .cloned()
+                    .unwrap_or_default();
 
-            (detector.clone(), DetectorAnalysis {
-                detector_name: detector,
-                total_findings: total,
-                true_positives: tp,
-                false_positives: fp,
-                precision,
-                recall,
-                common_false_positive_reasons: common_reasons,
+                (
+                    detector.clone(),
+                    DetectorAnalysis {
+                        detector_name: detector,
+                        total_findings: total,
+                        true_positives: tp,
+                        false_positives: fp,
+                        precision,
+                        recall,
+                        common_false_positive_reasons: common_reasons,
+                    },
+                )
             })
-        }).collect();
+            .collect();
 
         // Build severity analysis
-        let severity_analysis = severity_stats.into_iter().map(|(severity, (total, tp, fp))| {
-            let fp_rate = if total > 0 { fp as f64 / total as f64 } else { 0.0 };
-            (severity.clone(), SeverityAnalysis {
-                severity: severity.clone(),
-                total_findings: total,
-                true_positives: tp,
-                false_positives: fp,
-                false_positive_rate: fp_rate,
+        let severity_analysis = severity_stats
+            .into_iter()
+            .map(|(severity, (total, tp, fp))| {
+                let fp_rate = if total > 0 {
+                    fp as f64 / total as f64
+                } else {
+                    0.0
+                };
+                (
+                    severity.clone(),
+                    SeverityAnalysis {
+                        severity: severity.clone(),
+                        total_findings: total,
+                        true_positives: tp,
+                        false_positives: fp,
+                        false_positive_rate: fp_rate,
+                    },
+                )
             })
-        }).collect();
+            .collect();
 
         // Identify false positive patterns
         let false_positive_patterns = self.identify_false_positive_patterns();
@@ -233,16 +261,18 @@ impl FalsePositiveAnalyzer {
         if let Some(ground_truth) = self.ground_truth.get(&finding.file_path) {
             // Check if this finding matches any known true positive
             for tp in &ground_truth.true_positives {
-                if tp.detector == finding.detector &&
-                   self.line_numbers_match(tp.line_number, finding.line_number) {
+                if tp.detector == finding.detector
+                    && self.line_numbers_match(tp.line_number, finding.line_number)
+                {
                     return true;
                 }
             }
 
             // Check if this finding is a known false positive
             for fp in &ground_truth.known_false_positives {
-                if fp.detector == finding.detector &&
-                   self.line_numbers_match(fp.line_number, finding.line_number) {
+                if fp.detector == finding.detector
+                    && self.line_numbers_match(fp.line_number, finding.line_number)
+                {
                     return false;
                 }
             }
@@ -257,12 +287,18 @@ impl FalsePositiveAnalyzer {
         (expected as i32 - actual as i32).abs() <= 2
     }
 
-    fn record_false_positive_reason(&self, finding: &Finding, reasons: &mut HashMap<String, Vec<String>>) {
+    fn record_false_positive_reason(
+        &self,
+        finding: &Finding,
+        reasons: &mut HashMap<String, Vec<String>>,
+    ) {
         if let Some(ground_truth) = self.ground_truth.get(&finding.file_path) {
             for fp in &ground_truth.known_false_positives {
-                if fp.detector == finding.detector &&
-                   self.line_numbers_match(fp.line_number, finding.line_number) {
-                    reasons.entry(finding.detector.clone())
+                if fp.detector == finding.detector
+                    && self.line_numbers_match(fp.line_number, finding.line_number)
+                {
+                    reasons
+                        .entry(finding.detector.clone())
                         .or_insert_with(Vec::new)
                         .push(fp.reason.clone());
                     return;
@@ -271,7 +307,8 @@ impl FalsePositiveAnalyzer {
         }
 
         // Default reason for unclassified false positives
-        reasons.entry(finding.detector.clone())
+        reasons
+            .entry(finding.detector.clone())
             .or_insert_with(Vec::new)
             .push("Unclassified false positive".to_string());
     }
@@ -285,9 +322,9 @@ impl FalsePositiveAnalyzer {
 
             for tp in &ground_truth.true_positives {
                 if self.findings.iter().any(|f| {
-                    f.detector == tp.detector &&
-                    f.file_path == ground_truth.file_path &&
-                    self.line_numbers_match(tp.line_number, f.line_number)
+                    f.detector == tp.detector
+                        && f.file_path == ground_truth.file_path
+                        && self.line_numbers_match(tp.line_number, f.line_number)
                 }) {
                     detected_vulnerabilities += 1;
                 }
@@ -311,9 +348,9 @@ impl FalsePositiveAnalyzer {
                     total_expected += 1;
 
                     if self.findings.iter().any(|f| {
-                        f.detector == detector &&
-                        f.file_path == ground_truth.file_path &&
-                        self.line_numbers_match(tp.line_number, f.line_number)
+                        f.detector == detector
+                            && f.file_path == ground_truth.file_path
+                            && self.line_numbers_match(tp.line_number, f.line_number)
                     }) {
                         detected += 1;
                     }
@@ -332,7 +369,8 @@ impl FalsePositiveAnalyzer {
         let mut patterns = Vec::new();
 
         // Pattern 1: Safe external calls flagged as reentrancy
-        let safe_external_calls = self.count_pattern_occurrences("reentrancy", "safe external call");
+        let safe_external_calls =
+            self.count_pattern_occurrences("reentrancy", "safe external call");
         if safe_external_calls > 0 {
             patterns.push(FalsePositivePattern {
                 pattern_id: "SAFE_EXTERNAL_CALLS".to_string(),
@@ -345,7 +383,8 @@ impl FalsePositiveAnalyzer {
         }
 
         // Pattern 2: Library functions flagged as unprotected
-        let library_functions = self.count_pattern_occurrences("access-control", "library function");
+        let library_functions =
+            self.count_pattern_occurrences("access-control", "library function");
         if library_functions > 0 {
             patterns.push(FalsePositivePattern {
                 pattern_id: "LIBRARY_FUNCTIONS".to_string(),
@@ -378,7 +417,9 @@ impl FalsePositiveAnalyzer {
 
         for ground_truth in self.ground_truth.values() {
             for fp in &ground_truth.known_false_positives {
-                if fp.detector == detector && fp.reason.to_lowercase().contains(&pattern.to_lowercase()) {
+                if fp.detector == detector
+                    && fp.reason.to_lowercase().contains(&pattern.to_lowercase())
+                {
                     count += 1;
                 }
             }
@@ -395,9 +436,18 @@ impl FalsePositiveAnalyzer {
         report.push_str("## Overall Metrics\n\n");
         report.push_str(&format!("- Total Findings: {}\n", analysis.total_findings));
         report.push_str(&format!("- True Positives: {}\n", analysis.true_positives));
-        report.push_str(&format!("- False Positives: {}\n", analysis.false_positives));
-        report.push_str(&format!("- False Positive Rate: {:.2}%\n", analysis.false_positive_rate * 100.0));
-        report.push_str(&format!("- Precision: {:.2}%\n", analysis.precision * 100.0));
+        report.push_str(&format!(
+            "- False Positives: {}\n",
+            analysis.false_positives
+        ));
+        report.push_str(&format!(
+            "- False Positive Rate: {:.2}%\n",
+            analysis.false_positive_rate * 100.0
+        ));
+        report.push_str(&format!(
+            "- Precision: {:.2}%\n",
+            analysis.precision * 100.0
+        ));
         report.push_str(&format!("- Recall: {:.2}%\n", analysis.recall * 100.0));
         report.push_str(&format!("- F1 Score: {:.3}\n\n", analysis.f1_score));
 
@@ -439,19 +489,32 @@ impl FalsePositiveAnalyzer {
         for pattern in &analysis.false_positive_patterns {
             report.push_str(&format!("### {}\n\n", pattern.pattern_id));
             report.push_str(&format!("**Description:** {}\n\n", pattern.description));
-            report.push_str(&format!("**Frequency:** {} occurrences\n\n", pattern.frequency));
-            report.push_str(&format!("**Affected Detectors:** {}\n\n", pattern.affected_detectors.join(", ")));
+            report.push_str(&format!(
+                "**Frequency:** {} occurrences\n\n",
+                pattern.frequency
+            ));
+            report.push_str(&format!(
+                "**Affected Detectors:** {}\n\n",
+                pattern.affected_detectors.join(", ")
+            ));
             report.push_str("**Example Code:**\n");
             report.push_str("```solidity\n");
             report.push_str(&pattern.example_code);
             report.push_str("\n```\n\n");
-            report.push_str(&format!("**Mitigation Strategy:** {}\n\n", pattern.mitigation_strategy));
+            report.push_str(&format!(
+                "**Mitigation Strategy:** {}\n\n",
+                pattern.mitigation_strategy
+            ));
         }
 
         report
     }
 
-    pub fn save_analysis(&self, analysis: &FalsePositiveAnalysis, output_file: &str) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn save_analysis(
+        &self,
+        analysis: &FalsePositiveAnalysis,
+        output_file: &str,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let json_output = serde_json::to_string_pretty(analysis)?;
         std::fs::write(output_file, json_output)?;
         println!("False positive analysis saved to: {}", output_file);
@@ -520,19 +583,20 @@ mod tests {
 
         // Add ground truth with known false positive patterns
         let mut ground_truth = HashMap::new();
-        ground_truth.insert("test.sol".to_string(), GroundTruth {
-            file_path: "test.sol".to_string(),
-            true_positives: vec![],
-            known_false_positives: vec![
-                KnownFalsePositive {
+        ground_truth.insert(
+            "test.sol".to_string(),
+            GroundTruth {
+                file_path: "test.sol".to_string(),
+                true_positives: vec![],
+                known_false_positives: vec![KnownFalsePositive {
                     detector: "reentrancy".to_string(),
                     line_number: 10,
                     reason: "safe external call".to_string(),
                     explanation: "This is a safe external call".to_string(),
-                },
-            ],
-            annotations: HashMap::new(),
-        });
+                }],
+                annotations: HashMap::new(),
+            },
+        );
 
         let analyzer_with_gt = FalsePositiveAnalyzer {
             ground_truth,
@@ -542,6 +606,10 @@ mod tests {
 
         let patterns = analyzer_with_gt.identify_false_positive_patterns();
         assert!(!patterns.is_empty());
-        assert!(patterns.iter().any(|p| p.pattern_id == "SAFE_EXTERNAL_CALLS"));
+        assert!(
+            patterns
+                .iter()
+                .any(|p| p.pattern_id == "SAFE_EXTERNAL_CALLS")
+        );
     }
 }

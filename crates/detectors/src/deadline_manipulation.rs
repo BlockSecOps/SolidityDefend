@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for transaction deadline manipulation vulnerabilities
 pub struct DeadlineManipulationDetector {
@@ -56,26 +56,27 @@ impl Detector for DeadlineManipulationDetector {
                 let message = format!(
                     "Function '{}' has deadline manipulation risk. {} \
                     Validators can hold transactions and execute them at times that benefit MEV extraction or harm users.",
-                    function.name.name,
-                    deadline_issue
+                    function.name.name, deadline_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(367) // CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
-                .with_fix_suggestion(format!(
-                    "Improve deadline handling in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(367) // CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
+                    .with_fix_suggestion(format!(
+                        "Improve deadline handling in '{}'. \
                     Use reasonable default deadlines (e.g., block.timestamp + 15 minutes), \
                     validate deadline parameters, add minimum deadline checks, \
                     or implement deadline extensions for failed transactions.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +92,11 @@ impl Detector for DeadlineManipulationDetector {
 
 impl DeadlineManipulationDetector {
     /// Check for deadline manipulation vulnerabilities
-    fn check_deadline_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_deadline_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,18 +104,18 @@ impl DeadlineManipulationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check if function uses deadlines
-        let has_deadline_param = func_source.contains("deadline") ||
-                                func_source.contains("validUntil") ||
-                                func_source.contains("expiry");
+        let has_deadline_param = func_source.contains("deadline")
+            || func_source.contains("validUntil")
+            || func_source.contains("expiry");
 
         if !has_deadline_param {
             return None;
         }
 
         // Pattern 1: Deadline parameter without validation
-        let has_deadline_check = func_source.contains("require(block.timestamp <=") ||
-                                func_source.contains("require(deadline >=") ||
-                                func_source.contains("if (block.timestamp >");
+        let has_deadline_check = func_source.contains("require(block.timestamp <=")
+            || func_source.contains("require(deadline >=")
+            || func_source.contains("if (block.timestamp >");
 
         let lacks_validation = has_deadline_param && !has_deadline_check;
 
@@ -122,13 +127,12 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 2: Allows very distant deadlines
-        let has_max_check = func_source.contains("MAX_DEADLINE") ||
-                           func_source.contains("require(deadline <=") ||
-                           func_source.contains("require(deadline - block.timestamp");
+        let has_max_check = func_source.contains("MAX_DEADLINE")
+            || func_source.contains("require(deadline <=")
+            || func_source.contains("require(deadline - block.timestamp");
 
-        let allows_long_deadline = has_deadline_param &&
-                                  !has_max_check &&
-                                  func_source.contains("block.timestamp");
+        let allows_long_deadline =
+            has_deadline_param && !has_max_check && func_source.contains("block.timestamp");
 
         if allows_long_deadline {
             return Some(format!(
@@ -138,15 +142,14 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 3: Swap/trade without deadline
-        let is_swap = func_source.contains("swap") ||
-                     func_source.contains("trade") ||
-                     func_source.contains("exchange") ||
-                     function.name.name.to_lowercase().contains("swap");
+        let is_swap = func_source.contains("swap")
+            || func_source.contains("trade")
+            || func_source.contains("exchange")
+            || function.name.name.to_lowercase().contains("swap");
 
-        let missing_deadline = is_swap &&
-                              !has_deadline_param &&
-                              (func_source.contains("amountOut") ||
-                               func_source.contains("return"));
+        let missing_deadline = is_swap
+            && !has_deadline_param
+            && (func_source.contains("amountOut") || func_source.contains("return"));
 
         if missing_deadline {
             return Some(format!(
@@ -156,9 +159,9 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 4: Deadline set to type(uint256).max
-        let uses_max_uint = func_source.contains("type(uint256).max") ||
-                           func_source.contains("uint256(-1)") ||
-                           func_source.contains("2**256 - 1");
+        let uses_max_uint = func_source.contains("type(uint256).max")
+            || func_source.contains("uint256(-1)")
+            || func_source.contains("2**256 - 1");
 
         if uses_max_uint && has_deadline_param {
             return Some(format!(
@@ -168,10 +171,9 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 5: Minimum deadline too short
-        let has_short_deadline = func_source.contains("block.timestamp + 1") ||
-                                func_source.contains("block.timestamp + 60") ||
-                                (func_source.contains("deadline") &&
-                                 func_source.contains("+ 1"));
+        let has_short_deadline = func_source.contains("block.timestamp + 1")
+            || func_source.contains("block.timestamp + 60")
+            || (func_source.contains("deadline") && func_source.contains("+ 1"));
 
         if has_short_deadline {
             return Some(format!(
@@ -181,13 +183,12 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 6: Price-sensitive operation without deadline
-        let is_price_sensitive = func_source.contains("price") ||
-                                func_source.contains("slippage") ||
-                                func_source.contains("minAmount");
+        let is_price_sensitive = func_source.contains("price")
+            || func_source.contains("slippage")
+            || func_source.contains("minAmount");
 
-        let lacks_deadline_protection = is_price_sensitive &&
-                                       !has_deadline_param &&
-                                       !func_source.contains("block.timestamp");
+        let lacks_deadline_protection =
+            is_price_sensitive && !has_deadline_param && !func_source.contains("block.timestamp");
 
         if lacks_deadline_protection {
             return Some(format!(
@@ -197,13 +198,13 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 7: Liquidation without time constraints
-        let is_liquidation = func_source.contains("liquidat") ||
-                            function.name.name.to_lowercase().contains("liquidat");
+        let is_liquidation = func_source.contains("liquidat")
+            || function.name.name.to_lowercase().contains("liquidat");
 
-        let no_time_constraint = is_liquidation &&
-                                !has_deadline_param &&
-                                !func_source.contains("block.timestamp") &&
-                                !func_source.contains("timelock");
+        let no_time_constraint = is_liquidation
+            && !has_deadline_param
+            && !func_source.contains("block.timestamp")
+            && !func_source.contains("timelock");
 
         if no_time_constraint {
             return Some(format!(
@@ -213,12 +214,12 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 8: User-provided deadline not bounded
-        let user_deadline = func_source.contains("uint256 deadline") ||
-                           func_source.contains("uint256 validUntil");
+        let user_deadline =
+            func_source.contains("uint256 deadline") || func_source.contains("uint256 validUntil");
 
-        let no_bounds = user_deadline &&
-                       !func_source.contains("require(deadline <=") &&
-                       !func_source.contains("require(deadline - block.timestamp <=");
+        let no_bounds = user_deadline
+            && !func_source.contains("require(deadline <=")
+            && !func_source.contains("require(deadline - block.timestamp <=");
 
         if no_bounds {
             return Some(format!(
@@ -228,10 +229,11 @@ impl DeadlineManipulationDetector {
         }
 
         // Pattern 9: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("deadline") ||
-            func_source.contains("pinning") ||
-            func_source.contains("holding")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("deadline")
+                || func_source.contains("pinning")
+                || func_source.contains("holding"))
+        {
             return Some(format!(
                 "Deadline manipulation vulnerability marker detected"
             ));

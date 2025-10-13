@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct ReplayAttackDetector {
     base: BaseDetector,
@@ -16,7 +16,8 @@ impl ReplayAttackDetector {
             base: BaseDetector::new(
                 DetectorId("erc7683-cross-chain-replay".to_string()),
                 "ERC-7683 Cross-Chain Replay".to_string(),
-                "Detects missing chain-ID validation enabling cross-chain replay attacks".to_string(),
+                "Detects missing chain-ID validation enabling cross-chain replay attacks"
+                    .to_string(),
                 vec![DetectorCategory::CrossChain],
                 Severity::Critical,
             ),
@@ -25,11 +26,15 @@ impl ReplayAttackDetector {
 
     fn is_erc7683_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("fillorder") || source.contains("settle")) &&
-        (source.contains("crosschain") || source.contains("bridge"))
+        (source.contains("fillorder") || source.contains("settle"))
+            && (source.contains("crosschain") || source.contains("bridge"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<(Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<(Severity, String)> {
         let name = function.name.name.to_lowercase();
         if !name.contains("fill") && !name.contains("settle") {
             return None;
@@ -37,8 +42,8 @@ impl ReplayAttackDetector {
 
         let source = &ctx.source_code.to_lowercase();
 
-        let validates_chain = (source.contains("chainid") || source.contains("chain.id")) &&
-            (source.contains("==") || source.contains("require"));
+        let validates_chain = (source.contains("chainid") || source.contains("chain.id"))
+            && (source.contains("==") || source.contains("require"));
         let in_hash = source.contains("keccak") && source.contains("chainid");
         let uses_domain_sep = source.contains("domain") && source.contains("separator");
 
@@ -99,15 +104,17 @@ impl Detector for ReplayAttackDetector {
 
         for function in ctx.get_functions() {
             if let Some((severity, remediation)) = self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("Missing chain-ID validation in '{}'", function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("Missing chain-ID validation in '{}'", function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

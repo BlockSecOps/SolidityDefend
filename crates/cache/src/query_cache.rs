@@ -1,9 +1,9 @@
-use std::sync::RwLock;
-use dashmap::DashMap;
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
+use std::sync::RwLock;
 
-use crate::{CacheKey, CacheEntry, CacheConfig};
+use crate::{CacheConfig, CacheEntry, CacheKey};
 
 /// Cached database query result
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -153,9 +153,7 @@ impl QueryCache {
 
     /// Invalidate queries matching a pattern
     pub fn invalidate_queries_matching(&self, pattern: &str) {
-        self.cache.retain(|key, _| {
-            !key.contains(pattern)
-        });
+        self.cache.retain(|key, _| !key.contains(pattern));
         self.update_memory_usage();
     }
 
@@ -252,7 +250,9 @@ impl QueryCache {
     /// Evict least recently used entries
     fn evict_lru_entries(&self) {
         // Collect entries with their access times
-        let mut entries: Vec<_> = self.cache.iter()
+        let mut entries: Vec<_> = self
+            .cache
+            .iter()
             .map(|entry| (entry.key().clone(), entry.value().accessed_at))
             .collect();
 
@@ -280,15 +280,13 @@ impl QueryCache {
 
 /// Estimate memory usage of a query cache entry
 fn estimate_query_entry_size(entry: &CacheEntry<CachedQueryResult>) -> usize {
-    let params_size: usize = entry.data.parameters.iter()
-        .map(|p| p.len())
-        .sum();
+    let params_size: usize = entry.data.parameters.iter().map(|p| p.len()).sum();
 
-    entry.data.data.len() +
-    entry.data.query_hash.len() +
-    params_size +
-    entry.key.content_hash.len() +
-    entry.key.file_path.len() +
-    entry.key.config_hash.len() +
-    96 // Metadata and overhead
+    entry.data.data.len()
+        + entry.data.query_hash.len()
+        + params_size
+        + entry.key.content_hash.len()
+        + entry.key.file_path.len()
+        + entry.key.config_hash.len()
+        + 96 // Metadata and overhead
 }

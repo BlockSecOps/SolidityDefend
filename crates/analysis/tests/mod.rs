@@ -1,17 +1,17 @@
 // Test modules for comprehensive analysis coverage
 pub mod basic_tests;
 pub mod integration_tests;
-pub mod test_fixtures;
 pub mod performance_benchmarks;
 pub mod regression_tests;
+pub mod test_fixtures;
 pub mod vault_inflation_detector_tests;
 
+use crate::test_fixtures::TestFixtures;
+use analysis::AnalysisEngine;
 use anyhow::Result;
-use std::time::Instant;
 use ast::AstArena;
 use parser::Parser;
-use analysis::AnalysisEngine;
-use crate::test_fixtures::TestFixtures;
+use std::time::Instant;
 
 /// Unified test runner for comprehensive analysis testing
 pub struct TestRunner;
@@ -46,8 +46,10 @@ impl TestRunner {
 
         report.total_duration = start_time.elapsed();
 
-        println!("\n✅ Comprehensive test suite completed in {:.2}s",
-            report.total_duration.as_secs_f64());
+        println!(
+            "\n✅ Comprehensive test suite completed in {:.2}s",
+            report.total_duration.as_secs_f64()
+        );
 
         Ok(report)
     }
@@ -251,7 +253,8 @@ impl TestRunner {
                             if !func.ir_function.basic_blocks.is_empty()
                                 && func.cfg.statistics().block_count > 0
                                 && func.reaching_definitions.converged
-                                && func.live_variables.converged {
+                                && func.live_variables.converged
+                            {
                                 return TestResult::passed("Analysis pipeline working");
                             }
                         }
@@ -315,7 +318,8 @@ impl TestRunner {
         let mut results = PerformanceBenchmarkResults::new();
 
         // Run benchmarks (may fail during development)
-        let benchmark_results = crate::performance_benchmarks::PerformanceBenchmarks::run_all_benchmarks();
+        let benchmark_results =
+            crate::performance_benchmarks::PerformanceBenchmarks::run_all_benchmarks();
         results.completed = true;
         results.summary = benchmark_results.generate_summary();
         results.performance_issues = benchmark_results.validate_performance();
@@ -415,24 +419,39 @@ impl TestRunner {
             "#,
             chrono::Utc::now().format("%Y-%m-%d %H:%M:%S UTC"),
             report.total_duration.as_secs_f64(),
-
             // Basic tests status
-            if report.basic_tests.all_passed() { "✅ PASS" } else { "❌ FAIL" },
+            if report.basic_tests.all_passed() {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            },
             report.basic_tests.passed_count(),
-
             // Integration tests status
-            if report.integration_tests.all_passed() { "✅ PASS" } else { "❌ FAIL" },
-            if report.integration_tests.pipeline_test.passed { "✅" } else { "❌" },
-
+            if report.integration_tests.all_passed() {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            },
+            if report.integration_tests.pipeline_test.passed {
+                "✅"
+            } else {
+                "❌"
+            },
             // Performance status
-            if report.performance_benchmarks.completed { "✅ COMPLETE" } else { "❌ FAILED" },
+            if report.performance_benchmarks.completed {
+                "✅ COMPLETE"
+            } else {
+                "❌ FAILED"
+            },
             report.performance_benchmarks.performance_issues.len(),
-
             // Regression status
-            if report.regression_tests.completed { "✅ COMPLETE" } else { "❌ FAILED" },
+            if report.regression_tests.completed {
+                "✅ COMPLETE"
+            } else {
+                "❌ FAILED"
+            },
             report.regression_tests.passing_tests,
             report.regression_tests.total_tests,
-
             // Detailed results
             report.basic_tests.generate_summary(),
             report.integration_tests.generate_summary(),
@@ -513,11 +532,31 @@ impl BasicTestResults {
     pub fn generate_summary(&self) -> String {
         format!(
             "Engine Creation: {}\nParser Integration: {}\nSimple Analysis: {}\nEmpty Contract: {}\nMultiple Functions: {}",
-            if self.engine_creation.passed { "✅" } else { "❌" },
-            if self.parser_integration.passed { "✅" } else { "❌" },
-            if self.simple_analysis.passed { "✅" } else { "❌" },
-            if self.empty_contract.passed { "✅" } else { "❌" },
-            if self.multiple_functions.passed { "✅" } else { "❌" }
+            if self.engine_creation.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.parser_integration.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.simple_analysis.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.empty_contract.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.multiple_functions.passed {
+                "✅"
+            } else {
+                "❌"
+            }
         )
     }
 }
@@ -546,9 +585,21 @@ impl IntegrationTestResults {
     pub fn generate_summary(&self) -> String {
         format!(
             "Pipeline Test: {}\nFixtures Test: {}\nComplex Scenarios: {}",
-            if self.pipeline_test.passed { "✅" } else { "❌" },
-            if self.fixtures_test.passed { "✅" } else { "❌" },
-            if self.complex_scenarios.passed { "✅" } else { "❌" }
+            if self.pipeline_test.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.fixtures_test.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.complex_scenarios.passed {
+                "✅"
+            } else {
+                "❌"
+            }
         )
     }
 }
@@ -630,13 +681,33 @@ Regression: {} ({}/{} passing)
 {}
             "#,
             self.total_duration.as_secs_f64(),
-            if self.basic_tests.all_passed() { "✅" } else { "❌" },
+            if self.basic_tests.all_passed() {
+                "✅"
+            } else {
+                "❌"
+            },
             self.basic_tests.passed_count(),
-            if self.integration_tests.all_passed() { "✅" } else { "❌" },
-            if self.integration_tests.pipeline_test.passed { "✅" } else { "❌" },
-            if self.performance_benchmarks.completed { "✅" } else { "❌" },
+            if self.integration_tests.all_passed() {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.integration_tests.pipeline_test.passed {
+                "✅"
+            } else {
+                "❌"
+            },
+            if self.performance_benchmarks.completed {
+                "✅"
+            } else {
+                "❌"
+            },
             self.performance_benchmarks.performance_issues.len(),
-            if self.regression_tests.completed { "✅" } else { "❌" },
+            if self.regression_tests.completed {
+                "✅"
+            } else {
+                "❌"
+            },
             self.regression_tests.passing_tests,
             self.regression_tests.total_tests,
             if !self.performance_benchmarks.summary.is_empty() {

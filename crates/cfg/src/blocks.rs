@@ -1,7 +1,7 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::{Result, anyhow};
+use std::collections::{HashMap, HashSet};
 
-use ir::{IrFunction, BlockId, Instruction, BasicBlock};
+use ir::{BasicBlock, BlockId, Instruction, IrFunction};
 
 /// Basic block identification and analysis utilities
 pub struct BasicBlockAnalyzer {
@@ -116,12 +116,13 @@ impl BasicBlockAnalyzer {
 
     /// Check if an instruction is a terminator
     fn is_terminator_instruction(&self, instruction: &Instruction) -> bool {
-        matches!(instruction,
-            Instruction::Branch(_) |
-            Instruction::ConditionalBranch(_, _, _) |
-            Instruction::Return(_) |
-            Instruction::Revert(_) |
-            Instruction::SelfDestruct(_)
+        matches!(
+            instruction,
+            Instruction::Branch(_)
+                | Instruction::ConditionalBranch(_, _, _)
+                | Instruction::Return(_)
+                | Instruction::Revert(_)
+                | Instruction::SelfDestruct(_)
         )
     }
 
@@ -130,7 +131,7 @@ impl BasicBlockAnalyzer {
         &self,
         ir_function: &IrFunction,
         leaders: &HashSet<BlockId>,
-        terminators: &HashSet<BlockId>
+        terminators: &HashSet<BlockId>,
     ) -> Result<HashMap<BlockId, BlockBoundary>> {
         let mut boundaries = HashMap::new();
 
@@ -154,7 +155,11 @@ impl BasicBlockAnalyzer {
     }
 
     /// Analyze a single basic block
-    fn analyze_basic_block(&self, block_id: BlockId, basic_block: &BasicBlock) -> Result<BlockAnalysis> {
+    fn analyze_basic_block(
+        &self,
+        block_id: BlockId,
+        basic_block: &BasicBlock,
+    ) -> Result<BlockAnalysis> {
         let mut analysis = BlockAnalysis::new(block_id);
 
         // Count different types of instructions
@@ -182,27 +187,35 @@ impl BasicBlockAnalyzer {
     fn classify_instruction(&self, analysis: &mut BlockAnalysis, instruction: &Instruction) {
         match instruction {
             // Arithmetic operations
-            Instruction::Add(_, _, _) | Instruction::Sub(_, _, _) |
-            Instruction::Mul(_, _, _) | Instruction::Div(_, _, _) |
-            Instruction::Mod(_, _, _) | Instruction::Exp(_, _, _) => {
+            Instruction::Add(_, _, _)
+            | Instruction::Sub(_, _, _)
+            | Instruction::Mul(_, _, _)
+            | Instruction::Div(_, _, _)
+            | Instruction::Mod(_, _, _)
+            | Instruction::Exp(_, _, _) => {
                 analysis.arithmetic_ops += 1;
             }
 
             // Memory operations
-            Instruction::Load(_, _) | Instruction::Store(_, _) |
-            Instruction::StorageLoad(_, _) | Instruction::StorageStore(_, _) => {
+            Instruction::Load(_, _)
+            | Instruction::Store(_, _)
+            | Instruction::StorageLoad(_, _)
+            | Instruction::StorageStore(_, _) => {
                 analysis.memory_ops += 1;
             }
 
             // Control flow operations
-            Instruction::Branch(_) | Instruction::ConditionalBranch(_, _, _) |
-            Instruction::Return(_) => {
+            Instruction::Branch(_)
+            | Instruction::ConditionalBranch(_, _, _)
+            | Instruction::Return(_) => {
                 analysis.control_flow_ops += 1;
             }
 
             // Function calls
-            Instruction::Call(_, _, _) | Instruction::ExternalCall(_, _, _, _) |
-            Instruction::DelegateCall(_, _, _, _) | Instruction::StaticCall(_, _, _, _) => {
+            Instruction::Call(_, _, _)
+            | Instruction::ExternalCall(_, _, _, _)
+            | Instruction::DelegateCall(_, _, _, _)
+            | Instruction::StaticCall(_, _, _, _) => {
                 analysis.function_calls += 1;
             }
 
@@ -216,9 +229,9 @@ impl BasicBlockAnalyzer {
     /// Check if a block is straight-line code (no branches)
     fn is_straight_line_block(&self, basic_block: &BasicBlock) -> bool {
         !basic_block.instructions.iter().any(|inst| {
-            matches!(inst,
-                Instruction::Branch(_) |
-                Instruction::ConditionalBranch(_, _, _)
+            matches!(
+                inst,
+                Instruction::Branch(_) | Instruction::ConditionalBranch(_, _, _)
             )
         })
     }
@@ -227,10 +240,11 @@ impl BasicBlockAnalyzer {
     fn is_potential_loop_header(&self, basic_block: &BasicBlock) -> bool {
         // A block might be a loop header if it has multiple predecessors
         // and contains conditional branching
-        basic_block.predecessors.len() > 1 &&
-        basic_block.instructions.iter().any(|inst| {
-            matches!(inst, Instruction::ConditionalBranch(_, _, _))
-        })
+        basic_block.predecessors.len() > 1
+            && basic_block
+                .instructions
+                .iter()
+                .any(|inst| matches!(inst, Instruction::ConditionalBranch(_, _, _)))
     }
 
     /// Calculate a complexity score for the block
@@ -254,7 +268,10 @@ impl BasicBlockAnalyzer {
     }
 
     /// Find blocks that can be merged
-    pub fn find_mergeable_blocks(&self, ir_function: &IrFunction) -> Result<Vec<(BlockId, BlockId)>> {
+    pub fn find_mergeable_blocks(
+        &self,
+        ir_function: &IrFunction,
+    ) -> Result<Vec<(BlockId, BlockId)>> {
         let mut mergeable_pairs = Vec::new();
 
         for (block_id, basic_block) in &ir_function.basic_blocks {
@@ -267,9 +284,10 @@ impl BasicBlockAnalyzer {
                 let successor_id = basic_block.successors[0];
 
                 if let Some(successor_block) = ir_function.basic_blocks.get(&successor_id) {
-                    if successor_block.predecessors.len() == 1 &&
-                       successor_block.predecessors[0] == *block_id &&
-                       successor_id != ir_function.entry_block {
+                    if successor_block.predecessors.len() == 1
+                        && successor_block.predecessors[0] == *block_id
+                        && successor_id != ir_function.entry_block
+                    {
                         mergeable_pairs.push((*block_id, successor_id));
                     }
                 }
@@ -284,7 +302,7 @@ impl BasicBlockAnalyzer {
         &self,
         _ir_function: &mut IrFunction,
         _block_id: BlockId,
-        _split_index: usize
+        _split_index: usize,
     ) -> Result<BlockId> {
         // This would be implemented to actually split blocks
         // For now, return a placeholder
@@ -296,7 +314,7 @@ impl BasicBlockAnalyzer {
         &self,
         _ir_function: &mut IrFunction,
         _first_block: BlockId,
-        _second_block: BlockId
+        _second_block: BlockId,
     ) -> Result<()> {
         // This would be implemented to actually merge blocks
         // For now, return success
@@ -350,7 +368,9 @@ impl BasicBlockInfo {
 
     /// Get blocks with the highest complexity scores
     pub fn most_complex_blocks(&self, count: usize) -> Vec<(BlockId, u32)> {
-        let mut blocks: Vec<_> = self.block_analyses.iter()
+        let mut blocks: Vec<_> = self
+            .block_analyses
+            .iter()
             .map(|(id, analysis)| (*id, analysis.complexity_score))
             .collect();
 
@@ -393,7 +413,8 @@ impl BasicBlockInfo {
 
         if stats.total_blocks > 0 {
             stats.average_complexity = stats.total_complexity as f64 / stats.total_blocks as f64;
-            stats.average_instructions_per_block = stats.total_instructions as f64 / stats.total_blocks as f64;
+            stats.average_instructions_per_block =
+                stats.total_instructions as f64 / stats.total_blocks as f64;
         }
 
         stats
@@ -450,8 +471,11 @@ impl BlockAnalysis {
 
     /// Get the operation mix as percentages
     pub fn operation_mix(&self) -> OperationMix {
-        let total = self.arithmetic_ops + self.memory_ops + self.control_flow_ops +
-                   self.function_calls + self.other_ops;
+        let total = self.arithmetic_ops
+            + self.memory_ops
+            + self.control_flow_ops
+            + self.function_calls
+            + self.other_ops;
 
         if total == 0 {
             return OperationMix::default();
@@ -518,10 +542,18 @@ impl std::fmt::Display for BasicBlockStatistics {
         write!(f, "  Terminator blocks: {}\n", self.terminator_blocks)?;
         write!(f, "  Empty blocks: {}\n", self.empty_blocks)?;
         write!(f, "  Straight-line blocks: {}\n", self.straight_line_blocks)?;
-        write!(f, "  Potential loop headers: {}\n", self.potential_loop_headers)?;
+        write!(
+            f,
+            "  Potential loop headers: {}\n",
+            self.potential_loop_headers
+        )?;
         write!(f, "  Merge points: {}\n", self.merge_points)?;
         write!(f, "  Total instructions: {}\n", self.total_instructions)?;
-        write!(f, "  Average instructions per block: {:.2}\n", self.average_instructions_per_block)?;
+        write!(
+            f,
+            "  Average instructions per block: {:.2}\n",
+            self.average_instructions_per_block
+        )?;
         write!(f, "  Max complexity: {}\n", self.max_complexity)?;
         write!(f, "  Average complexity: {:.2}", self.average_complexity)
     }
@@ -530,14 +562,10 @@ impl std::fmt::Display for BasicBlockStatistics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ir::{IrFunction, Instruction, IrValue, ValueId};
+    use ir::{Instruction, IrFunction, IrValue, ValueId};
 
     fn create_test_function() -> IrFunction {
-        let mut ir_function = IrFunction::new(
-            "test_function".to_string(),
-            vec![],
-            vec![],
-        );
+        let mut ir_function = IrFunction::new("test_function".to_string(), vec![], vec![]);
 
         // Create some basic blocks
         let block1 = ir_function.create_block();
@@ -545,21 +573,27 @@ mod tests {
         let block3 = ir_function.create_block();
 
         // Add instructions to blocks
-        ir_function.add_instruction(block1,
-            Instruction::Add(ValueId(0), IrValue::ConstantInt(1), IrValue::ConstantInt(2))
-        ).unwrap();
+        ir_function
+            .add_instruction(
+                block1,
+                Instruction::Add(ValueId(0), IrValue::ConstantInt(1), IrValue::ConstantInt(2)),
+            )
+            .unwrap();
 
-        ir_function.add_instruction(block1,
-            Instruction::ConditionalBranch(IrValue::Value(ValueId(0)), block2, block3)
-        ).unwrap();
+        ir_function
+            .add_instruction(
+                block1,
+                Instruction::ConditionalBranch(IrValue::Value(ValueId(0)), block2, block3),
+            )
+            .unwrap();
 
-        ir_function.add_instruction(block2,
-            Instruction::Return(Some(IrValue::ConstantInt(1)))
-        ).unwrap();
+        ir_function
+            .add_instruction(block2, Instruction::Return(Some(IrValue::ConstantInt(1))))
+            .unwrap();
 
-        ir_function.add_instruction(block3,
-            Instruction::Return(Some(IrValue::ConstantInt(0)))
-        ).unwrap();
+        ir_function
+            .add_instruction(block3, Instruction::Return(Some(IrValue::ConstantInt(0))))
+            .unwrap();
 
         ir_function
     }

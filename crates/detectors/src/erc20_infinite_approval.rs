@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for infinite/unlimited ERC-20 approval risks
 pub struct Erc20InfiniteApprovalDetector {
@@ -56,8 +56,7 @@ impl Detector for Erc20InfiniteApprovalDetector {
                 let message = format!(
                     "Function '{}' has infinite approval risk. {} \
                     This creates permanent security risk if contract is compromised.",
-                    function.name.name,
-                    issue
+                    function.name.name, issue
                 );
 
                 let finding = self.base.create_finding(
@@ -87,7 +86,11 @@ impl Detector for Erc20InfiniteApprovalDetector {
 }
 
 impl Erc20InfiniteApprovalDetector {
-    fn check_infinite_approval(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_infinite_approval(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -95,28 +98,31 @@ impl Erc20InfiniteApprovalDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Look for patterns that suggest infinite approval
-        let checks_for_max = func_source.contains("type(uint256).max") ||
-                            func_source.contains("2**256 - 1") ||
-                            func_source.contains("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff") ||
-                            func_source.contains("MAX_UINT256") ||
-                            func_source.contains("UINT256_MAX");
+        let checks_for_max = func_source.contains("type(uint256).max")
+            || func_source.contains("2**256 - 1")
+            || func_source
+                .contains("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff")
+            || func_source.contains("MAX_UINT256")
+            || func_source.contains("UINT256_MAX");
 
         if checks_for_max {
             // Check if it's requiring max approval (bad)
-            let requires_max = func_source.contains("require") &&
-                              func_source.contains("allowance") &&
-                              checks_for_max;
+            let requires_max = func_source.contains("require")
+                && func_source.contains("allowance")
+                && checks_for_max;
 
             if requires_max {
                 return Some("Requires infinite approval (type(uint256).max)".to_string());
             }
 
             // Check if it's just checking for infinite approval (informational)
-            let checks_allowance = func_source.contains("allowance") &&
-                                  (func_source.contains(">=") || func_source.contains("=="));
+            let checks_allowance = func_source.contains("allowance")
+                && (func_source.contains(">=") || func_source.contains("=="));
 
             if checks_allowance {
-                return Some("Checks for infinite approval, encouraging unlimited approvals".to_string());
+                return Some(
+                    "Checks for infinite approval, encouraging unlimited approvals".to_string(),
+                );
             }
         }
 

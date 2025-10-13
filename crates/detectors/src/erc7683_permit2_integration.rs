@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct Permit2IntegrationDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl Permit2IntegrationDetector {
 
     fn is_erc7683_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("fillorder") || source.contains("settle")) &&
-        (source.contains("crosschain") || source.contains("bridge"))
+        (source.contains("fillorder") || source.contains("settle"))
+            && (source.contains("crosschain") || source.contains("bridge"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let name = function.name.name.to_lowercase();
 
@@ -44,21 +48,28 @@ impl Permit2IntegrationDetector {
 
         if uses_approve && !uses_permit2 {
             issues.push((
-                format!("Using approve() instead of Permit2 in '{}'", function.name.name),
+                format!(
+                    "Using approve() instead of Permit2 in '{}'",
+                    function.name.name
+                ),
                 Severity::High,
-                "Use Permit2: PERMIT2.permitTransferFrom(permit, details, user, sig);".to_string()
+                "Use Permit2: PERMIT2.permitTransferFrom(permit, details, user, sig);".to_string(),
             ));
         }
 
         if uses_permit2 {
             let validates_deadline = source.contains("deadline") && source.contains("timestamp");
-            let validates_nonce = source.contains("nonce") && (source.contains("used") || source.contains("mapping"));
+            let validates_nonce =
+                source.contains("nonce") && (source.contains("used") || source.contains("mapping"));
 
             if !validates_deadline {
                 issues.push((
-                    format!("Missing Permit2 deadline validation in '{}'", function.name.name),
+                    format!(
+                        "Missing Permit2 deadline validation in '{}'",
+                        function.name.name
+                    ),
                     Severity::Medium,
-                    "Add: require(permit.deadline >= block.timestamp);".to_string()
+                    "Add: require(permit.deadline >= block.timestamp);".to_string(),
                 ));
             }
 
@@ -66,7 +77,8 @@ impl Permit2IntegrationDetector {
                 issues.push((
                     format!("Missing Permit2 nonce tracking in '{}'", function.name.name),
                     Severity::Medium,
-                    "Add: require(!usedNonces[user][nonce]); usedNonces[user][nonce] = true;".to_string()
+                    "Add: require(!usedNonces[user][nonce]); usedNonces[user][nonce] = true;"
+                        .to_string(),
                 ));
             }
         }
@@ -115,7 +127,16 @@ impl Detector for Permit2IntegrationDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(ctx, title, function.name.location.start().line() as u32, 0, 20, severity)
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

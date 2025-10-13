@@ -1,11 +1,11 @@
+pub mod dependency;
 pub mod incremental;
 pub mod memory;
 pub mod parallel;
 pub mod streaming;
-pub mod dependency;
 
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 
 /// Performance configuration settings
@@ -45,7 +45,7 @@ impl Default for PerformanceConfig {
             persistent_cache: true,
             dependency_tracking: true,
             memory_pool_size: 16 * 1024 * 1024, // 16MB
-            gc_threshold: 100 * 1024 * 1024, // 100MB
+            gc_threshold: 100 * 1024 * 1024,    // 100MB
         }
     }
 }

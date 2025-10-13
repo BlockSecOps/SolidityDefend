@@ -1,10 +1,10 @@
 use anyhow::Result;
 use dashmap::DashMap;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use std::time::{SystemTime, Instant};
+use std::time::{Instant, SystemTime};
 
 use cache::CacheManager;
 use detectors::types::Finding;
@@ -271,14 +271,16 @@ impl IncrementalAnalyzer {
 
     /// Get next batch of files to analyze
     pub fn get_analysis_batch(&self) -> Vec<AnalysisTask> {
-        let mut tasks: Vec<_> = self.analysis_queue
+        let mut tasks: Vec<_> = self
+            .analysis_queue
             .iter()
             .map(|entry| entry.value().clone())
             .collect();
 
         // Sort by priority (highest first) and creation time
         tasks.sort_by(|a, b| {
-            b.priority.cmp(&a.priority)
+            b.priority
+                .cmp(&a.priority)
                 .then_with(|| a.created_at.cmp(&b.created_at))
         });
 
@@ -375,7 +377,8 @@ impl IncrementalAnalyzer {
         }
 
         // Update dependency graph
-        self.dependency_graph.insert(file_path.to_path_buf(), dependencies);
+        self.dependency_graph
+            .insert(file_path.to_path_buf(), dependencies);
 
         Ok(())
     }

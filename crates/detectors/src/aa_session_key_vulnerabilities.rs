@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SessionKeyVulnerabilitiesDetector {
     base: BaseDetector,
@@ -25,23 +25,30 @@ impl SessionKeyVulnerabilitiesDetector {
 
     fn is_session_key_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("sessionkey") || source.contains("session")) &&
-        (source.contains("execute") || source.contains("validate"))
+        (source.contains("sessionkey") || source.contains("session"))
+            && (source.contains("execute") || source.contains("validate"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
         let source_lower = source.to_lowercase();
 
         // Check session key validation functions
-        if name.contains("validate") && (name.contains("session") || source_lower.contains("sessionkey")) {
+        if name.contains("validate")
+            && (name.contains("session") || source_lower.contains("sessionkey"))
+        {
             // Check for missing expiration validation
-            let has_expiration = (source_lower.contains("expir") || source_lower.contains("validuntil")) &&
-                (source_lower.contains("timestamp") || source_lower.contains("block.timestamp"));
-            let has_deadline = source_lower.contains("deadline") &&
-                source_lower.contains("block.timestamp");
+            let has_expiration = (source_lower.contains("expir")
+                || source_lower.contains("validuntil"))
+                && (source_lower.contains("timestamp") || source_lower.contains("block.timestamp"));
+            let has_deadline =
+                source_lower.contains("deadline") && source_lower.contains("block.timestamp");
 
             if !has_expiration && !has_deadline {
                 issues.push((
@@ -52,12 +59,12 @@ impl SessionKeyVulnerabilitiesDetector {
             }
 
             // Check for overly permissive scope
-            let has_target_restriction = source_lower.contains("allowedtarget") ||
-                source_lower.contains("whitelist");
-            let has_function_restriction = source_lower.contains("selector") ||
-                source_lower.contains("allowedfunction");
-            let has_value_limit = source_lower.contains("maxvalue") ||
-                (source_lower.contains("value") && source_lower.contains("<="));
+            let has_target_restriction =
+                source_lower.contains("allowedtarget") || source_lower.contains("whitelist");
+            let has_function_restriction =
+                source_lower.contains("selector") || source_lower.contains("allowedfunction");
+            let has_value_limit = source_lower.contains("maxvalue")
+                || (source_lower.contains("value") && source_lower.contains("<="));
 
             if !has_target_restriction {
                 issues.push((
@@ -84,34 +91,40 @@ impl SessionKeyVulnerabilitiesDetector {
             }
 
             // Check for missing revocation mechanism
-            let has_revocation = source_lower.contains("revoke") || source_lower.contains("disable");
+            let has_revocation =
+                source_lower.contains("revoke") || source_lower.contains("disable");
 
             if !has_revocation {
                 issues.push((
                     "No session key revocation mechanism".to_string(),
                     Severity::Medium,
-                    "Add revocation: require(!revokedKeys[sessionKeyHash], \"Key revoked\");".to_string()
+                    "Add revocation: require(!revokedKeys[sessionKeyHash], \"Key revoked\");"
+                        .to_string(),
                 ));
             }
 
             // Check for missing nonce/replay protection
-            let has_nonce = source_lower.contains("nonce") &&
-                (source_lower.contains("++") || source_lower.contains("increment"));
+            let has_nonce = source_lower.contains("nonce")
+                && (source_lower.contains("++") || source_lower.contains("increment"));
 
             if !has_nonce {
                 issues.push((
                     "Session key without nonce (replay attack risk)".to_string(),
                     Severity::High,
-                    "Add nonce: require(nonce == sessionKey.nonce++, \"Invalid nonce\");".to_string()
+                    "Add nonce: require(nonce == sessionKey.nonce++, \"Invalid nonce\");"
+                        .to_string(),
                 ));
             }
         }
 
         // Check session key registration/creation
-        if name.contains("createsession") || name.contains("registersession") || name.contains("addsession") {
+        if name.contains("createsession")
+            || name.contains("registersession")
+            || name.contains("addsession")
+        {
             // Check for missing permission validation
-            let has_owner_check = source_lower.contains("owner") &&
-                (source_lower.contains("==") || source_lower.contains("require"));
+            let has_owner_check = source_lower.contains("owner")
+                && (source_lower.contains("==") || source_lower.contains("require"));
 
             if !has_owner_check {
                 issues.push((
@@ -122,8 +135,8 @@ impl SessionKeyVulnerabilitiesDetector {
             }
 
             // Check for overly long expiration periods
-            let has_max_duration = source_lower.contains("maxduration") ||
-                (source_lower.contains("duration") && source_lower.contains("<="));
+            let has_max_duration = source_lower.contains("maxduration")
+                || (source_lower.contains("duration") && source_lower.contains("<="));
 
             if !has_max_duration {
                 issues.push((
@@ -179,15 +192,17 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

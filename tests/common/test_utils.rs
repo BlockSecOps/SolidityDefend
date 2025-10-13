@@ -1,8 +1,8 @@
 // tests/common/test_utils.rs
 // Common test utilities and helper functions
 
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 /// Test utility functions
 pub fn read_test_file(path: &Path) -> String {

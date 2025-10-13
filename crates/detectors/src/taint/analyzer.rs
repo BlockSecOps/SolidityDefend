@@ -1,9 +1,9 @@
 use crate::taint::{
-    TaintedData, TaintType, TaintAnalysisResult, TaintFinding, TaintAnalysisConfig,
-    DataFlowGraph, TaintStatistics, SourceLocation, PropagationStep, PropagationType,
-    TaintUtils, DataFlowNode, DataFlowEdge, DataFlowNodeType
+    DataFlowEdge, DataFlowGraph, DataFlowNode, DataFlowNodeType, PropagationStep, PropagationType,
+    SourceLocation, TaintAnalysisConfig, TaintAnalysisResult, TaintFinding, TaintStatistics,
+    TaintType, TaintUtils, TaintedData,
 };
-use crate::taint::{TaintSource, TaintSink, TaintSanitizer};
+use crate::taint::{TaintSanitizer, TaintSink, TaintSource};
 use crate::types::{AnalysisContext, Severity};
 use std::collections::{HashMap, VecDeque};
 
@@ -93,7 +93,10 @@ impl TaintAnalyzer {
         // Add nodes for sources
         for (location, _source) in &self.taint_sources {
             nodes.push(DataFlowNode {
-                id: format!("source_{}_{}_{}", location.file, location.line, location.column),
+                id: format!(
+                    "source_{}_{}_{}",
+                    location.file, location.line, location.column
+                ),
                 location: location.clone(),
                 node_type: DataFlowNodeType::Source,
                 taint_level: 1.0,
@@ -103,7 +106,10 @@ impl TaintAnalyzer {
         // Add nodes for sinks
         for (location, _sink) in &self.taint_sinks {
             nodes.push(DataFlowNode {
-                id: format!("sink_{}_{}_{}", location.file, location.line, location.column),
+                id: format!(
+                    "sink_{}_{}_{}",
+                    location.file, location.line, location.column
+                ),
                 location: location.clone(),
                 node_type: DataFlowNodeType::Sink,
                 taint_level: 0.0,
@@ -113,7 +119,10 @@ impl TaintAnalyzer {
         // Add nodes for sanitizers
         for (location, _sanitizer) in &self.sanitizers {
             nodes.push(DataFlowNode {
-                id: format!("sanitizer_{}_{}_{}", location.file, location.line, location.column),
+                id: format!(
+                    "sanitizer_{}_{}_{}",
+                    location.file, location.line, location.column
+                ),
                 location: location.clone(),
                 node_type: DataFlowNodeType::Sanitizer,
                 taint_level: 0.0,
@@ -130,7 +139,7 @@ impl TaintAnalyzer {
     fn propagate_taint(
         &self,
         _context: &AnalysisContext,
-        graph: &mut DataFlowGraph
+        graph: &mut DataFlowGraph,
     ) -> HashMap<SourceLocation, Vec<TaintedData>> {
         let mut taint_map = HashMap::new();
         let mut work_queue = VecDeque::new();
@@ -145,7 +154,10 @@ impl TaintAnalyzer {
                 propagation_path: Vec::new(),
             };
 
-            taint_map.entry(location.clone()).or_insert_with(Vec::new).push(tainted_data.clone());
+            taint_map
+                .entry(location.clone())
+                .or_insert_with(Vec::new)
+                .push(tainted_data.clone());
             work_queue.push_back(tainted_data);
         }
 
@@ -161,16 +173,14 @@ impl TaintAnalyzer {
             for edge in outgoing_edges {
                 let target_node = self.find_node_by_id(graph, &edge.to);
                 if let Some(target) = target_node {
-                    let propagated_taint = self.propagate_taint_along_edge(
-                        &current_taint,
-                        edge,
-                        &target.location
-                    );
+                    let propagated_taint =
+                        self.propagate_taint_along_edge(&current_taint, edge, &target.location);
 
                     if propagated_taint.confidence >= self.config.min_confidence_threshold {
                         // Check for sanitization
                         if !self.is_sanitized(&propagated_taint, &target.location) {
-                            taint_map.entry(target.location.clone())
+                            taint_map
+                                .entry(target.location.clone())
                                 .or_insert_with(Vec::new)
                                 .push(propagated_taint.clone());
                             work_queue.push_back(propagated_taint);
@@ -187,14 +197,15 @@ impl TaintAnalyzer {
     fn detect_vulnerable_paths(
         &self,
         _context: &AnalysisContext,
-        taint_map: &HashMap<SourceLocation, Vec<TaintedData>>
+        taint_map: &HashMap<SourceLocation, Vec<TaintedData>>,
     ) -> Vec<TaintFinding> {
         let mut findings = Vec::new();
 
         for (sink_location, sink) in &self.taint_sinks {
             if let Some(tainted_data_list) = taint_map.get(sink_location) {
                 for tainted_data in tainted_data_list {
-                    let vulnerability_type = self.classify_vulnerability(&tainted_data.taint_type, sink);
+                    let vulnerability_type =
+                        self.classify_vulnerability(&tainted_data.taint_type, sink);
                     let severity = self.assess_severity(&tainted_data.taint_type, sink);
 
                     let finding = TaintFinding {
@@ -206,12 +217,12 @@ impl TaintAnalyzer {
                         description: self.generate_finding_description(
                             &tainted_data.source,
                             sink,
-                            &vulnerability_type
+                            &vulnerability_type,
                         ),
                         confidence: tainted_data.confidence,
                         false_positive_likelihood: TaintUtils::estimate_false_positive_likelihood(
                             &tainted_data.propagation_path,
-                            &self.get_sanitizers_in_path(&tainted_data.propagation_path)
+                            &self.get_sanitizers_in_path(&tainted_data.propagation_path),
                         ),
                     };
 
@@ -222,10 +233,13 @@ impl TaintAnalyzer {
 
         // Sort findings by severity and confidence
         findings.sort_by(|a, b| {
-            let severity_cmp = self.severity_to_numeric(&a.severity)
+            let severity_cmp = self
+                .severity_to_numeric(&a.severity)
                 .cmp(&self.severity_to_numeric(&b.severity));
             if severity_cmp == std::cmp::Ordering::Equal {
-                b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal)
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
             } else {
                 severity_cmp
             }
@@ -238,19 +252,21 @@ impl TaintAnalyzer {
     fn calculate_statistics(
         &self,
         findings: &[TaintFinding],
-        taint_map: &HashMap<SourceLocation, Vec<TaintedData>>
+        taint_map: &HashMap<SourceLocation, Vec<TaintedData>>,
     ) -> TaintStatistics {
         let total_sources = self.taint_sources.len();
         let total_sinks = self.taint_sinks.len();
         let total_paths = taint_map.values().map(|v| v.len()).sum();
         let vulnerable_paths = findings.len();
 
-        let sanitized_paths = taint_map.values()
+        let sanitized_paths = taint_map
+            .values()
             .flatten()
             .filter(|data| self.path_has_sanitizers(&data.propagation_path))
             .count();
 
-        let path_lengths: Vec<usize> = taint_map.values()
+        let path_lengths: Vec<usize> = taint_map
+            .values()
             .flatten()
             .map(|data| data.propagation_path.len())
             .collect();
@@ -296,20 +312,16 @@ impl TaintAnalyzer {
         // Check custom sources
         for custom_source in &self.config.custom_sources {
             if line_content.contains(custom_source) {
-                self.taint_sources.insert(
-                    location.clone(),
-                    TaintSource::Custom(custom_source.clone())
-                );
+                self.taint_sources
+                    .insert(location.clone(), TaintSource::Custom(custom_source.clone()));
             }
         }
 
         // Check custom sinks
         for custom_sink in &self.config.custom_sinks {
             if line_content.contains(custom_sink) {
-                self.taint_sinks.insert(
-                    location.clone(),
-                    TaintSink::Custom(custom_sink.clone())
-                );
+                self.taint_sinks
+                    .insert(location.clone(), TaintSink::Custom(custom_sink.clone()));
             }
         }
 
@@ -318,7 +330,7 @@ impl TaintAnalyzer {
             if line_content.contains(custom_sanitizer) {
                 self.sanitizers.insert(
                     location.clone(),
-                    TaintSanitizer::Custom(custom_sanitizer.clone())
+                    TaintSanitizer::Custom(custom_sanitizer.clone()),
                 );
             }
         }
@@ -328,7 +340,7 @@ impl TaintAnalyzer {
         &self,
         context: &AnalysisContext,
         nodes: &mut Vec<DataFlowNode>,
-        edges: &mut Vec<DataFlowEdge>
+        edges: &mut Vec<DataFlowEdge>,
     ) {
         // Simplified control flow analysis
         // In a real implementation, this would use proper CFG analysis
@@ -367,9 +379,18 @@ impl TaintAnalyzer {
         }
     }
 
-    fn find_outgoing_edges<'a>(&self, graph: &'a DataFlowGraph, location: &SourceLocation) -> Vec<&'a DataFlowEdge> {
-        let node_id = format!("source_{}_{}_{}", location.file, location.line, location.column);
-        graph.edges.iter()
+    fn find_outgoing_edges<'a>(
+        &self,
+        graph: &'a DataFlowGraph,
+        location: &SourceLocation,
+    ) -> Vec<&'a DataFlowEdge> {
+        let node_id = format!(
+            "source_{}_{}_{}",
+            location.file, location.line, location.column
+        );
+        graph
+            .edges
+            .iter()
             .filter(|edge| edge.from == node_id)
             .collect()
     }
@@ -382,7 +403,7 @@ impl TaintAnalyzer {
         &self,
         current_taint: &TaintedData,
         edge: &DataFlowEdge,
-        target_location: &SourceLocation
+        target_location: &SourceLocation,
     ) -> TaintedData {
         let mut propagated = current_taint.clone();
         propagated.current_location = target_location.clone();
@@ -420,11 +441,21 @@ impl TaintAnalyzer {
 
     fn classify_vulnerability(&self, taint_type: &TaintType, sink: &TaintSink) -> String {
         match (taint_type, sink) {
-            (TaintType::UserInput, TaintSink::ExternalCall) => "Unvalidated External Call".to_string(),
-            (TaintType::UserInput, TaintSink::StateModification) => "Unvalidated State Change".to_string(),
-            (TaintType::ExternalCall, TaintSink::StateModification) => "External Data State Change".to_string(),
-            (TaintType::TimeDependent, TaintSink::StateModification) => "Time-dependent State Change".to_string(),
-            (TaintType::UserInput, TaintSink::EtherTransfer) => "Unvalidated Ether Transfer".to_string(),
+            (TaintType::UserInput, TaintSink::ExternalCall) => {
+                "Unvalidated External Call".to_string()
+            }
+            (TaintType::UserInput, TaintSink::StateModification) => {
+                "Unvalidated State Change".to_string()
+            }
+            (TaintType::ExternalCall, TaintSink::StateModification) => {
+                "External Data State Change".to_string()
+            }
+            (TaintType::TimeDependent, TaintSink::StateModification) => {
+                "Time-dependent State Change".to_string()
+            }
+            (TaintType::UserInput, TaintSink::EtherTransfer) => {
+                "Unvalidated Ether Transfer".to_string()
+            }
             _ => "Data Flow Vulnerability".to_string(),
         }
     }
@@ -444,7 +475,7 @@ impl TaintAnalyzer {
         &self,
         source: &TaintSource,
         sink: &TaintSink,
-        vulnerability_type: &str
+        vulnerability_type: &str,
     ) -> String {
         format!(
             "{}: Untrusted data from {:?} flows to {:?} without proper validation. \
@@ -464,7 +495,8 @@ impl TaintAnalyzer {
     }
 
     fn path_has_sanitizers(&self, path: &[PropagationStep]) -> bool {
-        path.iter().any(|step| self.sanitizers.contains_key(&step.to_location))
+        path.iter()
+            .any(|step| self.sanitizers.contains_key(&step.to_location))
     }
 
     fn severity_to_numeric(&self, severity: &Severity) -> u8 {
@@ -482,7 +514,7 @@ impl TaintAnalyzer {
 mod tests {
     use super::*;
     use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
+    use ast::{AstArena, StateMutability, Visibility};
     use semantic::SymbolTable;
 
     #[test]
@@ -511,7 +543,8 @@ mod tests {
         let context = AnalysisContext {
             contract: &contract,
             symbols: SymbolTable::new(),
-            source_code: "function test() { address sender = msg.sender; target.call(); }".to_string(),
+            source_code: "function test() { address sender = msg.sender; target.call(); }"
+                .to_string(),
             file_path: "test.sol".to_string(),
         };
 
@@ -527,10 +560,8 @@ mod tests {
         let config = TaintAnalysisConfig::default();
         let analyzer = TaintAnalyzer::new(config);
 
-        let vulnerability = analyzer.classify_vulnerability(
-            &TaintType::UserInput,
-            &TaintSink::ExternalCall
-        );
+        let vulnerability =
+            analyzer.classify_vulnerability(&TaintType::UserInput, &TaintSink::ExternalCall);
         assert_eq!(vulnerability, "Unvalidated External Call");
     }
 

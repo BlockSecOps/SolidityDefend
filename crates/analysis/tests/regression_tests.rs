@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use analysis::{AnalysisEngine, SourceFileAnalysisResult};
 use anyhow::Result;
 use ast::AstArena;
 use parser::Parser;
-use analysis::{AnalysisEngine, SourceFileAnalysisResult};
+use std::collections::HashMap;
 
 /// Regression tests for security detector accuracy
 pub struct RegressionTests;
@@ -61,7 +61,10 @@ impl RegressionTests {
         results.add_test("complex_defi", Self::test_complex_defi());
         results.add_test("vulnerable_multisig", Self::test_vulnerable_multisig());
         results.add_test("vulnerable_auction", Self::test_vulnerable_auction());
-        results.add_test("vulnerable_nft_marketplace", Self::test_vulnerable_nft_marketplace());
+        results.add_test(
+            "vulnerable_nft_marketplace",
+            Self::test_vulnerable_nft_marketplace(),
+        );
 
         // Test secure contracts
         results.add_test("secure_contract", Self::test_secure_contract());
@@ -120,7 +123,11 @@ impl RegressionTests {
         let expected = ExpectedResults {
             contract_name: "ComplexDeFi".to_string(),
             expected_issues: 4, // Multiple vulnerabilities
-            expected_severities: vec!["Critical".to_string(), "High".to_string(), "Medium".to_string()],
+            expected_severities: vec![
+                "Critical".to_string(),
+                "High".to_string(),
+                "Medium".to_string(),
+            ],
             expected_issue_types: vec![
                 "missing-access-control".to_string(),
                 "gas-griefing".to_string(),
@@ -143,10 +150,7 @@ impl RegressionTests {
             contract_name: "VulnerableMultiSig".to_string(),
             expected_issues: 2, // Weak randomness, race condition
             expected_severities: vec!["High".to_string(), "Medium".to_string()],
-            expected_issue_types: vec![
-                "weak-randomness".to_string(),
-                "race-condition".to_string(),
-            ],
+            expected_issue_types: vec!["weak-randomness".to_string(), "race-condition".to_string()],
             should_pass_analysis: true,
         };
 
@@ -318,12 +322,14 @@ impl RegressionTests {
         for function_analysis in &analysis_results.function_analyses {
             // Check for potential issues based on function characteristics
             if function_analysis.function_name.contains("withdraw")
-                || function_analysis.function_name.contains("transfer") {
+                || function_analysis.function_name.contains("transfer")
+            {
                 severities.push("High".to_string());
             }
 
             if function_analysis.function_name.contains("emergency")
-                || function_analysis.function_name.contains("admin") {
+                || function_analysis.function_name.contains("admin")
+            {
                 severities.push("Critical".to_string());
             }
         }
@@ -347,7 +353,12 @@ impl RegressionTests {
             }
 
             // Check CFG complexity for potential issues
-            if function_analysis.cfg_analysis.complexity_metrics.cyclomatic_complexity > 10 {
+            if function_analysis
+                .cfg_analysis
+                .complexity_metrics
+                .cyclomatic_complexity
+                > 10
+            {
                 issue_types.push("high-complexity".to_string());
             }
         }
@@ -356,10 +367,7 @@ impl RegressionTests {
     }
 
     /// Validate actual results against expected results
-    fn validate_results(
-        expected: &ExpectedResults,
-        actual: &RegressionTestResult,
-    ) -> Vec<String> {
+    fn validate_results(expected: &ExpectedResults, actual: &RegressionTestResult) -> Vec<String> {
         let mut validations = Vec::new();
 
         // Check if analysis should have passed
@@ -384,8 +392,10 @@ impl RegressionTests {
 
         // Check severity coverage (lenient during development)
         if !expected.expected_severities.is_empty() {
-            let found_severities: std::collections::HashSet<_> = actual.actual_severities.iter().collect();
-            let expected_severities: std::collections::HashSet<_> = expected.expected_severities.iter().collect();
+            let found_severities: std::collections::HashSet<_> =
+                actual.actual_severities.iter().collect();
+            let expected_severities: std::collections::HashSet<_> =
+                expected.expected_severities.iter().collect();
 
             if found_severities.intersection(&expected_severities).count() == 0 {
                 validations.push("WARN: No expected severities found".to_string());
@@ -403,10 +413,12 @@ impl RegressionTests {
         let parser = Parser::new();
         let mut engine = AnalysisEngine::new();
 
-        let ast = parser.parse(&arena, source, "baseline.sol")
+        let ast = parser
+            .parse(&arena, source, "baseline.sol")
             .map_err(|e| anyhow::anyhow!("Parse failed: {:?}", e))?;
 
-        let results = engine.analyze_source_file(&ast)
+        let results = engine
+            .analyze_source_file(&ast)
             .map_err(|e| anyhow::anyhow!("Analysis failed: {}", e))?;
 
         // Generate baseline from actual results
@@ -441,11 +453,16 @@ impl RegressionTestResult {
         self.parse_passed
             && self.analysis_passed == self.expected.should_pass_analysis
             && self.errors.is_empty()
-            && self.validation_results.iter().any(|v| v.starts_with("PASS"))
+            && self
+                .validation_results
+                .iter()
+                .any(|v| v.starts_with("PASS"))
     }
 
     pub fn has_regressions(&self) -> bool {
-        self.validation_results.iter().any(|v| v.starts_with("FAIL"))
+        self.validation_results
+            .iter()
+            .any(|v| v.starts_with("FAIL"))
     }
 
     pub fn generate_report(&self) -> String {
@@ -478,14 +495,16 @@ Errors:
             self.actual_issues,
             self.expected.expected_severities,
             self.actual_severities,
-            self.validation_results.iter()
+            self.validation_results
+                .iter()
                 .map(|v| format!("  - {}", v))
                 .collect::<Vec<_>>()
                 .join("\n"),
             if self.errors.is_empty() {
                 "  None".to_string()
             } else {
-                self.errors.iter()
+                self.errors
+                    .iter()
                     .map(|e| format!("  - {}", e))
                     .collect::<Vec<_>>()
                     .join("\n")
@@ -520,7 +539,10 @@ impl RegressionTestResults {
     }
 
     pub fn regression_tests(&self) -> Vec<&RegressionTestResult> {
-        self.tests.values().filter(|t| t.has_regressions()).collect()
+        self.tests
+            .values()
+            .filter(|t| t.has_regressions())
+            .collect()
     }
 
     pub fn generate_summary(&self) -> String {
@@ -535,9 +557,17 @@ impl RegressionTestResults {
             Regressions: {} ({:.1}%)\n\n",
             total,
             passing,
-            if total > 0 { (passing as f64 / total as f64) * 100.0 } else { 0.0 },
+            if total > 0 {
+                (passing as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            },
             regressions,
-            if total > 0 { (regressions as f64 / total as f64) * 100.0 } else { 0.0 }
+            if total > 0 {
+                (regressions as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            }
         );
 
         // Add detailed results
@@ -587,8 +617,14 @@ mod tests {
         assert!(result.parse_passed, "Empty contract should parse");
         // Analysis might pass or fail during development - that's okay
 
-        println!("Empty contract regression test: {}",
-            if result.is_passing() { "✅ PASS" } else { "⚠️  DEV" });
+        println!(
+            "Empty contract regression test: {}",
+            if result.is_passing() {
+                "✅ PASS"
+            } else {
+                "⚠️  DEV"
+            }
+        );
     }
 
     #[test]
@@ -608,7 +644,10 @@ mod tests {
                 println!("✅ Baseline generation working: {:?}", baseline);
             }
             Err(e) => {
-                println!("⚠️  Baseline generation failed (expected during development): {}", e);
+                println!(
+                    "⚠️  Baseline generation failed (expected during development): {}",
+                    e
+                );
             }
         }
     }

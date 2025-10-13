@@ -1,7 +1,7 @@
+use ast::{StateMutability, Visibility};
+use semantic::SymbolTable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use semantic::SymbolTable;
-use ast::{Visibility, StateMutability};
 
 // Re-export AST types for detector use
 pub use ast::{Contract as AstContract, Function as AstFunction, Modifier as AstModifier};
@@ -151,9 +151,9 @@ impl FunctionLike for Function {
 #[cfg(test)]
 pub mod test_utils {
     use super::*;
-    use ast::{SourceLocation, Identifier, Position};
-    use bumpalo::collections::Vec as BumpVec;
     use ast::AstArena;
+    use ast::{Identifier, Position, SourceLocation};
+    use bumpalo::collections::Vec as BumpVec;
     use std::path::PathBuf;
 
     pub fn create_mock_ast_function<'arena>(
@@ -347,7 +347,12 @@ pub struct SourceLocation {
 
 impl SourceLocation {
     pub fn new(file: String, line: u32, column: u32, length: u32) -> Self {
-        Self { file, line, column, length }
+        Self {
+            file,
+            line,
+            column,
+            length,
+        }
     }
 }
 

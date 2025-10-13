@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for gas price manipulation vulnerabilities
 pub struct GasPriceManipulationDetector {
@@ -60,21 +60,23 @@ impl Detector for GasPriceManipulationDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(693) // CWE-693: Protection Mechanism Failure
-                .with_cwe(358) // CWE-358: Improperly Implemented Security Check for Standard
-                .with_fix_suggestion(format!(
-                    "Replace gas price checks in function '{}' with robust MEV protection. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(693) // CWE-693: Protection Mechanism Failure
+                    .with_cwe(358) // CWE-358: Improperly Implemented Security Check for Standard
+                    .with_fix_suggestion(format!(
+                        "Replace gas price checks in function '{}' with robust MEV protection. \
                     Example: Use commit-reveal schemes with sufficient delays, implement \
                     order batching, or use decentralized sequencers.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -108,8 +110,8 @@ impl GasPriceManipulationDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if function uses tx.gasprice for protection
-        let uses_gas_price = func_source.contains("tx.gasprice") ||
-                            func_source.contains("tx.gasPrice");
+        let uses_gas_price =
+            func_source.contains("tx.gasprice") || func_source.contains("tx.gasPrice");
 
         if !uses_gas_price {
             return false;
@@ -122,24 +124,23 @@ impl GasPriceManipulationDetector {
     /// Check for gas price bypass patterns
     fn check_bypass_patterns(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("Gas price check can be bypassed") ||
-                                        source.contains("MEV detection is ineffective"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("Gas price check can be bypassed")
+                || source.contains("MEV detection is ineffective"));
 
         // Pattern 2: Uses tx.gasprice in require/check
-        let has_gas_price_check = (source.contains("require(tx.gasprice") ||
-                                   source.contains("if (tx.gasprice")) &&
-                                  (source.contains("<=") || source.contains(">"));
+        let has_gas_price_check = (source.contains("require(tx.gasprice")
+            || source.contains("if (tx.gasprice"))
+            && (source.contains("<=") || source.contains(">"));
 
         // Pattern 3: MEV protection based on gas price
-        let mev_protection_pattern = (source.contains("maxGasPrice") ||
-                                     source.contains("gasLimit") ||
-                                     source.contains("withinGasLimit")) &&
-                                    source.contains("tx.gasprice");
+        let mev_protection_pattern = (source.contains("maxGasPrice")
+            || source.contains("gasLimit")
+            || source.contains("withinGasLimit"))
+            && source.contains("tx.gasprice");
 
         // Pattern 4: MEV detection using gas price
-        let mev_detection = source.contains("MEVDetected") &&
-                           source.contains("tx.gasprice");
+        let mev_detection = source.contains("MEVDetected") && source.contains("tx.gasprice");
 
         // Vulnerable if has explicit marker
         if has_vulnerability_marker {

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing MEV sandwich attack protection in swaps
 pub struct SandwichResistantSwapDetector {
@@ -57,27 +57,28 @@ impl Detector for SandwichResistantSwapDetector {
                     "Function '{}' lacks sandwich attack protection. {} \
                     MEV bots can front-run user swaps, manipulate price, then back-run \
                     to profit from the price difference at user's expense.",
-                    function.name.name,
-                    sandwich_issue
+                    function.name.name, sandwich_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Add sandwich attack protection to '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Add sandwich attack protection to '{}'. \
                     Implement: (1) Slippage tolerance with amountOutMin parameter, \
                     (2) Commit-reveal scheme for swap parameters, \
                     (3) Private mempool submission, (4) MEV-resistant AMM curve, \
                     (5) Batch auctions instead of continuous trading.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for SandwichResistantSwapDetector {
 
 impl SandwichResistantSwapDetector {
     /// Check for sandwich attack protection
-    fn check_sandwich_protection(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_sandwich_protection(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,27 +106,27 @@ impl SandwichResistantSwapDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify swap functions
-        let is_swap_function = func_source.contains("swap") ||
-                              function.name.name.to_lowercase().contains("swap") ||
-                              func_source.contains("exchange") ||
-                              func_source.contains("trade") ||
-                              function.name.name.to_lowercase().contains("trade");
+        let is_swap_function = func_source.contains("swap")
+            || function.name.name.to_lowercase().contains("swap")
+            || func_source.contains("exchange")
+            || func_source.contains("trade")
+            || function.name.name.to_lowercase().contains("trade");
 
         if !is_swap_function {
             return None;
         }
 
         // Pattern 1: Missing slippage protection (amountOutMin)
-        let has_output = func_source.contains("amountOut") ||
-                        func_source.contains("outputAmount") ||
-                        func_source.contains("return");
+        let has_output = func_source.contains("amountOut")
+            || func_source.contains("outputAmount")
+            || func_source.contains("return");
 
-        let lacks_slippage = has_output &&
-                            !func_source.contains("amountOutMin") &&
-                            !func_source.contains("minAmountOut") &&
-                            !func_source.contains("minimumOutput") &&
-                            !func_source.contains("minOut") &&
-                            !func_source.contains("require(amountOut >=");
+        let lacks_slippage = has_output
+            && !func_source.contains("amountOutMin")
+            && !func_source.contains("minAmountOut")
+            && !func_source.contains("minimumOutput")
+            && !func_source.contains("minOut")
+            && !func_source.contains("require(amountOut >=");
 
         if lacks_slippage {
             return Some(format!(
@@ -131,10 +136,10 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 2: Missing deadline parameter
-        let lacks_deadline = !func_source.contains("deadline") &&
-                            !func_source.contains("validUntil") &&
-                            !func_source.contains("expiry") &&
-                            !func_source.contains("require(block.timestamp");
+        let lacks_deadline = !func_source.contains("deadline")
+            && !func_source.contains("validUntil")
+            && !func_source.contains("expiry")
+            && !func_source.contains("require(block.timestamp");
 
         if lacks_deadline {
             return Some(format!(
@@ -144,15 +149,15 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 3: Uses spot price without TWAP protection
-        let uses_price = func_source.contains("getPrice") ||
-                        func_source.contains("price") ||
-                        func_source.contains("getReserves");
+        let uses_price = func_source.contains("getPrice")
+            || func_source.contains("price")
+            || func_source.contains("getReserves");
 
-        let lacks_twap = uses_price &&
-                        !func_source.contains("TWAP") &&
-                        !func_source.contains("timeWeighted") &&
-                        !func_source.contains("cumulative") &&
-                        !func_source.contains("average");
+        let lacks_twap = uses_price
+            && !func_source.contains("TWAP")
+            && !func_source.contains("timeWeighted")
+            && !func_source.contains("cumulative")
+            && !func_source.contains("average");
 
         if lacks_twap {
             return Some(format!(
@@ -162,14 +167,14 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 4: Public swap without commit-reveal
-        let is_public = function.visibility == ast::Visibility::Public ||
-                       function.visibility == ast::Visibility::External;
+        let is_public = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
 
-        let lacks_commit_reveal = is_public &&
-                                 !func_source.contains("commit") &&
-                                 !func_source.contains("reveal") &&
-                                 !func_source.contains("hash") &&
-                                 !func_source.contains("secret");
+        let lacks_commit_reveal = is_public
+            && !func_source.contains("commit")
+            && !func_source.contains("reveal")
+            && !func_source.contains("hash")
+            && !func_source.contains("secret");
 
         if lacks_commit_reveal && lacks_slippage {
             return Some(format!(
@@ -179,11 +184,11 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 5: No MEV protection modifier or mechanism
-        let lacks_mev_protection = !func_source.contains("onlyPrivate") &&
-                                   !func_source.contains("mevProtected") &&
-                                   !func_source.contains("flashbotsOnly") &&
-                                   !func_source.contains("batchAuction") &&
-                                   !func_source.contains("nonReentrant");
+        let lacks_mev_protection = !func_source.contains("onlyPrivate")
+            && !func_source.contains("mevProtected")
+            && !func_source.contains("flashbotsOnly")
+            && !func_source.contains("batchAuction")
+            && !func_source.contains("nonReentrant");
 
         if is_public && lacks_mev_protection && lacks_slippage {
             return Some(format!(
@@ -193,14 +198,13 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 6: Allows immediate execution without time delay
-        let immediate_execution = func_source.contains("swap") &&
-                                 !func_source.contains("delay") &&
-                                 !func_source.contains("queuedAt") &&
-                                 !func_source.contains("block.number") &&
-                                 func_source.contains("transfer");
+        let immediate_execution = func_source.contains("swap")
+            && !func_source.contains("delay")
+            && !func_source.contains("queuedAt")
+            && !func_source.contains("block.number")
+            && func_source.contains("transfer");
 
-        let has_large_amounts = func_source.contains("amountIn") ||
-                               func_source.contains("amount");
+        let has_large_amounts = func_source.contains("amountIn") || func_source.contains("amount");
 
         if immediate_execution && has_large_amounts && lacks_slippage {
             return Some(format!(
@@ -210,10 +214,10 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 7: No maximum price movement check
-        let lacks_max_price_movement = !func_source.contains("maxPriceImpact") &&
-                                       !func_source.contains("MAX_SLIPPAGE") &&
-                                       !func_source.contains("maxSlippage") &&
-                                       !func_source.contains("priceImpact");
+        let lacks_max_price_movement = !func_source.contains("maxPriceImpact")
+            && !func_source.contains("MAX_SLIPPAGE")
+            && !func_source.contains("maxSlippage")
+            && !func_source.contains("priceImpact");
 
         if is_swap_function && lacks_max_price_movement && lacks_slippage {
             return Some(format!(
@@ -223,13 +227,12 @@ impl SandwichResistantSwapDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("sandwich") ||
-            func_source.contains("MEV") ||
-            func_source.contains("front-run")) {
-            return Some(format!(
-                "Sandwich attack vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("sandwich")
+                || func_source.contains("MEV")
+                || func_source.contains("front-run"))
+        {
+            return Some(format!("Sandwich attack vulnerability marker detected"));
         }
 
         None

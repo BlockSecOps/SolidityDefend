@@ -1,9 +1,9 @@
 use anyhow::Result;
-use std::any::Any;
 use ast;
+use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector, AstAnalyzer};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing zero address checks in critical functions
 pub struct ZeroAddressDetector {
@@ -16,7 +16,8 @@ impl ZeroAddressDetector {
             base: BaseDetector::new(
                 DetectorId::new("missing-zero-address-check"),
                 "Missing Zero Address Check".to_string(),
-                "Detects functions that accept address parameters without checking for address(0)".to_string(),
+                "Detects functions that accept address parameters without checking for address(0)"
+                    .to_string(),
                 vec![DetectorCategory::Validation],
                 Severity::Medium,
             ),
@@ -24,11 +25,18 @@ impl ZeroAddressDetector {
     }
 
     /// Analyze a function for missing zero address checks
-    fn analyze_function_for_zero_address_checks(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> Vec<Finding> {
+    fn analyze_function_for_zero_address_checks(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         // Skip view/pure functions that don't modify state
-        if matches!(function.mutability, ast::StateMutability::View | ast::StateMutability::Pure) {
+        if matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) {
             return findings;
         }
 
@@ -52,18 +60,21 @@ impl ZeroAddressDetector {
                         param.name, function.name.name
                     );
 
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        message,
-                        param.location.start().line() as u32,
-                        param.location.start().column() as u32,
-                        param.location.byte_length() as u32,
-                        severity,
-                    )
-                    .with_cwe(476) // CWE-476: NULL Pointer Dereference
-                    .with_fix_suggestion(
-                        format!("Add require({} != address(0), \"Zero address not allowed\");", param.name)
-                    );
+                    let finding = self
+                        .base
+                        .create_finding_with_severity(
+                            ctx,
+                            message,
+                            param.location.start().line() as u32,
+                            param.location.start().column() as u32,
+                            param.location.byte_length() as u32,
+                            severity,
+                        )
+                        .with_cwe(476) // CWE-476: NULL Pointer Dereference
+                        .with_fix_suggestion(format!(
+                            "Add require({} != address(0), \"Zero address not allowed\");",
+                            param.name
+                        ));
                     findings.push(finding);
                 }
             }
@@ -104,25 +115,29 @@ impl ZeroAddressDetector {
         let name_lower = param_name.to_lowercase();
 
         // Critical address parameter patterns
-        name_lower.contains("owner") ||
-        name_lower.contains("admin") ||
-        name_lower.contains("authority") ||
-        name_lower.contains("controller") ||
-        name_lower.contains("manager") ||
-        name_lower.contains("governance") ||
-        name_lower.contains("treasury") ||
-        name_lower.contains("recipient") ||
-        name_lower.contains("beneficiary") ||
-        name_lower.contains("delegate") ||
-        name_lower.starts_with("to") ||
-        name_lower.starts_with("from") ||
-        name_lower == "target" ||
-        name_lower == "destination" ||
-        name_lower == "spender"
+        name_lower.contains("owner")
+            || name_lower.contains("admin")
+            || name_lower.contains("authority")
+            || name_lower.contains("controller")
+            || name_lower.contains("manager")
+            || name_lower.contains("governance")
+            || name_lower.contains("treasury")
+            || name_lower.contains("recipient")
+            || name_lower.contains("beneficiary")
+            || name_lower.contains("delegate")
+            || name_lower.starts_with("to")
+            || name_lower.starts_with("from")
+            || name_lower == "target"
+            || name_lower == "destination"
+            || name_lower == "spender"
     }
 
     /// Find zero address checks in function body
-    fn find_zero_address_checks(&self, block: &ast::Block<'_>, address_params: &[AddressParam]) -> std::collections::HashSet<String> {
+    fn find_zero_address_checks(
+        &self,
+        block: &ast::Block<'_>,
+        address_params: &[AddressParam],
+    ) -> std::collections::HashSet<String> {
         let mut checked_params = std::collections::HashSet::new();
 
         for stmt in &block.statements {
@@ -137,24 +152,37 @@ impl ZeroAddressDetector {
         &self,
         stmt: &ast::Statement<'_>,
         address_params: &[AddressParam],
-        checked_params: &mut std::collections::HashSet<String>
+        checked_params: &mut std::collections::HashSet<String>,
     ) {
         match stmt {
             ast::Statement::Expression(expr) => {
                 self.find_checks_in_expression(expr, address_params, checked_params);
             }
-            ast::Statement::If { condition, then_branch, else_branch, .. } => {
+            ast::Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 self.find_checks_in_expression(condition, address_params, checked_params);
                 self.find_checks_in_statement(then_branch, address_params, checked_params);
                 if let Some(else_stmt) = else_branch {
                     self.find_checks_in_statement(else_stmt, address_params, checked_params);
                 }
             }
-            ast::Statement::While { condition, body, .. } => {
+            ast::Statement::While {
+                condition, body, ..
+            } => {
                 self.find_checks_in_expression(condition, address_params, checked_params);
                 self.find_checks_in_statement(body, address_params, checked_params);
             }
-            ast::Statement::For { init, condition, update, body, .. } => {
+            ast::Statement::For {
+                init,
+                condition,
+                update,
+                body,
+                ..
+            } => {
                 if let Some(init_stmt) = init {
                     self.find_checks_in_statement(init_stmt, address_params, checked_params);
                 }
@@ -180,18 +208,27 @@ impl ZeroAddressDetector {
         &self,
         expr: &ast::Expression<'_>,
         address_params: &[AddressParam],
-        checked_params: &mut std::collections::HashSet<String>
+        checked_params: &mut std::collections::HashSet<String>,
     ) {
         match expr {
             // Look for patterns like: param != address(0) or address(0) != param
-            ast::Expression::BinaryOperation { operator, left, right, .. } => {
+            ast::Expression::BinaryOperation {
+                operator,
+                left,
+                right,
+                ..
+            } => {
                 if matches!(operator, ast::BinaryOperator::NotEqual) {
                     // Check if one side is a parameter and the other is address(0)
-                    if let (Some(param_name), true) = (self.get_identifier_name(left), self.is_zero_address(right)) {
+                    if let (Some(param_name), true) =
+                        (self.get_identifier_name(left), self.is_zero_address(right))
+                    {
                         if address_params.iter().any(|p| p.name == param_name) {
                             checked_params.insert(param_name);
                         }
-                    } else if let (Some(param_name), true) = (self.get_identifier_name(right), self.is_zero_address(left)) {
+                    } else if let (Some(param_name), true) =
+                        (self.get_identifier_name(right), self.is_zero_address(left))
+                    {
                         if address_params.iter().any(|p| p.name == param_name) {
                             checked_params.insert(param_name);
                         }
@@ -204,11 +241,19 @@ impl ZeroAddressDetector {
             }
 
             // Look for require() calls with zero address checks
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 if let ast::Expression::Identifier(id) = function {
                     if id.name == "require" && !arguments.is_empty() {
                         // Check the require condition
-                        self.find_checks_in_expression(&arguments[0], address_params, checked_params);
+                        self.find_checks_in_expression(
+                            &arguments[0],
+                            address_params,
+                            checked_params,
+                        );
                     }
                 }
 
@@ -223,7 +268,12 @@ impl ZeroAddressDetector {
             ast::Expression::Assignment { right, .. } => {
                 self.find_checks_in_expression(right, address_params, checked_params);
             }
-            ast::Expression::Conditional { condition, true_expression, false_expression, .. } => {
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
                 self.find_checks_in_expression(condition, address_params, checked_params);
                 self.find_checks_in_expression(true_expression, address_params, checked_params);
                 self.find_checks_in_expression(false_expression, address_params, checked_params);
@@ -244,7 +294,11 @@ impl ZeroAddressDetector {
     fn is_zero_address(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
             // Direct address(0) call
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 if let ast::Expression::Identifier(id) = function {
                     if id.name == "address" && arguments.len() == 1 {
                         if let ast::Expression::Literal { value, .. } = &arguments[0] {
@@ -257,7 +311,11 @@ impl ZeroAddressDetector {
                 false
             }
             // address(0x0) pattern
-            ast::Expression::TypeCast { type_name, expression, .. } => {
+            ast::Expression::TypeCast {
+                type_name,
+                expression,
+                ..
+            } => {
                 if self.is_address_type(type_name) {
                     if let ast::Expression::Literal { value, .. } = expression {
                         match value {
@@ -277,20 +335,25 @@ impl ZeroAddressDetector {
     }
 
     /// Determine severity based on function context and parameter criticality
-    fn determine_severity_for_function(&self, function: &ast::Function<'_>, param: &AddressParam) -> Severity {
+    fn determine_severity_for_function(
+        &self,
+        function: &ast::Function<'_>,
+        param: &AddressParam,
+    ) -> Severity {
         let function_name = function.name.name.to_lowercase();
 
         // Critical functions that should always check for zero address
-        if function_name.contains("transfer") ||
-           function_name.contains("approve") ||
-           function_name.contains("mint") ||
-           function_name.contains("burn") ||
-           function_name.contains("withdraw") ||
-           function_name.contains("deposit") ||
-           function_name.contains("owner") ||
-           function_name.contains("admin") ||
-           function_name.contains("governance") ||
-           function_name.contains("delegate") {
+        if function_name.contains("transfer")
+            || function_name.contains("approve")
+            || function_name.contains("mint")
+            || function_name.contains("burn")
+            || function_name.contains("withdraw")
+            || function_name.contains("deposit")
+            || function_name.contains("owner")
+            || function_name.contains("admin")
+            || function_name.contains("governance")
+            || function_name.contains("delegate")
+        {
             return Severity::High;
         }
 
@@ -313,38 +376,52 @@ impl ZeroAddressDetector {
 
     /// Check if function has any state-changing operations
     fn _has_state_changes(&self, function: &ast::Function<'_>) -> bool {
-        !matches!(function.mutability, ast::StateMutability::View | ast::StateMutability::Pure)
+        !matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        )
     }
 
     /// Analyze statement for zero address usage patterns
-    fn analyze_statement_for_zero_address_usage(&self, stmt: &ast::Statement<'_>, ctx: &AnalysisContext<'_>) -> Vec<Finding> {
+    fn analyze_statement_for_zero_address_usage(
+        &self,
+        stmt: &ast::Statement<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
         match stmt {
-            ast::Statement::Expression(ast::Expression::Assignment { left, right, location, .. }) => {
+            ast::Statement::Expression(ast::Expression::Assignment {
+                left,
+                right,
+                location,
+                ..
+            }) => {
                 // Check for assignments to address variables without validation
                 if let ast::Expression::Identifier(id) = left {
-                    if id.name.to_lowercase().contains("address") ||
-                       id.name.to_lowercase().contains("owner") ||
-                       id.name.to_lowercase().contains("recipient") {
-
+                    if id.name.to_lowercase().contains("address")
+                        || id.name.to_lowercase().contains("owner")
+                        || id.name.to_lowercase().contains("recipient")
+                    {
                         // Check if the right side could be zero
                         if self.could_be_zero_address(right) {
                             let message = format!(
                                 "Assignment to '{}' may result in zero address without validation",
                                 id.name
                             );
-                            let finding = self.base.create_finding(
-                                ctx,
-                                message,
-                                location.start().line() as u32,
-                                location.start().column() as u32,
-                                location.byte_length() as u32,
-                            )
-                            .with_cwe(476)
-                            .with_fix_suggestion(
-                                "Add validation to ensure the address is not zero".to_string()
-                            );
+                            let finding = self
+                                .base
+                                .create_finding(
+                                    ctx,
+                                    message,
+                                    location.start().line() as u32,
+                                    location.start().column() as u32,
+                                    location.byte_length() as u32,
+                                )
+                                .with_cwe(476)
+                                .with_fix_suggestion(
+                                    "Add validation to ensure the address is not zero".to_string(),
+                                );
                             findings.push(finding);
                         }
                     }
@@ -372,12 +449,10 @@ impl ZeroAddressDetector {
             ast::Expression::IndexAccess { .. } => true,
 
             // Literals - check if actually zero
-            ast::Expression::Literal { value, .. } => {
-                match value {
-                    ast::LiteralValue::Address(addr) => addr.starts_with("0x0"),
-                    _ => false,
-                }
-            }
+            ast::Expression::Literal { value, .. } => match value {
+                ast::LiteralValue::Address(addr) => addr.starts_with("0x0"),
+                _ => false,
+            },
 
             _ => false,
         }
@@ -430,20 +505,37 @@ impl Detector for ZeroAddressDetector {
 }
 
 impl AstAnalyzer for ZeroAddressDetector {
-    fn analyze_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         Ok(self.analyze_function_for_zero_address_checks(function, ctx))
     }
 
-    fn analyze_statement(&self, statement: &ast::Statement<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_statement(
+        &self,
+        statement: &ast::Statement<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         Ok(self.analyze_statement_for_zero_address_usage(statement, ctx))
     }
 
-    fn analyze_expression(&self, expression: &ast::Expression<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_expression(
+        &self,
+        expression: &ast::Expression<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
         // Check for direct zero address comparisons that might be backwards
         match expression {
-            ast::Expression::BinaryOperation { operator, left, right, location } => {
+            ast::Expression::BinaryOperation {
+                operator,
+                left,
+                right,
+                location,
+            } => {
                 if matches!(operator, ast::BinaryOperator::Equal) {
                     // Warn about using == with address(0) instead of !=
                     if self.is_zero_address(left) || self.is_zero_address(right) {
@@ -469,7 +561,11 @@ impl AstAnalyzer for ZeroAddressDetector {
         Ok(findings)
     }
 
-    fn analyze_modifier(&self, _modifier: &ast::Modifier<'_>, _ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn analyze_modifier(
+        &self,
+        _modifier: &ast::Modifier<'_>,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         // Zero address checks are typically in function bodies, not modifiers
         // However, modifiers could also validate addresses
         Ok(Vec::new())

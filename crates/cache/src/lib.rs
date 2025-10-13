@@ -1,11 +1,11 @@
-pub mod query_cache;
-pub mod file_cache;
 pub mod analysis_cache;
+pub mod file_cache;
+pub mod query_cache;
 
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::Arc;
-use anyhow::Result;
-use serde::{Serialize, Deserialize};
 
 /// Cache key for identifying cached items
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -156,19 +156,15 @@ impl CacheManager {
             file_cache_entries: self.file_cache.len(),
             analysis_cache_entries: self.analysis_cache.len(),
             query_cache_entries: self.query_cache.len(),
-            total_memory_usage: self.file_cache.memory_usage() +
-                              self.analysis_cache.memory_usage() +
-                              self.query_cache.memory_usage(),
+            total_memory_usage: self.file_cache.memory_usage()
+                + self.analysis_cache.memory_usage()
+                + self.query_cache.memory_usage(),
         }
     }
 
     /// Check if a file needs re-analysis
     pub fn needs_analysis(&self, file_path: &Path, content: &str, config_hash: &str) -> bool {
-        let key = CacheKey::new(
-            file_path.to_string_lossy().as_ref(),
-            content,
-            config_hash,
-        );
+        let key = CacheKey::new(file_path.to_string_lossy().as_ref(), content, config_hash);
 
         !self.analysis_cache.contains(&key)
     }

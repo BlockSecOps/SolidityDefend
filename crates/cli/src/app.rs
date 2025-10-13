@@ -1,28 +1,30 @@
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgAction, Command};
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
-use std::collections::HashMap;
 
+use crate::config::SolidityDefendConfig;
 use ast::arena::AstArena;
+use cache::analysis_cache::{
+    AnalysisMetadata, AnalysisStats, CachedAnalysisResult, CachedFinding, CachedLocation,
+};
+use cache::{CacheKey, CacheManager};
+use db::Database;
 use detectors::registry::{DetectorRegistry, RegistryConfig};
-use detectors::types::{AnalysisContext, Severity, Finding};
+use detectors::types::{AnalysisContext, Finding, Severity};
 use output::{OutputFormat, OutputManager};
 use parser::Parser;
-use db::Database;
 use semantic::symbols::SymbolTable;
-use cache::{CacheManager, CacheKey};
-use cache::analysis_cache::{CachedAnalysisResult, CachedFinding, CachedLocation, AnalysisMetadata, AnalysisStats};
-use crate::config::SolidityDefendConfig;
 
 /// Standard exit codes for CI/CD integration
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ExitCode {
-    Success = 0,           // No issues found
-    SecurityIssues = 1,    // Security issues found
-    AnalysisError = 2,     // Analysis failed (file errors, parsing errors)
-    ConfigError = 3,       // Configuration errors
-    InternalError = 4,     // Internal tool errors
+    Success = 0,        // No issues found
+    SecurityIssues = 1, // Security issues found
+    AnalysisError = 2,  // Analysis failed (file errors, parsing errors)
+    ConfigError = 3,    // Configuration errors
+    InternalError = 4,  // Internal tool errors
 }
 
 impl ExitCode {
@@ -82,19 +84,25 @@ impl AnalysisSummary {
             Severity::Info => self.total_findings > 0,
             Severity::Low => {
                 self.findings_by_severity.get(&Severity::Low).unwrap_or(&0) > &0
-                || self.has_findings_at_or_above(&Severity::Medium)
-            },
+                    || self.has_findings_at_or_above(&Severity::Medium)
+            }
             Severity::Medium => {
-                self.findings_by_severity.get(&Severity::Medium).unwrap_or(&0) > &0
-                || self.has_findings_at_or_above(&Severity::High)
-            },
+                self.findings_by_severity
+                    .get(&Severity::Medium)
+                    .unwrap_or(&0)
+                    > &0
+                    || self.has_findings_at_or_above(&Severity::High)
+            }
             Severity::High => {
                 self.findings_by_severity.get(&Severity::High).unwrap_or(&0) > &0
-                || self.has_findings_at_or_above(&Severity::Critical)
-            },
+                    || self.has_findings_at_or_above(&Severity::Critical)
+            }
             Severity::Critical => {
-                self.findings_by_severity.get(&Severity::Critical).unwrap_or(&0) > &0
-            },
+                self.findings_by_severity
+                    .get(&Severity::Critical)
+                    .unwrap_or(&0)
+                    > &0
+            }
         }
     }
 }
@@ -321,7 +329,8 @@ impl CliApp {
             return app.analyze_from_url(url, format, output_file, min_severity, use_cache);
         }
 
-        let files: Vec<&str> = matches.get_many::<String>("files")
+        let files: Vec<&str> = matches
+            .get_many::<String>("files")
             .unwrap_or_default()
             .map(|s| s.as_str())
             .collect();
@@ -375,7 +384,14 @@ impl CliApp {
             exit_config.error_on_analysis_failure = false;
         }
 
-        app.analyze_files(&files, format, output_file, min_severity, use_cache, exit_config)
+        app.analyze_files(
+            &files,
+            format,
+            output_file,
+            min_severity,
+            use_cache,
+            exit_config,
+        )
     }
 
     fn list_detectors(&self) -> Result<()> {
@@ -394,9 +410,21 @@ impl CliApp {
             ("array-bounds", "Array Bounds", "Medium"),
             ("parameter-consistency", "Parameter Consistency", "Low"),
             ("single-oracle-source", "Single Oracle Source", "High"),
-            ("missing-price-validation", "Missing Price Validation", "Medium"),
-            ("flashloan-vulnerable-patterns", "Flash Loan Vulnerable Patterns", "High"),
-            ("unchecked-external-call", "Unchecked External Call", "Medium"),
+            (
+                "missing-price-validation",
+                "Missing Price Validation",
+                "Medium",
+            ),
+            (
+                "flashloan-vulnerable-patterns",
+                "Flash Loan Vulnerable Patterns",
+                "High",
+            ),
+            (
+                "unchecked-external-call",
+                "Unchecked External Call",
+                "Medium",
+            ),
             ("sandwich-attack", "Sandwich Attack", "Medium"),
             ("front-running", "Front Running", "Medium"),
             ("block-dependency", "Block Dependency", "Medium"),
@@ -404,62 +432,187 @@ impl CliApp {
             ("test-governance", "Governance Vulnerabilities", "High"),
             ("external-calls-loop", "External Calls in Loop", "High"),
             ("signature-replay", "Signature Replay Attack", "High"),
-            ("emergency-pause-centralization", "Emergency Pause Centralization", "Medium"),
-            ("cross-chain-replay", "Cross-Chain Replay Attack", "Critical"),
-            ("flash-loan-staking", "Flash Loan Staking Attack", "Critical"),
-            ("oracle-manipulation", "Oracle Price Manipulation", "Critical"),
-            ("missing-slippage-protection", "Missing Slippage Protection", "High"),
+            (
+                "emergency-pause-centralization",
+                "Emergency Pause Centralization",
+                "Medium",
+            ),
+            (
+                "cross-chain-replay",
+                "Cross-Chain Replay Attack",
+                "Critical",
+            ),
+            (
+                "flash-loan-staking",
+                "Flash Loan Staking Attack",
+                "Critical",
+            ),
+            (
+                "oracle-manipulation",
+                "Oracle Price Manipulation",
+                "Critical",
+            ),
+            (
+                "missing-slippage-protection",
+                "Missing Slippage Protection",
+                "High",
+            ),
             ("delegation-loop", "Delegation Loop Vulnerability", "High"),
-            ("weak-signature-validation", "Weak Signature Validation", "High"),
-            ("auction-timing-manipulation", "Auction Timing Manipulation", "High"),
+            (
+                "weak-signature-validation",
+                "Weak Signature Validation",
+                "High",
+            ),
+            (
+                "auction-timing-manipulation",
+                "Auction Timing Manipulation",
+                "High",
+            ),
             ("weak-commit-reveal", "Weak Commit-Reveal Scheme", "Medium"),
-            ("reward-calculation-manipulation", "Reward Calculation Manipulation", "Medium"),
-            ("emergency-function-abuse", "Emergency Function Abuse", "Medium"),
+            (
+                "reward-calculation-manipulation",
+                "Reward Calculation Manipulation",
+                "Medium",
+            ),
+            (
+                "emergency-function-abuse",
+                "Emergency Function Abuse",
+                "Medium",
+            ),
             ("gas-price-manipulation", "Gas Price Manipulation", "Medium"),
-            ("emergency-withdrawal-abuse", "Emergency Withdrawal Abuse", "Medium"),
-            ("storage-collision", "Storage Collision Vulnerability", "Critical"),
-            ("dangerous-delegatecall", "Dangerous Delegatecall", "Critical"),
+            (
+                "emergency-withdrawal-abuse",
+                "Emergency Withdrawal Abuse",
+                "Medium",
+            ),
+            (
+                "storage-collision",
+                "Storage Collision Vulnerability",
+                "Critical",
+            ),
+            (
+                "dangerous-delegatecall",
+                "Dangerous Delegatecall",
+                "Critical",
+            ),
             ("selfdestruct-abuse", "Selfdestruct Abuse", "High"),
             ("integer-overflow", "Integer Overflow/Underflow", "High"),
-            ("uninitialized-storage", "Uninitialized Storage Pointer", "High"),
+            (
+                "uninitialized-storage",
+                "Uninitialized Storage Pointer",
+                "High",
+            ),
             ("signature-malleability", "Signature Malleability", "High"),
-            ("amm-liquidity-manipulation", "AMM Liquidity Manipulation", "Critical"),
-            ("lending-liquidation-abuse", "Lending Liquidation Abuse", "Critical"),
-            ("vault-share-inflation", "Vault Share Inflation Attack", "Critical"),
-            ("price-impact-manipulation", "Price Impact Manipulation", "High"),
-            ("sandwich-resistant-swap", "Missing Sandwich Attack Protection", "High"),
-            ("liquidity-bootstrapping-abuse", "Liquidity Bootstrapping Pool Abuse", "Medium"),
+            (
+                "amm-liquidity-manipulation",
+                "AMM Liquidity Manipulation",
+                "Critical",
+            ),
+            (
+                "lending-liquidation-abuse",
+                "Lending Liquidation Abuse",
+                "Critical",
+            ),
+            (
+                "vault-share-inflation",
+                "Vault Share Inflation Attack",
+                "Critical",
+            ),
+            (
+                "price-impact-manipulation",
+                "Price Impact Manipulation",
+                "High",
+            ),
+            (
+                "sandwich-resistant-swap",
+                "Missing Sandwich Attack Protection",
+                "High",
+            ),
+            (
+                "liquidity-bootstrapping-abuse",
+                "Liquidity Bootstrapping Pool Abuse",
+                "Medium",
+            ),
             ("timestamp-manipulation", "Timestamp Manipulation", "High"),
-            ("block-stuffing-vulnerable", "Block Stuffing Vulnerable", "High"),
+            (
+                "block-stuffing-vulnerable",
+                "Block Stuffing Vulnerable",
+                "High",
+            ),
             ("mev-extractable-value", "MEV Extractable Value", "High"),
             ("deadline-manipulation", "Deadline Manipulation", "Medium"),
             ("nonce-reuse", "Nonce Reuse Vulnerability", "Medium"),
             // Phase 7: Staking & Validator Security
-            ("slashing-mechanism", "Slashing Mechanism Vulnerability", "High"),
+            (
+                "slashing-mechanism",
+                "Slashing Mechanism Vulnerability",
+                "High",
+            ),
             ("validator-griefing", "Validator Griefing Attack", "High"),
             ("withdrawal-delay", "Withdrawal Delay Vulnerability", "High"),
             ("validator-front-running", "Validator Front-Running", "High"),
             // Phase 8: Upgradeable Contracts & Dependencies
-            ("upgradeable-proxy-issues", "Upgradeable Proxy Issues", "Critical"),
-            ("token-supply-manipulation", "Token Supply Manipulation", "Critical"),
+            (
+                "upgradeable-proxy-issues",
+                "Upgradeable Proxy Issues",
+                "Critical",
+            ),
+            (
+                "token-supply-manipulation",
+                "Token Supply Manipulation",
+                "Critical",
+            ),
             ("circular-dependency", "Circular Dependency", "High"),
             // Phase 9: Gas & Optimization Issues
             ("gas-griefing", "Gas Griefing Attack", "Medium"),
-            ("dos-unbounded-operation", "DOS via Unbounded Operation", "High"),
+            (
+                "dos-unbounded-operation",
+                "DOS via Unbounded Operation",
+                "High",
+            ),
             ("excessive-gas-usage", "Excessive Gas Usage", "Low"),
             ("inefficient-storage", "Inefficient Storage Usage", "Low"),
             ("redundant-checks", "Redundant Checks", "Low"),
             // Phase 10: Advanced Security
-            ("front-running-mitigation", "Missing Front-Running Mitigation", "Medium"),
+            (
+                "front-running-mitigation",
+                "Missing Front-Running Mitigation",
+                "Medium",
+            ),
             ("price-oracle-stale", "Stale Price Oracle Data", "High"),
             ("centralization-risk", "Centralization Risk", "Medium"),
             ("insufficient-randomness", "Insufficient Randomness", "High"),
             // Phase 11: Code Quality & Best Practices
             ("shadowing-variables", "Variable Shadowing", "Medium"),
             ("unchecked-math", "Unchecked Math Operations", "High"),
-            ("missing-input-validation", "Missing Input Validation", "Medium"),
+            (
+                "missing-input-validation",
+                "Missing Input Validation",
+                "Medium",
+            ),
             ("deprecated-functions", "Deprecated Functions", "Low"),
             ("unsafe-type-casting", "Unsafe Type Casting", "Medium"),
+            // Phase 17: Token Standard Edge Cases (2025)
+            (
+                "erc20-approve-race",
+                "ERC-20 Approve Race Condition",
+                "Medium",
+            ),
+            (
+                "erc20-infinite-approval",
+                "ERC-20 Infinite Approval Risk",
+                "Low",
+            ),
+            (
+                "erc777-reentrancy-hooks",
+                "ERC-777 Reentrancy via Hooks",
+                "High",
+            ),
+            (
+                "erc721-callback-reentrancy",
+                "ERC-721/1155 Callback Reentrancy",
+                "High",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
@@ -476,13 +629,34 @@ impl CliApp {
         println!("Version: {}", env!("CARGO_PKG_VERSION"));
 
         // Git info (fallback to runtime if build-time unavailable)
-        println!("Git Hash: {}", std::env::var("GIT_HASH").unwrap_or_else(|_| "unknown".to_string()));
-        println!("Git Branch: {}", std::env::var("GIT_BRANCH").unwrap_or_else(|_| "unknown".to_string()));
-        println!("Build Timestamp: {}", std::env::var("BUILD_TIMESTAMP").unwrap_or_else(|_| "unknown".to_string()));
-        println!("Build Number: {}", std::env::var("BUILD_NUMBER").unwrap_or_else(|_| "0".to_string()));
-        println!("Rust Version: {}", std::env::var("RUST_VERSION").unwrap_or_else(|_| "unknown".to_string()));
-        println!("Target: {}", std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string()));
-        println!("Profile: {}", std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string()));
+        println!(
+            "Git Hash: {}",
+            std::env::var("GIT_HASH").unwrap_or_else(|_| "unknown".to_string())
+        );
+        println!(
+            "Git Branch: {}",
+            std::env::var("GIT_BRANCH").unwrap_or_else(|_| "unknown".to_string())
+        );
+        println!(
+            "Build Timestamp: {}",
+            std::env::var("BUILD_TIMESTAMP").unwrap_or_else(|_| "unknown".to_string())
+        );
+        println!(
+            "Build Number: {}",
+            std::env::var("BUILD_NUMBER").unwrap_or_else(|_| "0".to_string())
+        );
+        println!(
+            "Rust Version: {}",
+            std::env::var("RUST_VERSION").unwrap_or_else(|_| "unknown".to_string())
+        );
+        println!(
+            "Target: {}",
+            std::env::var("TARGET").unwrap_or_else(|_| "unknown".to_string())
+        );
+        println!(
+            "Profile: {}",
+            std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string())
+        );
 
         let git_dirty = std::env::var("GIT_DIRTY").unwrap_or_else(|_| "false".to_string());
         let profile = std::env::var("PROFILE").unwrap_or_else(|_| "unknown".to_string());
@@ -522,16 +696,28 @@ impl CliApp {
 
         println!("Cache Statistics:");
         println!("================");
-        println!("Total entries: {}", stats.file_cache_entries + stats.analysis_cache_entries + stats.query_cache_entries);
+        println!(
+            "Total entries: {}",
+            stats.file_cache_entries + stats.analysis_cache_entries + stats.query_cache_entries
+        );
         println!("  File cache: {}", stats.file_cache_entries);
         println!("  Analysis cache: {}", stats.analysis_cache_entries);
         println!("  Query cache: {}", stats.query_cache_entries);
-        println!("Total memory usage: {:.2} MB", stats.total_memory_usage as f64 / 1024.0 / 1024.0);
+        println!(
+            "Total memory usage: {:.2} MB",
+            stats.total_memory_usage as f64 / 1024.0 / 1024.0
+        );
 
         if analysis_stats.total_entries > 0 {
             println!("\nAnalysis Cache Details:");
-            println!("  Average entry age: {}s", analysis_stats.average_age_seconds);
-            println!("  Oldest entry: {}s", analysis_stats.oldest_entry_age_seconds);
+            println!(
+                "  Average entry age: {}s",
+                analysis_stats.average_age_seconds
+            );
+            println!(
+                "  Oldest entry: {}s",
+                analysis_stats.oldest_entry_age_seconds
+            );
         }
 
         Ok(())
@@ -582,18 +768,12 @@ impl CliApp {
         // Output results
         match output_file {
             Some(path) => {
-                self.output_manager.write_to_file(
-                    &all_findings,
-                    format,
-                    &path,
-                )?;
+                self.output_manager
+                    .write_to_file(&all_findings, format, &path)?;
                 println!("Results written to: {}", path.display());
             }
             None => {
-                self.output_manager.write_to_stdout(
-                    &all_findings,
-                    format,
-                )?;
+                self.output_manager.write_to_stdout(&all_findings, format)?;
             }
         }
 
@@ -612,14 +792,18 @@ impl CliApp {
         if exit_code != ExitCode::Success {
             println!("\nExiting with code {} due to:", exit_code.as_code());
             if analysis_summary.failed_files > 0 && exit_config.error_on_analysis_failure {
-                println!("  - {} file(s) failed to analyze", analysis_summary.failed_files);
+                println!(
+                    "  - {} file(s) failed to analyze",
+                    analysis_summary.failed_files
+                );
             }
             if let Some(severity) = &exit_config.error_on_severity {
                 if analysis_summary.has_findings_at_or_above(severity) {
                     println!("  - Found {} or higher severity issues", severity);
                 }
-            } else if exit_config.error_on_high_severity &&
-                     analysis_summary.has_findings_at_or_above(&Severity::High) {
+            } else if exit_config.error_on_high_severity
+                && analysis_summary.has_findings_at_or_above(&Severity::High)
+            {
                 println!("  - Found high or critical severity issues");
             }
             exit_code.exit();
@@ -655,7 +839,12 @@ impl CliApp {
         ExitCode::Success
     }
 
-    fn analyze_file(&self, file_path: &str, min_severity: Severity, use_cache: bool) -> Result<(Vec<Finding>, bool)> {
+    fn analyze_file(
+        &self,
+        file_path: &str,
+        min_severity: Severity,
+        use_cache: bool,
+    ) -> Result<(Vec<Finding>, bool)> {
         // Read file
         let content = std::fs::read_to_string(file_path)
             .map_err(|e| anyhow!("Failed to read file {}: {}", file_path, e))?;
@@ -666,9 +855,13 @@ impl CliApp {
         // Check cache if enabled
         if use_cache {
             let cache_key = CacheKey::new(file_path, &content, &config_hash);
-            if let Some(cached_result) = self.cache_manager.analysis_cache().get_analysis(&cache_key) {
+            if let Some(cached_result) =
+                self.cache_manager.analysis_cache().get_analysis(&cache_key)
+            {
                 // Convert cached findings back to Finding objects and filter by severity
-                let findings: Vec<Finding> = cached_result.findings.iter()
+                let findings: Vec<Finding> = cached_result
+                    .findings
+                    .iter()
                     .map(|cached_finding| self.cached_finding_to_finding(cached_finding, file_path))
                     .filter(|f| f.severity >= min_severity)
                     .collect();
@@ -683,7 +876,8 @@ impl CliApp {
         let parser = Parser::new();
 
         // Parse the file
-        let source_file = parser.parse(&arena, &content, file_path)
+        let source_file = parser
+            .parse(&arena, &content, file_path)
             .map_err(|e| anyhow!("Parse error: {:?}", e))?;
 
         // Store in database
@@ -708,13 +902,22 @@ impl CliApp {
         for contract in &source_file.contracts {
             // Create a fresh symbol table for each contract
             let dummy_symbols = SymbolTable::new();
-            let ctx = AnalysisContext::new(contract, dummy_symbols, content.clone(), file_path.to_string());
+            let ctx = AnalysisContext::new(
+                contract,
+                dummy_symbols,
+                content.clone(),
+                file_path.to_string(),
+            );
 
             // Try to run analysis, fall back to empty result if detector system fails
             let analysis_result = match self.registry.run_analysis(&ctx) {
                 Ok(result) => result,
                 Err(e) => {
-                    eprintln!("Warning: Detector analysis failed for contract '{}' ({}), proceeding with empty result", contract.name.as_str(), e);
+                    eprintln!(
+                        "Warning: Detector analysis failed for contract '{}' ({}), proceeding with empty result",
+                        contract.name.as_str(),
+                        e
+                    );
                     detectors::types::AnalysisResult::new()
                 }
             };
@@ -734,14 +937,24 @@ impl CliApp {
         // Store in cache before filtering (so we cache all findings)
         if use_cache {
             let cache_key = CacheKey::new(file_path, &content, &config_hash);
-            let cached_result = self.convert_to_cached_result(&analysis_result.findings, file_path, start_time, end_time)?;
+            let cached_result = self.convert_to_cached_result(
+                &analysis_result.findings,
+                file_path,
+                start_time,
+                end_time,
+            )?;
 
             // Ignore cache storage errors to avoid failing analysis
-            let _ = self.cache_manager.analysis_cache().store_analysis(cache_key, cached_result);
+            let _ = self
+                .cache_manager
+                .analysis_cache()
+                .store_analysis(cache_key, cached_result);
         }
 
         // Filter by severity
-        let filtered_findings: Vec<_> = analysis_result.findings.into_iter()
+        let filtered_findings: Vec<_> = analysis_result
+            .findings
+            .into_iter()
             .filter(|f| f.severity >= min_severity)
             .collect();
 
@@ -767,7 +980,8 @@ impl CliApp {
         start_time: u64,
         end_time: u64,
     ) -> Result<CachedAnalysisResult> {
-        let cached_findings: Vec<CachedFinding> = findings.iter()
+        let cached_findings: Vec<CachedFinding> = findings
+            .iter()
             .map(|finding| CachedFinding {
                 detector_id: finding.detector_id.to_string(),
                 message: finding.message.clone(),
@@ -854,9 +1068,7 @@ impl CliApp {
 
         // Use tokio to run the async LSP server
         let rt = tokio::runtime::Runtime::new()?;
-        rt.block_on(async {
-            lsp::start_lsp_server().await
-        })?;
+        rt.block_on(async { lsp::start_lsp_server().await })?;
 
         Ok(())
     }
@@ -865,7 +1077,10 @@ impl CliApp {
         let config_path = PathBuf::from(".soliditydefend.yml");
 
         if config_path.exists() {
-            println!("Configuration file already exists: {}", config_path.display());
+            println!(
+                "Configuration file already exists: {}",
+                config_path.display()
+            );
             print!("Overwrite? [y/N]: ");
             std::io::Write::flush(&mut std::io::stdout())?;
 
@@ -879,7 +1094,10 @@ impl CliApp {
         }
 
         SolidityDefendConfig::create_default_config_file(&config_path)?;
-        println!("Created default configuration file: {}", config_path.display());
+        println!(
+            "Created default configuration file: {}",
+            config_path.display()
+        );
         println!("\nEdit this file to customize SolidityDefend settings:");
         println!("- Detector settings");
         println!("- Cache configuration");
@@ -944,9 +1162,7 @@ impl CliApp {
 
         // Fetch contract source
         let runtime = tokio::runtime::Runtime::new()?;
-        let contracts = runtime.block_on(async {
-            fetcher.fetch_contract_source(url).await
-        })?;
+        let contracts = runtime.block_on(async { fetcher.fetch_contract_source(url).await })?;
 
         if contracts.is_empty() {
             return Err(anyhow!("No verified contracts found at the provided URL"));
@@ -958,7 +1174,10 @@ impl CliApp {
         let mut analysis_summary = AnalysisSummary::default();
 
         for (index, contract) in contracts.iter().enumerate() {
-            println!("\n📄 Analyzing contract: {} ({})", contract.name, contract.address);
+            println!(
+                "\n📄 Analyzing contract: {} ({})",
+                contract.name, contract.address
+            );
             println!("   Platform: {}", contract.platform);
             println!("   Compiler: {}", contract.compiler_version);
             println!("   Verified: {}", contract.is_verified);
@@ -999,7 +1218,8 @@ impl CliApp {
         // Output results
         match output_file {
             Some(path) => {
-                self.output_manager.write_to_file(&all_findings, format, &path)?;
+                self.output_manager
+                    .write_to_file(&all_findings, format, &path)?;
                 println!("\n📁 Results written to: {}", path.display());
             }
             None => {
@@ -1024,12 +1244,22 @@ impl CliApp {
 
         println!("🔑 Setting up blockchain API keys...");
         println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-        println!("SolidityDefend needs API keys to fetch contract source code from blockchain explorers.");
+        println!(
+            "SolidityDefend needs API keys to fetch contract source code from blockchain explorers."
+        );
         println!("All API keys are free to obtain and stored locally on your machine.\n");
 
         let api_configs = vec![
-            ("Etherscan", "https://etherscan.io/apis", "ETHERSCAN_API_KEY"),
-            ("Polygonscan", "https://polygonscan.com/apis", "POLYGONSCAN_API_KEY"),
+            (
+                "Etherscan",
+                "https://etherscan.io/apis",
+                "ETHERSCAN_API_KEY",
+            ),
+            (
+                "Polygonscan",
+                "https://polygonscan.com/apis",
+                "POLYGONSCAN_API_KEY",
+            ),
             ("BscScan", "https://bscscan.com/apis", "BSCSCAN_API_KEY"),
             ("Arbiscan", "https://arbiscan.io/apis", "ARBISCAN_API_KEY"),
         ];
@@ -1056,7 +1286,9 @@ impl CliApp {
         }
 
         if env_commands.is_empty() {
-            println!("⚠️  No API keys configured. You can set them later using environment variables.");
+            println!(
+                "⚠️  No API keys configured. You can set them later using environment variables."
+            );
         } else {
             println!("✅ Setup complete! Add these to your shell profile (.bashrc, .zshrc, etc.):");
             println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");

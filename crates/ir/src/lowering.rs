@@ -1,8 +1,8 @@
-use std::collections::HashMap;
 use anyhow::{Result, anyhow};
+use std::collections::HashMap;
 
-use ast::*;
 use crate::instruction::*;
+use ast::*;
 
 /// Context for lowering AST to IR
 pub struct LoweringContext {
@@ -56,7 +56,9 @@ impl LoweringContext {
         self.block_counter += 1;
 
         if let Some(ref mut function) = self.current_function {
-            function.basic_blocks.insert(block_id, BasicBlock::new(block_id));
+            function
+                .basic_blocks
+                .insert(block_id, BasicBlock::new(block_id));
         }
 
         block_id
@@ -65,7 +67,8 @@ impl LoweringContext {
     /// Add an instruction to the current block
     pub fn add_instruction(&mut self, instruction: Instruction) -> Result<()> {
         if let (Some(ref mut function), Some(current_block)) =
-            (&mut self.current_function, self.current_block) {
+            (&mut self.current_function, self.current_block)
+        {
             function.add_instruction(current_block, instruction)
         } else {
             Err(anyhow!("No current function or block"))
@@ -166,12 +169,20 @@ impl Lowering {
     }
 
     /// Lower a single function with contract context (public API)
-    pub fn lower_contract_function(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
+    pub fn lower_contract_function(
+        &mut self,
+        function: &Function,
+        contract: &Contract,
+    ) -> Result<IrFunction> {
         self.lower_function_with_contract(function, contract)
     }
 
     /// Lower a function with contract context
-    fn lower_function_with_contract(&mut self, function: &Function, contract: &Contract) -> Result<IrFunction> {
+    fn lower_function_with_contract(
+        &mut self,
+        function: &Function,
+        contract: &Contract,
+    ) -> Result<IrFunction> {
         let mut context = LoweringContext::new();
 
         // Register Solidity global variables
@@ -190,7 +201,9 @@ impl Lowering {
         let mut ir_parameters = Vec::new();
         for param in &function.parameters {
             let ir_type = self.lower_type_name(&param.type_name)?;
-            let param_name = param.name.as_ref()
+            let param_name = param
+                .name
+                .as_ref()
                 .map(|id| id.name.to_string())
                 .unwrap_or_else(|| format!("param_{}", ir_parameters.len()));
             ir_parameters.push((param_name, ir_type));
@@ -221,7 +234,7 @@ impl Lowering {
             // Add parameter assignment instruction
             context.add_instruction(Instruction::Assign(
                 param_value,
-                IrValue::Value(ValueId(i as u32))
+                IrValue::Value(ValueId(i as u32)),
             ))?;
         }
 
@@ -234,7 +247,9 @@ impl Lowering {
         self.ensure_function_return(&mut context, &ir_function.return_types)?;
 
         // Update the function with the context state
-        context.current_function.ok_or_else(|| anyhow!("Lost function context"))
+        context
+            .current_function
+            .ok_or_else(|| anyhow!("Lost function context"))
     }
 
     /// Enhanced function lowering with complete implementation
@@ -245,7 +260,9 @@ impl Lowering {
         let mut ir_parameters = Vec::new();
         for param in &function.parameters {
             let ir_type = self.lower_type_name(&param.type_name)?;
-            let param_name = param.name.as_ref()
+            let param_name = param
+                .name
+                .as_ref()
                 .map(|id| id.name.to_string())
                 .unwrap_or_else(|| format!("param_{}", ir_parameters.len()));
             ir_parameters.push((param_name, ir_type));
@@ -276,7 +293,7 @@ impl Lowering {
             // Add parameter assignment instruction
             context.add_instruction(Instruction::Assign(
                 param_value,
-                IrValue::Value(ValueId(i as u32))
+                IrValue::Value(ValueId(i as u32)),
             ))?;
         }
 
@@ -289,7 +306,9 @@ impl Lowering {
         self.ensure_function_return(&mut context, &ir_function.return_types)?;
 
         // Update the function with the context state
-        context.current_function.ok_or_else(|| anyhow!("Lost function context"))
+        context
+            .current_function
+            .ok_or_else(|| anyhow!("Lost function context"))
     }
 
     /// Lower a block statement
@@ -301,18 +320,24 @@ impl Lowering {
     }
 
     /// Lower a statement to IR instructions
-    fn lower_statement(&mut self, context: &mut LoweringContext, statement: &Statement) -> Result<()> {
+    fn lower_statement(
+        &mut self,
+        context: &mut LoweringContext,
+        statement: &Statement,
+    ) -> Result<()> {
         match statement {
-            Statement::Block(block) => {
-                self.lower_block(context, block)
-            }
+            Statement::Block(block) => self.lower_block(context, block),
 
             Statement::Expression(expr) => {
                 self.lower_expression(context, expr)?;
                 Ok(())
             }
 
-            Statement::VariableDeclaration { declarations, initial_value, .. } => {
+            Statement::VariableDeclaration {
+                declarations,
+                initial_value,
+                ..
+            } => {
                 for declaration in declarations {
                     let var_name = declaration.name.name.to_string();
 
@@ -339,7 +364,12 @@ impl Lowering {
                 Ok(())
             }
 
-            Statement::If { condition, then_branch, else_branch, .. } => {
+            Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 let cond_value = self.lower_expression(context, condition)?;
 
                 let then_block = context.create_block();
@@ -352,9 +382,7 @@ impl Lowering {
 
                 // Add conditional branch
                 context.add_instruction(Instruction::ConditionalBranch(
-                    cond_value,
-                    then_block,
-                    else_block,
+                    cond_value, then_block, else_block,
                 ))?;
 
                 // Lower then branch
@@ -379,7 +407,9 @@ impl Lowering {
                 Ok(())
             }
 
-            Statement::While { condition, body, .. } => {
+            Statement::While {
+                condition, body, ..
+            } => {
                 let loop_header = context.create_block();
                 let loop_body = context.create_block();
                 let loop_exit = context.create_block();
@@ -391,9 +421,7 @@ impl Lowering {
                 context.set_current_block(loop_header);
                 let cond_value = self.lower_expression(context, condition)?;
                 context.add_instruction(Instruction::ConditionalBranch(
-                    cond_value,
-                    loop_body,
-                    loop_exit,
+                    cond_value, loop_body, loop_exit,
                 ))?;
 
                 // Loop body
@@ -413,7 +441,13 @@ impl Lowering {
                 Ok(())
             }
 
-            Statement::For { init, condition, update, body, .. } => {
+            Statement::For {
+                init,
+                condition,
+                update,
+                body,
+                ..
+            } => {
                 // Initialize
                 if let Some(init_stmt) = init {
                     self.lower_statement(context, init_stmt)?;
@@ -432,9 +466,7 @@ impl Lowering {
                 if let Some(cond_expr) = condition {
                     let cond_value = self.lower_expression(context, cond_expr)?;
                     context.add_instruction(Instruction::ConditionalBranch(
-                        cond_value,
-                        loop_body,
-                        loop_exit,
+                        cond_value, loop_body, loop_exit,
                     ))?;
                 } else {
                     // Infinite loop
@@ -505,7 +537,12 @@ impl Lowering {
 
             Statement::EmitStatement { event_call, .. } => {
                 // Handle event emission
-                if let Expression::FunctionCall { function, arguments, .. } = event_call {
+                if let Expression::FunctionCall {
+                    function,
+                    arguments,
+                    ..
+                } = event_call
+                {
                     if let Expression::Identifier(event_name) = function {
                         let mut arg_values = Vec::new();
                         for arg in arguments {
@@ -528,7 +565,11 @@ impl Lowering {
     }
 
     /// Lower an expression to an IR value
-    fn lower_expression(&mut self, context: &mut LoweringContext, expression: &Expression) -> Result<IrValue> {
+    fn lower_expression(
+        &mut self,
+        context: &mut LoweringContext,
+        expression: &Expression,
+    ) -> Result<IrValue> {
         match expression {
             Expression::Identifier(id) => {
                 if let Some(value_id) = context.lookup_variable(id.name) {
@@ -542,7 +583,8 @@ impl Lowering {
                 match value {
                     LiteralValue::Boolean(b) => Ok(IrValue::ConstantBool(*b)),
                     LiteralValue::Number(n) => {
-                        let num = n.parse::<u64>()
+                        let num = n
+                            .parse::<u64>()
                             .map_err(|_| anyhow!("Invalid number literal: {}", n))?;
                         Ok(IrValue::ConstantInt(num))
                     }
@@ -567,7 +609,12 @@ impl Lowering {
                 }
             }
 
-            Expression::BinaryOperation { left, operator, right, .. } => {
+            Expression::BinaryOperation {
+                left,
+                operator,
+                right,
+                ..
+            } => {
                 let left_val = self.lower_expression(context, left)?;
                 let right_val = self.lower_expression(context, right)?;
 
@@ -581,26 +628,59 @@ impl Lowering {
                     BinaryOperator::Div => Instruction::Div(result_value, left_val, right_val),
                     BinaryOperator::Mod => Instruction::Mod(result_value, left_val, right_val),
                     BinaryOperator::Pow => Instruction::Exp(result_value, left_val, right_val),
-                    BinaryOperator::Equal => Instruction::Compare(result_value, CompareOp::Equal, left_val, right_val),
-                    BinaryOperator::NotEqual => Instruction::Compare(result_value, CompareOp::NotEqual, left_val, right_val),
-                    BinaryOperator::Less => Instruction::Compare(result_value, CompareOp::LessThan, left_val, right_val),
-                    BinaryOperator::LessEqual => Instruction::Compare(result_value, CompareOp::LessEqual, left_val, right_val),
-                    BinaryOperator::Greater => Instruction::Compare(result_value, CompareOp::GreaterThan, left_val, right_val),
-                    BinaryOperator::GreaterEqual => Instruction::Compare(result_value, CompareOp::GreaterEqual, left_val, right_val),
-                    BinaryOperator::And => Instruction::LogicalAnd(result_value, left_val, right_val),
+                    BinaryOperator::Equal => {
+                        Instruction::Compare(result_value, CompareOp::Equal, left_val, right_val)
+                    }
+                    BinaryOperator::NotEqual => {
+                        Instruction::Compare(result_value, CompareOp::NotEqual, left_val, right_val)
+                    }
+                    BinaryOperator::Less => {
+                        Instruction::Compare(result_value, CompareOp::LessThan, left_val, right_val)
+                    }
+                    BinaryOperator::LessEqual => Instruction::Compare(
+                        result_value,
+                        CompareOp::LessEqual,
+                        left_val,
+                        right_val,
+                    ),
+                    BinaryOperator::Greater => Instruction::Compare(
+                        result_value,
+                        CompareOp::GreaterThan,
+                        left_val,
+                        right_val,
+                    ),
+                    BinaryOperator::GreaterEqual => Instruction::Compare(
+                        result_value,
+                        CompareOp::GreaterEqual,
+                        left_val,
+                        right_val,
+                    ),
+                    BinaryOperator::And => {
+                        Instruction::LogicalAnd(result_value, left_val, right_val)
+                    }
                     BinaryOperator::Or => Instruction::LogicalOr(result_value, left_val, right_val),
-                    BinaryOperator::BitwiseAnd => Instruction::And(result_value, left_val, right_val),
+                    BinaryOperator::BitwiseAnd => {
+                        Instruction::And(result_value, left_val, right_val)
+                    }
                     BinaryOperator::BitwiseOr => Instruction::Or(result_value, left_val, right_val),
-                    BinaryOperator::BitwiseXor => Instruction::Xor(result_value, left_val, right_val),
-                    BinaryOperator::ShiftLeft => Instruction::Shl(result_value, left_val, right_val),
-                    BinaryOperator::ShiftRight => Instruction::Shr(result_value, left_val, right_val),
+                    BinaryOperator::BitwiseXor => {
+                        Instruction::Xor(result_value, left_val, right_val)
+                    }
+                    BinaryOperator::ShiftLeft => {
+                        Instruction::Shl(result_value, left_val, right_val)
+                    }
+                    BinaryOperator::ShiftRight => {
+                        Instruction::Shr(result_value, left_val, right_val)
+                    }
                 };
 
                 context.add_instruction(instruction)?;
                 Ok(IrValue::Value(result_value))
             }
 
-            Expression::UnaryOperation { operator, operand, .. } => {
+            Expression::UnaryOperation {
+                operator, operand, ..
+            } => {
                 let operand_val = self.lower_expression(context, operand)?;
                 let result_type = self.infer_expression_type(context, operand)?;
                 let result_value = context.create_value(result_type);
@@ -619,7 +699,12 @@ impl Lowering {
                 Ok(IrValue::Value(result_value))
             }
 
-            Expression::Assignment { left, operator, right, .. } => {
+            Expression::Assignment {
+                left,
+                operator,
+                right,
+                ..
+            } => {
                 let right_val = self.lower_expression(context, right)?;
 
                 // Handle different assignment types
@@ -627,7 +712,10 @@ impl Lowering {
                     AssignmentOperator::Assign => {
                         if let Expression::Identifier(id) = left {
                             if let Some(var_value) = context.lookup_variable(id.name) {
-                                context.add_instruction(Instruction::Assign(var_value, right_val.clone()))?;
+                                context.add_instruction(Instruction::Assign(
+                                    var_value,
+                                    right_val.clone(),
+                                ))?;
                                 Ok(right_val)
                             } else {
                                 Err(anyhow!("Undefined variable in assignment: {}", id.name))
@@ -645,12 +733,27 @@ impl Lowering {
                         let result_value = context.create_value(result_type);
 
                         let op_instruction = match operator {
-                            AssignmentOperator::AddAssign => Instruction::Add(result_value, left_val, right_val),
-                            AssignmentOperator::SubAssign => Instruction::Sub(result_value, left_val, right_val),
-                            AssignmentOperator::MulAssign => Instruction::Mul(result_value, left_val, right_val),
-                            AssignmentOperator::DivAssign => Instruction::Div(result_value, left_val, right_val),
-                            AssignmentOperator::ModAssign => Instruction::Mod(result_value, left_val, right_val),
-                            _ => return Err(anyhow!("Unsupported assignment operator: {:?}", operator)),
+                            AssignmentOperator::AddAssign => {
+                                Instruction::Add(result_value, left_val, right_val)
+                            }
+                            AssignmentOperator::SubAssign => {
+                                Instruction::Sub(result_value, left_val, right_val)
+                            }
+                            AssignmentOperator::MulAssign => {
+                                Instruction::Mul(result_value, left_val, right_val)
+                            }
+                            AssignmentOperator::DivAssign => {
+                                Instruction::Div(result_value, left_val, right_val)
+                            }
+                            AssignmentOperator::ModAssign => {
+                                Instruction::Mod(result_value, left_val, right_val)
+                            }
+                            _ => {
+                                return Err(anyhow!(
+                                    "Unsupported assignment operator: {:?}",
+                                    operator
+                                ));
+                            }
                         };
 
                         context.add_instruction(op_instruction)?;
@@ -658,7 +761,10 @@ impl Lowering {
                         // Store result back to variable
                         if let Expression::Identifier(id) = left {
                             if let Some(var_value) = context.lookup_variable(id.name) {
-                                context.add_instruction(Instruction::Assign(var_value, IrValue::Value(result_value)))?;
+                                context.add_instruction(Instruction::Assign(
+                                    var_value,
+                                    IrValue::Value(result_value),
+                                ))?;
                             }
                         }
 
@@ -677,8 +783,12 @@ impl Lowering {
                     // Determine if this is array or mapping access
                     let base_type = self.infer_expression_type(context, base)?;
                     let instruction = match base_type {
-                        IrType::Array { .. } => Instruction::ArrayAccess(result_value, base_val, index_val),
-                        IrType::Mapping { .. } => Instruction::MappingAccess(result_value, base_val, index_val),
+                        IrType::Array { .. } => {
+                            Instruction::ArrayAccess(result_value, base_val, index_val)
+                        }
+                        IrType::Mapping { .. } => {
+                            Instruction::MappingAccess(result_value, base_val, index_val)
+                        }
                         _ => return Err(anyhow!("Index access on non-indexable type")),
                     };
 
@@ -689,7 +799,9 @@ impl Lowering {
                 }
             }
 
-            Expression::MemberAccess { expression, member, .. } => {
+            Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 let expr_val = self.lower_expression(context, expression)?;
                 let result_type = self.infer_member_access_type(expression, member.name)?;
                 let result_value = context.create_value(result_type);
@@ -703,7 +815,11 @@ impl Lowering {
                 Ok(IrValue::Value(result_value))
             }
 
-            Expression::FunctionCall { function, arguments, .. } => {
+            Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 let mut arg_values = Vec::new();
                 for arg in arguments {
                     arg_values.push(self.lower_expression(context, arg)?);
@@ -712,7 +828,9 @@ impl Lowering {
                 // Determine function name and type
                 let (func_name, _is_external) = match function {
                     Expression::Identifier(id) => (id.name.to_string(), false),
-                    Expression::MemberAccess { expression, member, .. } => {
+                    Expression::MemberAccess {
+                        expression, member, ..
+                    } => {
                         // External call: contract.function()
                         let contract_val = self.lower_expression(context, expression)?;
                         let result_type = self.infer_function_call_type(function)?;
@@ -733,11 +851,7 @@ impl Lowering {
                 let result_type = self.infer_function_call_type(function)?;
                 let result_value = context.create_value(result_type);
 
-                context.add_instruction(Instruction::Call(
-                    result_value,
-                    func_name,
-                    arg_values,
-                ))?;
+                context.add_instruction(Instruction::Call(result_value, func_name, arg_values))?;
 
                 Ok(IrValue::Value(result_value))
             }
@@ -772,9 +886,7 @@ impl Lowering {
                 })
             }
 
-            TypeName::UserDefined(id) => {
-                Ok(IrType::Contract(id.name.to_string()))
-            }
+            TypeName::UserDefined(id) => Ok(IrType::Contract(id.name.to_string())),
 
             TypeName::Array { base_type, length } => {
                 let element_type = Box::new(self.lower_type_name(base_type)?);
@@ -790,7 +902,10 @@ impl Lowering {
                 })
             }
 
-            TypeName::Mapping { key_type, value_type } => {
+            TypeName::Mapping {
+                key_type,
+                value_type,
+            } => {
                 let key_ir_type = Box::new(self.lower_type_name(key_type)?);
                 let value_ir_type = Box::new(self.lower_type_name(value_type)?);
                 Ok(IrType::Mapping {
@@ -799,7 +914,11 @@ impl Lowering {
                 })
             }
 
-            TypeName::Function { parameters, return_types, .. } => {
+            TypeName::Function {
+                parameters,
+                return_types,
+                ..
+            } => {
                 let mut param_types = Vec::new();
                 for param in parameters {
                     param_types.push(self.lower_type_name(param)?);
@@ -819,7 +938,11 @@ impl Lowering {
     }
 
     /// Helper methods for type inference and analysis
-    fn infer_expression_type(&self, context: &LoweringContext, expr: &Expression) -> Result<IrType> {
+    fn infer_expression_type(
+        &self,
+        context: &LoweringContext,
+        expr: &Expression,
+    ) -> Result<IrType> {
         match expr {
             Expression::Identifier(id) => {
                 // Look up variable type from context
@@ -841,13 +964,16 @@ impl Lowering {
                     _ => Ok(IrType::Uint(256)),
                 }
             }
-            Expression::MemberAccess { expression, member, .. } => {
+            Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 // Get the type of the base expression
                 let base_type = self.infer_expression_type(context, expression)?;
                 match base_type {
                     IrType::Struct { fields, .. } => {
                         // Look up field type
-                        fields.iter()
+                        fields
+                            .iter()
                             .find(|(name, _)| name == member.name)
                             .map(|(_, ty)| ty.clone())
                             .ok_or_else(|| anyhow!("Unknown field: {}", member.name))
@@ -879,22 +1005,32 @@ impl Lowering {
         Ok(IrType::Uint(256))
     }
 
-    fn lower_complex_assignment(&mut self, _context: &mut LoweringContext, _left: &Expression, _right_val: IrValue) -> Result<()> {
+    fn lower_complex_assignment(
+        &mut self,
+        _context: &mut LoweringContext,
+        _left: &Expression,
+        _right_val: IrValue,
+    ) -> Result<()> {
         // For now, simplified implementation
         Ok(())
     }
 
     fn is_terminator_statement(&self, statement: &Statement) -> bool {
-        matches!(statement,
-            Statement::Return { .. } |
-            Statement::Break { .. } |
-            Statement::Continue { .. } |
-            Statement::RevertStatement { .. } |
-            Statement::Throw { .. }
+        matches!(
+            statement,
+            Statement::Return { .. }
+                | Statement::Break { .. }
+                | Statement::Continue { .. }
+                | Statement::RevertStatement { .. }
+                | Statement::Throw { .. }
         )
     }
 
-    fn ensure_function_return(&mut self, context: &mut LoweringContext, return_types: &[IrType]) -> Result<()> {
+    fn ensure_function_return(
+        &mut self,
+        context: &mut LoweringContext,
+        return_types: &[IrType],
+    ) -> Result<()> {
         // Add implicit return if function doesn't end with terminator
         if return_types.is_empty() {
             context.add_instruction(Instruction::Return(None))?;

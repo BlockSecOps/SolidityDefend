@@ -45,8 +45,14 @@ fn main() {
     }
 
     // Target information
-    println!("cargo:rustc-env=TARGET={}", std::env::var("TARGET").unwrap_or_default());
-    println!("cargo:rustc-env=PROFILE={}", std::env::var("PROFILE").unwrap_or_default());
+    println!(
+        "cargo:rustc-env=TARGET={}",
+        std::env::var("TARGET").unwrap_or_default()
+    );
+    println!(
+        "cargo:rustc-env=PROFILE={}",
+        std::env::var("PROFILE").unwrap_or_default()
+    );
 
     // Generate version suffix for pre-releases
     let version_suffix = generate_version_suffix();
@@ -105,9 +111,7 @@ fn get_build_number() -> Result<String, Box<dyn std::error::Error>> {
 }
 
 fn get_rust_version() -> Result<String, Box<dyn std::error::Error>> {
-    let output = Command::new("rustc")
-        .args(["--version"])
-        .output()?;
+    let output = Command::new("rustc").args(["--version"]).output()?;
 
     if output.status.success() {
         let version = String::from_utf8(output.stdout)?;

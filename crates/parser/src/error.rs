@@ -1,6 +1,6 @@
-use thiserror::Error;
 use ast::SourceLocation;
 use std::path::PathBuf;
+use thiserror::Error;
 
 /// Parse error with source location information
 #[derive(Error, Debug, Clone)]
@@ -28,20 +28,13 @@ pub enum ParseError {
     SolangError(String),
 
     #[error("I/O error reading file {file:?}: {error}")]
-    IoError {
-        file: PathBuf,
-        error: String,
-    },
+    IoError { file: PathBuf, error: String },
 
     #[error("Invalid UTF-8 in file {file:?}")]
-    InvalidUtf8 {
-        file: PathBuf,
-    },
+    InvalidUtf8 { file: PathBuf },
 
     #[error("File not found: {file:?}")]
-    FileNotFound {
-        file: PathBuf,
-    },
+    FileNotFound { file: PathBuf },
 
     #[error("Arena allocation failed")]
     ArenaAllocationFailed,

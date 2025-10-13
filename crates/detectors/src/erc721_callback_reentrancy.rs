@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-721/ERC-1155 callback reentrancy vulnerabilities
 pub struct Erc721CallbackReentrancyDetector {
@@ -15,7 +15,8 @@ impl Erc721CallbackReentrancyDetector {
             base: BaseDetector::new(
                 DetectorId("erc721-callback-reentrancy".to_string()),
                 "ERC-721/1155 Callback Reentrancy".to_string(),
-                "Detects contracts vulnerable to reentrancy via ERC-721/1155 receiver callbacks".to_string(),
+                "Detects contracts vulnerable to reentrancy via ERC-721/1155 receiver callbacks"
+                    .to_string(),
                 vec![DetectorCategory::Reentrancy, DetectorCategory::Logic],
                 Severity::High,
             ),
@@ -56,8 +57,7 @@ impl Detector for Erc721CallbackReentrancyDetector {
                 let message = format!(
                     "Function '{}' is vulnerable to NFT callback reentrancy. {} \
                     Real-world example: HypeBears security incident.",
-                    function.name.name,
-                    issue
+                    function.name.name, issue
                 );
 
                 let finding = self.base.create_finding(
@@ -89,7 +89,11 @@ impl Detector for Erc721CallbackReentrancyDetector {
 }
 
 impl Erc721CallbackReentrancyDetector {
-    fn check_nft_callback_reentrancy(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_nft_callback_reentrancy(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -97,48 +101,55 @@ impl Erc721CallbackReentrancyDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for reentrancy guard
-        let has_reentrancy_guard = func_source.contains("nonReentrant") ||
-                                  function.modifiers.iter().any(|m| {
-                                      m.name.name.to_lowercase().contains("nonreentrant")
-                                  });
+        let has_reentrancy_guard = func_source.contains("nonReentrant")
+            || function
+                .modifiers
+                .iter()
+                .any(|m| m.name.name.to_lowercase().contains("nonreentrant"));
 
         // Check for safe NFT operations
-        let has_safe_ops = func_source.contains("_safeMint(") ||
-                          func_source.contains(".safeMint(") ||
-                          func_source.contains("_safeTransfer(") ||
-                          func_source.contains(".safeTransferFrom(") ||
-                          func_source.contains("_safeBatchMint(") ||
-                          func_source.contains(".safeBatchTransferFrom(");
+        let has_safe_ops = func_source.contains("_safeMint(")
+            || func_source.contains(".safeMint(")
+            || func_source.contains("_safeTransfer(")
+            || func_source.contains(".safeTransferFrom(")
+            || func_source.contains("_safeBatchMint(")
+            || func_source.contains(".safeBatchTransferFrom(");
 
         if has_safe_ops && !has_reentrancy_guard {
             // Check if state changes after safe operation
             let state_after_safe_op = self.has_state_change_after_safe_op(&func_source);
 
             if state_after_safe_op {
-                return Some("State changes after safe NFT operation without reentrancy guard".to_string());
+                return Some(
+                    "State changes after safe NFT operation without reentrancy guard".to_string(),
+                );
             }
 
             // Check for mint operations specifically
             if func_source.contains("Mint") || func_source.contains("mint") {
-                return Some("Uses safe mint without reentrancy guard, can bypass mint limits".to_string());
+                return Some(
+                    "Uses safe mint without reentrancy guard, can bypass mint limits".to_string(),
+                );
             }
 
             return Some("Uses safe NFT operations without reentrancy guard".to_string());
         }
 
         // Check if implementing receiver callbacks
-        if function.name.name == "onERC721Received" ||
-           function.name.name == "onERC1155Received" ||
-           function.name.name == "onERC1155BatchReceived" {
+        if function.name.name == "onERC721Received"
+            || function.name.name == "onERC1155Received"
+            || function.name.name == "onERC1155BatchReceived"
+        {
+            let has_external_calls =
+                func_source.contains(".call") || func_source.contains(".transfer(");
 
-            let has_external_calls = func_source.contains(".call") ||
-                                    func_source.contains(".transfer(");
-
-            let has_state_changes = func_source.contains(" = ") &&
-                                   !func_source.contains("==");
+            let has_state_changes = func_source.contains(" = ") && !func_source.contains("==");
 
             if (has_external_calls || has_state_changes) && !has_reentrancy_guard {
-                return Some(format!("Callback '{}' makes external calls or modifies state without reentrancy guard", function.name.name));
+                return Some(format!(
+                    "Callback '{}' makes external calls or modifies state without reentrancy guard",
+                    function.name.name
+                ));
             }
         }
 
@@ -156,9 +167,10 @@ impl Erc721CallbackReentrancyDetector {
 
             if found_safe_op {
                 // Look for storage writes
-                if (line.contains(" = ") || line.contains("+=") || line.contains("-=")) &&
-                   !line.contains("==") &&
-                   !line.starts_with("//") {
+                if (line.contains(" = ") || line.contains("+=") || line.contains("-="))
+                    && !line.contains("==")
+                    && !line.starts_with("//")
+                {
                     return true;
                 }
 

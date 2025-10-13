@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault withdrawal DOS vulnerabilities
 pub struct VaultWithdrawalDosDetector {
@@ -56,28 +56,29 @@ impl Detector for VaultWithdrawalDosDetector {
                 let message = format!(
                     "Function '{}' is vulnerable to withdrawal DOS attack. {} \
                     Attacker can block withdrawals, causing funds to be locked indefinitely.",
-                    function.name.name,
-                    dos_issue
+                    function.name.name, dos_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
-                .with_fix_suggestion(format!(
-                    "Protect '{}' from withdrawal DOS. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                    .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
+                    .with_fix_suggestion(format!(
+                        "Protect '{}' from withdrawal DOS. \
                     Solutions: (1) Implement withdrawal limits/caps per transaction, \
                     (2) Add circuit breakers for emergency withdrawals, \
                     (3) Avoid unbounded loops in withdrawal queue processing, \
                     (4) Implement partial withdrawal support, \
                     (5) Use pull-over-push pattern for failed withdrawals.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for VaultWithdrawalDosDetector {
 
 impl VaultWithdrawalDosDetector {
     /// Check for withdrawal DOS vulnerabilities
-    fn check_withdrawal_dos(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_withdrawal_dos(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,23 +106,23 @@ impl VaultWithdrawalDosDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify withdrawal/redeem functions
-        let is_withdrawal_function = function.name.name.to_lowercase().contains("withdraw") ||
-                                    function.name.name.to_lowercase().contains("redeem") ||
-                                    function.name.name.to_lowercase().contains("claim");
+        let is_withdrawal_function = function.name.name.to_lowercase().contains("withdraw")
+            || function.name.name.to_lowercase().contains("redeem")
+            || function.name.name.to_lowercase().contains("claim");
 
         if !is_withdrawal_function {
             return None;
         }
 
         // Pattern 1: Unbounded withdrawal queue processing
-        let has_unbounded_loop = (func_source.contains("for (") || func_source.contains("while (")) &&
-                                 (func_source.contains("withdrawalQueue") ||
-                                  func_source.contains("requests") ||
-                                  func_source.contains("queue"));
+        let has_unbounded_loop = (func_source.contains("for (") || func_source.contains("while ("))
+            && (func_source.contains("withdrawalQueue")
+                || func_source.contains("requests")
+                || func_source.contains("queue"));
 
-        let has_loop_limit = func_source.contains("maxIterations") ||
-                            func_source.contains("limit") ||
-                            func_source.contains("MAX_");
+        let has_loop_limit = func_source.contains("maxIterations")
+            || func_source.contains("limit")
+            || func_source.contains("MAX_");
 
         if has_unbounded_loop && !has_loop_limit {
             return Some(format!(
@@ -127,13 +132,12 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 2: Withdrawal requires successful external call
-        let has_external_call = func_source.contains(".transfer(") ||
-                               func_source.contains(".call") ||
-                               func_source.contains(".send(");
+        let has_external_call = func_source.contains(".transfer(")
+            || func_source.contains(".call")
+            || func_source.contains(".send(");
 
-        let checks_call_success = func_source.contains("require(") &&
-                                 (func_source.contains(".transfer(") ||
-                                  func_source.contains(".call"));
+        let checks_call_success = func_source.contains("require(")
+            && (func_source.contains(".transfer(") || func_source.contains(".call"));
 
         if has_external_call && checks_call_success {
             return Some(format!(
@@ -143,12 +147,13 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 3: Missing withdrawal cap or limit
-        let has_withdrawal_cap = func_source.contains("withdrawalCap") ||
-                                func_source.contains("maxWithdrawal") ||
-                                func_source.contains("withdrawalLimit") ||
-                                func_source.contains("MAX_WITHDRAW");
+        let has_withdrawal_cap = func_source.contains("withdrawalCap")
+            || func_source.contains("maxWithdrawal")
+            || func_source.contains("withdrawalLimit")
+            || func_source.contains("MAX_WITHDRAW");
 
-        let processes_large_amount = func_source.contains("amount") || func_source.contains("assets");
+        let processes_large_amount =
+            func_source.contains("amount") || func_source.contains("assets");
 
         if !has_withdrawal_cap && processes_large_amount && is_withdrawal_function {
             return Some(format!(
@@ -158,12 +163,12 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 4: No circuit breaker or emergency withdrawal
-        let has_circuit_breaker = func_source.contains("paused") ||
-                                 func_source.contains("emergency") ||
-                                 func_source.contains("circuitBreaker");
+        let has_circuit_breaker = func_source.contains("paused")
+            || func_source.contains("emergency")
+            || func_source.contains("circuitBreaker");
 
-        let is_public_withdraw = function.visibility == ast::Visibility::Public ||
-                                function.visibility == ast::Visibility::External;
+        let is_public_withdraw = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
 
         if !has_circuit_breaker && is_public_withdraw {
             return Some(format!(
@@ -173,19 +178,19 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 5: Accounting mismatch that can cause reverts
-        let uses_total_assets = func_source.contains("totalAssets()") ||
-                               func_source.contains("totalAssets");
+        let uses_total_assets =
+            func_source.contains("totalAssets()") || func_source.contains("totalAssets");
 
-        let uses_total_supply = func_source.contains("totalSupply()") ||
-                               func_source.contains("totalSupply");
+        let uses_total_supply =
+            func_source.contains("totalSupply()") || func_source.contains("totalSupply");
 
         let has_division = func_source.contains(" / ");
 
         if uses_total_assets && uses_total_supply && has_division {
             // Check for potential accounting mismatch
-            let checks_zero_division = func_source.contains("require(totalSupply") ||
-                                      func_source.contains("if (totalSupply == 0)") ||
-                                      func_source.contains("totalSupply > 0");
+            let checks_zero_division = func_source.contains("require(totalSupply")
+                || func_source.contains("if (totalSupply == 0)")
+                || func_source.contains("totalSupply > 0");
 
             if !checks_zero_division {
                 return Some(format!(
@@ -196,13 +201,13 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 6: Queue processing without partial execution
-        let has_queue_processing = func_source.contains("queue") ||
-                                  func_source.contains("pendingWithdrawals") ||
-                                  func_source.contains("requests");
+        let has_queue_processing = func_source.contains("queue")
+            || func_source.contains("pendingWithdrawals")
+            || func_source.contains("requests");
 
-        let supports_partial = func_source.contains("partial") ||
-                              func_source.contains("batched") ||
-                              func_source.contains("chunk");
+        let supports_partial = func_source.contains("partial")
+            || func_source.contains("batched")
+            || func_source.contains("chunk");
 
         if has_queue_processing && !supports_partial {
             return Some(format!(
@@ -212,10 +217,11 @@ impl VaultWithdrawalDosDetector {
         }
 
         // Pattern 7: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("DOS") ||
-            func_source.contains("denial") ||
-            func_source.contains("lock")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("DOS")
+                || func_source.contains("denial")
+                || func_source.contains("lock"))
+        {
             return Some(format!(
                 "Vault withdrawal DOS vulnerability marker detected"
             ));

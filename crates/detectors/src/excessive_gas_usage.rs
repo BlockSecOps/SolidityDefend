@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for patterns causing excessive gas consumption
 pub struct ExcessiveGasUsageDetector {
@@ -57,27 +57,28 @@ impl Detector for ExcessiveGasUsageDetector {
                     let message = format!(
                         "Function '{}' contains excessive gas usage pattern. {} \
                         Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
-                        function.name.name,
-                        issue_desc
+                        function.name.name, issue_desc
                     );
 
-                    let finding = self.base.create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                    .with_fix_suggestion(format!(
-                        "Optimize gas usage in '{}'. \
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            function.name.location.start().line() as u32,
+                            function.name.location.start().column() as u32,
+                            function.name.name.len() as u32,
+                        )
+                        .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                        .with_fix_suggestion(format!(
+                            "Optimize gas usage in '{}'. \
                         Consider: (1) Move storage operations outside loops, \
                         (2) Cache storage reads in memory, \
                         (3) Use events instead of storage for historical data, \
                         (4) Pack struct variables efficiently, \
                         (5) Use memory arrays for temporary data.",
-                        function.name.name
-                    ));
+                            function.name.name
+                        ));
 
                     findings.push(finding);
                 }
@@ -93,7 +94,11 @@ impl Detector for ExcessiveGasUsageDetector {
 }
 
 impl ExcessiveGasUsageDetector {
-    fn check_excessive_gas(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<Vec<String>> {
+    fn check_excessive_gas(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<Vec<String>> {
         if function.body.is_none() {
             return None;
         }
@@ -104,15 +109,21 @@ impl ExcessiveGasUsageDetector {
         // Pattern 1: Storage operations in loops
         if self.has_loop(&func_source) {
             if func_source.contains(".push(") {
-                issues.push("Storage array push operation inside loop. Extremely gas-intensive".to_string());
+                issues.push(
+                    "Storage array push operation inside loop. Extremely gas-intensive".to_string(),
+                );
             }
 
             if self.has_storage_write_in_loop(&func_source) {
-                issues.push("Storage write operation inside loop. Consider using memory array".to_string());
+                issues.push(
+                    "Storage write operation inside loop. Consider using memory array".to_string(),
+                );
             }
 
             if func_source.contains("delete ") {
-                issues.push("Storage deletion inside loop. Each delete costs significant gas".to_string());
+                issues.push(
+                    "Storage deletion inside loop. Each delete costs significant gas".to_string(),
+                );
             }
         }
 
@@ -127,19 +138,27 @@ impl ExcessiveGasUsageDetector {
 
         // Pattern 3: String concatenation in loop or multiple times
         if self.has_loop(&func_source) && func_source.contains("string.concat") {
-            issues.push("String concatenation in loop. Use bytes for efficient concatenation".to_string());
+            issues.push(
+                "String concatenation in loop. Use bytes for efficient concatenation".to_string(),
+            );
         }
 
         // Pattern 4: Dynamic array length in loop condition
         if func_source.contains("for") && func_source.contains(".length") {
             if !func_source.contains("uint len =") && !func_source.contains("uint256 len =") {
-                issues.push("Array length read in every loop iteration. Cache length in local variable".to_string());
+                issues.push(
+                    "Array length read in every loop iteration. Cache length in local variable"
+                        .to_string(),
+                );
             }
         }
 
         // Pattern 5: Emitting events in loops
         if self.has_loop(&func_source) && func_source.contains("emit ") {
-            issues.push("Event emission inside loop. Can cause excessive gas costs for large arrays".to_string());
+            issues.push(
+                "Event emission inside loop. Can cause excessive gas costs for large arrays"
+                    .to_string(),
+            );
         }
 
         if issues.is_empty() {
@@ -150,8 +169,10 @@ impl ExcessiveGasUsageDetector {
     }
 
     fn has_loop(&self, source: &str) -> bool {
-        source.contains("for (") || source.contains("for(") ||
-        source.contains("while (") || source.contains("while(")
+        source.contains("for (")
+            || source.contains("for(")
+            || source.contains("while (")
+            || source.contains("while(")
     }
 
     fn has_storage_write_in_loop(&self, source: &str) -> bool {
@@ -174,11 +195,12 @@ impl ExcessiveGasUsageDetector {
                 brace_count -= trimmed.matches('}').count() as i32;
 
                 // Look for storage writes (simplified)
-                if trimmed.contains(" = ") &&
-                   !trimmed.contains("memory") &&
-                   !trimmed.contains("uint") &&
-                   !trimmed.contains("address") &&
-                   !trimmed.starts_with("//") {
+                if trimmed.contains(" = ")
+                    && !trimmed.contains("memory")
+                    && !trimmed.contains("uint")
+                    && !trimmed.contains("address")
+                    && !trimmed.starts_with("//")
+                {
                     return true;
                 }
 

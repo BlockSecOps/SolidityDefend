@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 
-use ir::{BlockId, ValueId, Instruction};
-use cfg::ControlFlowGraph;
 use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, DefUseAnalysis, utils};
+use cfg::ControlFlowGraph;
+use ir::{BlockId, Instruction, ValueId};
 
 /// Live variables analysis
 ///
@@ -66,7 +66,8 @@ impl LiveVariablesState {
 
     /// Intersection with another state
     pub fn intersect_with(&mut self, other: &Self) {
-        self.live_variables.retain(|var| other.live_variables.contains(var));
+        self.live_variables
+            .retain(|var| other.live_variables.contains(var));
     }
 
     /// Get the number of live variables
@@ -118,7 +119,10 @@ impl<'a> LiveVariables<'a> {
     }
 
     /// Compute use and def sets for a basic block
-    pub fn compute_use_def(&self, instructions: &[Instruction]) -> (HashSet<ValueId>, HashSet<ValueId>) {
+    pub fn compute_use_def(
+        &self,
+        instructions: &[Instruction],
+    ) -> (HashSet<ValueId>, HashSet<ValueId>) {
         let mut use_set = HashSet::new();
         let mut def_set = HashSet::new();
 
@@ -142,21 +146,34 @@ impl<'a> LiveVariables<'a> {
     }
 
     /// Get live variables at the entry of a block
-    pub fn get_live_variables_entry(&self, result: &DataFlowResult<LiveVariablesState>, block_id: BlockId) -> HashSet<ValueId> {
-        result.get_entry_state(block_id)
+    pub fn get_live_variables_entry(
+        &self,
+        result: &DataFlowResult<LiveVariablesState>,
+        block_id: BlockId,
+    ) -> HashSet<ValueId> {
+        result
+            .get_entry_state(block_id)
             .map(|state| state.live_variables.clone())
             .unwrap_or_default()
     }
 
     /// Get live variables at the exit of a block
-    pub fn get_live_variables_exit(&self, result: &DataFlowResult<LiveVariablesState>, block_id: BlockId) -> HashSet<ValueId> {
-        result.get_exit_state(block_id)
+    pub fn get_live_variables_exit(
+        &self,
+        result: &DataFlowResult<LiveVariablesState>,
+        block_id: BlockId,
+    ) -> HashSet<ValueId> {
+        result
+            .get_exit_state(block_id)
             .map(|state| state.live_variables.clone())
             .unwrap_or_default()
     }
 
     /// Find dead variables (variables that are defined but never used)
-    pub fn find_dead_variables(&self, result: &DataFlowResult<LiveVariablesState>) -> HashSet<ValueId> {
+    pub fn find_dead_variables(
+        &self,
+        result: &DataFlowResult<LiveVariablesState>,
+    ) -> HashSet<ValueId> {
         let mut dead_variables = HashSet::new();
 
         for (block_id, block_node) in self.cfg.basic_blocks() {
@@ -205,7 +222,10 @@ impl<'a> LiveVariables<'a> {
 
         // Find potentially uninitialized variables
         let mut potentially_uninitialized = HashSet::new();
-        let entry_block = self.cfg.entry_block_id().unwrap_or_else(|| panic!("CFG must have an entry block"));
+        let entry_block = self
+            .cfg
+            .entry_block_id()
+            .unwrap_or_else(|| panic!("CFG must have an entry block"));
         let entry_live = self.get_live_variables_entry(&result, entry_block);
 
         for var in &entry_live {
@@ -221,7 +241,9 @@ impl<'a> LiveVariables<'a> {
         }
 
         // Compute maximum number of simultaneously live variables
-        let max_live_count = result.exit_states.values()
+        let max_live_count = result
+            .exit_states
+            .values()
             .map(|state| state.count())
             .max()
             .unwrap_or(0);
@@ -266,23 +288,37 @@ impl<'a> LiveVariables<'a> {
         }
 
         // Liveness statistics
-        let max_live = result.exit_states.values()
+        let max_live = result
+            .exit_states
+            .values()
             .map(|state| state.count())
             .max()
             .unwrap_or(0);
-        let avg_live = result.exit_states.values()
+        let avg_live = result
+            .exit_states
+            .values()
             .map(|state| state.count())
-            .sum::<usize>() as f64 / result.exit_states.len() as f64;
+            .sum::<usize>() as f64
+            / result.exit_states.len() as f64;
 
         report.push_str(&format!("\nLiveness Statistics:\n"));
-        report.push_str(&format!("  Maximum simultaneously live variables: {}\n", max_live));
-        report.push_str(&format!("  Average live variables per block: {:.2}\n", avg_live));
+        report.push_str(&format!(
+            "  Maximum simultaneously live variables: {}\n",
+            max_live
+        ));
+        report.push_str(&format!(
+            "  Average live variables per block: {:.2}\n",
+            avg_live
+        ));
 
         report
     }
 
     /// Compute register pressure (useful for optimization)
-    pub fn compute_register_pressure(&self, result: &DataFlowResult<LiveVariablesState>) -> HashMap<BlockId, usize> {
+    pub fn compute_register_pressure(
+        &self,
+        result: &DataFlowResult<LiveVariablesState>,
+    ) -> HashMap<BlockId, usize> {
         let mut pressure = HashMap::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
@@ -294,7 +330,10 @@ impl<'a> LiveVariables<'a> {
     }
 
     /// Find variables that interfere with each other (live at the same time)
-    pub fn compute_interference_graph(&self, result: &DataFlowResult<LiveVariablesState>) -> HashMap<ValueId, HashSet<ValueId>> {
+    pub fn compute_interference_graph(
+        &self,
+        result: &DataFlowResult<LiveVariablesState>,
+    ) -> HashMap<ValueId, HashSet<ValueId>> {
         let mut interference = HashMap::new();
 
         for (block_id, _) in self.cfg.basic_blocks() {
@@ -304,7 +343,10 @@ impl<'a> LiveVariables<'a> {
             for var1 in &live_vars {
                 for var2 in &live_vars {
                     if var1 != var2 {
-                        interference.entry(*var1).or_insert_with(HashSet::new).insert(*var2);
+                        interference
+                            .entry(*var1)
+                            .or_insert_with(HashSet::new)
+                            .insert(*var2);
                     }
                 }
             }
@@ -348,7 +390,12 @@ impl<'a> DataFlowAnalysis for LiveVariables<'a> {
         new_state
     }
 
-    fn transfer_block(&self, state: &Self::State, _block_id: BlockId, instructions: &[Instruction]) -> Self::State {
+    fn transfer_block(
+        &self,
+        state: &Self::State,
+        _block_id: BlockId,
+        instructions: &[Instruction],
+    ) -> Self::State {
         let mut current_state = state.clone();
 
         // Process instructions in reverse order for backward analysis
@@ -424,12 +471,20 @@ mod tests {
 
         // Block 2: dead = 42 (dead variable)
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::ConstantInt(42), IrValue::ConstantInt(0)), // dead = 42
+            Instruction::Add(
+                ValueId(3),
+                IrValue::ConstantInt(42),
+                IrValue::ConstantInt(0),
+            ), // dead = 42
         ];
 
         // Block 3: return x + y
         let instructions3 = vec![
-            Instruction::Add(ValueId(4), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // temp = x + y
+            Instruction::Add(
+                ValueId(4),
+                IrValue::Value(ValueId(1)),
+                IrValue::Value(ValueId(2)),
+            ), // temp = x + y
             Instruction::Return(Some(IrValue::Value(ValueId(4)))), // return temp
         ];
 
@@ -438,8 +493,10 @@ mod tests {
         cfg.add_block(block3, instructions3);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }
@@ -510,28 +567,50 @@ mod tests {
         let branch2 = BlockId(2);
         let merge = BlockId(3);
 
-        cfg.add_block(entry, vec![
-            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
-            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
-        ]);
+        cfg.add_block(
+            entry,
+            vec![
+                Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+                Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // y = 2
+            ],
+        );
 
-        cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)), // use x
-        ]);
+        cfg.add_block(
+            branch1,
+            vec![
+                Instruction::Add(
+                    ValueId(3),
+                    IrValue::Value(ValueId(1)),
+                    IrValue::ConstantInt(1),
+                ), // use x
+            ],
+        );
 
-        cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(4), IrValue::Value(ValueId(2)), IrValue::ConstantInt(1)), // use y
-        ]);
+        cfg.add_block(
+            branch2,
+            vec![
+                Instruction::Add(
+                    ValueId(4),
+                    IrValue::Value(ValueId(2)),
+                    IrValue::ConstantInt(1),
+                ), // use y
+            ],
+        );
 
-        cfg.add_block(merge, vec![
-            Instruction::Return(Some(IrValue::ConstantInt(0))), // return 0
-        ]);
+        cfg.add_block(
+            merge,
+            vec![
+                Instruction::Return(Some(IrValue::ConstantInt(0))), // return 0
+            ],
+        );
 
         cfg.set_entry_block(entry).unwrap();
         cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
         cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
-        cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(branch1, merge, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(branch2, merge, EdgeType::Unconditional)
+            .unwrap();
 
         let mut analysis = LiveVariables::new(&cfg);
         let result = analysis.analyze().unwrap();

@@ -76,11 +76,7 @@ impl VersionInfo {
         }
 
         // API version for compatibility (major.minor)
-        let api_version = version
-            .split('.')
-            .take(2)
-            .collect::<Vec<_>>()
-            .join(".");
+        let api_version = version.split('.').take(2).collect::<Vec<_>>().join(".");
 
         Self {
             version,
@@ -143,11 +139,7 @@ impl VersionInfo {
 
     /// Check API compatibility with another version
     pub fn is_api_compatible(&self, other: &str) -> bool {
-        let other_api = other
-            .split('.')
-            .take(2)
-            .collect::<Vec<_>>()
-            .join(".");
+        let other_api = other.split('.').take(2).collect::<Vec<_>>().join(".");
         self.api_version == other_api
     }
 
@@ -233,9 +225,15 @@ pub mod compare {
             return Err(format!("Invalid version format: {}", version));
         }
 
-        let major = parts[0].parse().map_err(|_| format!("Invalid major version: {}", parts[0]))?;
-        let minor = parts[1].parse().map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
-        let patch = parts[2].parse().map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
+        let major = parts[0]
+            .parse()
+            .map_err(|_| format!("Invalid major version: {}", parts[0]))?;
+        let minor = parts[1]
+            .parse()
+            .map_err(|_| format!("Invalid minor version: {}", parts[1]))?;
+        let patch = parts[2]
+            .parse()
+            .map_err(|_| format!("Invalid patch version: {}", parts[2]))?;
 
         Ok((major, minor, patch))
     }

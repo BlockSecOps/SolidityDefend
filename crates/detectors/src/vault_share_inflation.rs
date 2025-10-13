@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for vault share inflation attacks (first depositor attack)
 pub struct VaultShareInflationDetector {
@@ -57,8 +57,7 @@ impl Detector for VaultShareInflationDetector {
                     "Function '{}' is vulnerable to vault share inflation attack. {} \
                     First depositor can manipulate share price by depositing 1 wei, \
                     donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
-                    function.name.name,
-                    inflation_issue
+                    function.name.name, inflation_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -93,7 +92,11 @@ impl Detector for VaultShareInflationDetector {
 
 impl VaultShareInflationDetector {
     /// Check for share inflation vulnerabilities
-    fn check_share_inflation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_share_inflation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,19 +104,19 @@ impl VaultShareInflationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify deposit/mint functions in vault-like contracts
-        let is_deposit_function = func_source.contains("deposit") ||
-                                 function.name.name.to_lowercase().contains("deposit") ||
-                                 func_source.contains("mint(") ||
-                                 function.name.name.to_lowercase().contains("mint");
+        let is_deposit_function = func_source.contains("deposit")
+            || function.name.name.to_lowercase().contains("deposit")
+            || func_source.contains("mint(")
+            || function.name.name.to_lowercase().contains("mint");
 
         if !is_deposit_function {
             return None;
         }
 
         // Check if function calculates shares
-        let calculates_shares = func_source.contains("shares") ||
-                               func_source.contains("totalSupply") ||
-                               func_source.contains("totalAssets");
+        let calculates_shares = func_source.contains("shares")
+            || func_source.contains("totalSupply")
+            || func_source.contains("totalAssets");
 
         if !calculates_shares {
             return None;
@@ -136,11 +139,11 @@ impl VaultShareInflationDetector {
         }
 
         // Pattern 2: No minimum deposit requirement
-        let lacks_minimum = calculates_shares &&
-                           !func_source.contains("MINIMUM_") &&
-                           !func_source.contains("require(amount >=") &&
-                           !func_source.contains("require(assets >=") &&
-                           !func_source.contains("MIN_DEPOSIT");
+        let lacks_minimum = calculates_shares
+            && !func_source.contains("MINIMUM_")
+            && !func_source.contains("require(amount >=")
+            && !func_source.contains("require(assets >=")
+            && !func_source.contains("MIN_DEPOSIT");
 
         if lacks_minimum {
             return Some(format!(
@@ -150,14 +153,14 @@ impl VaultShareInflationDetector {
         }
 
         // Pattern 3: totalSupply() == 0 case not handled specially
-        let checks_total_supply = func_source.contains("totalSupply") ||
-                                 func_source.contains("totalSupply()");
+        let checks_total_supply =
+            func_source.contains("totalSupply") || func_source.contains("totalSupply()");
 
-        let lacks_bootstrap_protection = checks_total_supply &&
-                                         !func_source.contains("if (totalSupply() == 0)") &&
-                                         !func_source.contains("if (totalSupply == 0)") &&
-                                         !func_source.contains("totalSupply() > 0") &&
-                                         !func_source.contains("INITIAL_");
+        let lacks_bootstrap_protection = checks_total_supply
+            && !func_source.contains("if (totalSupply() == 0)")
+            && !func_source.contains("if (totalSupply == 0)")
+            && !func_source.contains("totalSupply() > 0")
+            && !func_source.contains("INITIAL_");
 
         if lacks_bootstrap_protection {
             return Some(format!(
@@ -167,16 +170,16 @@ impl VaultShareInflationDetector {
         }
 
         // Pattern 4: No dead shares minted at deployment
-        let is_constructor = function.name.name == "constructor" ||
-                            func_source.contains("constructor");
+        let is_constructor =
+            function.name.name == "constructor" || func_source.contains("constructor");
 
         let is_initializer = function.name.name.to_lowercase().contains("initialize");
 
-        let lacks_dead_shares = (is_constructor || is_initializer || is_deposit_function) &&
-                               calculates_shares &&
-                               !func_source.contains("_mint(address(0)") &&
-                               !func_source.contains("mint(DEAD") &&
-                               !func_source.contains("deadShares");
+        let lacks_dead_shares = (is_constructor || is_initializer || is_deposit_function)
+            && calculates_shares
+            && !func_source.contains("_mint(address(0)")
+            && !func_source.contains("mint(DEAD")
+            && !func_source.contains("deadShares");
 
         if lacks_dead_shares && is_deposit_function {
             return Some(format!(
@@ -186,14 +189,14 @@ impl VaultShareInflationDetector {
         }
 
         // Pattern 5: Direct asset balance check without accounting
-        let uses_balance_check = func_source.contains("balanceOf(address(this))") ||
-                                func_source.contains("token.balanceOf(address(this))") ||
-                                func_source.contains(".balanceOf(address(this))");
+        let uses_balance_check = func_source.contains("balanceOf(address(this))")
+            || func_source.contains("token.balanceOf(address(this))")
+            || func_source.contains(".balanceOf(address(this))");
 
-        let lacks_internal_accounting = uses_balance_check &&
-                                       !func_source.contains("totalAssets") &&
-                                       !func_source.contains("totalDeposited") &&
-                                       !func_source.contains("internalBalance");
+        let lacks_internal_accounting = uses_balance_check
+            && !func_source.contains("totalAssets")
+            && !func_source.contains("totalDeposited")
+            && !func_source.contains("internalBalance");
 
         if lacks_internal_accounting {
             return Some(format!(
@@ -203,10 +206,11 @@ impl VaultShareInflationDetector {
         }
 
         // Pattern 6: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("share inflation") ||
-            func_source.contains("first depositor") ||
-            func_source.contains("ERC4626")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("share inflation")
+                || func_source.contains("first depositor")
+                || func_source.contains("ERC4626"))
+        {
             return Some(format!(
                 "Vault share inflation vulnerability marker detected"
             ));

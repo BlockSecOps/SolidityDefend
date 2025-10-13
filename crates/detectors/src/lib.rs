@@ -42,9 +42,9 @@ pub mod oracle;
 pub mod oracle_manipulation;
 pub mod price_impact_manipulation;
 pub mod price_oracle_stale;
+pub mod redundant_checks;
 pub mod reentrancy;
 pub mod reward_calculation;
-pub mod redundant_checks;
 pub mod sandwich_resistant_swap;
 pub mod selfdestruct_abuse;
 pub mod shadowing_variables;
@@ -62,49 +62,49 @@ pub mod upgradeable_proxy_issues;
 pub mod validation;
 pub mod validator_front_running;
 pub mod validator_griefing;
-pub mod vault_share_inflation;
 pub mod vault_donation_attack;
-pub mod vault_withdrawal_dos;
 pub mod vault_fee_manipulation;
 pub mod vault_hook_reentrancy;
+pub mod vault_share_inflation;
+pub mod vault_withdrawal_dos;
 pub mod weak_commit_reveal;
 pub mod weak_signature_validation;
 pub mod withdrawal_delay;
 
 // Phase 12: Account Abstraction & ERC-4337 (2025)
-pub mod erc4337_entrypoint_trust;
-pub mod aa_initialization_vulnerability;
 pub mod aa_account_takeover;
 pub mod aa_bundler_dos;
+pub mod aa_initialization_vulnerability;
+pub mod erc4337_entrypoint_trust;
 pub mod hardware_wallet_delegation;
 
 // Phase 13: Cross-Chain Intent & Bridge Security (2025)
-pub mod erc7683_settlement_validation;
-pub mod erc7683_replay_attack;
+pub mod bridge_chain_id_validation;
+pub mod bridge_message_verification;
+pub mod bridge_token_minting;
 pub mod erc7683_filler_frontrunning;
 pub mod erc7683_oracle_dependency;
 pub mod erc7683_permit2_integration;
-pub mod bridge_token_minting;
-pub mod bridge_message_verification;
-pub mod bridge_chain_id_validation;
+pub mod erc7683_replay_attack;
+pub mod erc7683_settlement_validation;
 
 // Phase 14: Account Abstraction Advanced (2025)
-pub mod erc4337_paymaster_abuse;
+pub mod aa_nonce_management;
 pub mod aa_session_key_vulnerabilities;
 pub mod aa_signature_aggregation;
 pub mod aa_social_recovery;
-pub mod aa_nonce_management;
+pub mod erc4337_paymaster_abuse;
 
 // Phase 15: DeFi Protocol Security (2025)
-pub mod defi_liquidity_pool_manipulation;
 pub mod defi_jit_liquidity;
+pub mod defi_liquidity_pool_manipulation;
 pub mod defi_yield_farming;
 
 // Phase 17: Token Standard Edge Cases (2025)
 pub mod erc20_approve_race;
 pub mod erc20_infinite_approval;
-pub mod erc777_reentrancy_hooks;
 pub mod erc721_callback_reentrancy;
+pub mod erc777_reentrancy_hooks;
 
 // DeFi-specific detectors
 pub mod defi;
@@ -120,13 +120,13 @@ pub mod advanced_security_engine;
 
 // Re-export core types and traits
 pub use detector::{
-    Detector, DetectorCategory, ConfigurableDetector, MetricsDetector,
-    BaseDetector, AstAnalyzer, DataFlowAnalyzer, TaintAnalyzer
+    AstAnalyzer, BaseDetector, ConfigurableDetector, DataFlowAnalyzer, Detector, DetectorCategory,
+    MetricsDetector, TaintAnalyzer,
 };
 pub use registry::{DetectorRegistry, DetectorRegistryBuilder, RegistryConfig};
 pub use types::{
-    DetectorId, Severity, Confidence, SourceLocation, Finding,
-    AnalysisContext, AnalysisResult, AnalysisStats
+    AnalysisContext, AnalysisResult, AnalysisStats, Confidence, DetectorId, Finding, Severity,
+    SourceLocation,
 };
 
 // Convenience macro for implementing the Detector trait is defined in detector.rs

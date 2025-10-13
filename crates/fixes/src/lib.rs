@@ -4,10 +4,10 @@ pub mod replacements;
 pub use replacements::ReplacementEngine;
 
 use anyhow::Result;
+use detectors::types::{AnalysisContext, Finding};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use detectors::types::{Finding, AnalysisContext};
 
 /// A text replacement operation for fixing code
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,7 +50,11 @@ pub struct FixEngine {
 /// Trait for generating fixes for specific types of vulnerabilities
 pub trait FixGenerator: Send + Sync {
     /// Generate one or more fix suggestions for a finding
-    fn generate_fixes(&self, finding: &Finding, ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>>;
+    fn generate_fixes(
+        &self,
+        finding: &Finding,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>>;
 
     /// Get the detector IDs this generator can handle
     fn supported_detectors(&self) -> Vec<String>;
@@ -85,14 +89,22 @@ impl FixEngine {
     }
 
     /// Generate fix suggestions for a finding
-    pub fn generate_fixes(&self, finding: &Finding, ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    pub fn generate_fixes(
+        &self,
+        finding: &Finding,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let detector_id = finding.detector_id.0.as_str();
 
         if let Some(generator) = self.generators.get(detector_id) {
             let mut fixes = generator.generate_fixes(finding, ctx)?;
 
             // Sort by confidence (highest first)
-            fixes.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+            fixes.sort_by(|a, b| {
+                b.confidence
+                    .partial_cmp(&a.confidence)
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            });
 
             Ok(fixes)
         } else {
@@ -102,7 +114,11 @@ impl FixEngine {
     }
 
     /// Generate combined fixes for multiple findings, handling conflicts
-    pub fn generate_combined_fixes(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    pub fn generate_combined_fixes(
+        &self,
+        findings: &[Finding],
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let mut all_fixes = Vec::new();
 
         // Generate fixes for each finding
@@ -153,20 +169,32 @@ impl FixEngine {
     }
 
     /// Generate a generic fix suggestion when no specific generator is available
-    fn generate_generic_fix(&self, finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_generic_fix(
+        &self,
+        finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: format!("generic-fix-{}", finding.detector_id.0.as_str()),
-            description: format!("Review and fix {} vulnerability", finding.detector_id.0.as_str()),
+            description: format!(
+                "Review and fix {} vulnerability",
+                finding.detector_id.0.as_str()
+            ),
             explanation: format!(
                 "This {} vulnerability requires manual review. {}",
                 finding.detector_id.0.as_str(),
-                finding.fix_suggestion.as_deref().unwrap_or("Consider the security implications and implement appropriate safeguards.")
+                finding.fix_suggestion.as_deref().unwrap_or(
+                    "Consider the security implications and implement appropriate safeguards."
+                )
             ),
-            confidence: 0.3, // Low confidence for generic fixes
+            confidence: 0.3,          // Low confidence for generic fixes
             replacements: Vec::new(), // No automatic replacements for generic fixes
             metadata: HashMap::from([
                 ("type".to_string(), "manual-review".to_string()),
-                ("detector".to_string(), finding.detector_id.0.as_str().to_string()),
+                (
+                    "detector".to_string(),
+                    finding.detector_id.0.as_str().to_string(),
+                ),
             ]),
         };
 
@@ -236,14 +264,23 @@ impl FixEngine {
 
         // Sort fixes by confidence (highest first)
         let mut sorted_fixes = fixes;
-        sorted_fixes.sort_by(|a, b| b.confidence.partial_cmp(&a.confidence).unwrap_or(std::cmp::Ordering::Equal));
+        sorted_fixes.sort_by(|a, b| {
+            b.confidence
+                .partial_cmp(&a.confidence)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
 
         for fix in sorted_fixes {
             let mut conflicts = false;
 
             // Check if this fix conflicts with any already selected fix
             for replacement in &fix.replacements {
-                let range = (replacement.start_line, replacement.start_column, replacement.end_line, replacement.end_column);
+                let range = (
+                    replacement.start_line,
+                    replacement.start_column,
+                    replacement.end_line,
+                    replacement.end_column,
+                );
 
                 for used_range in &used_ranges {
                     if ranges_overlap(&range, used_range) {
@@ -260,7 +297,12 @@ impl FixEngine {
             if !conflicts {
                 // Add this fix's ranges to the used ranges
                 for replacement in &fix.replacements {
-                    used_ranges.push((replacement.start_line, replacement.start_column, replacement.end_line, replacement.end_column));
+                    used_ranges.push((
+                        replacement.start_line,
+                        replacement.start_column,
+                        replacement.end_line,
+                        replacement.end_column,
+                    ));
                 }
                 resolved_fixes.push(fix);
             }
@@ -271,10 +313,7 @@ impl FixEngine {
 }
 
 /// Check if two text ranges overlap
-fn ranges_overlap(
-    range1: &(u32, u32, u32, u32),
-    range2: &(u32, u32, u32, u32),
-) -> bool {
+fn ranges_overlap(range1: &(u32, u32, u32, u32), range2: &(u32, u32, u32, u32)) -> bool {
     let (start1_line, start1_col, end1_line, end1_col) = *range1;
     let (start2_line, start2_col, end2_line, end2_col) = *range2;
 
@@ -300,7 +339,11 @@ impl ReentrancyFixGenerator {
 }
 
 impl FixGenerator for ReentrancyFixGenerator {
-    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(
+        &self,
+        _finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "reentrancy-checks-effects-interactions".to_string(),
             description: "Apply checks-effects-interactions pattern".to_string(),
@@ -335,7 +378,11 @@ impl AccessControlFixGenerator {
 }
 
 impl FixGenerator for AccessControlFixGenerator {
-    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(
+        &self,
+        _finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "access-control-onlyowner".to_string(),
             description: "Add onlyOwner access control modifier".to_string(),
@@ -370,7 +417,11 @@ impl ZeroAddressFixGenerator {
 }
 
 impl FixGenerator for ZeroAddressFixGenerator {
-    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(
+        &self,
+        _finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "zero-address-check".to_string(),
             description: "Add zero address validation".to_string(),
@@ -405,7 +456,11 @@ impl IntegerOverflowFixGenerator {
 }
 
 impl FixGenerator for IntegerOverflowFixGenerator {
-    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(
+        &self,
+        _finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let solidity_08_fix = FixSuggestion {
             id: "overflow-solidity-08".to_string(),
             description: "Upgrade to Solidity ^0.8.0".to_string(),
@@ -434,7 +489,10 @@ impl FixGenerator for IntegerOverflowFixGenerator {
     }
 
     fn supported_detectors(&self) -> Vec<String> {
-        vec!["integer-overflow".to_string(), "integer-underflow".to_string()]
+        vec![
+            "integer-overflow".to_string(),
+            "integer-underflow".to_string(),
+        ]
     }
 
     fn priority(&self) -> i32 {
@@ -452,7 +510,11 @@ impl DivisionOrderFixGenerator {
 }
 
 impl FixGenerator for DivisionOrderFixGenerator {
-    fn generate_fixes(&self, _finding: &Finding, _ctx: &AnalysisContext<'_>) -> Result<Vec<FixSuggestion>> {
+    fn generate_fixes(
+        &self,
+        _finding: &Finding,
+        _ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<FixSuggestion>> {
         let fix = FixSuggestion {
             id: "division-order-reorder".to_string(),
             description: "Reorder operations: multiplication before division".to_string(),

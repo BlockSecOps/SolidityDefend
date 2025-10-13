@@ -1,12 +1,12 @@
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
-use std::path::{Path, PathBuf};
 use std::collections::HashMap;
+use std::path::{Path, PathBuf};
 
-use detectors::registry::RegistryConfig;
-use detectors::types::{Severity, Confidence};
-use detectors::detector::DetectorCategory;
 use cache::CacheConfig;
+use detectors::detector::DetectorCategory;
+use detectors::registry::RegistryConfig;
+use detectors::types::{Confidence, Severity};
 use output::OutputFormat;
 
 /// Main configuration structure for SolidityDefend
@@ -168,7 +168,9 @@ impl From<&CacheSettings> for CacheConfig {
         CacheConfig {
             max_memory_usage: settings.max_memory_mb * 1024 * 1024,
             max_entries: settings.max_entries,
-            cache_dir: settings.cache_dir.clone()
+            cache_dir: settings
+                .cache_dir
+                .clone()
                 .unwrap_or_else(|| std::env::temp_dir().join("soliditydefend_cache")),
             persistent: settings.persistent,
             ttl_seconds: settings.ttl_hours * 3600,
@@ -296,12 +298,12 @@ impl SolidityDefendConfig {
 
         // Create parent directory if it doesn't exist
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent)
-                .with_context(|| format!("Failed to create config directory: {}", parent.display()))?;
+            std::fs::create_dir_all(parent).with_context(|| {
+                format!("Failed to create config directory: {}", parent.display())
+            })?;
         }
 
-        let content = serde_norway::to_string(self)
-            .context("Failed to serialize configuration")?;
+        let content = serde_norway::to_string(self).context("Failed to serialize configuration")?;
 
         std::fs::write(path, content)
             .with_context(|| format!("Failed to write config file: {}", path.display()))?;
@@ -340,7 +342,11 @@ impl SolidityDefendConfig {
                         break;
                     }
                     Err(e) => {
-                        eprintln!("Warning: Failed to load config from {}: {}", path.display(), e);
+                        eprintln!(
+                            "Warning: Failed to load config from {}: {}",
+                            path.display(),
+                            e
+                        );
                         continue;
                     }
                 }
@@ -421,7 +427,10 @@ mod tests {
         assert!(yaml.contains("enabled"));
 
         let deserialized: SolidityDefendConfig = serde_norway::from_str(&yaml).unwrap();
-        assert_eq!(deserialized.general.min_severity, config.general.min_severity);
+        assert_eq!(
+            deserialized.general.min_severity,
+            config.general.min_severity
+        );
     }
 
     #[test]
@@ -435,7 +444,10 @@ mod tests {
         assert!(config_path.exists());
 
         let loaded_config = SolidityDefendConfig::load_from_file(&config_path)?;
-        assert_eq!(loaded_config.general.min_severity, config.general.min_severity);
+        assert_eq!(
+            loaded_config.general.min_severity,
+            config.general.min_severity
+        );
 
         Ok(())
     }
@@ -454,6 +466,9 @@ mod tests {
         let config = SolidityDefendConfig::default();
         let registry_config = config.to_registry_config();
         assert_eq!(registry_config.min_severity, config.detectors.min_severity);
-        assert_eq!(registry_config.min_confidence, config.detectors.min_confidence);
+        assert_eq!(
+            registry_config.min_confidence,
+            config.detectors.min_confidence
+        );
     }
 }
