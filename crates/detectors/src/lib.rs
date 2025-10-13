@@ -111,6 +111,10 @@ pub mod amm_k_invariant_violation;
 pub mod lending_borrow_bypass;
 pub mod uniswapv4_hook_issues;
 
+// Phase 19: Code Quality & Best Practices (2025)
+pub mod floating_pragma;
+pub mod unused_state_variables;
+
 // DeFi-specific detectors
 pub mod defi;
 
