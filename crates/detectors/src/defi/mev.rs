@@ -1,6 +1,8 @@
-use crate::types::{DetectorResult, AnalysisContext, Severity, Finding, DetectorId, Confidence, SourceLocation};
-use ast::Function;
 use crate::defi::{DeFiDetector, DeFiPatterns};
+use crate::types::{
+    AnalysisContext, Confidence, DetectorId, DetectorResult, Finding, Severity, SourceLocation,
+};
+use ast::Function;
 
 /// Detector for MEV (Maximal Extractable Value) vulnerabilities
 pub struct MEVDetector;
@@ -43,10 +45,10 @@ impl DeFiDetector for MEVDetector {
         // 2. Have price-dependent logic
         // 3. Manage significant value
         // 4. Have time-dependent operations
-        DeFiPatterns::interacts_with_amm(ctx) ||
-        DeFiPatterns::has_oracle_dependencies(ctx) ||
-        DeFiPatterns::manages_significant_value(ctx) ||
-        DeFiPatterns::has_time_dependencies(ctx)
+        DeFiPatterns::interacts_with_amm(ctx)
+            || DeFiPatterns::has_oracle_dependencies(ctx)
+            || DeFiPatterns::manages_significant_value(ctx)
+            || DeFiPatterns::has_time_dependencies(ctx)
     }
 }
 
@@ -84,11 +86,14 @@ impl MEVDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(362);
+                )
+                .with_cwe(362);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("High - Vulnerable to gas price manipulation".to_string())
-                    .with_suggested_fix(self.get_frontrunning_mitigation(&vulnerability_type)));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact("High - Vulnerable to gas price manipulation".to_string())
+                        .with_suggested_fix(self.get_frontrunning_mitigation(&vulnerability_type)),
+                );
             }
         }
 
@@ -223,12 +228,15 @@ impl MEVDetector {
                     ),
                 ).with_cwe(682);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("High - Complex arbitrage transactions".to_string())
-                    .with_suggested_fix(
-                        "Consider implementing arbitrage resistance through time delays, \
-                        minimum holding periods, or profit-sharing mechanisms".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact("High - Complex arbitrage transactions".to_string())
+                        .with_suggested_fix(
+                            "Consider implementing arbitrage resistance through time delays, \
+                        minimum holding periods, or profit-sharing mechanisms"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -240,7 +248,8 @@ impl MEVDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.is_liquidation_function(func) && self.has_mev_extractable_liquidation(ctx, func) {
+            if self.is_liquidation_function(func) && self.has_mev_extractable_liquidation(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::Medium,
@@ -256,14 +265,18 @@ impl MEVDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(682);
+                )
+                .with_cwe(682);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("Medium - Liquidation transaction complexity".to_string())
-                    .with_suggested_fix(
-                        "Implement fair liquidation mechanisms such as auctions, \
-                        graduated penalties, or profit sharing".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact("Medium - Liquidation transaction complexity".to_string())
+                        .with_suggested_fix(
+                            "Implement fair liquidation mechanisms such as auctions, \
+                        graduated penalties, or profit sharing"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -275,21 +288,26 @@ impl MEVDetector {
     fn is_frontrunnable_function(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         // Functions that create frontrunning opportunities
         let frontrunnable_patterns = [
-            "approve", "transfer", "swap", "trade", "buy", "sell",
-            "mint", "burn", "deposit", "withdraw", "claim"
+            "approve", "transfer", "swap", "trade", "buy", "sell", "mint", "burn", "deposit",
+            "withdraw", "claim",
         ];
 
-        frontrunnable_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        ) && !self.has_frontrunning_protection(ctx, func)
+        frontrunnable_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
+            && !self.has_frontrunning_protection(ctx, func)
     }
 
     fn classify_frontrunning_risk(&self, _ctx: &AnalysisContext, func: &Function) -> String {
         if func.name.as_str().to_lowercase().contains("approve") {
             "Approval frontrunning".to_string()
-        } else if func.name.as_str().to_lowercase().contains("swap") || func.name.as_str().to_lowercase().contains("trade") {
+        } else if func.name.as_str().to_lowercase().contains("swap")
+            || func.name.as_str().to_lowercase().contains("trade")
+        {
             "Trade frontrunning".to_string()
-        } else if func.name.as_str().to_lowercase().contains("mint") || func.name.as_str().to_lowercase().contains("burn") {
+        } else if func.name.as_str().to_lowercase().contains("mint")
+            || func.name.as_str().to_lowercase().contains("burn")
+        {
             "Token issuance frontrunning".to_string()
         } else {
             "General frontrunning".to_string()
@@ -309,7 +327,10 @@ impl MEVDetector {
         let mut confidence: f64 = 0.6;
 
         // Increase confidence if function is public/external
-        if matches!(func.visibility, ast::Visibility::Public | ast::Visibility::External) {
+        if matches!(
+            func.visibility,
+            ast::Visibility::Public | ast::Visibility::External
+        ) {
             confidence += 0.2;
         }
 
@@ -336,14 +357,18 @@ impl MEVDetector {
 
     fn get_frontrunning_mitigation(&self, vulnerability_type: &str) -> String {
         match vulnerability_type {
-            "Approval frontrunning" =>
-                "Use increaseAllowance/decreaseAllowance or implement atomic approve patterns".to_string(),
-            "Trade frontrunning" =>
-                "Implement commit-reveal schemes, time delays, or private mempools".to_string(),
-            "Token issuance frontrunning" =>
-                "Use batch processing or time-based restrictions on token operations".to_string(),
-            _ =>
-                "Implement MEV-resistant patterns such as commit-reveal or batch processing".to_string(),
+            "Approval frontrunning" => {
+                "Use increaseAllowance/decreaseAllowance or implement atomic approve patterns"
+                    .to_string()
+            }
+            "Trade frontrunning" => {
+                "Implement commit-reveal schemes, time delays, or private mempools".to_string()
+            }
+            "Token issuance frontrunning" => {
+                "Use batch processing or time-based restrictions on token operations".to_string()
+            }
+            _ => "Implement MEV-resistant patterns such as commit-reveal or batch processing"
+                .to_string(),
         }
     }
 
@@ -352,72 +377,66 @@ impl MEVDetector {
         let swap_patterns = ["swap", "trade", "exchange"];
         let slippage_patterns = ["slippage", "minAmount", "deadline", "maxPrice"];
 
-        let is_swap_function = swap_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        );
+        let is_swap_function = swap_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern));
 
-        let has_slippage_protection = slippage_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
-        );
+        let has_slippage_protection = slippage_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.to_lowercase().contains(pattern));
 
         is_swap_function && !has_slippage_protection
     }
 
     fn creates_backrunning_opportunity(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
         // Functions that create profitable state changes
-        let backrunnable_patterns = [
-            "updatePrice", "sync", "rebalance", "liquidate", "harvest"
-        ];
+        let backrunnable_patterns = ["updatePrice", "sync", "rebalance", "liquidate", "harvest"];
 
-        backrunnable_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        backrunnable_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn is_susceptible_to_pga(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         // Functions with limited opportunity windows
-        let pga_patterns = [
-            "claim", "redeem", "liquidate", "arbitrage", "flashLoan"
-        ];
+        let pga_patterns = ["claim", "redeem", "liquidate", "arbitrage", "flashLoan"];
 
-        pga_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        ) && DeFiPatterns::has_time_dependencies(ctx)
+        pga_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
+            && DeFiPatterns::has_time_dependencies(ctx)
     }
 
     fn enables_atomic_arbitrage(&self, ctx: &AnalysisContext, func: &Function) -> bool {
         // Functions that allow complex multi-step operations
-        let arbitrage_enablers = [
-            "multicall", "batch", "swap", "flashLoan"
-        ];
+        let arbitrage_enablers = ["multicall", "batch", "swap", "flashLoan"];
 
-        arbitrage_enablers.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        ) && DeFiPatterns::interacts_with_amm(ctx)
+        arbitrage_enablers
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
+            && DeFiPatterns::interacts_with_amm(ctx)
     }
 
     fn is_liquidation_function(&self, func: &Function) -> bool {
         let liquidation_patterns = ["liquidat", "seize", "repay", "foreclose"];
-        liquidation_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        liquidation_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn has_mev_extractable_liquidation(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         // Check if liquidation provides excessive rewards
         let reward_indicators = ["bonus", "incentive", "reward", "discount"];
-        reward_indicators.iter().any(|&indicator|
-            ctx.source_code.to_lowercase().contains(indicator)
-        )
+        reward_indicators
+            .iter()
+            .any(|&indicator| ctx.source_code.to_lowercase().contains(indicator))
     }
 
     fn has_frontrunning_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let protection_patterns = [
-            "commitReveal", "timelock", "nonce", "deadline", "private"
-        ];
-        protection_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
-        )
+        let protection_patterns = ["commitReveal", "timelock", "nonce", "deadline", "private"];
+        protection_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.to_lowercase().contains(pattern))
     }
 }
 
@@ -425,7 +444,7 @@ impl MEVDetector {
 mod tests {
     use super::*;
     use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
+    use ast::{AstArena, StateMutability, Visibility};
 
     #[test]
     fn test_frontrunning_detection() {
@@ -459,6 +478,4 @@ mod tests {
         assert_eq!(detector.severity(), Severity::Medium);
         assert!(!detector.description().is_empty());
     }
-
-
 }

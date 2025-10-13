@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for flash loan staking attack vulnerabilities
 pub struct FlashLoanStakingDetector {
@@ -60,21 +60,23 @@ impl Detector for FlashLoanStakingDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Implement time-delay requirements before rewards can be claimed. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Implement time-delay requirements before rewards can be claimed. \
                     Example: require(block.timestamp >= user.lastStakeTime + MIN_STAKE_DURATION) \
                     in function '{}'",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -90,7 +92,11 @@ impl Detector for FlashLoanStakingDetector {
 
 impl FlashLoanStakingDetector {
     /// Check if a function is vulnerable to flash loan staking attacks
-    fn is_vulnerable_to_flash_loan_staking(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+    fn is_vulnerable_to_flash_loan_staking(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return false;
@@ -99,13 +105,12 @@ impl FlashLoanStakingDetector {
         // Look for staking/farming related functions
         let function_name = function.name.name.to_lowercase();
         let staking_patterns = [
-            "deposit", "stake", "farm", "enter",
-            "compound", "harvest", "claim"
+            "deposit", "stake", "farm", "enter", "compound", "harvest", "claim",
         ];
 
-        let is_staking_function = staking_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_staking_function = staking_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_staking_function {
             return false;
@@ -123,21 +128,21 @@ impl FlashLoanStakingDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if this is a staking/farming contract
-        let has_staking_context = func_source.contains("amount") &&
-                                  (func_source.contains("reward") ||
-                                   func_source.contains("stake") ||
-                                   func_source.contains("pool"));
+        let has_staking_context = func_source.contains("amount")
+            && (func_source.contains("reward")
+                || func_source.contains("stake")
+                || func_source.contains("pool"));
 
         if !has_staking_context {
             return false;
         }
 
         // Look for reward calculation patterns
-        let has_reward_calculation = func_source.contains("pending") ||
-                                    func_source.contains("earned") ||
-                                    func_source.contains("reward") ||
-                                    func_source.contains("accRewardPerShare") ||
-                                    func_source.contains("rewardDebt");
+        let has_reward_calculation = func_source.contains("pending")
+            || func_source.contains("earned")
+            || func_source.contains("reward")
+            || func_source.contains("accRewardPerShare")
+            || func_source.contains("rewardDebt");
 
         // Check for vulnerability patterns
         let vulnerability_patterns = self.check_vulnerability_patterns(&func_source);
@@ -148,27 +153,32 @@ impl FlashLoanStakingDetector {
     /// Check for specific vulnerability patterns in the source code
     fn check_vulnerability_patterns(&self, source: &str) -> bool {
         // Pattern 1: Reward calculation before state update (classic flash loan vulnerability)
-        let reward_before_update = source.contains("pending") &&
-                                   source.contains("if (user.amount > 0)") &&
-                                   !source.contains("block.timestamp") &&
-                                   !source.contains("lastStakeTime");
+        let reward_before_update = source.contains("pending")
+            && source.contains("if (user.amount > 0)")
+            && !source.contains("block.timestamp")
+            && !source.contains("lastStakeTime");
 
         // Pattern 2: No time-lock or minimum staking period
-        let no_timelock = !source.contains("lockPeriod") &&
-                         !source.contains("lock_period") &&
-                         !source.contains("minimumStakingTime") &&
-                         !source.contains("MIN_STAKE_DURATION");
+        let no_timelock = !source.contains("lockPeriod")
+            && !source.contains("lock_period")
+            && !source.contains("minimumStakingTime")
+            && !source.contains("MIN_STAKE_DURATION");
 
         // Pattern 3: Immediate reward eligibility (commented as vulnerability)
-        let has_vulnerability_comment = source.contains("VULNERABILITY") &&
-                                       (source.contains("flash loan") ||
-                                        source.contains("Reward calculation before"));
+        let has_vulnerability_comment = source.contains("VULNERABILITY")
+            && (source.contains("flash loan") || source.contains("Reward calculation before"));
 
         // Pattern 4: Transfer before state update
-        let unsafe_transfer_order = source.contains("transferFrom") &&
-                                   source.contains("user.amount =") &&
-                                   source.lines().position(|l| l.contains("transferFrom")).unwrap_or(0) <
-                                   source.lines().position(|l| l.contains("user.amount =")).unwrap_or(usize::MAX);
+        let unsafe_transfer_order = source.contains("transferFrom")
+            && source.contains("user.amount =")
+            && source
+                .lines()
+                .position(|l| l.contains("transferFrom"))
+                .unwrap_or(0)
+                < source
+                    .lines()
+                    .position(|l| l.contains("user.amount ="))
+                    .unwrap_or(usize::MAX);
 
         // Vulnerable if any of these patterns are found
         reward_before_update || has_vulnerability_comment || (no_timelock && unsafe_transfer_order)

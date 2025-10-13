@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for variable shadowing that can cause confusion
 pub struct ShadowingVariablesDetector {
@@ -61,8 +61,7 @@ impl Detector for ShadowingVariablesDetector {
                     let message = format!(
                         "Function '{}' contains variable shadowing. {} \
                         Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
-                        function.name.name,
-                        issue_desc
+                        function.name.name, issue_desc
                     );
 
                     let finding = self.base.create_finding(
@@ -103,18 +102,26 @@ impl ShadowingVariablesDetector {
             let trimmed = line.trim();
 
             // Skip comments and functions
-            if trimmed.starts_with("//") || trimmed.starts_with("/*") ||
-               trimmed.contains("function") || trimmed.contains("modifier") {
+            if trimmed.starts_with("//")
+                || trimmed.starts_with("/*")
+                || trimmed.contains("function")
+                || trimmed.contains("modifier")
+            {
                 continue;
             }
 
             // Look for state variable patterns
-            if (trimmed.contains("uint") || trimmed.contains("address") ||
-                trimmed.contains("bool") || trimmed.contains("string") ||
-                trimmed.contains("bytes") || trimmed.contains("mapping")) &&
-               (trimmed.contains("public") || trimmed.contains("private") ||
-                trimmed.contains("internal") || trimmed.ends_with(";")) {
-
+            if (trimmed.contains("uint")
+                || trimmed.contains("address")
+                || trimmed.contains("bool")
+                || trimmed.contains("string")
+                || trimmed.contains("bytes")
+                || trimmed.contains("mapping"))
+                && (trimmed.contains("public")
+                    || trimmed.contains("private")
+                    || trimmed.contains("internal")
+                    || trimmed.ends_with(";"))
+            {
                 // Extract variable name (simplified)
                 if let Some(var_name) = self.extract_variable_name(trimmed) {
                     state_vars.push(var_name);
@@ -131,14 +138,20 @@ impl ShadowingVariablesDetector {
 
         for (i, part) in parts.iter().enumerate() {
             // Look for variable name after type declaration
-            if (*part == "public" || *part == "private" || *part == "internal") && i + 1 < parts.len() {
+            if (*part == "public" || *part == "private" || *part == "internal")
+                && i + 1 < parts.len()
+            {
                 let name = parts[i + 1].trim_end_matches(';').trim_end_matches('=');
                 return Some(name.to_string());
             }
 
             // For simple declarations like "uint256 balance;"
-            if i > 0 && (parts[i - 1].contains("uint") || parts[i - 1].contains("address") ||
-                        parts[i - 1].contains("bool") || parts[i - 1].contains("string")) {
+            if i > 0
+                && (parts[i - 1].contains("uint")
+                    || parts[i - 1].contains("address")
+                    || parts[i - 1].contains("bool")
+                    || parts[i - 1].contains("string"))
+            {
                 let name = part.trim_end_matches(';').trim_end_matches('=');
                 if !name.is_empty() && name != "public" && name != "private" && name != "internal" {
                     return Some(name.to_string());
@@ -149,7 +162,12 @@ impl ShadowingVariablesDetector {
         None
     }
 
-    fn check_shadowing(&self, function: &ast::Function<'_>, state_vars: &[String], ctx: &AnalysisContext) -> Option<Vec<String>> {
+    fn check_shadowing(
+        &self,
+        function: &ast::Function<'_>,
+        state_vars: &[String],
+        ctx: &AnalysisContext,
+    ) -> Option<Vec<String>> {
         if function.body.is_none() {
             return None;
         }
@@ -157,20 +175,20 @@ impl ShadowingVariablesDetector {
         let mut issues = Vec::new();
 
         // Check function signature for parameter shadowing (simplified)
-        let func_signature = ctx.source_code.lines()
+        let func_signature = ctx
+            .source_code
+            .lines()
             .skip(function.location.start().line())
             .take(3)
             .collect::<Vec<_>>()
             .join(" ");
 
         for state_var in state_vars {
-            if func_signature.contains(&format!("({})", state_var)) ||
-               func_signature.contains(&format!("({} ", state_var)) ||
-               func_signature.contains(&format!(" {},", state_var)) {
-                issues.push(format!(
-                    "Parameter '{}' shadows state variable",
-                    state_var
-                ));
+            if func_signature.contains(&format!("({})", state_var))
+                || func_signature.contains(&format!("({} ", state_var))
+                || func_signature.contains(&format!(" {},", state_var))
+            {
+                issues.push(format!("Parameter '{}' shadows state variable", state_var));
             }
         }
 
@@ -181,10 +199,13 @@ impl ShadowingVariablesDetector {
             let trimmed = line.trim();
 
             // Look for local variable declarations
-            if (trimmed.contains("uint") || trimmed.contains("address") ||
-                trimmed.contains("bool") || trimmed.contains("string")) &&
-               !trimmed.contains("public") && !trimmed.contains("private") {
-
+            if (trimmed.contains("uint")
+                || trimmed.contains("address")
+                || trimmed.contains("bool")
+                || trimmed.contains("string"))
+                && !trimmed.contains("public")
+                && !trimmed.contains("private")
+            {
                 if let Some(local_var) = self.extract_variable_name(trimmed) {
                     if state_vars.iter().any(|sv| sv == &local_var) {
                         issues.push(format!(

@@ -1,14 +1,14 @@
 /// Taint sinks - potential targets for malicious data
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum TaintSink {
-    ExternalCall,         // External contract calls
-    SelfDestruct,         // selfdestruct()
-    EtherTransfer,        // transfer(), send()
-    TokenApproval,        // approve()
-    StateModification,    // State variable assignments
-    StorageWrite,         // Storage writes
-    EventEmission,        // Event emissions
-    Custom(String),       // Custom taint sink
+    ExternalCall,      // External contract calls
+    SelfDestruct,      // selfdestruct()
+    EtherTransfer,     // transfer(), send()
+    TokenApproval,     // approve()
+    StateModification, // State variable assignments
+    StorageWrite,      // Storage writes
+    EventEmission,     // Event emissions
+    Custom(String),    // Custom taint sink
 }
 
 /// Detector for taint sinks
@@ -23,7 +23,10 @@ impl TaintSinkDetector {
             let line_number = line_idx + 1;
 
             // Check for various taint sinks
-            if line.contains("call(") || line.contains("delegatecall(") || line.contains("staticcall(") {
+            if line.contains("call(")
+                || line.contains("delegatecall(")
+                || line.contains("staticcall(")
+            {
                 sinks.push((line_number, TaintSink::ExternalCall));
             }
             if line.contains("selfdestruct") {

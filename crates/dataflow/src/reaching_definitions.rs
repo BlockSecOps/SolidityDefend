@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
-use ir::{BlockId, ValueId, Instruction};
-use cfg::ControlFlowGraph;
 use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, DefUseAnalysis, utils};
+use cfg::ControlFlowGraph;
+use ir::{BlockId, Instruction, ValueId};
 
 /// Reaching definitions analysis
 ///
@@ -74,16 +74,15 @@ impl ReachingDefinitionsState {
 
     /// Get all definitions of a specific variable
     pub fn get_definitions(&self, variable: ValueId) -> HashSet<&DefinitionSite> {
-        self.definitions.iter()
+        self.definitions
+            .iter()
             .filter(|def| def.variable == variable)
             .collect()
     }
 
     /// Get all variables that have reaching definitions
     pub fn get_defined_variables(&self) -> HashSet<ValueId> {
-        self.definitions.iter()
-            .map(|def| def.variable)
-            .collect()
+        self.definitions.iter().map(|def| def.variable).collect()
     }
 
     /// Union with another state
@@ -140,10 +139,10 @@ impl<'a> ReachingDefinitions<'a> {
     /// Classify the type of definition
     fn classify_definition(&self, instruction: &Instruction) -> DefinitionType {
         match instruction {
-            Instruction::Add(_, _, _) |
-            Instruction::Sub(_, _, _) |
-            Instruction::Mul(_, _, _) |
-            Instruction::Div(_, _, _) => DefinitionType::Assignment,
+            Instruction::Add(_, _, _)
+            | Instruction::Sub(_, _, _)
+            | Instruction::Mul(_, _, _)
+            | Instruction::Div(_, _, _) => DefinitionType::Assignment,
             Instruction::Load(_, _) => DefinitionType::Load,
             Instruction::Phi(_, _) => DefinitionType::Phi,
             _ => DefinitionType::Other,
@@ -151,14 +150,17 @@ impl<'a> ReachingDefinitions<'a> {
     }
 
     /// Generate a definition for the current instruction
-    fn gen_definition(&self, block_id: BlockId, instr_index: usize, instruction: &Instruction) -> Option<DefinitionSite> {
-        utils::get_instruction_definition(instruction).map(|var| {
-            DefinitionSite {
-                block_id,
-                instruction_index: instr_index,
-                variable: var,
-                instruction_type: self.classify_definition(instruction),
-            }
+    fn gen_definition(
+        &self,
+        block_id: BlockId,
+        instr_index: usize,
+        instruction: &Instruction,
+    ) -> Option<DefinitionSite> {
+        utils::get_instruction_definition(instruction).map(|var| DefinitionSite {
+            block_id,
+            instruction_index: instr_index,
+            variable: var,
+            instruction_type: self.classify_definition(instruction),
         })
     }
 
@@ -171,7 +173,11 @@ impl<'a> ReachingDefinitions<'a> {
     }
 
     /// Compute gen and kill sets for a basic block
-    pub fn compute_gen_kill(&self, block_id: BlockId, instructions: &[Instruction]) -> (HashSet<DefinitionSite>, HashSet<DefinitionSite>) {
+    pub fn compute_gen_kill(
+        &self,
+        block_id: BlockId,
+        instructions: &[Instruction],
+    ) -> (HashSet<DefinitionSite>, HashSet<DefinitionSite>) {
         let mut gen = HashSet::new();
         let mut kill = HashSet::new();
 
@@ -179,7 +185,8 @@ impl<'a> ReachingDefinitions<'a> {
             if let Some(defined_var) = utils::get_instruction_definition(instruction) {
                 // Kill all previous definitions of this variable from OTHER blocks
                 let all_defs = self.kill_definitions(defined_var);
-                let killed_defs: HashSet<DefinitionSite> = all_defs.into_iter()
+                let killed_defs: HashSet<DefinitionSite> = all_defs
+                    .into_iter()
                     .filter(|def| def.block_id != block_id)
                     .collect();
                 kill.extend(killed_defs);
@@ -198,8 +205,13 @@ impl<'a> ReachingDefinitions<'a> {
     }
 
     /// Get all reaching definitions at the entry of a block
-    pub fn get_reaching_definitions(&self, result: &DataFlowResult<ReachingDefinitionsState>, block_id: BlockId) -> HashSet<DefinitionSite> {
-        result.get_entry_state(block_id)
+    pub fn get_reaching_definitions(
+        &self,
+        result: &DataFlowResult<ReachingDefinitionsState>,
+        block_id: BlockId,
+    ) -> HashSet<DefinitionSite> {
+        result
+            .get_entry_state(block_id)
             .map(|state| state.definitions.clone())
             .unwrap_or_default()
     }
@@ -209,7 +221,7 @@ impl<'a> ReachingDefinitions<'a> {
         &self,
         result: &DataFlowResult<ReachingDefinitionsState>,
         block_id: BlockId,
-        variable: ValueId
+        variable: ValueId,
     ) -> HashSet<DefinitionSite> {
         self.get_reaching_definitions(result, block_id)
             .into_iter()
@@ -222,13 +234,18 @@ impl<'a> ReachingDefinitions<'a> {
         &self,
         result: &DataFlowResult<ReachingDefinitionsState>,
         block_id: BlockId,
-        variable: ValueId
+        variable: ValueId,
     ) -> bool {
-        self.get_variable_reaching_definitions(result, block_id, variable).len() > 1
+        self.get_variable_reaching_definitions(result, block_id, variable)
+            .len()
+            > 1
     }
 
     /// Find uninitialized variable uses
-    pub fn find_uninitialized_uses(&self, result: &DataFlowResult<ReachingDefinitionsState>) -> Vec<(BlockId, ValueId)> {
+    pub fn find_uninitialized_uses(
+        &self,
+        result: &DataFlowResult<ReachingDefinitionsState>,
+    ) -> Vec<(BlockId, ValueId)> {
         let mut uninitialized = Vec::new();
 
         for (block_id, block_node) in self.cfg.basic_blocks() {
@@ -239,8 +256,7 @@ impl<'a> ReachingDefinitions<'a> {
                 let used_vars = utils::get_instruction_uses(instruction);
                 for var in used_vars {
                     // Check if any definition of this variable reaches this point
-                    let has_reaching_def = reaching_defs.iter()
-                        .any(|def| def.variable == var);
+                    let has_reaching_def = reaching_defs.iter().any(|def| def.variable == var);
 
                     if !has_reaching_def {
                         uninitialized.push((block_id, var));
@@ -261,16 +277,27 @@ impl<'a> ReachingDefinitions<'a> {
         // Overall statistics
         report.push_str(&format!("Analysis converged: {}\n", result.converged));
         report.push_str(&format!("Iterations: {}\n", result.iterations));
-        report.push_str(&format!("Total variables: {}\n", self.variable_definitions.len()));
-        report.push_str(&format!("Total definitions: {}\n",
-            self.variable_definitions.values().map(|defs| defs.len()).sum::<usize>()));
+        report.push_str(&format!(
+            "Total variables: {}\n",
+            self.variable_definitions.len()
+        ));
+        report.push_str(&format!(
+            "Total definitions: {}\n",
+            self.variable_definitions
+                .values()
+                .map(|defs| defs.len())
+                .sum::<usize>()
+        ));
 
         // Per-block analysis
         report.push_str("\nPer-Block Analysis:\n");
         for (block_id, _) in self.cfg.basic_blocks() {
             let reaching_defs = self.get_reaching_definitions(result, block_id);
-            report.push_str(&format!("Block {}: {} reaching definitions\n",
-                block_id.0, reaching_defs.len()));
+            report.push_str(&format!(
+                "Block {}: {} reaching definitions\n",
+                block_id.0,
+                reaching_defs.len()
+            ));
 
             // Group by variable
             let mut vars_to_defs: HashMap<ValueId, Vec<&DefinitionSite>> = HashMap::new();
@@ -279,7 +306,11 @@ impl<'a> ReachingDefinitions<'a> {
             }
 
             for (var, defs) in vars_to_defs {
-                report.push_str(&format!("  Variable {}: {} definitions\n", var.0, defs.len()));
+                report.push_str(&format!(
+                    "  Variable {}: {} definitions\n",
+                    var.0,
+                    defs.len()
+                ));
                 if defs.len() > 1 {
                     report.push_str("    (Multiple definitions - potential φ-node needed)\n");
                 }
@@ -291,8 +322,10 @@ impl<'a> ReachingDefinitions<'a> {
         if !uninitialized.is_empty() {
             report.push_str("\nPotential Uninitialized Variable Uses:\n");
             for (block_id, var) in uninitialized {
-                report.push_str(&format!("  Block {}: Variable {} used without reaching definition\n",
-                    block_id.0, var.0));
+                report.push_str(&format!(
+                    "  Block {}: Variable {} used without reaching definition\n",
+                    block_id.0, var.0
+                ));
             }
         }
 
@@ -331,7 +364,12 @@ impl<'a> DataFlowAnalysis for ReachingDefinitions<'a> {
         new_state
     }
 
-    fn transfer_block(&self, state: &Self::State, block_id: BlockId, instructions: &[Instruction]) -> Self::State {
+    fn transfer_block(
+        &self,
+        state: &Self::State,
+        block_id: BlockId,
+        instructions: &[Instruction],
+    ) -> Self::State {
         let mut current_state = state.clone();
 
         for (instr_index, instruction) in instructions.iter().enumerate() {
@@ -418,12 +456,20 @@ mod tests {
 
         // Block 2: x = x + 1
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)), // x = x + 1
+            Instruction::Add(
+                ValueId(3),
+                IrValue::Value(ValueId(1)),
+                IrValue::ConstantInt(1),
+            ), // x = x + 1
         ];
 
         // Block 3: z = x + y
         let instructions3 = vec![
-            Instruction::Add(ValueId(4), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // z = x + y
+            Instruction::Add(
+                ValueId(4),
+                IrValue::Value(ValueId(1)),
+                IrValue::Value(ValueId(2)),
+            ), // z = x + y
         ];
 
         cfg.add_block(block1, instructions1);
@@ -431,8 +477,10 @@ mod tests {
         cfg.add_block(block3, instructions3);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block3, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block3, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }
@@ -507,21 +555,36 @@ mod tests {
         let merge = BlockId(3);
 
         cfg.add_block(entry, vec![]);
-        cfg.add_block(branch1, vec![
-            Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
-        ]);
-        cfg.add_block(branch2, vec![
-            Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2
-        ]);
-        cfg.add_block(merge, vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::ConstantInt(0)), // use x
-        ]);
+        cfg.add_block(
+            branch1,
+            vec![
+                Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(0)), // x = 1
+            ],
+        );
+        cfg.add_block(
+            branch2,
+            vec![
+                Instruction::Add(ValueId(2), IrValue::ConstantInt(2), IrValue::ConstantInt(0)), // x = 2
+            ],
+        );
+        cfg.add_block(
+            merge,
+            vec![
+                Instruction::Add(
+                    ValueId(3),
+                    IrValue::Value(ValueId(1)),
+                    IrValue::ConstantInt(0),
+                ), // use x
+            ],
+        );
 
         cfg.set_entry_block(entry).unwrap();
         cfg.add_edge(entry, branch1, EdgeType::True).unwrap();
         cfg.add_edge(entry, branch2, EdgeType::False).unwrap();
-        cfg.add_edge(branch1, merge, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(branch2, merge, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(branch1, merge, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(branch2, merge, EdgeType::Unconditional)
+            .unwrap();
 
         let mut analysis = ReachingDefinitions::new(&cfg);
         let result = analysis.analyze().unwrap();

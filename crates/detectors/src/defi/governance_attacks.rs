@@ -1,6 +1,8 @@
-use crate::types::{DetectorResult, AnalysisContext, Severity, Finding, DetectorId, Confidence, SourceLocation};
-use ast::Function;
 use crate::defi::DeFiDetector;
+use crate::types::{
+    AnalysisContext, Confidence, DetectorId, DetectorResult, Finding, Severity, SourceLocation,
+};
+use ast::Function;
 
 /// Detector for governance-related attack vulnerabilities
 pub struct GovernanceAttackDetector;
@@ -44,7 +46,10 @@ impl DeFiDetector for GovernanceAttackDetector {
 
 impl GovernanceAttackDetector {
     /// Detect governance token flash loan attacks
-    fn detect_governance_token_flash_loan_attacks(&self, ctx: &AnalysisContext) -> Vec<DetectorResult> {
+    fn detect_governance_token_flash_loan_attacks(
+        &self,
+        ctx: &AnalysisContext,
+    ) -> Vec<DetectorResult> {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
@@ -65,18 +70,25 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(682)  // CWE-682: Incorrect Calculation
+                )
+                .with_cwe(682) // CWE-682: Incorrect Calculation
                 .with_fix_suggestion(
                     "Implement time-weighted voting power, snapshot-based voting, or \
-                    minimum holding periods for governance tokens".to_string()
+                    minimum holding periods for governance tokens"
+                        .to_string(),
                 );
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("Very High - Flash loan attacks require complex operations".to_string())
-                    .with_suggested_fix(
-                        "Implement time-weighted voting power, snapshot-based voting, or \
-                        minimum holding periods for governance tokens".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact(
+                            "Very High - Flash loan attacks require complex operations".to_string(),
+                        )
+                        .with_suggested_fix(
+                            "Implement time-weighted voting power, snapshot-based voting, or \
+                        minimum holding periods for governance tokens"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -143,7 +155,9 @@ impl GovernanceAttackDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.enables_vote_delegation(ctx, func) && !self.has_vote_buying_protection(ctx, func) {
+            if self.enables_vote_delegation(ctx, func)
+                && !self.has_vote_buying_protection(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::High,
@@ -160,14 +174,20 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(284);
+                )
+                .with_cwe(284);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("Low - Vote delegation is typically gas-efficient".to_string())
-                    .with_suggested_fix(
-                        "Implement reputation-based voting, identity verification, or \
-                        restrictions on delegation transfers".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact(
+                            "Low - Vote delegation is typically gas-efficient".to_string(),
+                        )
+                        .with_suggested_fix(
+                            "Implement reputation-based voting, identity verification, or \
+                        restrictions on delegation transfers"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -179,9 +199,8 @@ impl GovernanceAttackDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.is_governance_execution_function(func) &&
-               self.vulnerable_to_griefing(ctx, func) {
-
+            if self.is_governance_execution_function(func) && self.vulnerable_to_griefing(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::Medium,
@@ -197,7 +216,8 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(400);
+                )
+                .with_cwe(400);
 
                 results.push(DetectorResult::new(finding)
                     .with_gas_impact("High - Failed executions waste significant gas".to_string())
@@ -216,7 +236,9 @@ impl GovernanceAttackDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.uses_voting_snapshots(ctx, func) && self.has_snapshot_manipulation_risk(ctx, func) {
+            if self.uses_voting_snapshots(ctx, func)
+                && self.has_snapshot_manipulation_risk(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::High,
@@ -233,14 +255,20 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(367);
+                )
+                .with_cwe(367);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("Medium - Snapshot operations require moderate gas".to_string())
-                    .with_suggested_fix(
-                        "Use deterministic snapshot timing, implement snapshot validation, \
-                        or use time-weighted averages instead of point-in-time snapshots".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact(
+                            "Medium - Snapshot operations require moderate gas".to_string(),
+                        )
+                        .with_suggested_fix(
+                            "Use deterministic snapshot timing, implement snapshot validation, \
+                        or use time-weighted averages instead of point-in-time snapshots"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -252,7 +280,8 @@ impl GovernanceAttackDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.enforces_quorum(ctx, func) && self.vulnerable_to_quorum_manipulation(ctx, func) {
+            if self.enforces_quorum(ctx, func) && self.vulnerable_to_quorum_manipulation(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::High,
@@ -269,7 +298,8 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(682);
+                )
+                .with_cwe(682);
 
                 results.push(DetectorResult::new(finding)
                     .with_gas_impact("Medium - Quorum calculations are moderately gas-intensive".to_string())
@@ -288,9 +318,9 @@ impl GovernanceAttackDetector {
         let mut results = Vec::new();
 
         for func in &ctx.contract.functions {
-            if self.is_proposal_creation_function(func) &&
-               !self.has_frontrunning_protection(ctx, func) {
-
+            if self.is_proposal_creation_function(func)
+                && !self.has_frontrunning_protection(ctx, func)
+            {
                 let finding = Finding::new(
                     DetectorId::new(self.name()),
                     Severity::Medium,
@@ -307,14 +337,20 @@ impl GovernanceAttackDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(362);
+                )
+                .with_cwe(362);
 
-                results.push(DetectorResult::new(finding)
-                    .with_gas_impact("High - Frontrunning involves gas price competition".to_string())
-                    .with_suggested_fix(
-                        "Implement commit-reveal schemes, proposal queuing systems, \
-                        or time delays for proposal submission".to_string()
-                    ));
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact(
+                            "High - Frontrunning involves gas price competition".to_string(),
+                        )
+                        .with_suggested_fix(
+                            "Implement commit-reveal schemes, proposal queuing systems, \
+                        or time delays for proposal submission"
+                                .to_string(),
+                        ),
+                );
             }
         }
 
@@ -325,198 +361,219 @@ impl GovernanceAttackDetector {
 
     fn has_governance_features(&self, ctx: &AnalysisContext) -> bool {
         let governance_indicators = [
-            "vote", "proposal", "govern", "delegate", "quorum", "snapshot",
-            "ballot", "referendum", "poll", "democracy"
+            "vote",
+            "proposal",
+            "govern",
+            "delegate",
+            "quorum",
+            "snapshot",
+            "ballot",
+            "referendum",
+            "poll",
+            "democracy",
         ];
-        governance_indicators.iter().any(|&indicator|
-            ctx.source_code.to_lowercase().contains(indicator)
-        )
+        governance_indicators
+            .iter()
+            .any(|&indicator| ctx.source_code.to_lowercase().contains(indicator))
     }
 
     fn is_voting_function(&self, func: &Function) -> bool {
         let voting_patterns = [
-            "vote", "castVote", "submitVote", "ballot", "approve", "reject"
+            "vote",
+            "castVote",
+            "submitVote",
+            "ballot",
+            "approve",
+            "reject",
         ];
-        voting_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        voting_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn vulnerable_to_flash_loan_voting(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let uses_current_balance = ctx.source_code.contains("balanceOf(") ||
-                                  ctx.source_code.contains("currentBalance") ||
-                                  ctx.source_code.contains("getBalance");
+        let uses_current_balance = ctx.source_code.contains("balanceOf(")
+            || ctx.source_code.contains("currentBalance")
+            || ctx.source_code.contains("getBalance");
 
-        let lacks_time_protection = !self.has_time_weighted_voting(ctx) &&
-                                   !self.has_snapshot_based_voting(ctx) &&
-                                   !self.has_holding_period_requirement(ctx);
+        let lacks_time_protection = !self.has_time_weighted_voting(ctx)
+            && !self.has_snapshot_based_voting(ctx)
+            && !self.has_holding_period_requirement(ctx);
 
         uses_current_balance && lacks_time_protection
     }
 
     fn has_time_weighted_voting(&self, ctx: &AnalysisContext) -> bool {
         let time_weighted_patterns = [
-            "timeWeighted", "averageBalance", "historicalBalance", "weightedVoting"
+            "timeWeighted",
+            "averageBalance",
+            "historicalBalance",
+            "weightedVoting",
         ];
-        time_weighted_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        time_weighted_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_snapshot_based_voting(&self, ctx: &AnalysisContext) -> bool {
-        let snapshot_patterns = [
-            "snapshot", "checkpointBalance", "balanceAt", "votingPower"
-        ];
-        snapshot_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let snapshot_patterns = ["snapshot", "checkpointBalance", "balanceAt", "votingPower"];
+        snapshot_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_holding_period_requirement(&self, ctx: &AnalysisContext) -> bool {
         let holding_patterns = [
-            "holdingPeriod", "lockPeriod", "vestingPeriod", "minimumHolding"
+            "holdingPeriod",
+            "lockPeriod",
+            "vestingPeriod",
+            "minimumHolding",
         ];
-        holding_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        holding_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn is_proposal_creation_function(&self, func: &Function) -> bool {
-        let proposal_patterns = [
-            "propose", "createProposal", "submitProposal", "addProposal"
-        ];
-        proposal_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(&pattern.to_lowercase())
-        )
+        let proposal_patterns = ["propose", "createProposal", "submitProposal", "addProposal"];
+        proposal_patterns.iter().any(|&pattern| {
+            func.name
+                .as_str()
+                .to_lowercase()
+                .contains(&pattern.to_lowercase())
+        })
     }
 
     fn has_proposal_threshold(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let threshold_patterns = [
-            "proposalThreshold", "minimumTokens", "requiredBalance", "threshold"
+            "proposalThreshold",
+            "minimumTokens",
+            "requiredBalance",
+            "threshold",
         ];
-        threshold_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        threshold_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_proposal_cooldown(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let cooldown_patterns = [
-            "cooldown", "delay", "interval", "waitPeriod", "lastProposal"
+            "cooldown",
+            "delay",
+            "interval",
+            "waitPeriod",
+            "lastProposal",
         ];
-        cooldown_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        cooldown_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_proposal_cost(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let cost_patterns = [
-            "proposalFee", "deposit", "bond", "stake", "cost"
-        ];
-        cost_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let cost_patterns = ["proposalFee", "deposit", "bond", "stake", "cost"];
+        cost_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_spam_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let spam_protection_patterns = [
-            "rateLimit", "maxProposals", "spamProtection", "antiSpam"
-        ];
-        spam_protection_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let spam_protection_patterns = ["rateLimit", "maxProposals", "spamProtection", "antiSpam"];
+        spam_protection_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn enables_vote_delegation(&self, _ctx: &AnalysisContext, func: &Function) -> bool {
-        let delegation_patterns = [
-            "delegate", "proxy", "representative", "assignVote"
-        ];
-        delegation_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        let delegation_patterns = ["delegate", "proxy", "representative", "assignVote"];
+        delegation_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn has_vote_buying_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let protection_patterns = [
-            "identity", "reputation", "verification", "sybilResistance", "antiVoteBuying"
+            "identity",
+            "reputation",
+            "verification",
+            "sybilResistance",
+            "antiVoteBuying",
         ];
-        protection_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        protection_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn is_governance_execution_function(&self, func: &Function) -> bool {
-        let execution_patterns = [
-            "execute", "implement", "enact", "apply", "fulfill"
-        ];
-        execution_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        let execution_patterns = ["execute", "implement", "enact", "apply", "fulfill"];
+        execution_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn vulnerable_to_griefing(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let lacks_execution_guarantee = !ctx.source_code.contains("guarantee") &&
-                                       !ctx.source_code.contains("bond") &&
-                                       !ctx.source_code.contains("penalty");
+        let lacks_execution_guarantee = !ctx.source_code.contains("guarantee")
+            && !ctx.source_code.contains("bond")
+            && !ctx.source_code.contains("penalty");
 
-        let allows_execution_failure = ctx.source_code.contains("revert") ||
-                                      ctx.source_code.contains("fail");
+        let allows_execution_failure =
+            ctx.source_code.contains("revert") || ctx.source_code.contains("fail");
 
         lacks_execution_guarantee && allows_execution_failure
     }
 
     fn uses_voting_snapshots(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let snapshot_patterns = [
-            "snapshot", "checkpoint", "balanceAt", "totalSupplyAt"
-        ];
-        snapshot_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let snapshot_patterns = ["snapshot", "checkpoint", "balanceAt", "totalSupplyAt"];
+        snapshot_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_snapshot_manipulation_risk(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let manipulation_indicators = [
-            "block.number", "block.timestamp", "now"
-        ];
-        manipulation_indicators.iter().any(|&indicator|
-            ctx.source_code.contains(indicator)
-        ) && !self.has_deterministic_snapshots(ctx)
+        let manipulation_indicators = ["block.number", "block.timestamp", "now"];
+        manipulation_indicators
+            .iter()
+            .any(|&indicator| ctx.source_code.contains(indicator))
+            && !self.has_deterministic_snapshots(ctx)
     }
 
     fn has_deterministic_snapshots(&self, ctx: &AnalysisContext) -> bool {
         let deterministic_patterns = [
-            "fixedSnapshot", "predeterminedSnapshot", "scheduledSnapshot"
+            "fixedSnapshot",
+            "predeterminedSnapshot",
+            "scheduledSnapshot",
         ];
-        deterministic_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        deterministic_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn enforces_quorum(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
         let quorum_patterns = [
-            "quorum", "minimumParticipation", "requiredVotes", "threshold"
+            "quorum",
+            "minimumParticipation",
+            "requiredVotes",
+            "threshold",
         ];
-        quorum_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        quorum_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn vulnerable_to_quorum_manipulation(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let uses_simple_quorum = ctx.source_code.contains("totalSupply") &&
-                                !ctx.source_code.contains("timeWeighted");
+        let uses_simple_quorum =
+            ctx.source_code.contains("totalSupply") && !ctx.source_code.contains("timeWeighted");
 
-        let lacks_participation_validation = !ctx.source_code.contains("validateParticipation") &&
-                                            !ctx.source_code.contains("verifyQuorum");
+        let lacks_participation_validation = !ctx.source_code.contains("validateParticipation")
+            && !ctx.source_code.contains("verifyQuorum");
 
         uses_simple_quorum && lacks_participation_validation
     }
 
     fn has_frontrunning_protection(&self, ctx: &AnalysisContext, _func: &Function) -> bool {
-        let protection_patterns = [
-            "commitReveal", "delay", "queue", "timelock", "batch"
-        ];
-        protection_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        let protection_patterns = ["commitReveal", "delay", "queue", "timelock", "batch"];
+        protection_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 }
 
@@ -524,7 +581,7 @@ impl GovernanceAttackDetector {
 mod tests {
     use super::*;
     use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
+    use ast::{AstArena, StateMutability, Visibility};
 
     #[test]
     fn test_voting_function_detection() {
@@ -553,7 +610,6 @@ mod tests {
             StateMutability::NonPayable,
         );
 
-
         assert!(detector.is_proposal_creation_function(&function));
     }
 
@@ -574,7 +630,8 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: semantic::SymbolTable::new(),
-            source_code: "function vote() { uint power = token.balanceOf(msg.sender); }".to_string(),
+            source_code: "function vote() { uint power = token.balanceOf(msg.sender); }"
+                .to_string(),
             file_path: "test.sol".to_string(),
         };
 

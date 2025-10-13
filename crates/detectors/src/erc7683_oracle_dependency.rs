@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct OracleDependencyDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl OracleDependencyDetector {
 
     fn is_erc7683_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("fillorder") || source.contains("settle")) &&
-        (source.contains("crosschain") || source.contains("bridge"))
+        (source.contains("fillorder") || source.contains("settle"))
+            && (source.contains("crosschain") || source.contains("bridge"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let name = function.name.name.to_lowercase();
 
@@ -39,30 +43,38 @@ impl OracleDependencyDetector {
 
         let source = &ctx.source_code.to_lowercase();
 
-        let uses_oracle = source.contains("latestrounddata") || source.contains("getprice") ||
-            source.contains("oracle.") || source.contains("pricefeed");
+        let uses_oracle = source.contains("latestrounddata")
+            || source.contains("getprice")
+            || source.contains("oracle.")
+            || source.contains("pricefeed");
 
         if !uses_oracle {
             return issues;
         }
 
         let validates_staleness = source.contains("updatedat") && source.contains("timestamp");
-        let has_circuit_breaker = (source.contains("price") && source.contains("max")) ||
-            (source.contains("price") && source.contains("min"));
+        let has_circuit_breaker = (source.contains("price") && source.contains("max"))
+            || (source.contains("price") && source.contains("min"));
 
         if !validates_staleness {
             issues.push((
-                format!("Oracle used without staleness check in '{}'", function.name.name),
+                format!(
+                    "Oracle used without staleness check in '{}'",
+                    function.name.name
+                ),
                 Severity::High,
-                "Add: require(block.timestamp - updatedAt <= MAX_DELAY);".to_string()
+                "Add: require(block.timestamp - updatedAt <= MAX_DELAY);".to_string(),
             ));
         }
 
         if !has_circuit_breaker {
             issues.push((
-                format!("Missing price bounds validation in '{}'", function.name.name),
+                format!(
+                    "Missing price bounds validation in '{}'",
+                    function.name.name
+                ),
                 Severity::High,
-                "Add: require(price >= MIN_PRICE && price <= MAX_PRICE);".to_string()
+                "Add: require(price >= MIN_PRICE && price <= MAX_PRICE);".to_string(),
             ));
         }
 
@@ -110,7 +122,16 @@ impl Detector for OracleDependencyDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(ctx, title, function.name.location.start().line() as u32, 0, 20, severity)
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ECDSA signature malleability vulnerabilities
 pub struct SignatureMalleabilityDetector {
@@ -57,8 +57,7 @@ impl Detector for SignatureMalleabilityDetector {
                     "Function '{}' uses ECDSA signature verification without malleability protection. {} \
                     ECDSA signatures have two valid forms (s and -s mod n). Without checking that s is in \
                     the lower half range, attackers can create alternate valid signatures for replay attacks.",
-                    function.name.name,
-                    malleability_risk
+                    function.name.name, malleability_risk
                 );
 
                 let finding = self.base.create_finding(
@@ -92,7 +91,11 @@ impl Detector for SignatureMalleabilityDetector {
 }
 
 impl SignatureMalleabilityDetector {
-    fn check_signature_malleability(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_signature_malleability(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -100,37 +103,42 @@ impl SignatureMalleabilityDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for signature verification
-        let uses_ecrecover = func_source.contains("ecrecover") ||
-                            func_source.contains("ECDSA.recover");
+        let uses_ecrecover =
+            func_source.contains("ecrecover") || func_source.contains("ECDSA.recover");
 
         if !uses_ecrecover {
             return None;
         }
 
         // Check for malleability protection
-        let has_s_check = func_source.contains("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0") ||
-                         func_source.contains("secp256k1") ||
-                         func_source.contains("malleability") ||
-                         (func_source.contains("require") && func_source.contains("s <=")) ||
-                         (func_source.contains("require") && func_source.contains("s <"));
+        let has_s_check = func_source
+            .contains("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
+            || func_source.contains("secp256k1")
+            || func_source.contains("malleability")
+            || (func_source.contains("require") && func_source.contains("s <="))
+            || (func_source.contains("require") && func_source.contains("s <"));
 
         // Using OpenZeppelin ECDSA library (has built-in protection)
-        let uses_oz_ecdsa = func_source.contains("ECDSA.recover") ||
-                           func_source.contains("ECDSA.toEthSignedMessageHash");
+        let uses_oz_ecdsa = func_source.contains("ECDSA.recover")
+            || func_source.contains("ECDSA.toEthSignedMessageHash");
 
         if uses_oz_ecdsa {
             return None; // OpenZeppelin ECDSA has malleability protection
         }
 
         if !has_s_check {
-            return Some("Uses ecrecover without checking 's' value against secp256k1 curve order".to_string());
+            return Some(
+                "Uses ecrecover without checking 's' value against secp256k1 curve order"
+                    .to_string(),
+            );
         }
 
         // Pattern: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("signature") ||
-            func_source.contains("malleability") ||
-            func_source.contains("ecrecover")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("signature")
+                || func_source.contains("malleability")
+                || func_source.contains("ecrecover"))
+        {
             return Some("Signature malleability vulnerability marker detected".to_string());
         }
 

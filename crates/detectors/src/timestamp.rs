@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct BlockDependencyDetector {
     base: BaseDetector,
@@ -23,17 +23,31 @@ impl BlockDependencyDetector {
 }
 
 impl Detector for BlockDependencyDetector {
-    fn id(&self) -> DetectorId { self.base.id.clone() }
-    fn name(&self) -> &str { &self.base.name }
-    fn description(&self) -> &str { &self.base.description }
-    fn default_severity(&self) -> Severity { self.base.default_severity }
-    fn categories(&self) -> Vec<DetectorCategory> { self.base.categories.clone() }
-    fn is_enabled(&self) -> bool { self.base.enabled }
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
         for function in ctx.get_functions() {
-            if let Some((has_dependency, manipulation_type)) = self.has_timestamp_dependency(function, ctx) {
+            if let Some((has_dependency, manipulation_type)) =
+                self.has_timestamp_dependency(function, ctx)
+            {
                 if has_dependency {
                     let message = match manipulation_type.as_str() {
                         "time_boost" => format!(
@@ -78,12 +92,18 @@ impl Detector for BlockDependencyDetector {
         Ok(findings)
     }
 
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }
 
 impl BlockDependencyDetector {
     /// Check if function has dangerous timestamp dependencies
-    fn has_timestamp_dependency(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<(bool, String)> {
+    fn has_timestamp_dependency(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<(bool, String)> {
         if let Some(body) = &function.body {
             // Get function source to check for specific patterns
             let func_start = function.location.start().line();
@@ -94,8 +114,11 @@ impl BlockDependencyDetector {
                 let func_source = source_lines[func_start..=func_end].join("\n");
 
                 // Check for specific manipulation types
-                if func_source.contains("VULNERABILITY") && func_source.contains("timestamp manipulation") {
-                    if func_source.contains("time-based boost") || func_source.contains("TimeBoost") {
+                if func_source.contains("VULNERABILITY")
+                    && func_source.contains("timestamp manipulation")
+                {
+                    if func_source.contains("time-based boost") || func_source.contains("TimeBoost")
+                    {
                         return Some((true, "time_boost".to_string()));
                     } else if func_source.contains("timestamp validation") {
                         return Some((true, "timestamp_validation".to_string()));
@@ -133,11 +156,15 @@ impl BlockDependencyDetector {
     /// Check if expression uses timestamp or block properties
     fn expression_uses_timestamp(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
-            ast::Expression::MemberAccess { expression, member, .. } => {
+            ast::Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 if let ast::Expression::Identifier(id) = expression {
                     if id.name == "block" {
                         let member_name = member.name.to_lowercase();
-                        return member_name == "timestamp" || member_name == "number" || member_name == "difficulty";
+                        return member_name == "timestamp"
+                            || member_name == "number"
+                            || member_name == "difficulty";
                     }
                 }
             }

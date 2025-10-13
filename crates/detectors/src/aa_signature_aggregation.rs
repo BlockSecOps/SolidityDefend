@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SignatureAggregationDetector {
     base: BaseDetector,
@@ -25,11 +25,16 @@ impl SignatureAggregationDetector {
 
     fn is_signature_aggregator(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("iaggregator") || source.contains("aggregator")) &&
-        (source.contains("validateuseropssignature") || source.contains("aggregatesignature"))
+        (source.contains("iaggregator") || source.contains("aggregator"))
+            && (source.contains("validateuseropssignature")
+                || source.contains("aggregatesignature"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,10 +43,10 @@ impl SignatureAggregationDetector {
         // Check validateUserOpSignature or validateSignatures
         if name.contains("validatesignature") || name.contains("validateuserops") {
             // Check for missing individual signature validation
-            let has_individual_check = source_lower.contains("for") &&
-                (source_lower.contains("verify") || source_lower.contains("recover"));
-            let has_each_validation = source_lower.contains("each") ||
-                (source_lower.contains("[i]") && source_lower.contains("signature"));
+            let has_individual_check = source_lower.contains("for")
+                && (source_lower.contains("verify") || source_lower.contains("recover"));
+            let has_each_validation = source_lower.contains("each")
+                || (source_lower.contains("[i]") && source_lower.contains("signature"));
 
             if !has_individual_check && !has_each_validation {
                 issues.push((
@@ -52,10 +57,10 @@ impl SignatureAggregationDetector {
             }
 
             // Check for aggregation bypass (accepting empty aggregator)
-            let has_empty_check = source_lower.contains("length") &&
-                (source_lower.contains("> 0") || source_lower.contains("!= 0"));
-            let has_count_validation = source_lower.contains("count") &&
-                source_lower.contains("require");
+            let has_empty_check = source_lower.contains("length")
+                && (source_lower.contains("> 0") || source_lower.contains("!= 0"));
+            let has_count_validation =
+                source_lower.contains("count") && source_lower.contains("require");
 
             if !has_empty_check && !has_count_validation {
                 issues.push((
@@ -66,10 +71,10 @@ impl SignatureAggregationDetector {
             }
 
             // Check for missing signer verification
-            let has_signer_check = source_lower.contains("signer") ||
-                (source_lower.contains("recover") && source_lower.contains("=="));
-            let has_owner_validation = source_lower.contains("owner") &&
-                source_lower.contains("require");
+            let has_signer_check = source_lower.contains("signer")
+                || (source_lower.contains("recover") && source_lower.contains("=="));
+            let has_owner_validation =
+                source_lower.contains("owner") && source_lower.contains("require");
 
             if !has_signer_check && !has_owner_validation {
                 issues.push((
@@ -80,8 +85,8 @@ impl SignatureAggregationDetector {
             }
 
             // Check for signature malleability
-            let has_malleability_check = source_lower.contains("uint256(s)") ||
-                source_lower.contains("malleability");
+            let has_malleability_check =
+                source_lower.contains("uint256(s)") || source_lower.contains("malleability");
 
             if !has_malleability_check {
                 issues.push((
@@ -95,8 +100,8 @@ impl SignatureAggregationDetector {
         // Check aggregateSignatures function
         if name.contains("aggregate") && name.contains("signature") {
             // Check for proper signature format validation
-            let has_format_check = source_lower.contains("length") &&
-                (source_lower.contains("== 65") || source_lower.contains("% 65"));
+            let has_format_check = source_lower.contains("length")
+                && (source_lower.contains("== 65") || source_lower.contains("% 65"));
 
             if !has_format_check {
                 issues.push((
@@ -108,7 +113,8 @@ impl SignatureAggregationDetector {
 
             // Check for replay protection across aggregations
             let has_nonce = source_lower.contains("nonce");
-            let has_unique_id = source_lower.contains("uniqueid") || source_lower.contains("requestid");
+            let has_unique_id =
+                source_lower.contains("uniqueid") || source_lower.contains("requestid");
 
             if !has_nonce && !has_unique_id {
                 issues.push((
@@ -122,8 +128,9 @@ impl SignatureAggregationDetector {
         // Check validateUserOp with aggregator
         if name.contains("validateuserop") {
             // Check if aggregator is properly validated
-            let has_aggregator_check = source_lower.contains("aggregator") &&
-                (source_lower.contains("!= address(0)") || source_lower.contains("== address(0)"));
+            let has_aggregator_check = source_lower.contains("aggregator")
+                && (source_lower.contains("!= address(0)")
+                    || source_lower.contains("== address(0)"));
 
             if source_lower.contains("aggregator") && !has_aggregator_check {
                 issues.push((
@@ -179,15 +186,17 @@ impl Detector for SignatureAggregationDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

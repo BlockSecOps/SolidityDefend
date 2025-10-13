@@ -1,7 +1,7 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::types::{DetectorId, Finding, AnalysisContext};
+use crate::types::{AnalysisContext, DetectorId, Finding};
 
 /// Core trait that all vulnerability detectors must implement
 pub trait Detector: Send + Sync {
@@ -335,16 +335,32 @@ macro_rules! impl_detector_base {
 /// Helper trait for detectors that analyze specific AST nodes
 pub trait AstAnalyzer {
     /// Analyze a function for vulnerabilities
-    fn analyze_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>>;
+    fn analyze_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>>;
 
     /// Analyze a statement for vulnerabilities
-    fn analyze_statement(&self, statement: &ast::Statement<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>>;
+    fn analyze_statement(
+        &self,
+        statement: &ast::Statement<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>>;
 
     /// Analyze an expression for vulnerabilities
-    fn analyze_expression(&self, expression: &ast::Expression<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>>;
+    fn analyze_expression(
+        &self,
+        expression: &ast::Expression<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>>;
 
     /// Analyze a modifier for vulnerabilities
-    fn analyze_modifier(&self, modifier: &ast::Modifier<'_>, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>>;
+    fn analyze_modifier(
+        &self,
+        modifier: &ast::Modifier<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>>;
 }
 
 /// Helper trait for detectors that use data flow analysis

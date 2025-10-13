@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for nonce reuse and management vulnerabilities
 pub struct NonceReuseDetector {
@@ -56,8 +56,7 @@ impl Detector for NonceReuseDetector {
                 let message = format!(
                     "Function '{}' has nonce management vulnerability. {} \
                     Improper nonce handling enables replay attacks or transaction reordering exploits.",
-                    function.name.name,
-                    nonce_issue
+                    function.name.name, nonce_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -91,7 +90,11 @@ impl Detector for NonceReuseDetector {
 
 impl NonceReuseDetector {
     /// Check for nonce reuse vulnerabilities
-    fn check_nonce_reuse(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_nonce_reuse(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,21 +102,20 @@ impl NonceReuseDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check if function uses nonces
-        let uses_nonce = func_source.contains("nonce") ||
-                        func_source.contains("Nonce");
+        let uses_nonce = func_source.contains("nonce") || func_source.contains("Nonce");
 
         if !uses_nonce {
             return None;
         }
 
         // Pattern 1: Nonce not incremented after use
-        let has_nonce_check = func_source.contains("nonces[") ||
-                             func_source.contains("nonce ==");
+        let has_nonce_check = func_source.contains("nonces[") || func_source.contains("nonce ==");
 
-        let lacks_increment = has_nonce_check &&
-                             !func_source.contains("++") &&
-                             !func_source.contains("+=") &&
-                             !func_source.contains("nonces[") && !func_source.contains("] =");
+        let lacks_increment = has_nonce_check
+            && !func_source.contains("++")
+            && !func_source.contains("+=")
+            && !func_source.contains("nonces[")
+            && !func_source.contains("] =");
 
         if lacks_increment {
             return Some(format!(
@@ -146,14 +148,15 @@ impl NonceReuseDetector {
         }
 
         // Pattern 3: No nonce validation in signature verification
-        let verifies_signature = func_source.contains("ecrecover") ||
-                                func_source.contains("verify") ||
-                                func_source.contains("Signature");
+        let verifies_signature = func_source.contains("ecrecover")
+            || func_source.contains("verify")
+            || func_source.contains("Signature");
 
-        let missing_nonce_in_sig = verifies_signature &&
-                                   uses_nonce &&
-                                   !func_source.contains("abi.encode") && !func_source.contains("nonce") ||
-                                   !func_source.contains("keccak256") && !func_source.contains("nonce");
+        let missing_nonce_in_sig = verifies_signature
+            && uses_nonce
+            && !func_source.contains("abi.encode")
+            && !func_source.contains("nonce")
+            || !func_source.contains("keccak256") && !func_source.contains("nonce");
 
         if missing_nonce_in_sig {
             return Some(format!(
@@ -163,11 +166,10 @@ impl NonceReuseDetector {
         }
 
         // Pattern 4: Global nonce instead of per-user
-        let uses_global_nonce = func_source.contains("uint256 nonce") ||
-                               func_source.contains("uint256 public nonce");
+        let uses_global_nonce =
+            func_source.contains("uint256 nonce") || func_source.contains("uint256 public nonce");
 
-        let not_per_user = uses_global_nonce &&
-                          !func_source.contains("mapping(address");
+        let not_per_user = uses_global_nonce && !func_source.contains("mapping(address");
 
         if not_per_user {
             return Some(format!(
@@ -177,13 +179,13 @@ impl NonceReuseDetector {
         }
 
         // Pattern 5: Nonce parameter without validation
-        let has_nonce_param = func_source.contains("uint256 nonce") &&
-                             (func_source.contains("function") || func_source.contains("("));
+        let has_nonce_param = func_source.contains("uint256 nonce")
+            && (func_source.contains("function") || func_source.contains("("));
 
-        let no_validation = has_nonce_param &&
-                           !func_source.contains("require(nonce ==") &&
-                           !func_source.contains("require(nonces[") &&
-                           !func_source.contains("if (nonce !=");
+        let no_validation = has_nonce_param
+            && !func_source.contains("require(nonce ==")
+            && !func_source.contains("require(nonces[")
+            && !func_source.contains("if (nonce !=");
 
         if no_validation {
             return Some(format!(
@@ -193,13 +195,12 @@ impl NonceReuseDetector {
         }
 
         // Pattern 6: Missing nonce cancellation mechanism
-        let has_nonce_logic = func_source.contains("nonces[") ||
-                             func_source.contains("nonce ==");
+        let has_nonce_logic = func_source.contains("nonces[") || func_source.contains("nonce ==");
 
-        let no_cancellation = has_nonce_logic &&
-                             !func_source.contains("cancel") &&
-                             !func_source.contains("invalidate") &&
-                             !func_source.contains("revoke");
+        let no_cancellation = has_nonce_logic
+            && !func_source.contains("cancel")
+            && !func_source.contains("invalidate")
+            && !func_source.contains("revoke");
 
         if no_cancellation {
             return Some(format!(
@@ -209,20 +210,19 @@ impl NonceReuseDetector {
         }
 
         // Pattern 7: Nonce overflow not handled
-        let increments_nonce = func_source.contains("nonces[") && func_source.contains("++") ||
-                              func_source.contains("nonces[") && func_source.contains("+=");
+        let increments_nonce = func_source.contains("nonces[") && func_source.contains("++")
+            || func_source.contains("nonces[") && func_source.contains("+=");
 
-        let _no_overflow_check = increments_nonce &&
-                                !func_source.contains("unchecked") &&
-                                !func_source.contains("SafeMath");
+        let _no_overflow_check = increments_nonce
+            && !func_source.contains("unchecked")
+            && !func_source.contains("SafeMath");
 
         // Pattern 8: Sequential nonce requirement too strict
-        let requires_sequential = func_source.contains("require(nonce == nonces[") ||
-                                 func_source.contains("if (nonce != nonces[");
+        let requires_sequential = func_source.contains("require(nonce == nonces[")
+            || func_source.contains("if (nonce != nonces[");
 
-        let no_gap_allowed = requires_sequential &&
-                            !func_source.contains(">=") &&
-                            !func_source.contains("bitmap");
+        let no_gap_allowed =
+            requires_sequential && !func_source.contains(">=") && !func_source.contains("bitmap");
 
         if no_gap_allowed {
             return Some(format!(
@@ -232,10 +232,10 @@ impl NonceReuseDetector {
         }
 
         // Pattern 9: Nonce used for randomness
-        let uses_for_randomness = (func_source.contains("random") ||
-                                  func_source.contains("Random") ||
-                                  func_source.contains("seed")) &&
-                                 uses_nonce;
+        let uses_for_randomness = (func_source.contains("random")
+            || func_source.contains("Random")
+            || func_source.contains("seed"))
+            && uses_nonce;
 
         if uses_for_randomness {
             return Some(format!(
@@ -245,12 +245,10 @@ impl NonceReuseDetector {
         }
 
         // Pattern 10: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("nonce") ||
-            func_source.contains("replay")) {
-            return Some(format!(
-                "Nonce reuse vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("nonce") || func_source.contains("replay"))
+        {
+            return Some(format!("Nonce reuse vulnerability marker detected"));
         }
 
         None

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for cross-chain replay attack vulnerabilities
 pub struct CrossChainReplayDetector {
@@ -60,20 +60,22 @@ impl Detector for CrossChainReplayDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
-                .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                .with_fix_suggestion(format!(
-                    "Include 'block.chainid' in the hash calculation for function '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
+                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                    .with_fix_suggestion(format!(
+                        "Include 'block.chainid' in the hash calculation for function '{}'. \
                     Example: keccak256(abi.encodePacked(..., block.chainid))",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -89,7 +91,11 @@ impl Detector for CrossChainReplayDetector {
 
 impl CrossChainReplayDetector {
     /// Check if a function is vulnerable to cross-chain replay attacks
-    fn is_vulnerable_to_cross_chain_replay(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+    fn is_vulnerable_to_cross_chain_replay(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return false;
@@ -98,13 +104,21 @@ impl CrossChainReplayDetector {
         // Look for bridge/cross-chain related functions
         let function_name = function.name.name.to_lowercase();
         let cross_chain_patterns = [
-            "bridge", "relay", "transfer", "lock", "unlock",
-            "deposit", "withdraw", "claim", "crosschain", "cross_chain"
+            "bridge",
+            "relay",
+            "transfer",
+            "lock",
+            "unlock",
+            "deposit",
+            "withdraw",
+            "claim",
+            "crosschain",
+            "cross_chain",
         ];
 
-        let is_cross_chain_function = cross_chain_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_cross_chain_function = cross_chain_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_cross_chain_function {
             // Also check for signature verification or hash generation in source
@@ -118,9 +132,9 @@ impl CrossChainReplayDetector {
 
             let func_source = source_lines[func_start..=func_end].join("\n");
 
-            let has_hashing = func_source.contains("keccak256") ||
-                             func_source.contains("sha256") ||
-                             func_source.contains("ecrecover");
+            let has_hashing = func_source.contains("keccak256")
+                || func_source.contains("sha256")
+                || func_source.contains("ecrecover");
 
             if !has_hashing {
                 return false;
@@ -139,8 +153,7 @@ impl CrossChainReplayDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if function has hashing operations
-        let has_hashing = func_source.contains("keccak256") ||
-                         func_source.contains("sha256");
+        let has_hashing = func_source.contains("keccak256") || func_source.contains("sha256");
 
         if !has_hashing {
             return false;
@@ -148,37 +161,46 @@ impl CrossChainReplayDetector {
 
         // Check for cross-chain indicators
         let cross_chain_indicators = [
-            "targetChain", "target_chain", "destinationChain", "destination_chain",
-            "chainId", "chain_id", "toChain", "to_chain", "fromChain", "from_chain",
-            "targetNetwork", "destinationNetwork"
+            "targetChain",
+            "target_chain",
+            "destinationChain",
+            "destination_chain",
+            "chainId",
+            "chain_id",
+            "toChain",
+            "to_chain",
+            "fromChain",
+            "from_chain",
+            "targetNetwork",
+            "destinationNetwork",
         ];
 
-        let has_chain_reference = cross_chain_indicators.iter().any(|indicator|
-            func_source.contains(indicator)
-        );
+        let has_chain_reference = cross_chain_indicators
+            .iter()
+            .any(|indicator| func_source.contains(indicator));
 
         // If it has chain references but no block.chainid in the hash, it's vulnerable
         if has_chain_reference {
-            let has_chainid_protection = func_source.contains("block.chainid") ||
-                                        func_source.contains("block.chainId") ||
-                                        func_source.contains("chainid()");
+            let has_chainid_protection = func_source.contains("block.chainid")
+                || func_source.contains("block.chainId")
+                || func_source.contains("chainid()");
 
             // Vulnerable if it references chains but doesn't include current chain ID
             return !has_chainid_protection;
         }
 
         // Check if it's a signature verification function without chain ID
-        let has_signature_ops = func_source.contains("ecrecover") ||
-                               func_source.contains("signature") ||
-                               func_source.contains("verify");
+        let has_signature_ops = func_source.contains("ecrecover")
+            || func_source.contains("signature")
+            || func_source.contains("verify");
 
         if has_signature_ops && has_hashing {
-            let has_chainid_in_hash = func_source.contains("block.chainid") ||
-                                     func_source.contains("block.chainId");
+            let has_chainid_in_hash =
+                func_source.contains("block.chainid") || func_source.contains("block.chainId");
 
             // Check if there's a comment about missing chainid (vulnerability marker)
-            let has_vulnerability_comment = func_source.contains("Missing:") &&
-                                           func_source.contains("chainid");
+            let has_vulnerability_comment =
+                func_source.contains("Missing:") && func_source.contains("chainid");
 
             return !has_chainid_in_hash || has_vulnerability_comment;
         }

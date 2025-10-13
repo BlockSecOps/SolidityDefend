@@ -1,7 +1,7 @@
-use anyhow::{Result, Context};
+use crate::{FixSuggestion, TextReplacement};
+use anyhow::{Context, Result};
 use regex::Regex;
 use std::collections::HashMap;
-use crate::{TextReplacement, FixSuggestion};
 
 /// Advanced text replacement engine for applying code fixes
 pub struct ReplacementEngine {
@@ -18,7 +18,11 @@ impl ReplacementEngine {
     }
 
     /// Apply a set of text replacements to source code
-    pub fn apply_replacements(&mut self, source: &str, replacements: &[TextReplacement]) -> Result<String> {
+    pub fn apply_replacements(
+        &mut self,
+        source: &str,
+        replacements: &[TextReplacement],
+    ) -> Result<String> {
         if replacements.is_empty() {
             return Ok(source.to_string());
         }
@@ -35,7 +39,12 @@ impl ReplacementEngine {
 
         for replacement in sorted_replacements {
             self.apply_single_replacement(&mut lines, &replacement)
-                .with_context(|| format!("Failed to apply replacement at {}:{}", replacement.start_line, replacement.start_column))?;
+                .with_context(|| {
+                    format!(
+                        "Failed to apply replacement at {}:{}",
+                        replacement.start_line, replacement.start_column
+                    )
+                })?;
         }
 
         Ok(lines.join("\n"))
@@ -47,7 +56,11 @@ impl ReplacementEngine {
     }
 
     /// Apply multiple fixes, resolving conflicts automatically
-    pub fn apply_multiple_fixes(&mut self, source: &str, fixes: &[FixSuggestion]) -> Result<String> {
+    pub fn apply_multiple_fixes(
+        &mut self,
+        source: &str,
+        fixes: &[FixSuggestion],
+    ) -> Result<String> {
         // Collect all replacements
         let mut all_replacements = Vec::new();
         for fix in fixes {
@@ -113,13 +126,22 @@ impl ReplacementEngine {
     }
 
     /// Generate replacement for adding require statement
-    pub fn add_require_statement(&self, line_number: u32, condition: &str, message: &str) -> TextReplacement {
+    pub fn add_require_statement(
+        &self,
+        line_number: u32,
+        condition: &str,
+        message: &str,
+    ) -> TextReplacement {
         let require_stmt = format!("        require({}, \"{}\");", condition, message);
         self.add_line_before(line_number, &require_stmt)
     }
 
     /// Generate replacement for adding modifier to function
-    pub fn add_modifier_to_function(&self, function_line: u32, modifier_name: &str) -> Result<TextReplacement> {
+    pub fn add_modifier_to_function(
+        &self,
+        function_line: u32,
+        modifier_name: &str,
+    ) -> Result<TextReplacement> {
         // This would need more sophisticated parsing to find the right place to insert the modifier
         // For now, provide a simple implementation
         Ok(TextReplacement {
@@ -155,13 +177,23 @@ impl ReplacementEngine {
     }
 
     /// Find and replace using regex patterns
-    pub fn regex_replace(&mut self, source: &str, pattern: &str, replacement: &str) -> Result<String> {
+    pub fn regex_replace(
+        &mut self,
+        source: &str,
+        pattern: &str,
+        replacement: &str,
+    ) -> Result<String> {
         let regex = self.get_or_compile_regex(pattern)?;
         Ok(regex.replace_all(source, replacement).to_string())
     }
 
     /// Find all matches of a pattern and generate replacements
-    pub fn find_and_replace_all(&mut self, source: &str, pattern: &str, replacement: &str) -> Result<Vec<TextReplacement>> {
+    pub fn find_and_replace_all(
+        &mut self,
+        source: &str,
+        pattern: &str,
+        replacement: &str,
+    ) -> Result<Vec<TextReplacement>> {
         let regex = self.get_or_compile_regex(pattern)?;
         let mut replacements = Vec::new();
 
@@ -184,7 +216,12 @@ impl ReplacementEngine {
     }
 
     /// Generate replacements for reordering expressions (e.g., division before multiplication)
-    pub fn reorder_expression(&self, line: u32, _old_expression: &str, new_expression: &str) -> TextReplacement {
+    pub fn reorder_expression(
+        &self,
+        line: u32,
+        _old_expression: &str,
+        new_expression: &str,
+    ) -> TextReplacement {
         TextReplacement {
             start_line: line,
             start_column: 1,
@@ -195,7 +232,11 @@ impl ReplacementEngine {
     }
 
     /// Apply a single replacement to the lines
-    fn apply_single_replacement(&self, lines: &mut Vec<String>, replacement: &TextReplacement) -> Result<()> {
+    fn apply_single_replacement(
+        &self,
+        lines: &mut Vec<String>,
+        replacement: &TextReplacement,
+    ) -> Result<()> {
         let start_line_idx = (replacement.start_line as usize).saturating_sub(1);
         let end_line_idx = (replacement.end_line as usize).saturating_sub(1);
 
@@ -229,13 +270,17 @@ impl ReplacementEngine {
         let start_col = if replacement.start_column == u32::MAX {
             line.len()
         } else {
-            (replacement.start_column as usize).saturating_sub(1).min(line.len())
+            (replacement.start_column as usize)
+                .saturating_sub(1)
+                .min(line.len())
         };
 
         let end_col = if replacement.end_column == u32::MAX {
             line.len()
         } else {
-            (replacement.end_column as usize).saturating_sub(1).min(line.len())
+            (replacement.end_column as usize)
+                .saturating_sub(1)
+                .min(line.len())
         };
 
         if start_col <= end_col && end_col <= line.len() {
@@ -269,13 +314,17 @@ impl ReplacementEngine {
         let start_col = if replacement.start_column == u32::MAX {
             start_line.len()
         } else {
-            (replacement.start_column as usize).saturating_sub(1).min(start_line.len())
+            (replacement.start_column as usize)
+                .saturating_sub(1)
+                .min(start_line.len())
         };
 
         let end_col = if replacement.end_column == u32::MAX {
             end_line.len()
         } else {
-            (replacement.end_column as usize).saturating_sub(1).min(end_line.len())
+            (replacement.end_column as usize)
+                .saturating_sub(1)
+                .min(end_line.len())
         };
 
         // Create the new content
@@ -296,7 +345,10 @@ impl ReplacementEngine {
     }
 
     /// Resolve conflicts between overlapping replacements
-    fn resolve_replacement_conflicts(&self, replacements: Vec<TextReplacement>) -> Result<Vec<TextReplacement>> {
+    fn resolve_replacement_conflicts(
+        &self,
+        replacements: Vec<TextReplacement>,
+    ) -> Result<Vec<TextReplacement>> {
         let mut sorted_replacements = replacements;
         // Sort by position (reverse order for easier conflict detection)
         sorted_replacements.sort_by(|a, b| {
@@ -309,7 +361,12 @@ impl ReplacementEngine {
         let mut used_ranges = Vec::new();
 
         for replacement in sorted_replacements {
-            let range = (replacement.start_line, replacement.start_column, replacement.end_line, replacement.end_column);
+            let range = (
+                replacement.start_line,
+                replacement.start_column,
+                replacement.end_line,
+                replacement.end_column,
+            );
 
             // Check for conflicts with already selected replacements
             let mut conflicts = false;
@@ -375,7 +432,10 @@ pub mod patterns {
 
     /// Generate replacement for adding access control check
     pub fn add_access_control_check(line_number: u32, owner_variable: &str) -> TextReplacement {
-        let require_stmt = format!("        require(msg.sender == {}, \"Not authorized\");", owner_variable);
+        let require_stmt = format!(
+            "        require(msg.sender == {}, \"Not authorized\");",
+            owner_variable
+        );
         TextReplacement {
             start_line: line_number,
             start_column: 1,
@@ -387,7 +447,10 @@ pub mod patterns {
 
     /// Generate replacement for adding zero address check
     pub fn add_zero_address_check(line_number: u32, address_variable: &str) -> TextReplacement {
-        let require_stmt = format!("        require({} != address(0), \"Zero address not allowed\");", address_variable);
+        let require_stmt = format!(
+            "        require({} != address(0), \"Zero address not allowed\");",
+            address_variable
+        );
         TextReplacement {
             start_line: line_number,
             start_column: 1,
@@ -398,7 +461,10 @@ pub mod patterns {
     }
 
     /// Generate replacement for adding reentrancy guard
-    pub fn add_reentrancy_guard(function_start_line: u32, function_end_line: u32) -> Vec<TextReplacement> {
+    pub fn add_reentrancy_guard(
+        function_start_line: u32,
+        function_end_line: u32,
+    ) -> Vec<TextReplacement> {
         vec![
             // Add at the beginning of function
             TextReplacement {
@@ -406,7 +472,9 @@ pub mod patterns {
                 start_column: 1,
                 end_line: function_start_line + 1,
                 end_column: 1,
-                replacement_text: "        require(!locked, \"Reentrancy guard\");\n        locked = true;\n".to_string(),
+                replacement_text:
+                    "        require(!locked, \"Reentrancy guard\");\n        locked = true;\n"
+                        .to_string(),
             },
             // Add at the end of function
             TextReplacement {
@@ -449,13 +517,21 @@ pub mod patterns {
                 start_column: start_col,
                 end_line: line_number,
                 end_column: end_col,
-                replacement_text: format!("/* TODO: Reorder to avoid precision loss */ {}", original_expr),
+                replacement_text: format!(
+                    "/* TODO: Reorder to avoid precision loss */ {}",
+                    original_expr
+                ),
             })
         }
     }
 
     /// Generate replacement for adding SafeMath usage
-    pub fn add_safemath_usage(line_number: u32, operation: &str, left: &str, right: &str) -> TextReplacement {
+    pub fn add_safemath_usage(
+        line_number: u32,
+        operation: &str,
+        left: &str,
+        right: &str,
+    ) -> TextReplacement {
         let safe_operation = match operation {
             "+" => format!("{}.add({})", left, right),
             "-" => format!("{}.sub({})", left, right),

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for inefficient storage patterns and layout issues
 pub struct InefficientStorageDetector {
@@ -61,22 +61,18 @@ impl Detector for InefficientStorageDetector {
                     issue_desc
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line_num,
-                    0,
-                    30,
-                )
-                .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                .with_fix_suggestion(format!(
-                    "Optimize storage layout. \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line_num, 0, 30)
+                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                    .with_fix_suggestion(format!(
+                        "Optimize storage layout. \
                     Consider: (1) Pack variables <32 bytes together in structs, \
                     (2) Order struct fields by size (largest to smallest), \
                     (3) Use uint256 instead of smaller types for standalone variables, \
                     (4) Combine boolean flags into a single uint256 bitmap, \
                     (5) Use constants/immutables for unchanging values."
-                ));
+                    ));
 
                 findings.push(finding);
             }
@@ -115,9 +111,13 @@ impl InefficientStorageDetector {
                 if trimmed.contains("uint256") || trimmed.contains("address") {
                     struct_has_uint256 = true;
                 }
-                if trimmed.contains("uint8") || trimmed.contains("uint16") ||
-                   trimmed.contains("uint32") || trimmed.contains("uint64") ||
-                   trimmed.contains("uint128") || trimmed.contains("bool") {
+                if trimmed.contains("uint8")
+                    || trimmed.contains("uint16")
+                    || trimmed.contains("uint32")
+                    || trimmed.contains("uint64")
+                    || trimmed.contains("uint128")
+                    || trimmed.contains("bool")
+                {
                     struct_has_small_types = true;
                 }
 
@@ -133,10 +133,13 @@ impl InefficientStorageDetector {
             }
 
             // Pattern 2: Single boolean flags as storage variables
-            if trimmed.contains("bool ") &&
-               (trimmed.contains("public") || trimmed.contains("private") || trimmed.contains("internal")) &&
-               !trimmed.contains("mapping") &&
-               !in_struct {
+            if trimmed.contains("bool ")
+                && (trimmed.contains("public")
+                    || trimmed.contains("private")
+                    || trimmed.contains("internal"))
+                && !trimmed.contains("mapping")
+                && !in_struct
+            {
                 issues.push((
                     (line_idx + 1) as u32,
                     "Single boolean storage variable. Consider packing multiple bools into uint256 bitmap".to_string()
@@ -144,9 +147,14 @@ impl InefficientStorageDetector {
             }
 
             // Pattern 3: Small uint types as standalone storage variables
-            if (trimmed.contains("uint8 ") || trimmed.contains("uint16 ") || trimmed.contains("uint32 ")) &&
-               (trimmed.contains("public") || trimmed.contains("private") || trimmed.contains("internal")) &&
-               !in_struct {
+            if (trimmed.contains("uint8 ")
+                || trimmed.contains("uint16 ")
+                || trimmed.contains("uint32 "))
+                && (trimmed.contains("public")
+                    || trimmed.contains("private")
+                    || trimmed.contains("internal"))
+                && !in_struct
+            {
                 issues.push((
                     (line_idx + 1) as u32,
                     "Small uint type as standalone storage variable. Use uint256 or pack with other variables".to_string()
@@ -154,11 +162,14 @@ impl InefficientStorageDetector {
             }
 
             // Pattern 4: Constant-like variables stored in storage
-            if trimmed.contains(" = ") &&
-               (trimmed.contains("public") || trimmed.contains("private")) &&
-               !trimmed.contains("constant") &&
-               !trimmed.contains("immutable") &&
-               (trimmed.contains("1000") || trimmed.contains("100") || trimmed.contains("10000")) {
+            if trimmed.contains(" = ")
+                && (trimmed.contains("public") || trimmed.contains("private"))
+                && !trimmed.contains("constant")
+                && !trimmed.contains("immutable")
+                && (trimmed.contains("1000")
+                    || trimmed.contains("100")
+                    || trimmed.contains("10000"))
+            {
                 issues.push((
                     (line_idx + 1) as u32,
                     "Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable".to_string()
@@ -171,7 +182,10 @@ impl InefficientStorageDetector {
             if self.has_redundant_storage_reads(&function.source) {
                 issues.push((
                     function.line as u32,
-                    format!("Function '{}' reads same storage variable multiple times. Cache in memory", function.name)
+                    format!(
+                        "Function '{}' reads same storage variable multiple times. Cache in memory",
+                        function.name
+                    ),
                 ));
             }
         }
@@ -200,8 +214,10 @@ impl InefficientStorageDetector {
             if let Some((_, _, ref mut func_lines)) = current_function {
                 func_lines.push(line.to_string());
 
-                if trimmed == "}" && func_lines.iter().filter(|l| l.contains('{')).count() ==
-                   func_lines.iter().filter(|l| l.contains('}')).count() {
+                if trimmed == "}"
+                    && func_lines.iter().filter(|l| l.contains('{')).count()
+                        == func_lines.iter().filter(|l| l.contains('}')).count()
+                {
                     let (name, line, source_lines) = current_function.take().unwrap();
                     functions.push(FunctionInfo {
                         name,

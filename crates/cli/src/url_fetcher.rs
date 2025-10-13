@@ -1,8 +1,8 @@
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Context, Result, anyhow};
+use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::Duration;
-use reqwest::Client;
 use url::Url;
 
 /// Supported blockchain explorer platforms
@@ -131,24 +131,34 @@ impl UrlFetcher {
 
     /// Parse URL and extract platform and type
     pub fn parse_url(&self, url_str: &str) -> Result<(ExplorerPlatform, UrlType)> {
-        let url = Url::parse(url_str)
-            .with_context(|| format!("Invalid URL format: {}", url_str))?;
+        let url =
+            Url::parse(url_str).with_context(|| format!("Invalid URL format: {}", url_str))?;
 
         // Validate URL scheme is HTTP or HTTPS
         match url.scheme() {
-            "http" | "https" => {},
-            scheme => return Err(anyhow!("Unsupported URL scheme: {}. Only HTTP and HTTPS are supported", scheme)),
+            "http" | "https" => {}
+            scheme => {
+                return Err(anyhow!(
+                    "Unsupported URL scheme: {}. Only HTTP and HTTPS are supported",
+                    scheme
+                ));
+            }
         }
 
-        let host = url.host_str()
+        let host = url
+            .host_str()
             .ok_or_else(|| anyhow!("URL missing host: {}", url_str))?;
 
         let platform = match host {
-            "etherscan.io" | "goerli.etherscan.io" | "sepolia.etherscan.io" => ExplorerPlatform::Etherscan,
+            "etherscan.io" | "goerli.etherscan.io" | "sepolia.etherscan.io" => {
+                ExplorerPlatform::Etherscan
+            }
             "polygonscan.com" | "mumbai.polygonscan.com" => ExplorerPlatform::Polygonscan,
             "bscscan.com" | "testnet.bscscan.com" => ExplorerPlatform::BscScan,
             "arbiscan.io" | "goerli.arbiscan.io" => ExplorerPlatform::Arbiscan,
-            "optimistic.etherscan.io" | "goerli-optimism.etherscan.io" => ExplorerPlatform::OptimismEtherscan,
+            "optimistic.etherscan.io" | "goerli-optimism.etherscan.io" => {
+                ExplorerPlatform::OptimismEtherscan
+            }
             "basescan.org" | "goerli.basescan.org" => ExplorerPlatform::BaseScan,
             "snowtrace.io" | "testnet.snowtrace.io" => ExplorerPlatform::Snowtrace,
             _ => return Err(anyhow!("Unsupported blockchain explorer: {}", host)),
@@ -156,7 +166,8 @@ impl UrlFetcher {
 
         let path = url.path();
         let url_type = if path.starts_with("/tx/") {
-            let tx_hash = path.strip_prefix("/tx/")
+            let tx_hash = path
+                .strip_prefix("/tx/")
                 .ok_or_else(|| anyhow!("Invalid transaction URL format"))?
                 .to_string();
             if tx_hash.is_empty() {
@@ -164,7 +175,8 @@ impl UrlFetcher {
             }
             UrlType::Transaction(tx_hash)
         } else if path.starts_with("/address/") {
-            let address = path.strip_prefix("/address/")
+            let address = path
+                .strip_prefix("/address/")
                 .ok_or_else(|| anyhow!("Invalid address URL format"))?
                 .to_string();
             if address.is_empty() {
@@ -172,7 +184,9 @@ impl UrlFetcher {
             }
             UrlType::Contract(address)
         } else {
-            return Err(anyhow!("URL must be either a transaction (/tx/) or address (/address/) URL"));
+            return Err(anyhow!(
+                "URL must be either a transaction (/tx/) or address (/address/) URL"
+            ));
         };
 
         Ok((platform, url_type))
@@ -189,27 +203,36 @@ impl UrlFetcher {
 
                 if let Some(contract_address) = tx_info.contract_address {
                     // Fetch contract source from the created contract
-                    self.fetch_contract_source_by_address(&platform, &contract_address).await
+                    self.fetch_contract_source_by_address(&platform, &contract_address)
+                        .await
                 } else {
                     // Transaction might be interacting with an existing contract
                     if let Some(to_address) = tx_info.to {
-                        self.fetch_contract_source_by_address(&platform, &to_address).await
+                        self.fetch_contract_source_by_address(&platform, &to_address)
+                            .await
                     } else {
                         Err(anyhow!("Transaction does not involve a smart contract"))
                     }
                 }
-            },
+            }
             UrlType::Contract(address) => {
-                self.fetch_contract_source_by_address(&platform, &address).await
+                self.fetch_contract_source_by_address(&platform, &address)
+                    .await
             }
         }
     }
 
     /// Fetch transaction information
-    async fn fetch_transaction_info(&self, platform: &ExplorerPlatform, tx_hash: &str) -> Result<TransactionInfo> {
-        let api_url = self.build_api_url(platform, "eth_getTransactionByHash", &[("txhash", tx_hash)])?;
+    async fn fetch_transaction_info(
+        &self,
+        platform: &ExplorerPlatform,
+        tx_hash: &str,
+    ) -> Result<TransactionInfo> {
+        let api_url =
+            self.build_api_url(platform, "eth_getTransactionByHash", &[("txhash", tx_hash)])?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&api_url)
             .send()
             .await
@@ -221,7 +244,10 @@ impl UrlFetcher {
             .with_context(|| "Failed to parse transaction API response")?;
 
         if api_response.status != "1" {
-            return Err(anyhow!("API error: {}", api_response.message.unwrap_or_default()));
+            return Err(anyhow!(
+                "API error: {}",
+                api_response.message.unwrap_or_default()
+            ));
         }
 
         // Parse transaction data
@@ -231,8 +257,7 @@ impl UrlFetcher {
         let is_contract_creation = tx_data.to.is_none();
         Ok(TransactionInfo {
             hash: tx_hash.to_string(),
-            block_number: u64::from_str_radix(&tx_data.block_number[2..], 16)
-                .unwrap_or_default(),
+            block_number: u64::from_str_radix(&tx_data.block_number[2..], 16).unwrap_or_default(),
             from: tx_data.from,
             to: tx_data.to,
             contract_address: tx_data.contract_address,
@@ -241,10 +266,15 @@ impl UrlFetcher {
     }
 
     /// Fetch contract source code by address
-    async fn fetch_contract_source_by_address(&self, platform: &ExplorerPlatform, address: &str) -> Result<Vec<ContractSource>> {
+    async fn fetch_contract_source_by_address(
+        &self,
+        platform: &ExplorerPlatform,
+        address: &str,
+    ) -> Result<Vec<ContractSource>> {
         let api_url = self.build_api_url(platform, "getsourcecode", &[("address", address)])?;
 
-        let response = self.client
+        let response = self
+            .client
             .get(&api_url)
             .send()
             .await
@@ -256,7 +286,10 @@ impl UrlFetcher {
             .with_context(|| "Failed to parse contract source API response")?;
 
         if api_response.status != "1" {
-            return Err(anyhow!("API error: {}", api_response.message.unwrap_or_default()));
+            return Err(anyhow!(
+                "API error: {}",
+                api_response.message.unwrap_or_default()
+            ));
         }
 
         let source_data: Vec<ContractSourceData> = serde_json::from_value(api_response.result)
@@ -267,7 +300,9 @@ impl UrlFetcher {
         for (index, data) in source_data.iter().enumerate() {
             if data.source_code.is_empty() {
                 if index == 0 {
-                    return Err(anyhow!("Contract source code not available - contract may not be verified"));
+                    return Err(anyhow!(
+                        "Contract source code not available - contract may not be verified"
+                    ));
                 }
                 continue;
             }
@@ -302,7 +337,10 @@ impl UrlFetcher {
         }
 
         if contracts.is_empty() {
-            Err(anyhow!("No verified contracts found at address {}", address))
+            Err(anyhow!(
+                "No verified contracts found at address {}",
+                address
+            ))
         } else {
             Ok(contracts)
         }
@@ -331,7 +369,12 @@ impl UrlFetcher {
     }
 
     /// Build API URL for different platforms
-    fn build_api_url(&self, platform: &ExplorerPlatform, module_action: &str, params: &[(&str, &str)]) -> Result<String> {
+    fn build_api_url(
+        &self,
+        platform: &ExplorerPlatform,
+        module_action: &str,
+        params: &[(&str, &str)],
+    ) -> Result<String> {
         let base_url = match platform {
             ExplorerPlatform::Etherscan => "https://api.etherscan.io/api",
             ExplorerPlatform::Polygonscan => "https://api.polygonscan.com/api",
@@ -362,7 +405,8 @@ impl UrlFetcher {
         use std::io::Write;
 
         let temp_dir = std::env::temp_dir();
-        let filename = format!("{}_{}.sol",
+        let filename = format!(
+            "{}_{}.sol",
             contract.platform.to_lowercase(),
             contract.address[2..8].to_lowercase() // Remove 0x prefix, take first 6 chars
         );
@@ -376,7 +420,11 @@ impl UrlFetcher {
         writeln!(file, "// Address: {}", contract.address)?;
         writeln!(file, "// Platform: {}", contract.platform)?;
         writeln!(file, "// Compiler: {}", contract.compiler_version)?;
-        writeln!(file, "// Optimization: {} (runs: {})", contract.optimization, contract.optimization_runs)?;
+        writeln!(
+            file,
+            "// Optimization: {} (runs: {})",
+            contract.optimization, contract.optimization_runs
+        )?;
         writeln!(file, "// Verified: {}", contract.is_verified)?;
         writeln!(file, "")?;
 

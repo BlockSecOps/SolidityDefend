@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for weak multi-signature validation vulnerabilities
 pub struct WeakSignatureValidationDetector {
@@ -60,21 +60,23 @@ impl Detector for WeakSignatureValidationDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                .with_cwe(347) // CWE-347: Improper Verification of Cryptographic Signature
-                .with_fix_suggestion(format!(
-                    "Add duplicate signer check in function '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                    .with_cwe(347) // CWE-347: Improper Verification of Cryptographic Signature
+                    .with_fix_suggestion(format!(
+                        "Add duplicate signer check in function '{}'. \
                     Example: Track seen signers in a mapping or check array for duplicates. \
                     require(!seen[signer], \"Duplicate signer\"); seen[signer] = true;",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -90,7 +92,11 @@ impl Detector for WeakSignatureValidationDetector {
 
 impl WeakSignatureValidationDetector {
     /// Check if function has weak signature validation
-    fn has_weak_signature_validation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+    fn has_weak_signature_validation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return false;
@@ -108,22 +114,21 @@ impl WeakSignatureValidationDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if function validates signatures
-        let validates_signatures = (func_source.contains("signature") ||
-                                   func_source.contains("recover") ||
-                                   func_source.contains("ecrecover") ||
-                                   func_source.contains("signer")) &&
-                                  (func_source.contains("for") ||
-                                   func_source.contains("while"));
+        let validates_signatures = (func_source.contains("signature")
+            || func_source.contains("recover")
+            || func_source.contains("ecrecover")
+            || func_source.contains("signer"))
+            && (func_source.contains("for") || func_source.contains("while"));
 
         if !validates_signatures {
             return false;
         }
 
         // Check if it's processing multiple signatures
-        let has_multiple_signatures = func_source.contains("signatures.length") ||
-                                     func_source.contains("signatures[") ||
-                                     func_source.contains("signatureCount") ||
-                                     func_source.contains("requiredSignatures");
+        let has_multiple_signatures = func_source.contains("signatures.length")
+            || func_source.contains("signatures[")
+            || func_source.contains("signatureCount")
+            || func_source.contains("requiredSignatures");
 
         if !has_multiple_signatures {
             return false;
@@ -136,31 +141,28 @@ impl WeakSignatureValidationDetector {
     /// Check if function lacks duplicate signer protection
     fn check_duplicate_protection(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("duplicate") ||
-                                        source.contains("same signature") ||
-                                        source.contains("No check for duplicate"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("duplicate")
+                || source.contains("same signature")
+                || source.contains("No check for duplicate"));
 
         // Pattern 2: Has signature recovery/validation in loop
-        let has_signature_loop = (source.contains("for") &&
-                                 (source.contains("ecrecover") ||
-                                  source.contains("recover") ||
-                                  source.contains("signer ="))) ||
-                                (source.contains("for (uint256 i") &&
-                                 source.contains("signatures[i]"));
+        let has_signature_loop = (source.contains("for")
+            && (source.contains("ecrecover")
+                || source.contains("recover")
+                || source.contains("signer =")))
+            || (source.contains("for (uint256 i") && source.contains("signatures[i]"));
 
         // Pattern 3: Missing duplicate check mechanisms
-        let has_duplicate_check = source.contains("seen[") ||
-                                 source.contains("used[") ||
-                                 source.contains("duplicate") ||
-                                 source.contains("unique") ||
-                                 source.contains("already signed") ||
-                                 (source.contains("signers[i]") &&
-                                  source.contains("signers[j]"));
+        let has_duplicate_check = source.contains("seen[")
+            || source.contains("used[")
+            || source.contains("duplicate")
+            || source.contains("unique")
+            || source.contains("already signed")
+            || (source.contains("signers[i]") && source.contains("signers[j]"));
 
         // Pattern 4: Stores signers but doesn't check
-        let stores_signers = source.contains("signers[i] =") ||
-                            source.contains("signers.push");
+        let stores_signers = source.contains("signers[i] =") || source.contains("signers.push");
 
         // Vulnerable if it has explicit marker
         if has_vulnerability_marker {

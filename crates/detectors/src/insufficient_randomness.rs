@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for weak or predictable randomness sources
 pub struct InsufficientRandomnessDetector {
@@ -56,28 +56,29 @@ impl Detector for InsufficientRandomnessDetector {
                 let message = format!(
                     "Function '{}' uses weak randomness source. {} \
                     Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
-                    function.name.name,
-                    randomness_issue
+                    function.name.name, randomness_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(338) // CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator
-                .with_cwe(330) // CWE-330: Use of Insufficiently Random Values
-                .with_fix_suggestion(format!(
-                    "Use secure randomness in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(338) // CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator
+                    .with_cwe(330) // CWE-330: Use of Insufficiently Random Values
+                    .with_fix_suggestion(format!(
+                        "Use secure randomness in '{}'. \
                     Implement: (1) Chainlink VRF for verifiable randomness, \
                     (2) Commit-reveal scheme with multi-block delay, \
                     (3) External oracle for random number generation, \
                     (4) Avoid block.timestamp, blockhash, or block.number, \
                     (5) Use Randao for Ethereum 2.0.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -92,7 +93,11 @@ impl Detector for InsufficientRandomnessDetector {
 }
 
 impl InsufficientRandomnessDetector {
-    fn check_weak_randomness(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_weak_randomness(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -100,21 +105,22 @@ impl InsufficientRandomnessDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for secure randomness first
-        let has_secure_randomness = func_source.contains("VRFConsumer") ||
-                                   func_source.contains("requestRandomness") ||
-                                   func_source.contains("fulfillRandomness") ||
-                                   func_source.contains("Chainlink") ||
-                                   func_source.contains("VRFCoordinator");
+        let has_secure_randomness = func_source.contains("VRFConsumer")
+            || func_source.contains("requestRandomness")
+            || func_source.contains("fulfillRandomness")
+            || func_source.contains("Chainlink")
+            || func_source.contains("VRFCoordinator");
 
         if has_secure_randomness {
             return None; // Using secure randomness, no issue
         }
 
         // Pattern 1: block.timestamp for randomness
-        if func_source.contains("block.timestamp") &&
-           (func_source.contains("random") ||
-            func_source.contains("lottery") ||
-            func_source.contains("keccak256")) {
+        if func_source.contains("block.timestamp")
+            && (func_source.contains("random")
+                || func_source.contains("lottery")
+                || func_source.contains("keccak256"))
+        {
             return Some(format!(
                 "Uses block.timestamp for randomness generation. \
                 Miners can manipulate timestamp within ~15 second range to influence outcome"
@@ -122,10 +128,11 @@ impl InsufficientRandomnessDetector {
         }
 
         // Pattern 2: blockhash for randomness
-        if func_source.contains("blockhash") &&
-           (func_source.contains("random") ||
-            func_source.contains("lottery") ||
-            func_source.contains("keccak256")) {
+        if func_source.contains("blockhash")
+            && (func_source.contains("random")
+                || func_source.contains("lottery")
+                || func_source.contains("keccak256"))
+        {
             return Some(format!(
                 "Uses blockhash for randomness. \
                 Only last 256 blocks accessible, miners can influence, not available for future blocks"
@@ -133,11 +140,12 @@ impl InsufficientRandomnessDetector {
         }
 
         // Pattern 3: block.number for randomness
-        if func_source.contains("block.number") &&
-           (func_source.contains("random") ||
-            func_source.contains("lottery") ||
-            func_source.contains("%") ||
-            func_source.contains("mod")) {
+        if func_source.contains("block.number")
+            && (func_source.contains("random")
+                || func_source.contains("lottery")
+                || func_source.contains("%")
+                || func_source.contains("mod"))
+        {
             return Some(format!(
                 "Uses block.number for randomness. \
                 Completely predictable, miners control block production timing"
@@ -145,12 +153,13 @@ impl InsufficientRandomnessDetector {
         }
 
         // Pattern 4: msg.sender or tx.origin in randomness
-        if (func_source.contains("msg.sender") || func_source.contains("tx.origin")) &&
-           func_source.contains("keccak256") &&
-           func_source.contains("abi.encodePacked") {
-            let has_only_user_data = !func_source.contains("nonce") &&
-                                     !func_source.contains("secret") &&
-                                     !func_source.contains("commitment");
+        if (func_source.contains("msg.sender") || func_source.contains("tx.origin"))
+            && func_source.contains("keccak256")
+            && func_source.contains("abi.encodePacked")
+        {
+            let has_only_user_data = !func_source.contains("nonce")
+                && !func_source.contains("secret")
+                && !func_source.contains("commitment");
 
             if has_only_user_data {
                 return Some(format!(
@@ -161,9 +170,9 @@ impl InsufficientRandomnessDetector {
         }
 
         // Pattern 5: block.difficulty (deprecated in post-merge Ethereum)
-        if func_source.contains("block.difficulty") &&
-           (func_source.contains("random") ||
-            func_source.contains("keccak256")) {
+        if func_source.contains("block.difficulty")
+            && (func_source.contains("random") || func_source.contains("keccak256"))
+        {
             return Some(format!(
                 "Uses block.difficulty for randomness (deprecated post-merge). \
                 Now always returns 0, previously manipulable by miners"

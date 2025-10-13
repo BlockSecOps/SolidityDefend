@@ -3,11 +3,11 @@ pub mod error;
 pub mod recovery;
 
 use ast::{AstArena, SourceFile};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
 pub use arena::ArenaParser;
-pub use error::{ParseError, ParseResult, ParseErrors};
+pub use error::{ParseError, ParseErrors, ParseResult};
 
 /// High-level parser for Solidity source code with arena allocation and error recovery
 #[derive(Debug)]
@@ -130,7 +130,7 @@ impl Parser {
                     let location = ast::SourceLocation::new(
                         "<validation>".into(),
                         ast::Position::start(),
-                        ast::Position::start()
+                        ast::Position::start(),
                     );
                     let parse_error = ParseError::syntax_error(format!("{:?}", error), location);
                     parse_errors.push(parse_error);
@@ -187,12 +187,15 @@ impl<'arena> ParseSession<'arena> {
 
     /// Get all contracts from all parsed files
     pub fn contracts(&self) -> impl Iterator<Item = &ast::Contract<'arena>> {
-        self.source_files.iter().flat_map(|file| file.contracts.iter())
+        self.source_files
+            .iter()
+            .flat_map(|file| file.contracts.iter())
     }
 
     /// Get all functions from all contracts
     pub fn functions(&self) -> impl Iterator<Item = &ast::Function<'arena>> {
-        self.contracts().flat_map(|contract| contract.functions.iter())
+        self.contracts()
+            .flat_map(|contract| contract.functions.iter())
     }
 }
 
@@ -213,9 +216,7 @@ mod tests {
 
     #[test]
     fn test_parser_configuration() {
-        let parser = Parser::new()
-            .with_max_errors(50)
-            .with_recovery(false);
+        let parser = Parser::new().with_max_errors(50).with_recovery(false);
 
         assert!(!parser.enable_recovery);
         assert_eq!(parser.max_errors, 50);
@@ -237,7 +238,11 @@ mod tests {
         "#;
 
         let result = parser.parse(&arena, source, "test.sol");
-        assert!(result.is_ok(), "Parser should handle simple contract: {:?}", result);
+        assert!(
+            result.is_ok(),
+            "Parser should handle simple contract: {:?}",
+            result
+        );
 
         let source_file = result.unwrap();
         assert_eq!(source_file.contracts.len(), 1);

@@ -1,9 +1,9 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 
-use ir::{BlockId, ValueId, Instruction, IrValue, IrFunction};
+use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowEngine, DataFlowResult};
 use cfg::ControlFlowGraph;
-use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, DataFlowEngine};
+use ir::{BlockId, Instruction, IrFunction, IrValue, ValueId};
 
 /// Generic dataflow analysis framework that provides common functionality
 pub struct DataFlowFramework<'a> {
@@ -36,8 +36,7 @@ impl<'a> DataFlowFramework<'a> {
         let reaching_defs = self.reaching_definitions()?;
         let live_vars = self.live_variables()?;
 
-        DefUseChainBuilder::new(self.cfg, self.ir_function)
-            .build(&reaching_defs, &live_vars)
+        DefUseChainBuilder::new(self.cfg, self.ir_function).build(&reaching_defs, &live_vars)
     }
 
     /// Get the CFG
@@ -93,7 +92,10 @@ pub struct ReachingDefinitionsAnalysis<'a> {
 
 impl<'a> ReachingDefinitionsAnalysis<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, _ir_function: ir_function }
+        Self {
+            cfg,
+            _ir_function: ir_function,
+        }
     }
 }
 
@@ -182,7 +184,10 @@ pub struct LiveVariablesAnalysis<'a> {
 
 impl<'a> LiveVariablesAnalysis<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, _ir_function: ir_function }
+        Self {
+            cfg,
+            _ir_function: ir_function,
+        }
     }
 }
 
@@ -273,7 +278,10 @@ pub struct DefUseChainBuilder<'a> {
 
 impl<'a> DefUseChainBuilder<'a> {
     pub fn new(cfg: &'a ControlFlowGraph, ir_function: &'a IrFunction) -> Self {
-        Self { cfg, _ir_function: ir_function }
+        Self {
+            cfg,
+            _ir_function: ir_function,
+        }
     }
 
     pub fn build(
@@ -303,49 +311,49 @@ impl<'a> DefUseChainBuilder<'a> {
 /// Utility functions for instruction analysis
 pub fn get_instruction_definition(instruction: &Instruction) -> Option<ValueId> {
     match instruction {
-        Instruction::Add(target, _, _) |
-        Instruction::Sub(target, _, _) |
-        Instruction::Mul(target, _, _) |
-        Instruction::Div(target, _, _) |
-        Instruction::Mod(target, _, _) |
-        Instruction::Exp(target, _, _) |
-        Instruction::And(target, _, _) |
-        Instruction::Or(target, _, _) |
-        Instruction::Xor(target, _, _) |
-        Instruction::Not(target, _) |
-        Instruction::Shl(target, _, _) |
-        Instruction::Shr(target, _, _) |
-        Instruction::Sar(target, _, _) |
-        Instruction::Compare(target, _, _, _) |
-        Instruction::LogicalAnd(target, _, _) |
-        Instruction::LogicalOr(target, _, _) |
-        Instruction::LogicalNot(target, _) |
-        Instruction::Cast(target, _, _, _) |
-        Instruction::Load(target, _) |
-        Instruction::StorageLoad(target, _) |
-        Instruction::ArrayAccess(target, _, _) |
-        Instruction::ArrayLength(target, _) |
-        Instruction::ArrayPop(target, _) |
-        Instruction::MappingAccess(target, _, _) |
-        Instruction::StructAccess(target, _, _) |
-        Instruction::Call(target, _, _) |
-        Instruction::ExternalCall(target, _, _, _) |
-        Instruction::DelegateCall(target, _, _, _) |
-        Instruction::StaticCall(target, _, _, _) |
-        Instruction::Create(target, _, _) |
-        Instruction::Create2(target, _, _, _) |
-        Instruction::Keccak256(target, _) |
-        Instruction::Ecrecover(target, _, _, _, _) |
-        Instruction::BlockHash(target, _) |
-        Instruction::Balance(target, _) |
-        Instruction::Send(target, _, _) |
-        Instruction::Phi(target, _) |
-        Instruction::Assign(target, _) |
-        Instruction::CodeSize(target, _) |
-        Instruction::ExtCodeSize(target, _) |
-        Instruction::Gas(target) |
-        Instruction::GasLimit(target) |
-        Instruction::GasPrice(target) => Some(*target),
+        Instruction::Add(target, _, _)
+        | Instruction::Sub(target, _, _)
+        | Instruction::Mul(target, _, _)
+        | Instruction::Div(target, _, _)
+        | Instruction::Mod(target, _, _)
+        | Instruction::Exp(target, _, _)
+        | Instruction::And(target, _, _)
+        | Instruction::Or(target, _, _)
+        | Instruction::Xor(target, _, _)
+        | Instruction::Not(target, _)
+        | Instruction::Shl(target, _, _)
+        | Instruction::Shr(target, _, _)
+        | Instruction::Sar(target, _, _)
+        | Instruction::Compare(target, _, _, _)
+        | Instruction::LogicalAnd(target, _, _)
+        | Instruction::LogicalOr(target, _, _)
+        | Instruction::LogicalNot(target, _)
+        | Instruction::Cast(target, _, _, _)
+        | Instruction::Load(target, _)
+        | Instruction::StorageLoad(target, _)
+        | Instruction::ArrayAccess(target, _, _)
+        | Instruction::ArrayLength(target, _)
+        | Instruction::ArrayPop(target, _)
+        | Instruction::MappingAccess(target, _, _)
+        | Instruction::StructAccess(target, _, _)
+        | Instruction::Call(target, _, _)
+        | Instruction::ExternalCall(target, _, _, _)
+        | Instruction::DelegateCall(target, _, _, _)
+        | Instruction::StaticCall(target, _, _, _)
+        | Instruction::Create(target, _, _)
+        | Instruction::Create2(target, _, _, _)
+        | Instruction::Keccak256(target, _)
+        | Instruction::Ecrecover(target, _, _, _, _)
+        | Instruction::BlockHash(target, _)
+        | Instruction::Balance(target, _)
+        | Instruction::Send(target, _, _)
+        | Instruction::Phi(target, _)
+        | Instruction::Assign(target, _)
+        | Instruction::CodeSize(target, _)
+        | Instruction::ExtCodeSize(target, _)
+        | Instruction::Gas(target)
+        | Instruction::GasLimit(target)
+        | Instruction::GasPrice(target) => Some(*target),
         _ => None,
     }
 }
@@ -354,56 +362,54 @@ pub fn get_instruction_uses(instruction: &Instruction) -> HashSet<ValueId> {
     let mut uses = HashSet::new();
 
     match instruction {
-        Instruction::Add(_, lhs, rhs) |
-        Instruction::Sub(_, lhs, rhs) |
-        Instruction::Mul(_, lhs, rhs) |
-        Instruction::Div(_, lhs, rhs) |
-        Instruction::Mod(_, lhs, rhs) |
-        Instruction::Exp(_, lhs, rhs) => {
+        Instruction::Add(_, lhs, rhs)
+        | Instruction::Sub(_, lhs, rhs)
+        | Instruction::Mul(_, lhs, rhs)
+        | Instruction::Div(_, lhs, rhs)
+        | Instruction::Mod(_, lhs, rhs)
+        | Instruction::Exp(_, lhs, rhs) => {
             if let IrValue::Value(id) = lhs {
                 uses.insert(*id);
             }
             if let IrValue::Value(id) = rhs {
                 uses.insert(*id);
             }
-        },
-        Instruction::Load(_, address) |
-        Instruction::StorageLoad(_, address) => {
+        }
+        Instruction::Load(_, address) | Instruction::StorageLoad(_, address) => {
             if let IrValue::Value(id) = address {
                 uses.insert(*id);
             }
-        },
-        Instruction::Store(address, value) |
-        Instruction::StorageStore(address, value) => {
+        }
+        Instruction::Store(address, value) | Instruction::StorageStore(address, value) => {
             if let IrValue::Value(id) = address {
                 uses.insert(*id);
             }
             if let IrValue::Value(id) = value {
                 uses.insert(*id);
             }
-        },
+        }
         Instruction::ConditionalBranch(condition, _, _) => {
             if let IrValue::Value(id) = condition {
                 uses.insert(*id);
             }
-        },
+        }
         Instruction::Return(Some(value)) => {
             if let IrValue::Value(id) = value {
                 uses.insert(*id);
             }
-        },
+        }
         Instruction::Phi(_, phi_args) => {
             for (value, _) in phi_args {
                 if let IrValue::Value(id) = value {
                     uses.insert(*id);
                 }
             }
-        },
+        }
         Instruction::Assign(_, value) => {
             if let IrValue::Value(id) = value {
                 uses.insert(*id);
             }
-        },
+        }
         _ => {
             // Handle other instruction types as needed
         }

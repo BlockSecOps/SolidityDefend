@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for missing access control modifiers on critical functions
 pub struct MissingModifiersDetector {
@@ -55,17 +55,18 @@ impl Detector for UnprotectedInitializerDetector {
         // Check for functions that look like initializers
         for function in ctx.get_functions() {
             // Skip internal/private functions
-            if function.visibility == ast::Visibility::Internal ||
-               function.visibility == ast::Visibility::Private {
+            if function.visibility == ast::Visibility::Internal
+                || function.visibility == ast::Visibility::Private
+            {
                 continue;
             }
 
             // Look for initializer function patterns
             let function_name = function.name.name.to_lowercase();
-            let is_initializer = function_name.contains("init") ||
-                               function_name.contains("setup") ||
-                               function_name.contains("configure") ||
-                               function_name == "initialize";
+            let is_initializer = function_name.contains("init")
+                || function_name.contains("setup")
+                || function_name.contains("configure")
+                || function_name == "initialize";
 
             if is_initializer {
                 // Check if it has access control
@@ -112,10 +113,11 @@ impl UnprotectedInitializerDetector {
         // Look for access control patterns
         for modifier in &function.modifiers {
             let modifier_name = modifier.name.name.to_lowercase();
-            if modifier_name.contains("only") ||
-               modifier_name.contains("auth") ||
-               modifier_name.contains("restricted") ||
-               modifier_name.contains("protected") {
+            if modifier_name.contains("only")
+                || modifier_name.contains("auth")
+                || modifier_name.contains("restricted")
+                || modifier_name.contains("protected")
+            {
                 return true;
             }
         }
@@ -140,17 +142,52 @@ impl MissingModifiersDetector {
     /// Check if a function name suggests it needs access control
     fn requires_access_control(&self, function_name: &str) -> bool {
         let critical_patterns = [
-            "withdraw", "transfer", "send", "mint", "burn", "destroy",
-            "suicide", "selfdestruct", "kill", "pause", "unpause",
-            "stop", "start", "emergency", "admin", "owner", "upgrade",
-            "migrate", "configure", "set", "update", "change", "modify",
-            "delete", "remove", "add", "create", "initialize", "init",
-            "rescue", "recover", "claim", "distribute", "allocate",
-            "approve", "authorize", "grant", "revoke", "enable", "disable"
+            "withdraw",
+            "transfer",
+            "send",
+            "mint",
+            "burn",
+            "destroy",
+            "suicide",
+            "selfdestruct",
+            "kill",
+            "pause",
+            "unpause",
+            "stop",
+            "start",
+            "emergency",
+            "admin",
+            "owner",
+            "upgrade",
+            "migrate",
+            "configure",
+            "set",
+            "update",
+            "change",
+            "modify",
+            "delete",
+            "remove",
+            "add",
+            "create",
+            "initialize",
+            "init",
+            "rescue",
+            "recover",
+            "claim",
+            "distribute",
+            "allocate",
+            "approve",
+            "authorize",
+            "grant",
+            "revoke",
+            "enable",
+            "disable",
         ];
 
         let name_lower = function_name.to_lowercase();
-        critical_patterns.iter().any(|pattern| name_lower.contains(pattern))
+        critical_patterns
+            .iter()
+            .any(|pattern| name_lower.contains(pattern))
     }
 
     /// Check if a function has access control modifiers
@@ -162,14 +199,26 @@ impl MissingModifiersDetector {
 
         // Look for common access control modifier patterns
         let access_control_modifiers = [
-            "onlyowner", "onlyadmin", "onlyauthorized", "onlyminter",
-            "onlyburner", "onlygovernance", "onlycontroller", "onlymanager",
-            "restricted", "authorized", "protected", "secure"
+            "onlyowner",
+            "onlyadmin",
+            "onlyauthorized",
+            "onlyminter",
+            "onlyburner",
+            "onlygovernance",
+            "onlycontroller",
+            "onlymanager",
+            "restricted",
+            "authorized",
+            "protected",
+            "secure",
         ];
 
         for modifier in &function.modifiers {
             let modifier_name = modifier.name.name.to_lowercase();
-            if access_control_modifiers.iter().any(|ac| modifier_name.contains(ac)) {
+            if access_control_modifiers
+                .iter()
+                .any(|ac| modifier_name.contains(ac))
+            {
                 return true;
             }
         }
@@ -205,10 +254,11 @@ impl Detector for MissingModifiersDetector {
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
             // Skip view/pure functions, constructors, and internal functions
-            if function.visibility == ast::Visibility::Internal ||
-               function.visibility == ast::Visibility::Private ||
-               function.mutability == ast::StateMutability::View ||
-               function.mutability == ast::StateMutability::Pure {
+            if function.visibility == ast::Visibility::Internal
+                || function.visibility == ast::Visibility::Private
+                || function.mutability == ast::StateMutability::View
+                || function.mutability == ast::StateMutability::Pure
+            {
                 continue;
             }
 
@@ -221,18 +271,20 @@ impl Detector for MissingModifiersDetector {
                         function.name.name
                     );
 
-                    let finding = self.base.create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(284) // CWE-284: Improper Access Control
-                    .with_fix_suggestion(format!(
-                        "Add an access control modifier like 'onlyOwner' to function '{}'",
-                        function.name.name
-                    ));
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            function.name.location.start().line() as u32,
+                            function.name.location.start().column() as u32,
+                            function.name.name.len() as u32,
+                        )
+                        .with_cwe(284) // CWE-284: Improper Access Control
+                        .with_fix_suggestion(format!(
+                            "Add an access control modifier like 'onlyOwner' to function '{}'",
+                            function.name.name
+                        ));
 
                     findings.push(finding);
                 }
@@ -270,7 +322,9 @@ impl UnprotectedInitDetector {
         let init_patterns = ["initialize", "init", "setup", "configure"];
         let name_lower = function.name.name.to_lowercase();
 
-        init_patterns.iter().any(|pattern| name_lower.contains(pattern))
+        init_patterns
+            .iter()
+            .any(|pattern| name_lower.contains(pattern))
     }
 
     /// Check if initializer has proper protection
@@ -326,18 +380,20 @@ impl Detector for UnprotectedInitDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(284) // CWE-284: Improper Access Control
-                .with_fix_suggestion(format!(
-                    "Add 'initializer' modifier or access control to function '{}'",
-                    function.name.name
-                ));
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_fix_suggestion(format!(
+                        "Add 'initializer' modifier or access control to function '{}'",
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -373,8 +429,8 @@ impl DefaultVisibilityDetector {
     fn uses_old_solidity(&self, ctx: &AnalysisContext<'_>) -> bool {
         // This is a simplified check - in practice we'd parse pragma directives
         // For now, assume any contract without explicit visibility is old
-        ctx.source_code.contains("pragma solidity ^0.4") ||
-        ctx.source_code.contains("pragma solidity 0.4")
+        ctx.source_code.contains("pragma solidity ^0.4")
+            || ctx.source_code.contains("pragma solidity 0.4")
     }
 }
 
@@ -415,18 +471,20 @@ impl Detector for DefaultVisibilityDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(200) // CWE-200: Information Exposure
-                .with_fix_suggestion(format!(
-                    "Explicitly declare visibility for function '{}'",
-                    function.name.name
-                ));
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(200) // CWE-200: Information Exposure
+                    .with_fix_suggestion(format!(
+                        "Explicitly declare visibility for function '{}'",
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }

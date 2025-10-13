@@ -1,15 +1,14 @@
-use std::path::PathBuf;
-use std::collections::HashMap;
-use sha2::{Sha256, Digest};
 use anyhow::{Result, anyhow};
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use std::collections::HashMap;
+use std::path::PathBuf;
 
 use ast::{AstArena, SourceFile, Visibility};
-use parser::{Parser, ParseErrors};
+use parser::{ParseErrors, Parser};
 
 /// Source file identifier for Salsa database
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SourceFileId(usize);
 
 impl SourceFileId {
@@ -29,8 +28,7 @@ impl std::fmt::Display for SourceFileId {
 }
 
 /// Input file content with metadata
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SourceFileInput {
     pub path: PathBuf,
     pub content: String,
@@ -175,7 +173,9 @@ pub struct Database {
 /// Helper function to validate file path UTF-8 encoding
 /// This is a standalone function since it doesn't access any instance data
 fn validate_file_path(input: &SourceFileInput) -> Result<&str> {
-    input.path.to_str()
+    input
+        .path
+        .to_str()
         .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
 }
 
@@ -186,7 +186,6 @@ impl Default for Database {
 }
 
 impl Database {
-
     /// Create a new database instance
     pub fn new() -> Self {
         Self {
@@ -200,7 +199,11 @@ impl Database {
     }
 
     /// Add a new source file to the database
-    pub fn add_source_file(&mut self, path: impl Into<PathBuf>, content: impl Into<String>) -> SourceFileId {
+    pub fn add_source_file(
+        &mut self,
+        path: impl Into<PathBuf>,
+        content: impl Into<String>,
+    ) -> SourceFileId {
         let file_id = SourceFileId::new(self.file_counter);
         self.file_counter += 1;
 
@@ -227,7 +230,8 @@ impl Database {
 
     /// Get source file content
     pub fn get_source_content(&self, id: SourceFileId) -> &str {
-        self.file_registry.get(&id)
+        self.file_registry
+            .get(&id)
             .map(|input| input.content.as_str())
             .unwrap_or("")
     }
@@ -235,10 +239,14 @@ impl Database {
     /// Get source file path
     /// Returns an error if the file ID is not found or path contains invalid UTF-8
     pub fn get_source_path(&self, id: SourceFileId) -> Result<&str> {
-        let input = self.file_registry.get(&id)
+        let input = self
+            .file_registry
+            .get(&id)
             .ok_or_else(|| anyhow!("Source file with ID {} not found", id))?;
 
-        input.path.to_str()
+        input
+            .path
+            .to_str()
             .ok_or_else(|| anyhow!("Invalid UTF-8 in file path: {:?}", input.path))
     }
 
@@ -313,7 +321,8 @@ impl Database {
 
         // HashMap overhead for file_registry
         // HashMap has overhead per entry plus table capacity
-        total += self.file_registry.capacity() * std::mem::size_of::<(SourceFileId, SourceFileInput)>();
+        total +=
+            self.file_registry.capacity() * std::mem::size_of::<(SourceFileId, SourceFileInput)>();
         total += std::mem::size_of::<HashMap<SourceFileId, SourceFileInput>>();
 
         // Cache memory
@@ -340,7 +349,8 @@ impl Database {
         }
 
         // HashMap overhead for cache
-        total += self.cache.capacity() * std::mem::size_of::<(SourceFileId, Result<Vec<String>, String>)>();
+        total += self.cache.capacity()
+            * std::mem::size_of::<(SourceFileId, Result<Vec<String>, String>)>();
         total += std::mem::size_of::<HashMap<SourceFileId, Result<Vec<String>, String>>>();
 
         // Performance metrics overhead
@@ -361,7 +371,8 @@ impl Database {
 
         // Check cache first
         if let Some(cached_result) = self.cache.get(&id) {
-            self.performance_metrics.record_query(true, start_time.elapsed().as_millis() as u64);
+            self.performance_metrics
+                .record_query(true, start_time.elapsed().as_millis() as u64);
             return cached_result.clone().map_err(|e| anyhow!("{}", e));
         }
 
@@ -396,7 +407,8 @@ impl Database {
         };
         self.cache.insert(id, cache_result);
 
-        self.performance_metrics.record_query(false, start_time.elapsed().as_millis() as u64);
+        self.performance_metrics
+            .record_query(false, start_time.elapsed().as_millis() as u64);
         result
     }
 
@@ -421,7 +433,10 @@ impl Database {
                     for contract in &source_file.contracts {
                         for function in &contract.functions {
                             // Check actual visibility from AST instead of name patterns
-                            if matches!(function.visibility, Visibility::Public | Visibility::External) {
+                            if matches!(
+                                function.visibility,
+                                Visibility::Public | Visibility::External
+                            ) {
                                 public_functions.push(function.name.name.to_string());
                             }
                         }
@@ -454,9 +469,10 @@ impl Database {
                         for (file_id, file_input) in &self.file_registry {
                             if let Some(file_path_str) = file_input.path.to_str() {
                                 // Match by filename or relative path
-                                if file_path_str.ends_with(&path) ||
-                                   file_path_str == path ||
-                                   self.paths_match(&path, file_path_str) {
+                                if file_path_str.ends_with(&path)
+                                    || file_path_str == path
+                                    || self.paths_match(&path, file_path_str)
+                                {
                                     dependencies.push(*file_id);
                                     break;
                                 }
@@ -499,4 +515,3 @@ impl Database {
         self.file_registry.get(&id)
     }
 }
-

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for flash loan vulnerability patterns
 pub struct VulnerablePatternsDetector {
@@ -15,7 +15,8 @@ impl VulnerablePatternsDetector {
             base: BaseDetector::new(
                 DetectorId("flashloan-vulnerable-patterns".to_string()),
                 "Flash Loan Vulnerable Patterns".to_string(),
-                "Function vulnerable to flash loan attacks due to reliance on spot prices".to_string(),
+                "Function vulnerable to flash loan attacks due to reliance on spot prices"
+                    .to_string(),
                 vec![DetectorCategory::FlashLoanAttacks],
                 Severity::High,
             ),
@@ -94,11 +95,21 @@ impl VulnerablePatternsDetector {
             // 3. Has liquidation or trading logic
             let function_name = function.name.name.to_lowercase();
             let vulnerable_patterns = [
-                "liquidate", "swap", "trade", "arbitrage",
-                "getprice", "price", "exchange", "mint", "redeem"
+                "liquidate",
+                "swap",
+                "trade",
+                "arbitrage",
+                "getprice",
+                "price",
+                "exchange",
+                "mint",
+                "redeem",
             ];
 
-            if vulnerable_patterns.iter().any(|pattern| function_name.contains(pattern)) {
+            if vulnerable_patterns
+                .iter()
+                .any(|pattern| function_name.contains(pattern))
+            {
                 return self.uses_spot_prices(&body.statements);
             }
         }
@@ -112,10 +123,11 @@ impl VulnerablePatternsDetector {
                 ast::Statement::Expression(ast::Expression::FunctionCall { function, .. }) => {
                     if let ast::Expression::MemberAccess { member, .. } = function {
                         let method_name = member.name.to_lowercase();
-                        if method_name.contains("getprice") ||
-                           method_name.contains("getamount") ||
-                           method_name.contains("getreserves") ||
-                           method_name.contains("balanceof") {
+                        if method_name.contains("getprice")
+                            || method_name.contains("getamount")
+                            || method_name.contains("getreserves")
+                            || method_name.contains("balanceof")
+                        {
                             return true;
                         }
                     }

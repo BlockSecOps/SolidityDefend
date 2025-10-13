@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for redundant validation checks that waste gas
 pub struct RedundantChecksDetector {
@@ -57,27 +57,28 @@ impl Detector for RedundantChecksDetector {
                     let message = format!(
                         "Function '{}' contains redundant checks. {} \
                         Redundant checks waste gas and increase transaction costs unnecessarily.",
-                        function.name.name,
-                        issue_desc
+                        function.name.name, issue_desc
                     );
 
-                    let finding = self.base.create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                    .with_fix_suggestion(format!(
-                        "Remove redundant checks in '{}'. \
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            function.name.location.start().line() as u32,
+                            function.name.location.start().column() as u32,
+                            function.name.name.len() as u32,
+                        )
+                        .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                        .with_fix_suggestion(format!(
+                            "Remove redundant checks in '{}'. \
                         Consider: (1) Eliminate duplicate require() statements, \
                         (2) Combine multiple checks into single require(), \
                         (3) Remove overflow checks in Solidity >=0.8, \
                         (4) Avoid checking same condition in modifier and function, \
                         (5) Use custom errors instead of require with strings.",
-                        function.name.name
-                    ));
+                            function.name.name
+                        ));
 
                     findings.push(finding);
                 }
@@ -93,7 +94,11 @@ impl Detector for RedundantChecksDetector {
 }
 
 impl RedundantChecksDetector {
-    fn check_redundant_checks(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<Vec<String>> {
+    fn check_redundant_checks(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<Vec<String>> {
         if function.body.is_none() {
             return None;
         }
@@ -117,14 +122,15 @@ impl RedundantChecksDetector {
 
         // Pattern 2: Redundant overflow checks in Solidity >=0.8
         let contract_source = ctx.source_code.as_str();
-        let is_solidity_08_plus = contract_source.contains("pragma solidity ^0.8") ||
-                                  contract_source.contains("pragma solidity 0.8") ||
-                                  contract_source.contains("pragma solidity >=0.8");
+        let is_solidity_08_plus = contract_source.contains("pragma solidity ^0.8")
+            || contract_source.contains("pragma solidity 0.8")
+            || contract_source.contains("pragma solidity >=0.8");
 
         if is_solidity_08_plus {
-            if func_source.contains("require(") &&
-               (func_source.contains(" + ") || func_source.contains(" - ")) &&
-               (func_source.contains("overflow") || func_source.contains("underflow")) {
+            if func_source.contains("require(")
+                && (func_source.contains(" + ") || func_source.contains(" - "))
+                && (func_source.contains("overflow") || func_source.contains("underflow"))
+            {
                 issues.push("Manual overflow/underflow check in Solidity 0.8+. Built-in protection makes this redundant".to_string());
             }
         }
@@ -148,8 +154,13 @@ impl RedundantChecksDetector {
 
         // Pattern 4: Unnecessary zero checks for unsigned integers
         if func_source.contains("require(") && func_source.contains(">= 0") {
-            if func_source.contains("uint") || func_source.contains("amount >= 0") || func_source.contains("value >= 0") {
-                issues.push("Redundant check: uint >= 0 is always true for unsigned integers".to_string());
+            if func_source.contains("uint")
+                || func_source.contains("amount >= 0")
+                || func_source.contains("value >= 0")
+            {
+                issues.push(
+                    "Redundant check: uint >= 0 is always true for unsigned integers".to_string(),
+                );
             }
         }
 
@@ -163,8 +174,9 @@ impl RedundantChecksDetector {
         }
 
         // Pattern 6: Checking msg.sender != address(0)
-        if func_source.contains("require(msg.sender != address(0)") ||
-           func_source.contains("require(msg.sender != 0") {
+        if func_source.contains("require(msg.sender != address(0)")
+            || func_source.contains("require(msg.sender != 0")
+        {
             issues.push("Redundant check: msg.sender can never be address(0)".to_string());
         }
 
@@ -207,18 +219,18 @@ impl RedundantChecksDetector {
                 let modifiers: Vec<String> = line
                     .split_whitespace()
                     .filter(|word| {
-                        !word.starts_with("function") &&
-                        !word.starts_with("(") &&
-                        !word.starts_with("public") &&
-                        !word.starts_with("private") &&
-                        !word.starts_with("external") &&
-                        !word.starts_with("internal") &&
-                        !word.starts_with("view") &&
-                        !word.starts_with("pure") &&
-                        !word.starts_with("payable") &&
-                        !word.starts_with("returns") &&
-                        !word.starts_with("{") &&
-                        word.chars().next().unwrap_or(' ').is_alphabetic()
+                        !word.starts_with("function")
+                            && !word.starts_with("(")
+                            && !word.starts_with("public")
+                            && !word.starts_with("private")
+                            && !word.starts_with("external")
+                            && !word.starts_with("internal")
+                            && !word.starts_with("view")
+                            && !word.starts_with("pure")
+                            && !word.starts_with("payable")
+                            && !word.starts_with("returns")
+                            && !word.starts_with("{")
+                            && word.chars().next().unwrap_or(' ').is_alphabetic()
                     })
                     .skip(1) // Skip function name
                     .map(|s| s.to_string())
@@ -239,7 +251,10 @@ impl RedundantChecksDetector {
         let mut brace_count = 0;
 
         for line in lines {
-            if line.trim().starts_with(&format!("modifier {}", modifier_name)) {
+            if line
+                .trim()
+                .starts_with(&format!("modifier {}", modifier_name))
+            {
                 in_modifier = true;
                 brace_count = 0;
             }

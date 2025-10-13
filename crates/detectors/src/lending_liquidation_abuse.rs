@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for lending protocol liquidation abuse vulnerabilities
 pub struct LendingLiquidationAbuseDetector {
@@ -57,8 +57,7 @@ impl Detector for LendingLiquidationAbuseDetector {
                     "Function '{}' has liquidation abuse vulnerability. {} \
                     Unfair liquidation mechanics can be exploited to profit from borrowers \
                     or manipulated to prevent legitimate liquidations.",
-                    function.name.name,
-                    liquidation_issue
+                    function.name.name, liquidation_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -92,7 +91,11 @@ impl Detector for LendingLiquidationAbuseDetector {
 
 impl LendingLiquidationAbuseDetector {
     /// Check for liquidation abuse vulnerabilities
-    fn check_liquidation_abuse(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_liquidation_abuse(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -100,22 +103,22 @@ impl LendingLiquidationAbuseDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify liquidation functions
-        let is_liquidation_function = func_source.contains("liquidate") ||
-                                     function.name.name.to_lowercase().contains("liquidate") ||
-                                     func_source.contains("seize") ||
-                                     func_source.contains("liquidationCall");
+        let is_liquidation_function = func_source.contains("liquidate")
+            || function.name.name.to_lowercase().contains("liquidate")
+            || func_source.contains("seize")
+            || func_source.contains("liquidationCall");
 
         if !is_liquidation_function {
             return None;
         }
 
         // Pattern 1: Spot price used for health factor calculation
-        let uses_spot_price = (func_source.contains("getPrice") ||
-                              func_source.contains("latestAnswer") ||
-                              func_source.contains("price()")) &&
-                             !func_source.contains("TWAP") &&
-                             !func_source.contains("timeWeighted") &&
-                             !func_source.contains("cumulative");
+        let uses_spot_price = (func_source.contains("getPrice")
+            || func_source.contains("latestAnswer")
+            || func_source.contains("price()"))
+            && !func_source.contains("TWAP")
+            && !func_source.contains("timeWeighted")
+            && !func_source.contains("cumulative");
 
         if uses_spot_price {
             return Some(format!(
@@ -125,10 +128,10 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 2: No liquidation cooldown or front-running protection
-        let lacks_cooldown = !func_source.contains("lastLiquidation") &&
-                            !func_source.contains("liquidationDelay") &&
-                            !func_source.contains("cooldown") &&
-                            !func_source.contains("block.timestamp");
+        let lacks_cooldown = !func_source.contains("lastLiquidation")
+            && !func_source.contains("liquidationDelay")
+            && !func_source.contains("cooldown")
+            && !func_source.contains("block.timestamp");
 
         if lacks_cooldown {
             return Some(format!(
@@ -138,15 +141,15 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 3: Excessive liquidation bonus/incentive
-        let has_bonus = func_source.contains("liquidationBonus") ||
-                       func_source.contains("liquidationIncentive") ||
-                       func_source.contains("bonus") ||
-                       func_source.contains("incentive");
+        let has_bonus = func_source.contains("liquidationBonus")
+            || func_source.contains("liquidationIncentive")
+            || func_source.contains("bonus")
+            || func_source.contains("incentive");
 
-        let lacks_bonus_cap = has_bonus &&
-                             !func_source.contains("MAX_") &&
-                             !func_source.contains("require(") &&
-                             !func_source.contains("<");
+        let lacks_bonus_cap = has_bonus
+            && !func_source.contains("MAX_")
+            && !func_source.contains("require(")
+            && !func_source.contains("<");
 
         if lacks_bonus_cap {
             return Some(format!(
@@ -156,15 +159,15 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 4: Full liquidation without partial option
-        let has_full_liquidation = func_source.contains("seizeCollateral") ||
-                                  func_source.contains("totalDebt") ||
-                                  func_source.contains("borrowBalance");
+        let has_full_liquidation = func_source.contains("seizeCollateral")
+            || func_source.contains("totalDebt")
+            || func_source.contains("borrowBalance");
 
-        let lacks_partial_liquidation = has_full_liquidation &&
-                                       !func_source.contains("repayAmount") &&
-                                       !func_source.contains("partialLiquidation") &&
-                                       !func_source.contains("closeFactorMantissa") &&
-                                       !func_source.contains("maxClose");
+        let lacks_partial_liquidation = has_full_liquidation
+            && !func_source.contains("repayAmount")
+            && !func_source.contains("partialLiquidation")
+            && !func_source.contains("closeFactorMantissa")
+            && !func_source.contains("maxClose");
 
         if lacks_partial_liquidation {
             return Some(format!(
@@ -174,15 +177,15 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 5: Health factor not properly validated
-        let calculates_health = func_source.contains("healthFactor") ||
-                               func_source.contains("collateralRatio") ||
-                               func_source.contains("LTV");
+        let calculates_health = func_source.contains("healthFactor")
+            || func_source.contains("collateralRatio")
+            || func_source.contains("LTV");
 
-        let lacks_health_validation = calculates_health &&
-                                      !func_source.contains("require(healthFactor") &&
-                                      !func_source.contains("require(collateralRatio") &&
-                                      !func_source.contains("if (") &&
-                                      !func_source.contains("1e18");
+        let lacks_health_validation = calculates_health
+            && !func_source.contains("require(healthFactor")
+            && !func_source.contains("require(collateralRatio")
+            && !func_source.contains("if (")
+            && !func_source.contains("1e18");
 
         if lacks_health_validation {
             return Some(format!(
@@ -192,14 +195,14 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 6: Missing oracle staleness check
-        let uses_oracle = func_source.contains("oracle") ||
-                         func_source.contains("getPrice") ||
-                         func_source.contains("latestAnswer");
+        let uses_oracle = func_source.contains("oracle")
+            || func_source.contains("getPrice")
+            || func_source.contains("latestAnswer");
 
-        let lacks_staleness_check = uses_oracle &&
-                                   !func_source.contains("updatedAt") &&
-                                   !func_source.contains("timestamp") &&
-                                   !func_source.contains("stale");
+        let lacks_staleness_check = uses_oracle
+            && !func_source.contains("updatedAt")
+            && !func_source.contains("timestamp")
+            && !func_source.contains("stale");
 
         if lacks_staleness_check {
             return Some(format!(
@@ -209,14 +212,14 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 7: No minimum collateral protection
-        let seizes_collateral = func_source.contains("seize") ||
-                               func_source.contains("transfer") ||
-                               func_source.contains("liquidatorShare");
+        let seizes_collateral = func_source.contains("seize")
+            || func_source.contains("transfer")
+            || func_source.contains("liquidatorShare");
 
-        let lacks_min_protection = seizes_collateral &&
-                                   !func_source.contains("minCollateral") &&
-                                   !func_source.contains("dustThreshold") &&
-                                   !func_source.contains("require(amount");
+        let lacks_min_protection = seizes_collateral
+            && !func_source.contains("minCollateral")
+            && !func_source.contains("dustThreshold")
+            && !func_source.contains("require(amount");
 
         if lacks_min_protection {
             return Some(format!(
@@ -226,13 +229,12 @@ impl LendingLiquidationAbuseDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("liquidation") ||
-            func_source.contains("unfair") ||
-            func_source.contains("abuse")) {
-            return Some(format!(
-                "Liquidation abuse vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("liquidation")
+                || func_source.contains("unfair")
+                || func_source.contains("abuse"))
+        {
+            return Some(format!("Liquidation abuse vulnerability marker detected"));
         }
 
         None

@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for unsafe EIP-7702 delegation patterns in hardware wallets
 pub struct HardwareWalletDelegationDetector {
@@ -66,24 +66,20 @@ impl Detector for HardwareWalletDelegationDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(1188) // CWE-1188: Initialization of a Resource with an Insecure Default
-                .with_cwe(665)  // CWE-665: Improper Initialization
-                .with_fix_suggestion(
-                    "Avoid hardcoded relayer dependencies: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(1188) // CWE-1188: Initialization of a Resource with an Insecure Default
+                    .with_cwe(665) // CWE-665: Improper Initialization
+                    .with_fix_suggestion(
+                        "Avoid hardcoded relayer dependencies: \
                     (1) Support multiple relayer backends, \
                     (2) Allow relayer switching via user signature, \
                     (3) Implement fallback to direct transaction submission, \
                     (4) Never require single trusted relayer, \
                     (5) Follow EIP-7702 decentralization principles."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -98,24 +94,20 @@ impl Detector for HardwareWalletDelegationDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(672) // CWE-672: Operation on a Resource after Expiration or Release
-                .with_cwe(404) // CWE-404: Improper Resource Shutdown or Release
-                .with_fix_suggestion(
-                    "Implement delegation recovery: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(672) // CWE-672: Operation on a Resource after Expiration or Release
+                    .with_cwe(404) // CWE-404: Improper Resource Shutdown or Release
+                    .with_fix_suggestion(
+                        "Implement delegation recovery: \
                     (1) Add removeDelegation function, \
                     (2) Allow switching delegation targets, \
                     (3) Implement emergency mode fallback, \
                     (4) Support direct EOA transactions, \
                     (5) Require hardware wallet signature for changes."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -130,24 +122,20 @@ impl Detector for HardwareWalletDelegationDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(269) // CWE-269: Improper Privilege Management
-                .with_cwe(250) // CWE-250: Execution with Unnecessary Privileges
-                .with_fix_suggestion(
-                    "Limit delegation scope: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(269) // CWE-269: Improper Privilege Management
+                    .with_cwe(250) // CWE-250: Execution with Unnecessary Privileges
+                    .with_fix_suggestion(
+                        "Limit delegation scope: \
                     (1) Implement per-asset spending limits, \
                     (2) Add transaction value restrictions, \
                     (3) Whitelist approved operations only, \
                     (4) Require two-step approval for large transfers, \
                     (5) Use time-locked withdrawal mechanisms."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -162,24 +150,20 @@ impl Detector for HardwareWalletDelegationDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(494) // CWE-494: Download of Code Without Integrity Check
-                .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                .with_fix_suggestion(
-                    "Secure code update mechanism: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(494) // CWE-494: Download of Code Without Integrity Check
+                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                    .with_fix_suggestion(
+                        "Secure code update mechanism: \
                     (1) Require hardware wallet signature for updates, \
                     (2) Display delegation changes on device, \
                     (3) Implement update time-lock period, \
                     (4) Validate new code before activation, \
                     (5) Provide update preview on hardware wallet screen."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -194,53 +178,46 @@ impl Detector for HardwareWalletDelegationDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(306) // CWE-306: Missing Authentication for Critical Function
-                .with_cwe(862) // CWE-862: Missing Authorization
-                .with_fix_suggestion(
-                    "Enforce hardware wallet signatures: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(306) // CWE-306: Missing Authentication for Critical Function
+                    .with_cwe(862) // CWE-862: Missing Authorization
+                    .with_fix_suggestion(
+                        "Enforce hardware wallet signatures: \
                     (1) Require ECDSA signature from hardware wallet, \
                     (2) Validate signer matches EOA owner, \
                     (3) Include nonce to prevent replay, \
                     (4) Display operation details on hardware device, \
                     (5) Follow EIP-191 or EIP-712 signing standards."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
         }
 
         // Pattern 6: Trusted delegate without validation
-        if !contract_source.contains("supportsInterface") &&
-           contract_source.contains("delegatecall") {
+        if !contract_source.contains("supportsInterface")
+            && contract_source.contains("delegatecall")
+        {
             let message = "Delegation target not validated for interface compatibility. \
                 Missing interface validation can cause hardware wallet to delegate to incompatible code, bricking the account.".to_string();
 
-            let finding = self.base.create_finding(
-                ctx,
-                message,
-                1,
-                0,
-                40,
-            )
-            .with_cwe(20)  // CWE-20: Improper Input Validation
-            .with_cwe(704) // CWE-704: Incorrect Type Conversion or Cast
-            .with_fix_suggestion(
-                "Validate delegation target: \
+            let finding = self
+                .base
+                .create_finding(ctx, message, 1, 0, 40)
+                .with_cwe(20) // CWE-20: Improper Input Validation
+                .with_cwe(704) // CWE-704: Incorrect Type Conversion or Cast
+                .with_fix_suggestion(
+                    "Validate delegation target: \
                 (1) Check supportsInterface for EIP-165, \
                 (2) Verify required functions exist, \
                 (3) Test delegation in simulation first, \
                 (4) Implement delegation preview/confirmation, \
                 (5) Maintain whitelist of verified delegation targets."
-                    .to_string(),
-            );
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -255,11 +232,11 @@ impl Detector for HardwareWalletDelegationDetector {
 
 impl HardwareWalletDelegationDetector {
     fn is_delegation_contract(&self, source: &str) -> bool {
-        source.contains("delegatecall") ||
-        source.contains("EIP-7702") ||
-        source.contains("delegation") ||
-        source.contains("setCode") ||
-        source.contains("DELEGATECALL")
+        source.contains("delegatecall")
+            || source.contains("EIP-7702")
+            || source.contains("delegation")
+            || source.contains("setCode")
+            || source.contains("DELEGATECALL")
     }
 
     fn check_hardcoded_relayer(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -270,55 +247,58 @@ impl HardwareWalletDelegationDetector {
             let trimmed = line.trim();
 
             // Check for hardcoded relayer addresses
-            if (trimmed.contains("relayer") || trimmed.contains("RELAYER")) &&
-               (trimmed.contains("constant") || trimmed.contains("immutable")) &&
-               trimmed.contains("= 0x") {
+            if (trimmed.contains("relayer") || trimmed.contains("RELAYER"))
+                && (trimmed.contains("constant") || trimmed.contains("immutable"))
+                && trimmed.contains("= 0x")
+            {
                 issues.push((
                     (idx + 1) as u32,
-                    "Hardcoded relayer address creates single point of failure".to_string()
+                    "Hardcoded relayer address creates single point of failure".to_string(),
                 ));
             }
 
             // Check for require(msg.sender == relayer) without alternatives
-            if trimmed.contains("require(msg.sender == ") &&
-               (trimmed.contains("relayer") || trimmed.contains("RELAYER")) {
+            if trimmed.contains("require(msg.sender == ")
+                && (trimmed.contains("relayer") || trimmed.contains("RELAYER"))
+            {
                 // Check if there's any fallback mechanism nearby
                 let context = self.get_surrounding_context(&lines, idx, 5);
                 if !context.contains("||") && !context.contains("else") {
                     issues.push((
                         (idx + 1) as u32,
-                        "Single relayer requirement without fallback mechanism".to_string()
+                        "Single relayer requirement without fallback mechanism".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn check_delegation_recovery(&self, source: &str) -> Option<Vec<(u32, String)>> {
-        let has_delegation = source.contains("delegatecall") ||
-                            source.contains("setDelegation");
+        let has_delegation = source.contains("delegatecall") || source.contains("setDelegation");
 
         if !has_delegation {
             return None;
         }
 
         // Check for recovery mechanisms
-        let has_remove = source.contains("removeDelegation") ||
-                        source.contains("clearDelegation") ||
-                        source.contains("revokeDelegation");
+        let has_remove = source.contains("removeDelegation")
+            || source.contains("clearDelegation")
+            || source.contains("revokeDelegation");
 
-        let has_switch = source.contains("switchDelegation") ||
-                        source.contains("updateDelegation");
+        let has_switch = source.contains("switchDelegation") || source.contains("updateDelegation");
 
-        let has_emergency = source.contains("emergency") ||
-                           source.contains("recover");
+        let has_emergency = source.contains("emergency") || source.contains("recover");
 
         if !has_remove && !has_switch && !has_emergency {
             return Some(vec![(
                 1,
-                "No recovery mechanism found - users cannot undo delegation".to_string()
+                "No recovery mechanism found - users cannot undo delegation".to_string(),
             )]);
         }
 
@@ -337,22 +317,28 @@ impl HardwareWalletDelegationDetector {
                 let func_context = self.get_function_context(&lines, idx);
 
                 // Check for value limits
-                let has_limit = func_context.contains("maxAmount") ||
-                               func_context.contains("limit") ||
-                               func_context.contains("cap") ||
-                               func_context.contains("require(amount <") ||
-                               func_context.contains("require(value <");
+                let has_limit = func_context.contains("maxAmount")
+                    || func_context.contains("limit")
+                    || func_context.contains("cap")
+                    || func_context.contains("require(amount <")
+                    || func_context.contains("require(value <");
 
-                if !has_limit && (func_context.contains(".value(") || func_context.contains(".transfer(")) {
+                if !has_limit
+                    && (func_context.contains(".value(") || func_context.contains(".transfer("))
+                {
                     issues.push((
                         (idx + 1) as u32,
-                        "Delegation allows unrestricted asset transfers without limits".to_string()
+                        "Delegation allows unrestricted asset transfers without limits".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn check_code_update_safety(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -362,38 +348,42 @@ impl HardwareWalletDelegationDetector {
         for (idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("function") &&
-               (trimmed.contains("updateDelegation") ||
-                trimmed.contains("setDelegation") ||
-                trimmed.contains("changeDelegation")) {
-
+            if trimmed.contains("function")
+                && (trimmed.contains("updateDelegation")
+                    || trimmed.contains("setDelegation")
+                    || trimmed.contains("changeDelegation"))
+            {
                 let func_body = self.get_function_body(&lines, idx);
 
                 // Check for hardware wallet signature verification
-                let has_hw_sig = func_body.contains("signature") &&
-                                (func_body.contains("ecrecover") ||
-                                 func_body.contains("ECDSA.recover"));
+                let has_hw_sig = func_body.contains("signature")
+                    && (func_body.contains("ecrecover") || func_body.contains("ECDSA.recover"));
 
                 // Check for timelock
-                let has_timelock = func_body.contains("timelock") ||
-                                  func_body.contains("delay") ||
-                                  func_body.contains("block.timestamp");
+                let has_timelock = func_body.contains("timelock")
+                    || func_body.contains("delay")
+                    || func_body.contains("block.timestamp");
 
                 if !has_hw_sig {
                     issues.push((
                         (idx + 1) as u32,
-                        "Delegation update lacks hardware wallet signature verification".to_string()
+                        "Delegation update lacks hardware wallet signature verification"
+                            .to_string(),
                     ));
                 } else if !has_timelock {
                     issues.push((
                         (idx + 1) as u32,
-                        "Delegation update lacks time-lock protection".to_string()
+                        "Delegation update lacks time-lock protection".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn check_signature_validation(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -404,29 +394,33 @@ impl HardwareWalletDelegationDetector {
             let trimmed = line.trim();
 
             // Look for critical delegation functions
-            if trimmed.contains("function") &&
-               (trimmed.contains("setDelegation") ||
-                trimmed.contains("enableDelegation") ||
-                trimmed.contains("delegate")) &&
-               trimmed.contains("external") {
-
+            if trimmed.contains("function")
+                && (trimmed.contains("setDelegation")
+                    || trimmed.contains("enableDelegation")
+                    || trimmed.contains("delegate"))
+                && trimmed.contains("external")
+            {
                 let func_body = self.get_function_body(&lines, idx);
 
                 // Check for signature validation
-                let has_sig_check = func_body.contains("ecrecover") ||
-                                   func_body.contains("ECDSA.recover") ||
-                                   func_body.contains("SignatureChecker");
+                let has_sig_check = func_body.contains("ecrecover")
+                    || func_body.contains("ECDSA.recover")
+                    || func_body.contains("SignatureChecker");
 
                 if !has_sig_check {
                     issues.push((
                         (idx + 1) as u32,
-                        "Critical delegation function missing signature validation".to_string()
+                        "Critical delegation function missing signature validation".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn get_surrounding_context(&self, lines: &[&str], idx: usize, range: usize) -> String {

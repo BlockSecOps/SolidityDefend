@@ -1,6 +1,6 @@
 use anyhow::Result;
 use dashmap::DashMap;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -257,7 +257,9 @@ impl DependencyTracker {
                         metrics.cache_misses += 1;
 
                         // Resolve import path
-                        if let Some(resolved_path) = self.resolve_import_path(file_path, &import_path)? {
+                        if let Some(resolved_path) =
+                            self.resolve_import_path(file_path, &import_path)?
+                        {
                             imports.insert(resolved_path.clone());
                             metrics.dependencies_found += 1;
 
@@ -301,7 +303,9 @@ impl DependencyTracker {
                         let parents = &parents_part[..brace_pos];
                         for parent in parents.split(',') {
                             let parent = parent.trim();
-                            if let Some(resolved_path) = self.resolve_contract_reference(file_path, parent)? {
+                            if let Some(resolved_path) =
+                                self.resolve_contract_reference(file_path, parent)?
+                            {
                                 inheritance.insert(resolved_path);
                                 metrics.dependencies_found += 1;
                             }
@@ -341,7 +345,11 @@ impl DependencyTracker {
     }
 
     /// Resolve import path to actual file path
-    fn resolve_import_path(&self, current_file: &Path, import_path: &str) -> Result<Option<PathBuf>> {
+    fn resolve_import_path(
+        &self,
+        current_file: &Path,
+        import_path: &str,
+    ) -> Result<Option<PathBuf>> {
         // Handle relative imports
         if import_path.starts_with("./") || import_path.starts_with("../") {
             if let Some(parent) = current_file.parent() {
@@ -363,7 +371,11 @@ impl DependencyTracker {
     }
 
     /// Resolve contract reference to file path
-    fn resolve_contract_reference(&self, _current_file: &Path, _contract_name: &str) -> Result<Option<PathBuf>> {
+    fn resolve_contract_reference(
+        &self,
+        _current_file: &Path,
+        _contract_name: &str,
+    ) -> Result<Option<PathBuf>> {
         // Look for contract in current file's dependencies
         // This is a simplified implementation
         Ok(None)
@@ -414,7 +426,9 @@ impl DependencyTracker {
             let after_keyword = &line[start + keyword.len()..];
             let name = after_keyword.trim().split_whitespace().next()?;
             // Remove any trailing characters like '{' or 'is'
-            let clean_name = name.split(|c: char| !c.is_alphanumeric() && c != '_').next()?;
+            let clean_name = name
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .next()?;
             if !clean_name.is_empty() {
                 return Some(clean_name.to_string());
             }
@@ -425,7 +439,8 @@ impl DependencyTracker {
     /// Update the dependency graph
     fn update_dependency_graph(&self, file_path: &Path, dependencies: HashSet<PathBuf>) {
         // Update forward dependencies
-        self.dependencies.insert(file_path.to_path_buf(), dependencies.clone());
+        self.dependencies
+            .insert(file_path.to_path_buf(), dependencies.clone());
 
         // Update reverse dependencies
         for dep_path in dependencies {
@@ -509,12 +524,8 @@ impl DependencyTracker {
                 }
                 targets
             }
-            InvalidationStrategy::DependencyTree => {
-                self.get_all_dependents(changed_file)
-            }
-            InvalidationStrategy::Smart => {
-                self.smart_invalidation(changed_file)
-            }
+            InvalidationStrategy::DependencyTree => self.get_all_dependents(changed_file),
+            InvalidationStrategy::Smart => self.smart_invalidation(changed_file),
         }
     }
 
@@ -557,7 +568,11 @@ impl DependencyTracker {
     /// Get dependency graph statistics
     pub fn get_statistics(&self) -> DependencyStatistics {
         let total_files = self.dependencies.len();
-        let total_dependencies: usize = self.dependencies.iter().map(|entry| entry.value().len()).sum();
+        let total_dependencies: usize = self
+            .dependencies
+            .iter()
+            .map(|entry| entry.value().len())
+            .sum();
         let avg_dependencies = if total_files > 0 {
             total_dependencies as f64 / total_files as f64
         } else {

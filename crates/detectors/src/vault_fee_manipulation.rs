@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault fee manipulation vulnerabilities
 pub struct VaultFeeManipulationDetector {
@@ -56,28 +56,29 @@ impl Detector for VaultFeeManipulationDetector {
                 let message = format!(
                     "Function '{}' is vulnerable to fee manipulation attack. {} \
                     Attacker can front-run fee changes to extract value from depositors.",
-                    function.name.name,
-                    fee_issue
+                    function.name.name, fee_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
-                .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
-                .with_fix_suggestion(format!(
-                    "Protect '{}' from fee manipulation. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
+                    .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_fix_suggestion(format!(
+                        "Protect '{}' from fee manipulation. \
                     Solutions: (1) Implement timelock delay on fee updates (24-48 hours), \
                     (2) Emit events before fee changes take effect, \
                     (3) Add maximum fee change limits per update, \
                     (4) Require multi-sig approval for fee changes, \
                     (5) Use gradual fee ramping instead of instant updates.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for VaultFeeManipulationDetector {
 
 impl VaultFeeManipulationDetector {
     /// Check for fee manipulation vulnerabilities
-    fn check_fee_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_fee_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -101,29 +106,29 @@ impl VaultFeeManipulationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify fee-related functions
-        let is_fee_function = function.name.name.to_lowercase().contains("fee") ||
-                            function.name.name.to_lowercase().contains("setfee") ||
-                            function.name.name.to_lowercase().contains("updatefee") ||
-                            func_source.contains("Fee =") ||
-                            func_source.contains("fee =");
+        let is_fee_function = function.name.name.to_lowercase().contains("fee")
+            || function.name.name.to_lowercase().contains("setfee")
+            || function.name.name.to_lowercase().contains("updatefee")
+            || func_source.contains("Fee =")
+            || func_source.contains("fee =");
 
-        let is_fee_setter = function.name.name.to_lowercase().contains("set") &&
-                          function.name.name.to_lowercase().contains("fee");
+        let is_fee_setter = function.name.name.to_lowercase().contains("set")
+            && function.name.name.to_lowercase().contains("fee");
 
         if !is_fee_function && !is_fee_setter {
             return None;
         }
 
         // Pattern 1: Unprotected fee update without timelock
-        let updates_fee = func_source.contains("Fee =") ||
-                         func_source.contains("fee =") ||
-                         func_source.contains("feePercentage =") ||
-                         func_source.contains("performanceFee =");
+        let updates_fee = func_source.contains("Fee =")
+            || func_source.contains("fee =")
+            || func_source.contains("feePercentage =")
+            || func_source.contains("performanceFee =");
 
-        let has_timelock = func_source.contains("timelock") ||
-                          func_source.contains("delay") ||
-                          func_source.contains("scheduledTime") ||
-                          func_source.contains("effectiveTime");
+        let has_timelock = func_source.contains("timelock")
+            || func_source.contains("delay")
+            || func_source.contains("scheduledTime")
+            || func_source.contains("effectiveTime");
 
         if updates_fee && !has_timelock {
             return Some(format!(
@@ -133,10 +138,10 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 2: Missing fee change event emission
-        let has_event_emit = func_source.contains("emit ") &&
-                            (func_source.contains("FeeUpdated") ||
-                             func_source.contains("FeeChanged") ||
-                             func_source.contains("SetFee"));
+        let has_event_emit = func_source.contains("emit ")
+            && (func_source.contains("FeeUpdated")
+                || func_source.contains("FeeChanged")
+                || func_source.contains("SetFee"));
 
         if updates_fee && !has_event_emit {
             return Some(format!(
@@ -146,10 +151,10 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 3: No maximum fee change limit
-        let has_max_fee_check = func_source.contains("MAX_FEE") ||
-                               func_source.contains("maxFee") ||
-                               func_source.contains("FEE_LIMIT") ||
-                               func_source.contains("require(newFee <=");
+        let has_max_fee_check = func_source.contains("MAX_FEE")
+            || func_source.contains("maxFee")
+            || func_source.contains("FEE_LIMIT")
+            || func_source.contains("require(newFee <=");
 
         if updates_fee && !has_max_fee_check {
             return Some(format!(
@@ -159,18 +164,18 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 4: Front-runnable fee-dependent operations
-        let calculates_with_fee = func_source.contains("* fee") ||
-                                 func_source.contains("* performanceFee") ||
-                                 func_source.contains("/ FEE_DENOMINATOR");
+        let calculates_with_fee = func_source.contains("* fee")
+            || func_source.contains("* performanceFee")
+            || func_source.contains("/ FEE_DENOMINATOR");
 
-        let is_deposit_withdraw = function.name.name.to_lowercase().contains("deposit") ||
-                                 function.name.name.to_lowercase().contains("withdraw") ||
-                                 function.name.name.to_lowercase().contains("redeem");
+        let is_deposit_withdraw = function.name.name.to_lowercase().contains("deposit")
+            || function.name.name.to_lowercase().contains("withdraw")
+            || function.name.name.to_lowercase().contains("redeem");
 
         if calculates_with_fee && is_deposit_withdraw {
-            let reads_current_fee = func_source.contains("currentFee") ||
-                                   func_source.contains("fee()") ||
-                                   func_source.contains("getFee()");
+            let reads_current_fee = func_source.contains("currentFee")
+                || func_source.contains("fee()")
+                || func_source.contains("getFee()");
 
             if reads_current_fee {
                 return Some(format!(
@@ -181,18 +186,18 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 5: Missing multi-sig or governance control
-        let has_access_control = func_source.contains("onlyOwner") ||
-                                func_source.contains("onlyGovernance") ||
-                                func_source.contains("require(msg.sender ==") ||
-                                function.modifiers.iter().any(|m| {
-                                    let modifier_name = &m.name.name;
-                                    modifier_name.to_lowercase().contains("only") ||
-                                    modifier_name.to_lowercase().contains("auth")
-                                });
+        let has_access_control = func_source.contains("onlyOwner")
+            || func_source.contains("onlyGovernance")
+            || func_source.contains("require(msg.sender ==")
+            || function.modifiers.iter().any(|m| {
+                let modifier_name = &m.name.name;
+                modifier_name.to_lowercase().contains("only")
+                    || modifier_name.to_lowercase().contains("auth")
+            });
 
-        let has_multisig = func_source.contains("multisig") ||
-                          func_source.contains("timelock") ||
-                          func_source.contains("governance");
+        let has_multisig = func_source.contains("multisig")
+            || func_source.contains("timelock")
+            || func_source.contains("governance");
 
         if updates_fee && has_access_control && !has_multisig {
             return Some(format!(
@@ -202,10 +207,10 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 6: No gradual fee ramping
-        let has_gradual_change = func_source.contains("ramp") ||
-                                func_source.contains("gradual") ||
-                                func_source.contains("step") ||
-                                func_source.contains("increment");
+        let has_gradual_change = func_source.contains("ramp")
+            || func_source.contains("gradual")
+            || func_source.contains("step")
+            || func_source.contains("increment");
 
         if updates_fee && !has_gradual_change && !has_timelock {
             return Some(format!(
@@ -215,10 +220,10 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 7: Fee change window too short
-        let has_notice_period = func_source.contains("NOTICE_PERIOD") ||
-                               func_source.contains("DELAY") ||
-                               func_source.contains("48 hours") ||
-                               func_source.contains("24 hours");
+        let has_notice_period = func_source.contains("NOTICE_PERIOD")
+            || func_source.contains("DELAY")
+            || func_source.contains("48 hours")
+            || func_source.contains("24 hours");
 
         if updates_fee && has_timelock && !has_notice_period {
             return Some(format!(
@@ -228,10 +233,11 @@ impl VaultFeeManipulationDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("fee") ||
-            func_source.contains("front") ||
-            func_source.contains("manipulation")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("fee")
+                || func_source.contains("front")
+                || func_source.contains("manipulation"))
+        {
             return Some(format!(
                 "Vault fee manipulation vulnerability marker detected"
             ));

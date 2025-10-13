@@ -2,13 +2,12 @@
 ///
 /// Tests the vault_share_inflation detector against real Solidity contracts
 /// to ensure proper detection of first depositor share manipulation vulnerabilities.
-
 use anyhow::Result;
 use ast::AstArena;
-use parser::Parser;
 use detectors::Detector;
-use detectors::vault_share_inflation::VaultShareInflationDetector;
 use detectors::types::{AnalysisContext, Severity};
+use detectors::vault_share_inflation::VaultShareInflationDetector;
+use parser::Parser;
 use semantic::SymbolTable;
 
 /// Helper to parse and analyze a contract with the vault inflation detector
@@ -17,11 +16,14 @@ fn analyze_contract(source: &str) -> Result<Vec<detectors::types::Finding>> {
     let parser = Parser::new();
 
     // Parse the contract
-    let ast = parser.parse(&arena, source, "test.sol")
+    let ast = parser
+        .parse(&arena, source, "test.sol")
         .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))?;
 
     // Get the first contract
-    let contract = ast.contracts.first()
+    let contract = ast
+        .contracts
+        .first()
         .ok_or_else(|| anyhow::anyhow!("No contracts found in source"))?;
 
     // Create empty symbol table for testing
@@ -101,20 +103,28 @@ fn test_vulnerable_vault_classic_pattern() {
         return;
     }
 
-    assert!(!findings.is_empty(), "Should detect vault inflation vulnerability");
-
-    // Check that findings mention the vulnerability
-    let has_inflation_finding = findings.iter().any(|f|
-        f.message.contains("vault share inflation") ||
-        f.message.contains("share price manipulation") ||
-        f.message.contains("first depositor")
+    assert!(
+        !findings.is_empty(),
+        "Should detect vault inflation vulnerability"
     );
 
-    assert!(has_inflation_finding, "Should mention share inflation vulnerability");
+    // Check that findings mention the vulnerability
+    let has_inflation_finding = findings.iter().any(|f| {
+        f.message.contains("vault share inflation")
+            || f.message.contains("share price manipulation")
+            || f.message.contains("first depositor")
+    });
+
+    assert!(
+        has_inflation_finding,
+        "Should mention share inflation vulnerability"
+    );
 
     // Verify severity is Critical
-    assert!(findings.iter().any(|f| f.severity == Severity::Critical),
-        "Should have at least one critical finding");
+    assert!(
+        findings.iter().any(|f| f.severity == Severity::Critical),
+        "Should have at least one critical finding"
+    );
 }
 
 #[test]
@@ -146,14 +156,19 @@ fn test_vulnerable_vault_no_minimum_deposit() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Should detect lack of minimum deposit
-    assert!(!findings.is_empty(), "Should detect missing minimum deposit");
-
-    let has_minimum_finding = findings.iter().any(|f|
-        f.message.contains("minimum deposit") ||
-        f.message.contains("1 wei")
+    assert!(
+        !findings.is_empty(),
+        "Should detect missing minimum deposit"
     );
 
-    assert!(has_minimum_finding, "Should mention minimum deposit vulnerability");
+    let has_minimum_finding = findings
+        .iter()
+        .any(|f| f.message.contains("minimum deposit") || f.message.contains("1 wei"));
+
+    assert!(
+        has_minimum_finding,
+        "Should mention minimum deposit vulnerability"
+    );
 }
 
 #[test]
@@ -179,15 +194,18 @@ fn test_vulnerable_vault_uses_balance_of() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Should detect balanceOf usage vulnerability
-    let _has_balance_finding = findings.iter().any(|f|
-        f.message.contains("balanceOf") ||
-        f.message.contains("internal accounting") ||
-        f.message.contains("direct token transfer")
-    );
+    let _has_balance_finding = findings.iter().any(|f| {
+        f.message.contains("balanceOf")
+            || f.message.contains("internal accounting")
+            || f.message.contains("direct token transfer")
+    });
 
     // Note: This specific pattern might not be caught depending on implementation
     // The detector looks for balanceOf(address(this)) without internal accounting checks
-    println!("Findings: {:?}", findings.iter().map(|f| &f.message).collect::<Vec<_>>());
+    println!(
+        "Findings: {:?}",
+        findings.iter().map(|f| &f.message).collect::<Vec<_>>()
+    );
 }
 
 #[test]
@@ -221,11 +239,15 @@ fn test_secure_vault_virtual_shares() {
 
     // Secure implementation with virtual shares should have fewer or no findings
     // (though other detectors might still flag it)
-    let inflation_findings: Vec<_> = findings.iter()
+    let inflation_findings: Vec<_> = findings
+        .iter()
         .filter(|f| f.message.contains("vault share inflation"))
         .collect();
 
-    println!("Virtual shares vault findings: {}", inflation_findings.len());
+    println!(
+        "Virtual shares vault findings: {}",
+        inflation_findings.len()
+    );
     // Virtual offsets should be recognized as mitigation
 }
 
@@ -261,7 +283,8 @@ fn test_secure_vault_dead_shares() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Check if dead shares pattern is recognized
-    let inflation_findings: Vec<_> = findings.iter()
+    let inflation_findings: Vec<_> = findings
+        .iter()
         .filter(|f| f.message.contains("vault share inflation"))
         .collect();
 
@@ -299,7 +322,8 @@ fn test_secure_vault_minimum_deposit() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Minimum deposit requirements should reduce findings
-    let minimum_findings: Vec<_> = findings.iter()
+    let minimum_findings: Vec<_> = findings
+        .iter()
         .filter(|f| f.message.contains("minimum deposit"))
         .collect();
 
@@ -336,11 +360,15 @@ fn test_secure_vault_internal_accounting() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Internal accounting should be recognized
-    let balance_findings: Vec<_> = findings.iter()
+    let balance_findings: Vec<_> = findings
+        .iter()
         .filter(|f| f.message.contains("balanceOf") || f.message.contains("internal accounting"))
         .collect();
 
-    println!("Internal accounting vault findings: {}", balance_findings.len());
+    println!(
+        "Internal accounting vault findings: {}",
+        balance_findings.len()
+    );
     // totalDeposited usage should be recognized as internal accounting
 }
 
@@ -365,12 +393,15 @@ fn test_non_vault_contract_no_findings() {
     let findings = analyze_contract(source).expect("Analysis should succeed");
 
     // Non-vault contract should not trigger vault-specific detectors
-    let vault_findings: Vec<_> = findings.iter()
+    let vault_findings: Vec<_> = findings
+        .iter()
         .filter(|f| f.message.contains("vault") || f.message.contains("share inflation"))
         .collect();
 
-    assert!(vault_findings.is_empty(),
-        "Non-vault contract should not have vault inflation findings");
+    assert!(
+        vault_findings.is_empty(),
+        "Non-vault contract should not have vault inflation findings"
+    );
 }
 
 #[test]
@@ -403,9 +434,9 @@ fn test_findings_have_cwe_references() {
 
         // Vault inflation should reference CWE-682 (Incorrect Calculation)
         // and CWE-1339 (Insufficient Precision)
-        let has_cwe = findings.iter().any(|f|
-            f.cwe_ids.contains(&682) || f.cwe_ids.contains(&1339)
-        );
+        let has_cwe = findings
+            .iter()
+            .any(|f| f.cwe_ids.contains(&682) || f.cwe_ids.contains(&1339));
 
         assert!(has_cwe, "Findings should have relevant CWE references");
     }
@@ -448,14 +479,15 @@ fn test_findings_have_fix_suggestions() {
                 println!("Fix suggestion: {}", fix);
 
                 // Should mention at least one mitigation strategy
-                let mentions_mitigation =
-                    fix.contains("dead shares") ||
-                    fix.contains("virtual shares") ||
-                    fix.contains("minimum") ||
-                    fix.contains("internal");
+                let mentions_mitigation = fix.contains("dead shares")
+                    || fix.contains("virtual shares")
+                    || fix.contains("minimum")
+                    || fix.contains("internal");
 
-                assert!(mentions_mitigation,
-                    "Fix should mention specific mitigation strategies");
+                assert!(
+                    mentions_mitigation,
+                    "Fix should mention specific mitigation strategies"
+                );
             }
         }
     }
@@ -498,7 +530,8 @@ fn test_multiple_functions_analyzed() {
     println!("Total findings: {}", findings.len());
 
     // Check that findings cover multiple functions
-    let function_names: std::collections::HashSet<_> = findings.iter()
+    let function_names: std::collections::HashSet<_> = findings
+        .iter()
         .filter_map(|f| {
             if f.message.contains("Function '") {
                 // Extract function name from message
@@ -512,5 +545,8 @@ fn test_multiple_functions_analyzed() {
     println!("Functions with findings: {:?}", function_names);
 
     // Should detect issues in deposit, mint, or previewDeposit
-    assert!(!function_names.is_empty(), "Should find issues in vault functions");
+    assert!(
+        !function_names.is_empty(),
+        "Should find issues in vault functions"
+    );
 }

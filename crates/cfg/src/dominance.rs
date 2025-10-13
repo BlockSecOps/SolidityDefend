@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet, VecDeque};
 use anyhow::{Result, anyhow};
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use ir::BlockId;
 use crate::graph::ControlFlowGraph;
+use ir::BlockId;
 
 /// Dominator tree for control flow analysis
 #[derive(Debug, Clone)]
@@ -76,7 +76,9 @@ impl DominatorTree {
                 // Find the first processed predecessor
                 let mut new_idom = None;
                 for &pred in &predecessors {
-                    if self.idom.contains_key(&pred) && self.idom[&pred].is_some() || pred == entry_block {
+                    if self.idom.contains_key(&pred) && self.idom[&pred].is_some()
+                        || pred == entry_block
+                    {
                         new_idom = Some(pred);
                         break;
                     }
@@ -85,7 +87,10 @@ impl DominatorTree {
                 // Intersect with all other processed predecessors
                 if let Some(mut new_idom_val) = new_idom {
                     for &pred in &predecessors {
-                        if pred != new_idom_val && (self.idom.contains_key(&pred) && self.idom[&pred].is_some() || pred == entry_block) {
+                        if pred != new_idom_val
+                            && (self.idom.contains_key(&pred) && self.idom[&pred].is_some()
+                                || pred == entry_block)
+                        {
                             new_idom_val = self.intersect(new_idom_val, pred, &blocks)?;
                         }
                     }
@@ -132,7 +137,10 @@ impl DominatorTree {
 
     /// Get reverse postorder number (simplified)
     fn get_reverse_postorder_number(&self, block: BlockId, blocks: &[BlockId]) -> usize {
-        blocks.iter().position(|&b| b == block).unwrap_or(usize::MAX)
+        blocks
+            .iter()
+            .position(|&b| b == block)
+            .unwrap_or(usize::MAX)
     }
 
     /// Build the dominator tree structure from immediate dominators
@@ -237,7 +245,10 @@ impl DominatorTree {
 
     /// Get the dominance frontier of a block
     pub fn dominance_frontier(&self, block: BlockId) -> HashSet<BlockId> {
-        self.dominance_frontier.get(&block).cloned().unwrap_or_default()
+        self.dominance_frontier
+            .get(&block)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Find the lowest common ancestor in the dominator tree
@@ -272,7 +283,10 @@ impl DominatorTree {
         // Check that each non-root block has an immediate dominator
         for (block, idom) in &self.idom {
             if Some(*block) != self.root && idom.is_none() {
-                return Err(anyhow!("Non-root block {} has no immediate dominator", block));
+                return Err(anyhow!(
+                    "Non-root block {} has no immediate dominator",
+                    block
+                ));
             }
         }
 
@@ -282,7 +296,8 @@ impl DominatorTree {
                 if self.immediate_dominator(child) != Some(*parent) {
                     return Err(anyhow!(
                         "Inconsistent parent-child relationship: {} -> {}",
-                        parent, child
+                        parent,
+                        child
                     ));
                 }
             }
@@ -302,7 +317,9 @@ impl DominatorTree {
         }
 
         // Compute average dominance frontier size
-        let total_frontier_size: usize = self.dominance_frontier.values()
+        let total_frontier_size: usize = self
+            .dominance_frontier
+            .values()
             .map(|frontier| frontier.len())
             .sum();
 
@@ -311,13 +328,17 @@ impl DominatorTree {
         }
 
         // Find maximum frontier size
-        stats.max_frontier_size = self.dominance_frontier.values()
+        stats.max_frontier_size = self
+            .dominance_frontier
+            .values()
             .map(|frontier| frontier.len())
             .max()
             .unwrap_or(0);
 
         // Count blocks with no children (leaves)
-        stats.leaf_blocks = self.children.values()
+        stats.leaf_blocks = self
+            .children
+            .values()
             .filter(|children| children.is_empty())
             .count();
 
@@ -344,7 +365,10 @@ impl DominatorTree {
     /// Export dominator tree to DOT format for visualization
     pub fn to_dot(&self) -> String {
         let mut dot = String::new();
-        dot.push_str(&format!("digraph \"dominator_tree_{}\" {{\n", self.cfg_name));
+        dot.push_str(&format!(
+            "digraph \"dominator_tree_{}\" {{\n",
+            self.cfg_name
+        ));
         dot.push_str("    rankdir=TB;\n");
         dot.push_str("    node [shape=box];\n\n");
 
@@ -356,8 +380,10 @@ impl DominatorTree {
                 ""
             };
 
-            dot.push_str(&format!("    \"{}\" [label=\"{}\",{}];\n",
-                block_id, block_id, style));
+            dot.push_str(&format!(
+                "    \"{}\" [label=\"{}\",{}];\n",
+                block_id, block_id, style
+            ));
         }
 
         dot.push_str("\n");
@@ -431,7 +457,11 @@ impl std::fmt::Display for DominatorTreeStatistics {
         write!(f, "  Total blocks: {}\n", self.total_blocks)?;
         write!(f, "  Tree height: {}\n", self.tree_height)?;
         write!(f, "  Leaf blocks: {}\n", self.leaf_blocks)?;
-        write!(f, "  Average frontier size: {:.2}\n", self.average_frontier_size)?;
+        write!(
+            f,
+            "  Average frontier size: {:.2}\n",
+            self.average_frontier_size
+        )?;
         write!(f, "  Max frontier size: {}", self.max_frontier_size)
     }
 }
@@ -646,10 +676,14 @@ mod tests {
         cfg.add_block(block4, vec![]);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block1, block3, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block2, block4, EdgeType::Unconditional).unwrap();
-        cfg.add_edge(block3, block4, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block1, block3, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block2, block4, EdgeType::Unconditional)
+            .unwrap();
+        cfg.add_edge(block3, block4, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }

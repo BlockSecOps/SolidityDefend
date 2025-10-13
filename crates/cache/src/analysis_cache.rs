@@ -1,10 +1,10 @@
+use anyhow::Result;
+use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
 use std::path::Path;
 use std::sync::RwLock;
-use dashmap::DashMap;
-use anyhow::Result;
-use serde::{Serialize, Deserialize};
 
-use crate::{CacheKey, CacheEntry, CacheConfig};
+use crate::{CacheConfig, CacheEntry, CacheKey};
 
 /// Cached analysis results
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -124,9 +124,8 @@ impl AnalysisCache {
         let file_path_str = file_path.to_string_lossy().to_string();
 
         // Remove all entries for this file path
-        self.cache.retain(|_, entry| {
-            entry.data.file_path != file_path_str
-        });
+        self.cache
+            .retain(|_, entry| entry.data.file_path != file_path_str);
 
         self.update_memory_usage();
     }
@@ -134,9 +133,8 @@ impl AnalysisCache {
     /// Invalidate entries based on configuration changes
     pub fn invalidate_config(&self, old_config_hash: &str) {
         // Remove all entries with the old configuration
-        self.cache.retain(|_, entry| {
-            entry.data.config_hash != old_config_hash
-        });
+        self.cache
+            .retain(|_, entry| entry.data.config_hash != old_config_hash);
 
         self.update_memory_usage();
     }
@@ -224,7 +222,9 @@ impl AnalysisCache {
     /// Evict least recently used entries
     fn evict_lru_entries(&self) {
         // Collect entries with their access times
-        let mut entries: Vec<_> = self.cache.iter()
+        let mut entries: Vec<_> = self
+            .cache
+            .iter()
             .map(|entry| (entry.key().clone(), entry.value().accessed_at))
             .collect();
 
@@ -261,7 +261,10 @@ pub struct CacheHitStats {
 
 /// Estimate memory usage of an analysis cache entry
 fn estimate_analysis_entry_size(entry: &CacheEntry<CachedAnalysisResult>) -> usize {
-    let findings_size: usize = entry.data.findings.iter()
+    let findings_size: usize = entry
+        .data
+        .findings
+        .iter()
         .map(|f| {
             f.detector_id.len() +
             f.message.len() +
@@ -272,20 +275,29 @@ fn estimate_analysis_entry_size(entry: &CacheEntry<CachedAnalysisResult>) -> usi
         })
         .sum();
 
-    let metadata_size = entry.data.metadata.detectors_run.iter()
+    let metadata_size = entry
+        .data
+        .metadata
+        .detectors_run
+        .iter()
         .map(|d| d.len())
-        .sum::<usize>() +
-        entry.data.metadata.stats.findings_by_severity.keys()
-        .map(|k| k.len() + 8) // usize size
-        .sum::<usize>() +
-        64; // Other metadata overhead
+        .sum::<usize>()
+        + entry
+            .data
+            .metadata
+            .stats
+            .findings_by_severity
+            .keys()
+            .map(|k| k.len() + 8) // usize size
+            .sum::<usize>()
+        + 64; // Other metadata overhead
 
-    findings_size +
-    metadata_size +
-    entry.data.file_path.len() +
-    entry.data.config_hash.len() +
-    entry.key.content_hash.len() +
-    entry.key.file_path.len() +
-    entry.key.config_hash.len() +
-    128 // Entry overhead
+    findings_size
+        + metadata_size
+        + entry.data.file_path.len()
+        + entry.data.config_hash.len()
+        + entry.key.content_hash.len()
+        + entry.key.file_path.len()
+        + entry.key.config_hash.len()
+        + 128 // Entry overhead
 }

@@ -112,8 +112,14 @@ mod tests {
         assert_eq!(index1, 0);
         assert_eq!(index2, 1);
 
-        assert_eq!(arena.get_source_file(0), Some("contract Test1 {}".to_string()));
-        assert_eq!(arena.get_source_file(1), Some("contract Test2 {}".to_string()));
+        assert_eq!(
+            arena.get_source_file(0),
+            Some("contract Test1 {}".to_string())
+        );
+        assert_eq!(
+            arena.get_source_file(1),
+            Some("contract Test2 {}".to_string())
+        );
         assert_eq!(arena.get_source_file(2), None);
     }
 }

@@ -3,7 +3,9 @@ pub mod resolution;
 pub mod symbols;
 pub mod types;
 
-pub use symbols::{SymbolTable, Symbol, SymbolKind, Scope};
-pub use types::{TypeResolver, ResolvedType, TypeCompatibility};
-pub use inheritance::{InheritanceGraph, InheritanceNode, InheritanceGraphBuilder, InheritanceGraphStats};
-pub use resolution::{NameResolver, ResolutionResult, BatchNameResolver, ResolutionStatistics};
+pub use inheritance::{
+    InheritanceGraph, InheritanceGraphBuilder, InheritanceGraphStats, InheritanceNode,
+};
+pub use resolution::{BatchNameResolver, NameResolver, ResolutionResult, ResolutionStatistics};
+pub use symbols::{Scope, Symbol, SymbolKind, SymbolTable};
+pub use types::{ResolvedType, TypeCompatibility, TypeResolver};

@@ -6,15 +6,15 @@
 
 pub mod analyzer;
 pub mod propagation;
-pub mod sources;
-pub mod sinks;
 pub mod sanitizers;
+pub mod sinks;
+pub mod sources;
 
 pub use analyzer::TaintAnalyzer;
-pub use propagation::{TaintPropagator, PropagationRule};
-pub use sources::{TaintSource, TaintSourceDetector};
+pub use propagation::{PropagationRule, TaintPropagator};
+pub use sanitizers::{SanitizerDetector, TaintSanitizer};
 pub use sinks::{TaintSink, TaintSinkDetector};
-pub use sanitizers::{TaintSanitizer, SanitizerDetector};
+pub use sources::{TaintSource, TaintSourceDetector};
 
 use crate::types::Severity;
 use std::collections::HashMap;
@@ -41,15 +41,15 @@ pub struct SourceLocation {
 /// Type of taint
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum TaintType {
-    UserInput,           // Data from user input (msg.sender, tx.origin, etc.)
-    ExternalCall,        // Data from external contract calls
-    ExternalData,        // Data from external sources (oracles, etc.)
-    UntrustedStorage,    // Data from untrusted storage locations
-    ArbitraryData,       // Arbitrary data that can be controlled
-    TimeDependent,       // Time-dependent data (block.timestamp, etc.)
-    AddressDependent,    // Address-dependent data
-    NumericOverflow,     // Data that may cause numeric overflow
-    Custom(String),      // Custom taint type
+    UserInput,        // Data from user input (msg.sender, tx.origin, etc.)
+    ExternalCall,     // Data from external contract calls
+    ExternalData,     // Data from external sources (oracles, etc.)
+    UntrustedStorage, // Data from untrusted storage locations
+    ArbitraryData,    // Arbitrary data that can be controlled
+    TimeDependent,    // Time-dependent data (block.timestamp, etc.)
+    AddressDependent, // Address-dependent data
+    NumericOverflow,  // Data that may cause numeric overflow
+    Custom(String),   // Custom taint type
 }
 
 /// Step in taint propagation
@@ -64,15 +64,15 @@ pub struct PropagationStep {
 /// Type of taint propagation
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum PropagationType {
-    Direct,              // Direct assignment
-    Arithmetic,          // Arithmetic operation
-    Comparison,          // Comparison operation
-    FunctionCall,        // Function call
-    Return,              // Function return
-    Storage,             // Storage write/read
-    Memory,              // Memory operation
-    Event,               // Event emission
-    ExternalCall,        // External contract call
+    Direct,       // Direct assignment
+    Arithmetic,   // Arithmetic operation
+    Comparison,   // Comparison operation
+    FunctionCall, // Function call
+    Return,       // Function return
+    Storage,      // Storage write/read
+    Memory,       // Memory operation
+    Event,        // Event emission
+    ExternalCall, // External contract call
 }
 
 /// Result of taint analysis
@@ -258,19 +258,19 @@ impl TaintUtils {
     /// Calculate taint propagation factor
     pub fn calculate_propagation_factor(operation: &str, _taint_type: &TaintType) -> f64 {
         match operation {
-            "=" => 1.0,  // Direct assignment preserves all taint
-            "+" | "-" | "*" | "/" => 0.8,  // Arithmetic may reduce taint slightly
-            "==" | "!=" | "<" | ">" => 0.3,  // Comparisons reduce taint significantly
-            "&&" | "||" => 0.5,  // Logical operations
+            "=" => 1.0,                     // Direct assignment preserves all taint
+            "+" | "-" | "*" | "/" => 0.8,   // Arithmetic may reduce taint slightly
+            "==" | "!=" | "<" | ">" => 0.3, // Comparisons reduce taint significantly
+            "&&" | "||" => 0.5,             // Logical operations
             "keccak256" | "sha256" => 0.1,  // Hashing reduces taint significantly
-            _ => 0.6,  // Default propagation factor
+            _ => 0.6,                       // Default propagation factor
         }
     }
 
     /// Estimate false positive likelihood
     pub fn estimate_false_positive_likelihood(
         path: &[PropagationStep],
-        sanitizers: &[TaintSanitizer]
+        sanitizers: &[TaintSanitizer],
     ) -> f64 {
         let mut fp_likelihood: f64 = 0.1; // Base false positive rate
 
@@ -293,18 +293,25 @@ impl TaintUtils {
     }
 
     fn get_line_content(code: &str, line_number: usize) -> Option<String> {
-        code.lines().nth(line_number.saturating_sub(1)).map(|s| s.to_string())
+        code.lines()
+            .nth(line_number.saturating_sub(1))
+            .map(|s| s.to_string())
     }
 
     fn contains_bounds_check(line: &str) -> bool {
-        line.contains("> 0") || line.contains("< length") ||
-        line.contains(">=") || line.contains("<=") ||
-        line.contains("bounds") || line.contains("range")
+        line.contains("> 0")
+            || line.contains("< length")
+            || line.contains(">=")
+            || line.contains("<=")
+            || line.contains("bounds")
+            || line.contains("range")
     }
 
     fn contains_null_check(line: &str) -> bool {
-        line.contains("!= address(0)") || line.contains("!= 0") ||
-        line.contains("== address(0)") || line.contains("== 0")
+        line.contains("!= address(0)")
+            || line.contains("!= 0")
+            || line.contains("== address(0)")
+            || line.contains("== 0")
     }
 }
 
@@ -340,9 +347,18 @@ mod tests {
 
     #[test]
     fn test_propagation_factor_calculation() {
-        assert_eq!(TaintUtils::calculate_propagation_factor("=", &TaintType::UserInput), 1.0);
-        assert_eq!(TaintUtils::calculate_propagation_factor("+", &TaintType::UserInput), 0.8);
-        assert_eq!(TaintUtils::calculate_propagation_factor("==", &TaintType::UserInput), 0.3);
+        assert_eq!(
+            TaintUtils::calculate_propagation_factor("=", &TaintType::UserInput),
+            1.0
+        );
+        assert_eq!(
+            TaintUtils::calculate_propagation_factor("+", &TaintType::UserInput),
+            0.8
+        );
+        assert_eq!(
+            TaintUtils::calculate_propagation_factor("==", &TaintType::UserInput),
+            0.3
+        );
     }
 
     #[test]

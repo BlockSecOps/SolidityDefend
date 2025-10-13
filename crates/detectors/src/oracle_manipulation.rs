@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for oracle price manipulation via flash loans
 pub struct OracleManipulationDetector {
@@ -15,7 +15,8 @@ impl OracleManipulationDetector {
             base: BaseDetector::new(
                 DetectorId("oracle-manipulation".to_string()),
                 "Oracle Price Manipulation".to_string(),
-                "Detects oracle price queries vulnerable to flash loan manipulation attacks".to_string(),
+                "Detects oracle price queries vulnerable to flash loan manipulation attacks"
+                    .to_string(),
                 vec![DetectorCategory::Oracle, DetectorCategory::FlashLoanAttacks],
                 Severity::Critical,
             ),
@@ -60,20 +61,22 @@ impl Detector for OracleManipulationDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(20) // CWE-20: Improper Input Validation
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_fix_suggestion(format!(
-                    "Use Time-Weighted Average Price (TWAP) instead of spot prices, \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_fix_suggestion(format!(
+                        "Use Time-Weighted Average Price (TWAP) instead of spot prices, \
                     or implement multi-oracle validation with deviation checks in function '{}'",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -89,7 +92,11 @@ impl Detector for OracleManipulationDetector {
 
 impl OracleManipulationDetector {
     /// Check if a function is vulnerable to oracle manipulation attacks
-    fn is_vulnerable_to_oracle_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+    fn is_vulnerable_to_oracle_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return false;
@@ -108,14 +115,22 @@ impl OracleManipulationDetector {
 
         // Check if function uses price oracles
         let price_query_patterns = [
-            "getPrice", "get_price", "latestPrice", "currentPrice",
-            "getReserves", "get_reserves", "quote", "getAmountOut",
-            "consult", "update", "oracle.price"
+            "getPrice",
+            "get_price",
+            "latestPrice",
+            "currentPrice",
+            "getReserves",
+            "get_reserves",
+            "quote",
+            "getAmountOut",
+            "consult",
+            "update",
+            "oracle.price",
         ];
 
-        let uses_price_oracle = price_query_patterns.iter().any(|pattern|
-            func_source.contains(pattern)
-        );
+        let uses_price_oracle = price_query_patterns
+            .iter()
+            .any(|pattern| func_source.contains(pattern));
 
         if !uses_price_oracle {
             return false;
@@ -124,13 +139,21 @@ impl OracleManipulationDetector {
         // Check if function is critical (used in trading, liquidation, or collateral)
         let function_name = function.name.name.to_lowercase();
         let critical_patterns = [
-            "liquidate", "swap", "trade", "borrow", "mint",
-            "burn", "redeem", "exchange", "price", "value"
+            "liquidate",
+            "swap",
+            "trade",
+            "borrow",
+            "mint",
+            "burn",
+            "redeem",
+            "exchange",
+            "price",
+            "value",
         ];
 
-        let is_critical_function = critical_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_critical_function = critical_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_critical_function {
             return false;
@@ -143,41 +166,43 @@ impl OracleManipulationDetector {
     /// Check for specific oracle manipulation vulnerability patterns
     fn has_manipulation_vulnerability(&self, source: &str) -> bool {
         // Pattern 1: Uses spot price without TWAP
-        let uses_spot_price = (source.contains("getPrice") ||
-                              source.contains("latestPrice") ||
-                              source.contains("getReserves")) &&
-                             !source.contains("TWAP") &&
-                             !source.contains("twap") &&
-                             !source.contains("getTWAP") &&
-                             !source.contains("timeWeighted");
+        let uses_spot_price = (source.contains("getPrice")
+            || source.contains("latestPrice")
+            || source.contains("getReserves"))
+            && !source.contains("TWAP")
+            && !source.contains("twap")
+            && !source.contains("getTWAP")
+            && !source.contains("timeWeighted");
 
         // Pattern 2: Direct reserve manipulation
-        let uses_reserves = source.contains("getReserves") &&
-                           source.contains("reserve0") &&
-                           source.contains("reserve1") &&
-                           !source.contains("oraclePrice");
+        let uses_reserves = source.contains("getReserves")
+            && source.contains("reserve0")
+            && source.contains("reserve1")
+            && !source.contains("oraclePrice");
 
         // Pattern 3: Single oracle source without validation
-        let single_oracle = source.contains("oracle.") &&
-                           !source.contains("oracle2") &&
-                           !source.contains("secondOracle") &&
-                           !source.contains("backup") &&
-                           !source.contains("deviation");
+        let single_oracle = source.contains("oracle.")
+            && !source.contains("oracle2")
+            && !source.contains("secondOracle")
+            && !source.contains("backup")
+            && !source.contains("deviation");
 
         // Pattern 4: Vulnerability comment marker
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                      (source.contains("oracle") ||
-                                       source.contains("flash loan") ||
-                                       source.contains("Spot price"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("oracle")
+                || source.contains("flash loan")
+                || source.contains("Spot price"));
 
         // Pattern 5: No staleness check
-        let no_staleness_check = uses_spot_price &&
-                                !source.contains("timestamp") &&
-                                !source.contains("lastUpdate") &&
-                                !source.contains("updatedAt");
+        let no_staleness_check = uses_spot_price
+            && !source.contains("timestamp")
+            && !source.contains("lastUpdate")
+            && !source.contains("updatedAt");
 
-        uses_spot_price || uses_reserves || has_vulnerability_marker ||
-        (single_oracle && no_staleness_check)
+        uses_spot_price
+            || uses_reserves
+            || has_vulnerability_marker
+            || (single_oracle && no_staleness_check)
     }
 }
 

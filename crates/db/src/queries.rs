@@ -1,12 +1,15 @@
+use crate::database::{Database, SourceFileId};
 /// Query implementations for Salsa database
 ///
 /// This module contains the implementation functions for derived queries
 /// that are called by the Salsa framework for incremental computation.
 use anyhow::Result;
-use crate::database::{Database, SourceFileId};
 
 /// Helper function to extract functions from a database query result
-pub fn extract_functions_from_parse_result(db: &mut Database, id: SourceFileId) -> Result<Vec<String>> {
+pub fn extract_functions_from_parse_result(
+    db: &mut Database,
+    id: SourceFileId,
+) -> Result<Vec<String>> {
     db.get_all_functions(id)
 }
 
@@ -21,7 +24,10 @@ pub fn analyze_dependencies(db: &Database, id: SourceFileId) -> Result<Vec<Sourc
 }
 
 /// Query to get contract metadata (name, type, etc.)
-pub fn get_contract_metadata_query(db: &mut Database, id: SourceFileId) -> Result<Vec<ContractMetadata>> {
+pub fn get_contract_metadata_query(
+    db: &mut Database,
+    id: SourceFileId,
+) -> Result<Vec<ContractMetadata>> {
     // Note: This would require access to parsed AST
     // For now, return basic metadata from file content
     let content = db.get_source_content(id);
@@ -29,7 +35,10 @@ pub fn get_contract_metadata_query(db: &mut Database, id: SourceFileId) -> Resul
     let mut metadata = Vec::new();
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("contract ") || trimmed.starts_with("interface ") || trimmed.starts_with("library ") {
+        if trimmed.starts_with("contract ")
+            || trimmed.starts_with("interface ")
+            || trimmed.starts_with("library ")
+        {
             if let Some(name_start) = trimmed.find(' ') {
                 let rest = &trimmed[name_start + 1..];
                 if let Some(name_end) = rest.find(' ') {
@@ -87,7 +96,10 @@ pub fn get_file_stats_query(db: &mut Database, id: SourceFileId) -> Result<FileS
     // Simple parsing to count contracts and functions
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with("contract ") || trimmed.starts_with("interface ") || trimmed.starts_with("library ") {
+        if trimmed.starts_with("contract ")
+            || trimmed.starts_with("interface ")
+            || trimmed.starts_with("library ")
+        {
             contract_count += 1;
         } else if trimmed.starts_with("function ") {
             function_count += 1;

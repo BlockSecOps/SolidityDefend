@@ -1,7 +1,7 @@
-use std::fs;
-use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fs;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GoldenFile {
@@ -83,10 +83,10 @@ pub struct Difference {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum DifferenceSeverity {
-    Critical,    // Breaking changes (e.g., missing critical findings)
-    Major,       // Significant changes (e.g., different number of findings)
-    Minor,       // Small changes (e.g., slightly different line numbers)
-    Cosmetic,    // Formatting or description changes
+    Critical, // Breaking changes (e.g., missing critical findings)
+    Major,    // Significant changes (e.g., different number of findings)
+    Minor,    // Small changes (e.g., slightly different line numbers)
+    Cosmetic, // Formatting or description changes
 }
 
 pub struct GoldenFileRegression {
@@ -137,7 +137,12 @@ impl GoldenFileRegression {
         self
     }
 
-    pub fn create_golden_file(&self, test_name: &str, input_file: &str, output: &AnalysisOutput) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn create_golden_file(
+        &self,
+        test_name: &str,
+        input_file: &str,
+        output: &AnalysisOutput,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let input_hash = self.calculate_file_hash(input_file)?;
         let timestamp = chrono::Utc::now().to_rfc3339();
 
@@ -160,7 +165,9 @@ impl GoldenFileRegression {
         Ok(())
     }
 
-    pub fn run_regression_tests(&self) -> Result<Vec<RegressionTestResult>, Box<dyn std::error::Error>> {
+    pub fn run_regression_tests(
+        &self,
+    ) -> Result<Vec<RegressionTestResult>, Box<dyn std::error::Error>> {
         let golden_files = self.load_all_golden_files()?;
         let mut results = Vec::new();
 
@@ -186,7 +193,10 @@ impl GoldenFileRegression {
         Ok(results)
     }
 
-    fn run_single_test(&self, golden_file: &GoldenFile) -> Result<RegressionTestResult, Box<dyn std::error::Error>> {
+    fn run_single_test(
+        &self,
+        golden_file: &GoldenFile,
+    ) -> Result<RegressionTestResult, Box<dyn std::error::Error>> {
         // Check if input file has changed
         let current_hash = self.calculate_file_hash(&golden_file.input_file)?;
         if current_hash != golden_file.metadata.input_hash {
@@ -235,19 +245,17 @@ impl GoldenFileRegression {
         // Mock analysis - in real implementation, this would call:
         // let output = soliditydefend_engine.analyze(input_file)?;
 
-        let mock_findings = vec![
-            Finding {
-                id: "REENTRANCY_001".to_string(),
-                detector: "reentrancy".to_string(),
-                severity: "High".to_string(),
-                title: "Potential reentrancy vulnerability".to_string(),
-                description: "External call before state update".to_string(),
-                file_path: input_file.to_string(),
-                line_number: 25,
-                column: 12,
-                confidence: 0.85,
-            },
-        ];
+        let mock_findings = vec![Finding {
+            id: "REENTRANCY_001".to_string(),
+            detector: "reentrancy".to_string(),
+            severity: "High".to_string(),
+            title: "Potential reentrancy vulnerability".to_string(),
+            description: "External call before state update".to_string(),
+            file_path: input_file.to_string(),
+            line_number: 25,
+            column: 12,
+            confidence: 0.85,
+        }];
 
         let mock_statistics = AnalysisStatistics {
             total_files: 1,
@@ -270,7 +278,11 @@ impl GoldenFileRegression {
         })
     }
 
-    fn compare_outputs(&self, expected: &AnalysisOutput, actual: &AnalysisOutput) -> Vec<Difference> {
+    fn compare_outputs(
+        &self,
+        expected: &AnalysisOutput,
+        actual: &AnalysisOutput,
+    ) -> Vec<Difference> {
         let mut differences = Vec::new();
 
         // Compare findings
@@ -280,12 +292,21 @@ impl GoldenFileRegression {
         self.compare_statistics(&expected.statistics, &actual.statistics, &mut differences);
 
         // Compare performance metrics (with tolerance)
-        self.compare_performance(&expected.performance_metrics, &actual.performance_metrics, &mut differences);
+        self.compare_performance(
+            &expected.performance_metrics,
+            &actual.performance_metrics,
+            &mut differences,
+        );
 
         differences
     }
 
-    fn compare_findings(&self, expected: &[Finding], actual: &[Finding], differences: &mut Vec<Difference>) {
+    fn compare_findings(
+        &self,
+        expected: &[Finding],
+        actual: &[Finding],
+        differences: &mut Vec<Difference>,
+    ) {
         // Check for missing findings
         for exp_finding in expected {
             if !self.finding_exists_in_actual(exp_finding, actual) {
@@ -320,29 +341,53 @@ impl GoldenFileRegression {
         }
     }
 
-    fn finding_exists_in_actual(&self, expected_finding: &Finding, actual_findings: &[Finding]) -> bool {
-        actual_findings.iter().any(|actual| self.findings_match(expected_finding, actual))
+    fn finding_exists_in_actual(
+        &self,
+        expected_finding: &Finding,
+        actual_findings: &[Finding],
+    ) -> bool {
+        actual_findings
+            .iter()
+            .any(|actual| self.findings_match(expected_finding, actual))
     }
 
-    fn finding_exists_in_expected(&self, actual_finding: &Finding, expected_findings: &[Finding]) -> bool {
-        expected_findings.iter().any(|expected| self.findings_match(expected, actual_finding))
+    fn finding_exists_in_expected(
+        &self,
+        actual_finding: &Finding,
+        expected_findings: &[Finding],
+    ) -> bool {
+        expected_findings
+            .iter()
+            .any(|expected| self.findings_match(expected, actual_finding))
     }
 
-    fn find_matching_finding<'a>(&self, expected: &Finding, actual: &'a [Finding]) -> Option<&'a Finding> {
-        actual.iter().find(|&act| self.findings_match(expected, act))
+    fn find_matching_finding<'a>(
+        &self,
+        expected: &Finding,
+        actual: &'a [Finding],
+    ) -> Option<&'a Finding> {
+        actual
+            .iter()
+            .find(|&act| self.findings_match(expected, act))
     }
 
     fn findings_match(&self, expected: &Finding, actual: &Finding) -> bool {
-        expected.detector == actual.detector &&
-        expected.file_path == actual.file_path &&
-        self.line_numbers_within_tolerance(expected.line_number, actual.line_number)
+        expected.detector == actual.detector
+            && expected.file_path == actual.file_path
+            && self.line_numbers_within_tolerance(expected.line_number, actual.line_number)
     }
 
     fn line_numbers_within_tolerance(&self, expected: usize, actual: usize) -> bool {
-        (expected as i32 - actual as i32).abs() <= self.tolerance_config.line_number_tolerance as i32
+        (expected as i32 - actual as i32).abs()
+            <= self.tolerance_config.line_number_tolerance as i32
     }
 
-    fn compare_individual_findings(&self, expected: &Finding, actual: &Finding, differences: &mut Vec<Difference>) {
+    fn compare_individual_findings(
+        &self,
+        expected: &Finding,
+        actual: &Finding,
+        differences: &mut Vec<Difference>,
+    ) {
         // Compare confidence
         let confidence_diff = (expected.confidence - actual.confidence).abs();
         if confidence_diff > self.tolerance_config.confidence_tolerance {
@@ -365,7 +410,9 @@ impl GoldenFileRegression {
         }
 
         // Compare descriptions (cosmetic if ignore_cosmetic_changes is true)
-        if expected.description != actual.description && !self.tolerance_config.ignore_cosmetic_changes {
+        if expected.description != actual.description
+            && !self.tolerance_config.ignore_cosmetic_changes
+        {
             differences.push(Difference {
                 field: format!("finding_{}_description", expected.id),
                 expected: expected.description.clone(),
@@ -375,7 +422,12 @@ impl GoldenFileRegression {
         }
     }
 
-    fn compare_statistics(&self, expected: &AnalysisStatistics, actual: &AnalysisStatistics, differences: &mut Vec<Difference>) {
+    fn compare_statistics(
+        &self,
+        expected: &AnalysisStatistics,
+        actual: &AnalysisStatistics,
+        differences: &mut Vec<Difference>,
+    ) {
         if expected.total_files != actual.total_files {
             differences.push(Difference {
                 field: "total_files".to_string(),
@@ -395,9 +447,15 @@ impl GoldenFileRegression {
         }
     }
 
-    fn compare_performance(&self, expected: &PerformanceMetrics, actual: &PerformanceMetrics, differences: &mut Vec<Difference>) {
+    fn compare_performance(
+        &self,
+        expected: &PerformanceMetrics,
+        actual: &PerformanceMetrics,
+        differences: &mut Vec<Difference>,
+    ) {
         // Check analysis time with tolerance
-        let time_diff = (expected.analysis_time_ms as f64 - actual.analysis_time_ms as f64).abs() / expected.analysis_time_ms as f64;
+        let time_diff = (expected.analysis_time_ms as f64 - actual.analysis_time_ms as f64).abs()
+            / expected.analysis_time_ms as f64;
         if time_diff > self.tolerance_config.performance_tolerance {
             differences.push(Difference {
                 field: "analysis_time_ms".to_string(),
@@ -408,7 +466,8 @@ impl GoldenFileRegression {
         }
 
         // Check memory usage with tolerance
-        let memory_diff = (expected.memory_usage_mb - actual.memory_usage_mb).abs() / expected.memory_usage_mb;
+        let memory_diff =
+            (expected.memory_usage_mb - actual.memory_usage_mb).abs() / expected.memory_usage_mb;
         if memory_diff > self.tolerance_config.performance_tolerance {
             differences.push(Difference {
                 field: "memory_usage_mb".to_string(),
@@ -422,11 +481,18 @@ impl GoldenFileRegression {
     fn should_update(&self, differences: &[Difference]) -> bool {
         // Only update if differences are minor or cosmetic
         differences.iter().all(|diff| {
-            matches!(diff.severity, DifferenceSeverity::Minor | DifferenceSeverity::Cosmetic)
+            matches!(
+                diff.severity,
+                DifferenceSeverity::Minor | DifferenceSeverity::Cosmetic
+            )
         })
     }
 
-    fn update_golden_file(&self, golden_file: &GoldenFile, new_output: &AnalysisOutput) -> Result<(), Box<dyn std::error::Error>> {
+    fn update_golden_file(
+        &self,
+        golden_file: &GoldenFile,
+        new_output: &AnalysisOutput,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut updated_golden = golden_file.clone();
         updated_golden.expected_output = new_output.clone();
         updated_golden.metadata.updated_at = chrono::Utc::now().to_rfc3339();
@@ -439,12 +505,24 @@ impl GoldenFileRegression {
     fn generate_test_summary(&self, differences: &[Difference], status: &TestStatus) -> String {
         match status {
             TestStatus::Passed => "Test passed - output matches golden file".to_string(),
-            TestStatus::Updated => format!("Golden file updated - {} differences resolved", differences.len()),
+            TestStatus::Updated => format!(
+                "Golden file updated - {} differences resolved",
+                differences.len()
+            ),
             TestStatus::Failed => {
-                let critical_count = differences.iter().filter(|d| d.severity == DifferenceSeverity::Critical).count();
-                let major_count = differences.iter().filter(|d| d.severity == DifferenceSeverity::Major).count();
-                format!("Test failed - {} critical, {} major differences", critical_count, major_count)
-            },
+                let critical_count = differences
+                    .iter()
+                    .filter(|d| d.severity == DifferenceSeverity::Critical)
+                    .count();
+                let major_count = differences
+                    .iter()
+                    .filter(|d| d.severity == DifferenceSeverity::Major)
+                    .count();
+                format!(
+                    "Test failed - {} critical, {} major differences",
+                    critical_count, major_count
+                )
+            }
             TestStatus::Skipped => "Test skipped".to_string(),
         }
     }
@@ -458,7 +536,9 @@ impl GoldenFileRegression {
 
     fn save_golden_file(&self, golden_file: &GoldenFile) -> Result<(), Box<dyn std::error::Error>> {
         fs::create_dir_all(&self.golden_files_dir)?;
-        let file_path = self.golden_files_dir.join(format!("{}.json", golden_file.test_name));
+        let file_path = self
+            .golden_files_dir
+            .join(format!("{}.json", golden_file.test_name));
         let content = serde_json::to_string_pretty(golden_file)?;
         fs::write(file_path, content)?;
         Ok(())
@@ -489,16 +569,28 @@ impl GoldenFileRegression {
         let mut report = String::new();
         report.push_str("# Regression Test Report\n\n");
 
-        let passed = results.iter().filter(|r| r.status == TestStatus::Passed).count();
-        let failed = results.iter().filter(|r| r.status == TestStatus::Failed).count();
-        let updated = results.iter().filter(|r| r.status == TestStatus::Updated).count();
+        let passed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Passed)
+            .count();
+        let failed = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Failed)
+            .count();
+        let updated = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Updated)
+            .count();
 
         report.push_str(&format!("## Summary\n\n"));
         report.push_str(&format!("- Total Tests: {}\n", results.len()));
         report.push_str(&format!("- Passed: {}\n", passed));
         report.push_str(&format!("- Failed: {}\n", failed));
         report.push_str(&format!("- Updated: {}\n", updated));
-        report.push_str(&format!("- Success Rate: {:.1}%\n\n", (passed as f64 / results.len() as f64) * 100.0));
+        report.push_str(&format!(
+            "- Success Rate: {:.1}%\n\n",
+            (passed as f64 / results.len() as f64) * 100.0
+        ));
 
         report.push_str("## Test Results\n\n");
         report.push_str("| Test Name | Status | Differences | Summary |\n");
@@ -523,7 +615,10 @@ impl GoldenFileRegression {
         }
 
         // Detailed failure analysis
-        let failed_tests: Vec<_> = results.iter().filter(|r| r.status == TestStatus::Failed).collect();
+        let failed_tests: Vec<_> = results
+            .iter()
+            .filter(|r| r.status == TestStatus::Failed)
+            .collect();
         if !failed_tests.is_empty() {
             report.push_str("\n## Failed Tests Details\n\n");
 

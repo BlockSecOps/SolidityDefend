@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for generalized MEV extraction vulnerabilities
 pub struct MevExtractableValueDetector {
@@ -56,26 +56,27 @@ impl Detector for MevExtractableValueDetector {
                 let message = format!(
                     "Function '{}' has extractable MEV. {} \
                     Searchers can extract value through transaction ordering, front-running, or back-running.",
-                    function.name.name,
-                    mev_issue
+                    function.name.name, mev_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Reduce MEV extractability in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Reduce MEV extractability in '{}'. \
                     Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, \
                     (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, \
                     (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +92,11 @@ impl Detector for MevExtractableValueDetector {
 
 impl MevExtractableValueDetector {
     /// Check for MEV extraction opportunities
-    fn check_mev_extractable(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_mev_extractable(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,19 +104,19 @@ impl MevExtractableValueDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Pattern 1: Public function with value transfer without protection
-        let is_public = function.visibility == ast::Visibility::Public ||
-                       function.visibility == ast::Visibility::External;
+        let is_public = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
 
-        let has_value_transfer = func_source.contains("transfer") ||
-                                func_source.contains("send") ||
-                                func_source.contains("call{value:");
+        let has_value_transfer = func_source.contains("transfer")
+            || func_source.contains("send")
+            || func_source.contains("call{value:");
 
-        let lacks_mev_protection = is_public &&
-                                  has_value_transfer &&
-                                  !func_source.contains("onlyFlashbots") &&
-                                  !func_source.contains("mevProtected") &&
-                                  !func_source.contains("commit") &&
-                                  !func_source.contains("batchAuction");
+        let lacks_mev_protection = is_public
+            && has_value_transfer
+            && !func_source.contains("onlyFlashbots")
+            && !func_source.contains("mevProtected")
+            && !func_source.contains("commit")
+            && !func_source.contains("batchAuction");
 
         if lacks_mev_protection {
             return Some(format!(
@@ -121,18 +126,18 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 2: Profitable liquidation without auction mechanism
-        let is_liquidation = func_source.contains("liquidat") ||
-                            function.name.name.to_lowercase().contains("liquidat");
+        let is_liquidation = func_source.contains("liquidat")
+            || function.name.name.to_lowercase().contains("liquidat");
 
-        let has_profit = func_source.contains("bonus") ||
-                        func_source.contains("reward") ||
-                        func_source.contains("incentive");
+        let has_profit = func_source.contains("bonus")
+            || func_source.contains("reward")
+            || func_source.contains("incentive");
 
-        let no_auction = is_liquidation &&
-                        has_profit &&
-                        !func_source.contains("auction") &&
-                        !func_source.contains("bid") &&
-                        !func_source.contains("dutch");
+        let no_auction = is_liquidation
+            && has_profit
+            && !func_source.contains("auction")
+            && !func_source.contains("bid")
+            && !func_source.contains("dutch");
 
         if no_auction {
             return Some(format!(
@@ -142,17 +147,15 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 3: Arbitrage-able price differences
-        let has_pricing = func_source.contains("price") ||
-                         func_source.contains("getAmount");
+        let has_pricing = func_source.contains("price") || func_source.contains("getAmount");
 
-        let has_swap = func_source.contains("swap") ||
-                      func_source.contains("exchange");
+        let has_swap = func_source.contains("swap") || func_source.contains("exchange");
 
-        let arbitrage_opportunity = has_pricing &&
-                                   has_swap &&
-                                   !func_source.contains("TWAP") &&
-                                   !func_source.contains("oracle") &&
-                                   !func_source.contains("batch");
+        let arbitrage_opportunity = has_pricing
+            && has_swap
+            && !func_source.contains("TWAP")
+            && !func_source.contains("oracle")
+            && !func_source.contains("batch");
 
         if arbitrage_opportunity {
             return Some(format!(
@@ -162,20 +165,19 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 4: State changes visible in mempool before execution
-        let changes_state = func_source.contains("=") ||
-                           func_source.contains("+=") ||
-                           func_source.contains("-=");
+        let changes_state =
+            func_source.contains("=") || func_source.contains("+=") || func_source.contains("-=");
 
-        let affects_others = func_source.contains("balance") ||
-                            func_source.contains("supply") ||
-                            func_source.contains("reserve") ||
-                            func_source.contains("price");
+        let affects_others = func_source.contains("balance")
+            || func_source.contains("supply")
+            || func_source.contains("reserve")
+            || func_source.contains("price");
 
-        let mempool_visible = is_public &&
-                             changes_state &&
-                             affects_others &&
-                             !func_source.contains("private") &&
-                             !func_source.contains("encrypted");
+        let mempool_visible = is_public
+            && changes_state
+            && affects_others
+            && !func_source.contains("private")
+            && !func_source.contains("encrypted");
 
         if mempool_visible {
             return Some(format!(
@@ -185,14 +187,14 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 5: Reward distribution without commit-reveal
-        let distributes_rewards = func_source.contains("reward") ||
-                                 func_source.contains("distribute") ||
-                                 func_source.contains("claim");
+        let distributes_rewards = func_source.contains("reward")
+            || func_source.contains("distribute")
+            || func_source.contains("claim");
 
-        let no_commit_reveal = distributes_rewards &&
-                              !func_source.contains("commit") &&
-                              !func_source.contains("reveal") &&
-                              !func_source.contains("hash");
+        let no_commit_reveal = distributes_rewards
+            && !func_source.contains("commit")
+            && !func_source.contains("reveal")
+            && !func_source.contains("hash");
 
         if no_commit_reveal {
             return Some(format!(
@@ -202,17 +204,17 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 6: First-come-first-served with high value
-        let is_fcfs = func_source.contains("first") ||
-                     function.name.name.to_lowercase().contains("first");
+        let is_fcfs =
+            func_source.contains("first") || function.name.name.to_lowercase().contains("first");
 
-        let high_value = func_source.contains("mint") ||
-                        func_source.contains("claim") ||
-                        func_source.contains("buy");
+        let high_value = func_source.contains("mint")
+            || func_source.contains("claim")
+            || func_source.contains("buy");
 
-        let fcfs_mev = is_fcfs &&
-                      high_value &&
-                      !func_source.contains("queue") &&
-                      !func_source.contains("lottery");
+        let fcfs_mev = is_fcfs
+            && high_value
+            && !func_source.contains("queue")
+            && !func_source.contains("lottery");
 
         if fcfs_mev {
             return Some(format!(
@@ -222,13 +224,12 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 7: Oracle update function
-        let updates_oracle = func_source.contains("updatePrice") ||
-                            func_source.contains("setPrice") ||
-                            function.name.name.to_lowercase().contains("update");
+        let updates_oracle = func_source.contains("updatePrice")
+            || func_source.contains("setPrice")
+            || function.name.name.to_lowercase().contains("update");
 
-        let affects_defi = updates_oracle &&
-                          (func_source.contains("price") ||
-                           func_source.contains("rate"));
+        let affects_defi =
+            updates_oracle && (func_source.contains("price") || func_source.contains("rate"));
 
         if affects_defi && is_public {
             return Some(format!(
@@ -238,12 +239,12 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 8: Multi-step operation without atomicity
-        let has_multiple_calls = func_source.matches(".call(").count() > 1 ||
-                                func_source.matches(".transfer(").count() > 1;
+        let has_multiple_calls = func_source.matches(".call(").count() > 1
+            || func_source.matches(".transfer(").count() > 1;
 
-        let lacks_atomicity = has_multiple_calls &&
-                             !func_source.contains("require") &&
-                             !func_source.contains("revert");
+        let lacks_atomicity = has_multiple_calls
+            && !func_source.contains("require")
+            && !func_source.contains("revert");
 
         if lacks_atomicity {
             return Some(format!(
@@ -253,10 +254,11 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 9: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("MEV") ||
-            func_source.contains("front-run") ||
-            func_source.contains("extractable")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("MEV")
+                || func_source.contains("front-run")
+                || func_source.contains("extractable"))
+        {
             return Some(format!(
                 "MEV extractable value vulnerability marker detected"
             ));

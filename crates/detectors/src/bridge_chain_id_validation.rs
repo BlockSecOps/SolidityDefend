@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct ChainIdValidationDetector {
     base: BaseDetector,
@@ -28,7 +28,11 @@ impl ChainIdValidationDetector {
         source.contains("bridge") || source.contains("relay")
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<(Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<(Severity, String)> {
         let name = function.name.name.to_lowercase();
 
         if !name.contains("process") && !name.contains("execute") && !name.contains("receive") {
@@ -49,23 +53,26 @@ impl ChainIdValidationDetector {
         let func_source = self.get_function_source(function, ctx).to_lowercase();
 
         // Look for actual validation using block.chainid (more specific than just "chainid")
-        let validates_chain = (func_source.contains("block.chainid") || func_source.contains("block.chain.id")) &&
-            (func_source.contains("==") || func_source.contains("require"));
+        let validates_chain = (func_source.contains("block.chainid")
+            || func_source.contains("block.chain.id"))
+            && (func_source.contains("==") || func_source.contains("require"));
 
         // Check if chainid is used in hash (parameters like sourceChainId or targetChainId)
-        let in_hash = func_source.contains("keccak") &&
-            (func_source.contains("chainid") || func_source.contains("chain_id"));
+        let in_hash = func_source.contains("keccak")
+            && (func_source.contains("chainid") || func_source.contains("chain_id"));
 
         if !validates_chain && !in_hash {
             Some((
                 Severity::High,
                 "Add chain-ID validation: require(message.destinationChainId == block.chainid); \
-                 OR include chain-ID in message hash".to_string()
+                 OR include chain-ID in message hash"
+                    .to_string(),
             ))
         } else if !validates_chain && in_hash {
             Some((
                 Severity::Medium,
-                "Add runtime validation: require(message.destinationChainId == block.chainid);".to_string()
+                "Add runtime validation: require(message.destinationChainId == block.chainid);"
+                    .to_string(),
             ))
         } else {
             None
@@ -138,15 +145,17 @@ impl Detector for ChainIdValidationDetector {
 
         for function in ctx.get_functions() {
             if let Some((severity, remediation)) = self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("Missing chain-ID validation in '{}'", function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("Missing chain-ID validation in '{}'", function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }
@@ -170,6 +179,10 @@ mod tests {
         assert_eq!(detector.name(), "Missing Chain-ID Validation");
         assert_eq!(detector.default_severity(), Severity::High);
         assert!(detector.is_enabled());
-        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::CrossChain)
+        );
     }
 }

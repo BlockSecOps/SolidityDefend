@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct JitLiquidityDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl JitLiquidityDetector {
 
     fn is_liquidity_pool(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("addliquidity") || source.contains("removeliquidity")) &&
-        (source.contains("liquidity") || source.contains("mint") || source.contains("burn"))
+        (source.contains("addliquidity") || source.contains("removeliquidity"))
+            && (source.contains("liquidity") || source.contains("mint") || source.contains("burn"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,9 +42,9 @@ impl JitLiquidityDetector {
         // Check addLiquidity/mint functions
         if name.contains("addliquidity") || name.contains("mint") {
             // Check for timestamp/lock tracking
-            let has_lock_time = source_lower.contains("locktime") ||
-                source_lower.contains("deposittime") ||
-                source_lower.contains("timestamp") && source_lower.contains("mapping");
+            let has_lock_time = source_lower.contains("locktime")
+                || source_lower.contains("deposittime")
+                || source_lower.contains("timestamp") && source_lower.contains("mapping");
 
             if !has_lock_time {
                 issues.push((
@@ -51,9 +55,9 @@ impl JitLiquidityDetector {
             }
 
             // Check for minimum liquidity duration
-            let has_min_duration = source_lower.contains("min_lock") ||
-                source_lower.contains("minimum_duration") ||
-                (source_lower.contains("lock") && source_lower.contains("period"));
+            let has_min_duration = source_lower.contains("min_lock")
+                || source_lower.contains("minimum_duration")
+                || (source_lower.contains("lock") && source_lower.contains("period"));
 
             if !has_min_duration {
                 issues.push((
@@ -64,8 +68,8 @@ impl JitLiquidityDetector {
             }
 
             // Check for LP token cooldown
-            let has_cooldown = source_lower.contains("cooldown") ||
-                source_lower.contains("withdrawal") && source_lower.contains("delay");
+            let has_cooldown = source_lower.contains("cooldown")
+                || source_lower.contains("withdrawal") && source_lower.contains("delay");
 
             if !has_cooldown {
                 issues.push((
@@ -76,8 +80,8 @@ impl JitLiquidityDetector {
             }
 
             // Check for anti-sandwich protection
-            let has_fee_on_entry = source_lower.contains("depositfee") ||
-                source_lower.contains("entryfee");
+            let has_fee_on_entry =
+                source_lower.contains("depositfee") || source_lower.contains("entryfee");
 
             if !has_fee_on_entry {
                 issues.push((
@@ -91,8 +95,9 @@ impl JitLiquidityDetector {
         // Check removeLiquidity/burn functions
         if name.contains("removeliquidity") || name.contains("burn") {
             // Check for lock time validation
-            let has_lock_check = (source_lower.contains("locktime") || source_lower.contains("deposittime")) &&
-                (source_lower.contains("require") || source_lower.contains("block.timestamp"));
+            let has_lock_check = (source_lower.contains("locktime")
+                || source_lower.contains("deposittime"))
+                && (source_lower.contains("require") || source_lower.contains("block.timestamp"));
 
             if !has_lock_check {
                 issues.push((
@@ -103,9 +108,9 @@ impl JitLiquidityDetector {
             }
 
             // Check for exit fee
-            let has_exit_fee = source_lower.contains("exitfee") ||
-                source_lower.contains("withdrawalfee") ||
-                source_lower.contains("penalty");
+            let has_exit_fee = source_lower.contains("exitfee")
+                || source_lower.contains("withdrawalfee")
+                || source_lower.contains("penalty");
 
             if !has_exit_fee {
                 issues.push((
@@ -116,8 +121,9 @@ impl JitLiquidityDetector {
             }
 
             // Check for same-block deposit/withdrawal protection
-            let has_block_check = source_lower.contains("block.number") &&
-                source_lower.contains("deposit") || source_lower.contains("lastblock");
+            let has_block_check = source_lower.contains("block.number")
+                && source_lower.contains("deposit")
+                || source_lower.contains("lastblock");
 
             if !has_block_check {
                 issues.push((
@@ -131,27 +137,29 @@ impl JitLiquidityDetector {
         // Check swap functions for JIT protection
         if name.contains("swap") {
             // Check if swap validates liquidity age
-            let has_liquidity_age_check = source_lower.contains("liquidityage") ||
-                (source_lower.contains("reserve") && source_lower.contains("timestamp"));
+            let has_liquidity_age_check = source_lower.contains("liquidityage")
+                || (source_lower.contains("reserve") && source_lower.contains("timestamp"));
 
             if source_lower.contains("reserve") && !has_liquidity_age_check {
                 issues.push((
                     "Swap doesn't validate liquidity age (JIT sandwich risk)".to_string(),
                     Severity::Medium,
-                    "Validate age: Consider requiring minimum liquidity age or use TWAP prices".to_string()
+                    "Validate age: Consider requiring minimum liquidity age or use TWAP prices"
+                        .to_string(),
                 ));
             }
 
             // Check for multi-block TWAP
-            let has_twap = source_lower.contains("twap") ||
-                source_lower.contains("timeweighted") ||
-                source_lower.contains("cumulative");
+            let has_twap = source_lower.contains("twap")
+                || source_lower.contains("timeweighted")
+                || source_lower.contains("cumulative");
 
             if !has_twap {
                 issues.push((
                     "No TWAP pricing (vulnerable to JIT manipulation)".to_string(),
                     Severity::High,
-                    "Use TWAP: Implement time-weighted average price over multiple blocks".to_string()
+                    "Use TWAP: Implement time-weighted average price over multiple blocks"
+                        .to_string(),
                 ));
             }
         }
@@ -159,9 +167,9 @@ impl JitLiquidityDetector {
         // Check for liquidity incentive structures
         if name.contains("stake") || name.contains("reward") {
             // Check for vesting period
-            let has_vesting = source_lower.contains("vesting") ||
-                source_lower.contains("cliff") ||
-                (source_lower.contains("release") && source_lower.contains("time"));
+            let has_vesting = source_lower.contains("vesting")
+                || source_lower.contains("cliff")
+                || (source_lower.contains("release") && source_lower.contains("time"));
 
             if !has_vesting {
                 issues.push((
@@ -175,8 +183,8 @@ impl JitLiquidityDetector {
         // Check for concentrated liquidity (Uniswap V3 style)
         if name.contains("position") || source_lower.contains("ticklower") {
             // Check for position lock
-            let has_position_lock = source_lower.contains("lock") ||
-                source_lower.contains("freeze");
+            let has_position_lock =
+                source_lower.contains("lock") || source_lower.contains("freeze");
 
             if !has_position_lock {
                 issues.push((
@@ -187,14 +195,15 @@ impl JitLiquidityDetector {
             }
 
             // Check for fee tier based on lock duration
-            let has_dynamic_fees = source_lower.contains("feediscount") ||
-                (source_lower.contains("fee") && source_lower.contains("duration"));
+            let has_dynamic_fees = source_lower.contains("feediscount")
+                || (source_lower.contains("fee") && source_lower.contains("duration"));
 
             if !has_dynamic_fees {
                 issues.push((
                     "No fee incentive for long-term liquidity providers".to_string(),
                     Severity::Low,
-                    "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods".to_string()
+                    "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods"
+                        .to_string(),
                 ));
             }
         }
@@ -244,15 +253,17 @@ impl Detector for JitLiquidityDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

@@ -49,10 +49,10 @@ pub enum ContractType {
 /// Trust level of a contract
 #[derive(Debug, Clone, PartialEq)]
 pub enum TrustLevel {
-    Trusted,     // Well-known, audited contracts
-    Verified,    // Verified source code
-    Unverified,  // Unverified or unknown
-    Malicious,   // Known malicious patterns
+    Trusted,    // Well-known, audited contracts
+    Verified,   // Verified source code
+    Unverified, // Unverified or unknown
+    Malicious,  // Known malicious patterns
 }
 
 /// Type of interaction between contracts
@@ -110,7 +110,9 @@ impl InteractionGraph {
         for (from_name, from_context) in contracts {
             for (to_name, to_context) in contracts {
                 if from_name != to_name {
-                    if let Some(interaction) = Self::detect_interaction(from_name, from_context, to_name, to_context) {
+                    if let Some(interaction) =
+                        Self::detect_interaction(from_name, from_context, to_name, to_context)
+                    {
                         graph.add_edge(interaction);
                     }
                 }
@@ -139,7 +141,10 @@ impl InteractionGraph {
 
     /// Get neighboring contracts
     pub fn get_neighbors(&self, contract: &str) -> Vec<String> {
-        self.adjacency_list.get(contract).cloned().unwrap_or_default()
+        self.adjacency_list
+            .get(contract)
+            .cloned()
+            .unwrap_or_default()
     }
 
     /// Check if there's a direct edge between contracts
@@ -202,13 +207,7 @@ impl InteractionGraph {
 
         for node in self.nodes.keys() {
             if !visited.contains(node) {
-                self.dfs_cycles(
-                    node,
-                    &mut visited,
-                    &mut rec_stack,
-                    &mut path,
-                    &mut cycles
-                );
+                self.dfs_cycles(node, &mut visited, &mut rec_stack, &mut path, &mut cycles);
             }
         }
 
@@ -222,7 +221,7 @@ impl InteractionGraph {
         visited: &mut HashSet<String>,
         rec_stack: &mut HashSet<String>,
         path: &mut Vec<String>,
-        cycles: &mut Vec<Vec<String>>
+        cycles: &mut Vec<Vec<String>>,
     ) {
         visited.insert(node.to_string());
         rec_stack.insert(node.to_string());
@@ -253,7 +252,8 @@ impl InteractionGraph {
 
     /// Get all edges involving a contract
     pub fn get_edges_for_contract(&self, contract: &str) -> Vec<&InteractionEdge> {
-        self.edges.iter()
+        self.edges
+            .iter()
             .filter(|edge| edge.from == contract || edge.to == contract)
             .collect()
     }
@@ -273,7 +273,9 @@ impl InteractionGraph {
         let cycle_count = cycles.len();
 
         // Calculate average degree
-        let total_degree: usize = self.adjacency_list.values()
+        let total_degree: usize = self
+            .adjacency_list
+            .values()
             .map(|neighbors| neighbors.len())
             .sum();
         let average_degree = if node_count > 0 {
@@ -313,7 +315,7 @@ impl InteractionGraph {
         from_name: &str,
         _from_context: &AnalysisContext,
         to_name: &str,
-        _to_context: &AnalysisContext
+        _to_context: &AnalysisContext,
     ) -> Option<InteractionEdge> {
         // Look for function calls to the target contract
         let calls_target = Self::calls_contract(_from_context, to_name);
@@ -339,9 +341,9 @@ impl InteractionGraph {
 
     fn calls_contract(_context: &AnalysisContext, _target: &str) -> bool {
         // Simplified detection - would need AST analysis for precision
-        _context.source_code.contains(_target) ||
-        _context.source_code.contains("call(") ||
-        _context.source_code.contains("delegatecall(")
+        _context.source_code.contains(_target)
+            || _context.source_code.contains("call(")
+            || _context.source_code.contains("delegatecall(")
     }
 
     fn determine_interaction_type(_context: &AnalysisContext, _target: &str) -> InteractionType {
@@ -373,7 +375,10 @@ impl InteractionGraph {
         functions
     }
 
-    fn analyze_data_flow(_from_context: &AnalysisContext, _to_context: &AnalysisContext) -> Vec<DataFlow> {
+    fn analyze_data_flow(
+        _from_context: &AnalysisContext,
+        _to_context: &AnalysisContext,
+    ) -> Vec<DataFlow> {
         // Simplified data flow analysis - would need more sophisticated implementation
         Vec::new()
     }
@@ -413,11 +418,20 @@ impl ContractNode {
             ContractType::Token
         } else if source.contains("swap") || source.contains("dex") || source.contains("uniswap") {
             ContractType::DEX
-        } else if source.contains("lending") || source.contains("compound") || source.contains("aave") {
+        } else if source.contains("lending")
+            || source.contains("compound")
+            || source.contains("aave")
+        {
             ContractType::LendingPool
-        } else if source.contains("oracle") || source.contains("chainlink") || source.contains("price") {
+        } else if source.contains("oracle")
+            || source.contains("chainlink")
+            || source.contains("price")
+        {
             ContractType::Oracle
-        } else if source.contains("governance") || source.contains("voting") || source.contains("proposal") {
+        } else if source.contains("governance")
+            || source.contains("voting")
+            || source.contains("proposal")
+        {
             ContractType::Governance
         } else if source.contains("vault") || source.contains("strategy") {
             ContractType::Vault
@@ -476,7 +490,7 @@ impl Default for InteractionGraph {
 mod tests {
     use super::*;
     use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
+    use ast::{AstArena, StateMutability, Visibility};
     use semantic::SymbolTable;
 
     #[test]

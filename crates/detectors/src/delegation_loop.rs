@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for delegation loop vulnerabilities in governance systems
 pub struct DelegationLoopDetector {
@@ -60,21 +60,23 @@ impl Detector for DelegationLoopDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(840) // CWE-840: Business Logic Errors
-                .with_cwe(834) // CWE-834: Excessive Iteration
-                .with_fix_suggestion(format!(
-                    "Implement loop detection in function '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(840) // CWE-840: Business Logic Errors
+                    .with_cwe(834) // CWE-834: Excessive Iteration
+                    .with_fix_suggestion(format!(
+                        "Implement loop detection in function '{}'. \
                     Example: Track delegation chain depth and reject if exceeds limit, \
                     or traverse delegation chain to detect cycles before allowing delegation.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -90,7 +92,11 @@ impl Detector for DelegationLoopDetector {
 
 impl DelegationLoopDetector {
     /// Check if function has delegation loop vulnerability
-    fn has_delegation_loop_vulnerability(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+    fn has_delegation_loop_vulnerability(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations
         if function.body.is_none() {
             return false;
@@ -114,10 +120,10 @@ impl DelegationLoopDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check for delegation state updates
-        let has_delegation_update = func_source.contains("delegatee") ||
-                                   func_source.contains("delegate[") ||
-                                   func_source.contains("_delegate") ||
-                                   func_source.contains("delegated");
+        let has_delegation_update = func_source.contains("delegatee")
+            || func_source.contains("delegate[")
+            || func_source.contains("_delegate")
+            || func_source.contains("delegated");
 
         if !has_delegation_update {
             return false;
@@ -130,26 +136,25 @@ impl DelegationLoopDetector {
     /// Check if function lacks loop protection
     fn check_loop_protection(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment
-        let has_vulnerability_marker = source.contains("VULNERABILITY") &&
-                                       (source.contains("delegation loop") ||
-                                        source.contains("circular delegation"));
+        let has_vulnerability_marker = source.contains("VULNERABILITY")
+            && (source.contains("delegation loop") || source.contains("circular delegation"));
 
         // Pattern 2: Has delegation assignment but no loop check
-        let has_delegation_assignment = source.contains("delegatee =") ||
-                                       source.contains("delegates[") ||
-                                       source.contains("_delegate =");
+        let has_delegation_assignment = source.contains("delegatee =")
+            || source.contains("delegates[")
+            || source.contains("_delegate =");
 
         // Pattern 3: Missing loop detection mechanisms
-        let has_loop_detection = source.contains("loop") ||
-                                source.contains("cycle") ||
-                                source.contains("circular") ||
-                                source.contains("depth") ||
-                                source.contains("visited") ||
-                                source.contains("chain");
+        let has_loop_detection = source.contains("loop")
+            || source.contains("cycle")
+            || source.contains("circular")
+            || source.contains("depth")
+            || source.contains("visited")
+            || source.contains("chain");
 
         // Pattern 4: Has self-delegation check but no chain check
-        let has_self_check = source.contains("Cannot delegate to self") ||
-                            source.contains("delegatee != msg.sender");
+        let has_self_check = source.contains("Cannot delegate to self")
+            || source.contains("delegatee != msg.sender");
 
         // Vulnerable if it has delegation but lacks proper loop detection
         if has_vulnerability_marker {

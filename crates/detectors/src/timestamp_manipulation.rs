@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for timestamp manipulation vulnerabilities
 pub struct TimestampManipulationDetector {
@@ -56,26 +56,27 @@ impl Detector for TimestampManipulationDetector {
                 let message = format!(
                     "Function '{}' has dangerous timestamp dependency. {} \
                     Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
-                    function.name.name,
-                    timestamp_issue
+                    function.name.name, timestamp_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(367) // CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
-                .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
-                .with_fix_suggestion(format!(
-                    "Reduce timestamp dependency in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(367) // CWE-367: Time-of-check Time-of-use (TOCTOU) Race Condition
+                    .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_fix_suggestion(format!(
+                        "Reduce timestamp dependency in '{}'. \
                     Use block.number for time intervals, add tolerance ranges (±15 seconds), \
                     implement commit-reveal schemes for time-sensitive operations, \
                     or use oracle-based time sources for critical logic.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +92,11 @@ impl Detector for TimestampManipulationDetector {
 
 impl TimestampManipulationDetector {
     /// Check for timestamp manipulation vulnerabilities
-    fn check_timestamp_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_timestamp_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,20 +104,19 @@ impl TimestampManipulationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check for block.timestamp usage
-        let uses_timestamp = func_source.contains("block.timestamp") ||
-                            func_source.contains("now"); // Solidity < 0.7.0
+        let uses_timestamp = func_source.contains("block.timestamp") || func_source.contains("now"); // Solidity < 0.7.0
 
         if !uses_timestamp {
             return None;
         }
 
         // Pattern 1: Timestamp used in comparison without tolerance
-        let has_exact_comparison = (func_source.contains("block.timestamp ==") ||
-                                   func_source.contains("block.timestamp !=") ||
-                                   func_source.contains("now ==") ||
-                                   func_source.contains("now !=")) &&
-                                  !func_source.contains("TOLERANCE") &&
-                                  !func_source.contains("BUFFER");
+        let has_exact_comparison = (func_source.contains("block.timestamp ==")
+            || func_source.contains("block.timestamp !=")
+            || func_source.contains("now ==")
+            || func_source.contains("now !="))
+            && !func_source.contains("TOLERANCE")
+            && !func_source.contains("BUFFER");
 
         if has_exact_comparison {
             return Some(format!(
@@ -122,11 +126,11 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 2: Timestamp for randomness
-        let uses_for_randomness = (func_source.contains("random") ||
-                                  func_source.contains("Random") ||
-                                  func_source.contains("lottery") ||
-                                  func_source.contains("winner")) &&
-                                 uses_timestamp;
+        let uses_for_randomness = (func_source.contains("random")
+            || func_source.contains("Random")
+            || func_source.contains("lottery")
+            || func_source.contains("winner"))
+            && uses_timestamp;
 
         if uses_for_randomness {
             return Some(format!(
@@ -136,16 +140,16 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 3: Critical state changes based on timestamp
-        let has_critical_logic = func_source.contains("transfer") ||
-                                func_source.contains("mint") ||
-                                func_source.contains("burn") ||
-                                func_source.contains("withdraw") ||
-                                func_source.contains("claim");
+        let has_critical_logic = func_source.contains("transfer")
+            || func_source.contains("mint")
+            || func_source.contains("burn")
+            || func_source.contains("withdraw")
+            || func_source.contains("claim");
 
-        let timestamp_controls_critical = uses_timestamp &&
-                                         has_critical_logic &&
-                                         (func_source.contains("if (block.timestamp") ||
-                                          func_source.contains("require(block.timestamp"));
+        let timestamp_controls_critical = uses_timestamp
+            && has_critical_logic
+            && (func_source.contains("if (block.timestamp")
+                || func_source.contains("require(block.timestamp"));
 
         if timestamp_controls_critical {
             return Some(format!(
@@ -155,13 +159,12 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 4: Timestamp used for deadline without block.number fallback
-        let has_deadline = func_source.contains("deadline") ||
-                          func_source.contains("expiry") ||
-                          func_source.contains("expires");
+        let has_deadline = func_source.contains("deadline")
+            || func_source.contains("expiry")
+            || func_source.contains("expires");
 
-        let lacks_block_number = has_deadline &&
-                                uses_timestamp &&
-                                !func_source.contains("block.number");
+        let lacks_block_number =
+            has_deadline && uses_timestamp && !func_source.contains("block.number");
 
         if lacks_block_number {
             return Some(format!(
@@ -171,12 +174,12 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 5: Timestamp arithmetic without safety checks
-        let has_timestamp_math = (func_source.contains("block.timestamp +") ||
-                                 func_source.contains("block.timestamp -") ||
-                                 func_source.contains("now +") ||
-                                 func_source.contains("now -")) &&
-                                !func_source.contains("SafeMath") &&
-                                !func_source.contains("checked");
+        let has_timestamp_math = (func_source.contains("block.timestamp +")
+            || func_source.contains("block.timestamp -")
+            || func_source.contains("now +")
+            || func_source.contains("now -"))
+            && !func_source.contains("SafeMath")
+            && !func_source.contains("checked");
 
         if has_timestamp_math {
             return Some(format!(
@@ -186,15 +189,14 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 6: Auction or time-sensitive mechanism
-        let is_auction = func_source.contains("auction") ||
-                        func_source.contains("Auction") ||
-                        func_source.contains("bid") ||
-                        func_source.contains("Bid");
+        let is_auction = func_source.contains("auction")
+            || func_source.contains("Auction")
+            || func_source.contains("bid")
+            || func_source.contains("Bid");
 
-        let timestamp_affects_auction = is_auction &&
-                                       uses_timestamp &&
-                                       (func_source.contains("endTime") ||
-                                        func_source.contains("startTime"));
+        let timestamp_affects_auction = is_auction
+            && uses_timestamp
+            && (func_source.contains("endTime") || func_source.contains("startTime"));
 
         if timestamp_affects_auction {
             return Some(format!(
@@ -204,14 +206,13 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 7: Vesting or unlock schedules
-        let is_vesting = func_source.contains("vest") ||
-                        func_source.contains("unlock") ||
-                        func_source.contains("release");
+        let is_vesting = func_source.contains("vest")
+            || func_source.contains("unlock")
+            || func_source.contains("release");
 
-        let timestamp_controls_vesting = is_vesting &&
-                                        uses_timestamp &&
-                                        (func_source.contains(">=") ||
-                                         func_source.contains("<="));
+        let timestamp_controls_vesting = is_vesting
+            && uses_timestamp
+            && (func_source.contains(">=") || func_source.contains("<="));
 
         if timestamp_controls_vesting {
             return Some(format!(
@@ -221,9 +222,9 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("timestamp") ||
-            func_source.contains("time manipulation")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("timestamp") || func_source.contains("time manipulation"))
+        {
             return Some(format!(
                 "Timestamp manipulation vulnerability marker detected"
             ));

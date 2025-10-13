@@ -1,4 +1,4 @@
-use crate::taint::{TaintedData, PropagationStep, PropagationType, TaintType, SourceLocation};
+use crate::taint::{PropagationStep, PropagationType, SourceLocation, TaintType, TaintedData};
 
 /// Taint propagation rules and logic
 pub struct TaintPropagator {
@@ -31,7 +31,7 @@ impl TaintPropagator {
         &self,
         source_taint: &TaintedData,
         operation: &str,
-        target_location: &SourceLocation
+        target_location: &SourceLocation,
     ) -> Option<TaintedData> {
         // Find matching propagation rule
         let rule = self.find_matching_rule(operation, &source_taint.taint_type)?;
@@ -138,10 +138,13 @@ impl TaintPropagator {
         ]
     }
 
-    fn find_matching_rule(&self, operation: &str, taint_type: &TaintType) -> Option<&PropagationRule> {
+    fn find_matching_rule(
+        &self,
+        operation: &str,
+        taint_type: &TaintType,
+    ) -> Option<&PropagationRule> {
         self.rules.iter().find(|rule| {
-            rule.operation == operation &&
-            rule.source_taint_types.contains(taint_type)
+            rule.operation == operation && rule.source_taint_types.contains(taint_type)
         })
     }
 
@@ -166,7 +169,7 @@ impl Default for TaintPropagator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::taint::{TaintSource};
+    use crate::taint::TaintSource;
 
     #[test]
     fn test_propagator_creation() {

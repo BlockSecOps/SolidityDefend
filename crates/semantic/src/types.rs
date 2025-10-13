@@ -1,9 +1,9 @@
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fmt;
-use anyhow::{Result, anyhow};
 
-use ast::{TypeName, ElementaryType, Function, StateVariable, SourceLocation};
-use crate::symbols::{SymbolTable, Scope, SymbolKind};
+use crate::symbols::{Scope, SymbolKind, SymbolTable};
+use ast::{ElementaryType, Function, SourceLocation, StateVariable, TypeName};
 
 /// Represents a resolved type in the Solidity type system
 #[derive(Debug, Clone, PartialEq)]
@@ -42,19 +42,34 @@ impl fmt::Display for ResolvedType {
         match self {
             ResolvedType::Elementary(elem) => write!(f, "{:?}", elem),
             ResolvedType::UserDefined { name, .. } => write!(f, "{}", name),
-            ResolvedType::Array { base_type, length } => {
-                match length {
-                    Some(len) => write!(f, "{}[{}]", base_type, len),
-                    None => write!(f, "{}[]", base_type),
-                }
-            }
-            ResolvedType::Mapping { key_type, value_type } => {
+            ResolvedType::Array { base_type, length } => match length {
+                Some(len) => write!(f, "{}[{}]", base_type, len),
+                None => write!(f, "{}[]", base_type),
+            },
+            ResolvedType::Mapping {
+                key_type,
+                value_type,
+            } => {
                 write!(f, "mapping({} => {})", key_type, value_type)
             }
-            ResolvedType::Function { parameters, return_types, .. } => {
-                write!(f, "function({}) returns ({})",
-                    parameters.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
-                    return_types.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(", ")
+            ResolvedType::Function {
+                parameters,
+                return_types,
+                ..
+            } => {
+                write!(
+                    f,
+                    "function({}) returns ({})",
+                    parameters
+                        .iter()
+                        .map(|p| p.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    return_types
+                        .iter()
+                        .map(|r| r.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
             }
             ResolvedType::Error(msg) => write!(f, "Error: {}", msg),
@@ -96,12 +111,8 @@ impl<'a> TypeResolver<'a> {
     /// Resolve a TypeName from the AST to a ResolvedType
     pub fn resolve_type(&mut self, type_name: &TypeName) -> Result<ResolvedType> {
         match type_name {
-            TypeName::Elementary(elem_type) => {
-                Ok(ResolvedType::Elementary(*elem_type))
-            }
-            TypeName::UserDefined(identifier) => {
-                self.resolve_user_defined_type(identifier.name)
-            }
+            TypeName::Elementary(elem_type) => Ok(ResolvedType::Elementary(*elem_type)),
+            TypeName::UserDefined(identifier) => self.resolve_user_defined_type(identifier.name),
             TypeName::Array { base_type, length } => {
                 let resolved_base = self.resolve_type(base_type)?;
                 let resolved_length = if let Some(_length_expr) = length {
@@ -117,7 +128,10 @@ impl<'a> TypeResolver<'a> {
                     length: resolved_length,
                 })
             }
-            TypeName::Mapping { key_type, value_type } => {
+            TypeName::Mapping {
+                key_type,
+                value_type,
+            } => {
                 let resolved_key = self.resolve_type(key_type)?;
                 let resolved_value = self.resolve_type(value_type)?;
 
@@ -126,7 +140,12 @@ impl<'a> TypeResolver<'a> {
                     value_type: Box::new(resolved_value),
                 })
             }
-            TypeName::Function { parameters, return_types, visibility, mutability } => {
+            TypeName::Function {
+                parameters,
+                return_types,
+                visibility,
+                mutability,
+            } => {
                 // Resolve function type parameters and return types
                 let mut param_types = Vec::new();
                 for param_type_name in parameters {
@@ -158,7 +177,10 @@ impl<'a> TypeResolver<'a> {
         }
 
         // Look up the type in the symbol table
-        if let Some(symbol) = self.symbol_table.lookup_symbol(self.current_scope, type_name) {
+        if let Some(symbol) = self
+            .symbol_table
+            .lookup_symbol(self.current_scope, type_name)
+        {
             let resolved_type = match symbol.kind {
                 SymbolKind::Contract | SymbolKind::Interface | SymbolKind::Library => {
                     ResolvedType::UserDefined {
@@ -167,34 +189,29 @@ impl<'a> TypeResolver<'a> {
                         location: symbol.location.clone(),
                     }
                 }
-                SymbolKind::Struct => {
-                    ResolvedType::UserDefined {
-                        name: type_name.to_string(),
-                        definition_scope: self.current_scope,
-                        location: symbol.location.clone(),
-                    }
-                }
-                SymbolKind::Enum => {
-                    ResolvedType::UserDefined {
-                        name: type_name.to_string(),
-                        definition_scope: self.current_scope,
-                        location: symbol.location.clone(),
-                    }
-                }
-                SymbolKind::Type => {
-                    ResolvedType::UserDefined {
-                        name: type_name.to_string(),
-                        definition_scope: self.current_scope,
-                        location: symbol.location.clone(),
-                    }
-                }
+                SymbolKind::Struct => ResolvedType::UserDefined {
+                    name: type_name.to_string(),
+                    definition_scope: self.current_scope,
+                    location: symbol.location.clone(),
+                },
+                SymbolKind::Enum => ResolvedType::UserDefined {
+                    name: type_name.to_string(),
+                    definition_scope: self.current_scope,
+                    location: symbol.location.clone(),
+                },
+                SymbolKind::Type => ResolvedType::UserDefined {
+                    name: type_name.to_string(),
+                    definition_scope: self.current_scope,
+                    location: symbol.location.clone(),
+                },
                 _ => {
                     return Err(anyhow!("Symbol '{}' is not a type", type_name));
                 }
             };
 
             // Cache the resolved type
-            self.type_cache.insert(type_name.to_string(), resolved_type.clone());
+            self.type_cache
+                .insert(type_name.to_string(), resolved_type.clone());
             Ok(resolved_type)
         } else {
             Err(anyhow!("Undefined type: {}", type_name))
@@ -202,7 +219,11 @@ impl<'a> TypeResolver<'a> {
     }
 
     /// Check type compatibility for assignments and function calls
-    pub fn check_compatibility(&self, from_type: &ResolvedType, to_type: &ResolvedType) -> TypeCompatibility {
+    pub fn check_compatibility(
+        &self,
+        from_type: &ResolvedType,
+        to_type: &ResolvedType,
+    ) -> TypeCompatibility {
         match (from_type, to_type) {
             // Identical types
             (a, b) if a == b => TypeCompatibility::Identical,
@@ -213,8 +234,16 @@ impl<'a> TypeResolver<'a> {
             }
 
             // Array type compatibility
-            (ResolvedType::Array { base_type: from_base, length: from_len },
-             ResolvedType::Array { base_type: to_base, length: to_len }) => {
+            (
+                ResolvedType::Array {
+                    base_type: from_base,
+                    length: from_len,
+                },
+                ResolvedType::Array {
+                    base_type: to_base,
+                    length: to_len,
+                },
+            ) => {
                 // Base types must be compatible
                 let base_compat = self.check_compatibility(from_base, to_base);
                 if base_compat == TypeCompatibility::Incompatible {
@@ -240,8 +269,12 @@ impl<'a> TypeResolver<'a> {
             }
 
             // User-defined type compatibility
-            (ResolvedType::UserDefined { name: from_name, .. },
-             ResolvedType::UserDefined { name: to_name, .. }) => {
+            (
+                ResolvedType::UserDefined {
+                    name: from_name, ..
+                },
+                ResolvedType::UserDefined { name: to_name, .. },
+            ) => {
                 if from_name == to_name {
                     TypeCompatibility::Identical
                 } else {
@@ -256,7 +289,11 @@ impl<'a> TypeResolver<'a> {
     }
 
     /// Check compatibility between elementary types
-    fn check_elementary_compatibility(&self, from_type: &ElementaryType, to_type: &ElementaryType) -> TypeCompatibility {
+    fn check_elementary_compatibility(
+        &self,
+        from_type: &ElementaryType,
+        to_type: &ElementaryType,
+    ) -> TypeCompatibility {
         use ElementaryType::*;
 
         match (from_type, to_type) {
@@ -339,7 +376,10 @@ impl<'a> TypeResolver<'a> {
     }
 
     /// Resolve state variable type
-    pub fn resolve_state_variable_type(&mut self, variable: &StateVariable) -> Result<ResolvedType> {
+    pub fn resolve_state_variable_type(
+        &mut self,
+        variable: &StateVariable,
+    ) -> Result<ResolvedType> {
         self.resolve_type(&variable.type_name)
     }
 
@@ -370,9 +410,9 @@ impl<'a> TypeResolver<'a> {
         match resolved_type {
             ResolvedType::Elementary(_) => true,
             ResolvedType::UserDefined { .. } => false, // Contracts are reference types
-            ResolvedType::Array { .. } => false, // Arrays are reference types
-            ResolvedType::Mapping { .. } => false, // Mappings are reference types
-            ResolvedType::Function { .. } => true, // Function types are value types
+            ResolvedType::Array { .. } => false,       // Arrays are reference types
+            ResolvedType::Mapping { .. } => false,     // Mappings are reference types
+            ResolvedType::Function { .. } => true,     // Function types are value types
             ResolvedType::Error(_) => false,
         }
     }
@@ -385,15 +425,22 @@ impl<'a> TypeResolver<'a> {
                 match elem_type {
                     ElementaryType::Bool => Some(1),
                     ElementaryType::Address => Some(20),
-                    ElementaryType::Uint(bits) | ElementaryType::Int(bits) => Some(*bits as u32 / 8),
+                    ElementaryType::Uint(bits) | ElementaryType::Int(bits) => {
+                        Some(*bits as u32 / 8)
+                    }
                     ElementaryType::FixedBytes(size) => Some(*size as u32),
                     ElementaryType::String | ElementaryType::Bytes => None, // Dynamic size
-                    ElementaryType::Fixed(bits, _) | ElementaryType::Ufixed(bits, _) => Some(*bits as u32 / 8),
+                    ElementaryType::Fixed(bits, _) | ElementaryType::Ufixed(bits, _) => {
+                        Some(*bits as u32 / 8)
+                    }
                 }
             }
-            ResolvedType::Array { length: Some(len), base_type } => {
-                self.get_type_size(base_type).map(|base_size| base_size * (*len as u32))
-            }
+            ResolvedType::Array {
+                length: Some(len),
+                base_type,
+            } => self
+                .get_type_size(base_type)
+                .map(|base_size| base_size * (*len as u32)),
             _ => None, // Reference types or dynamic types don't have fixed size
         }
     }
@@ -418,7 +465,10 @@ mod tests {
         let uint256_type = TypeName::Elementary(ElementaryType::Uint(256));
         let resolved = resolver.resolve_type(&uint256_type).unwrap();
 
-        assert_eq!(resolved, ResolvedType::Elementary(ElementaryType::Uint(256)));
+        assert_eq!(
+            resolved,
+            ResolvedType::Elementary(ElementaryType::Uint(256))
+        );
     }
 
     #[test]
@@ -460,7 +510,10 @@ mod tests {
         let resolved = resolver.resolve_type(&array_type).unwrap();
 
         if let ResolvedType::Array { base_type, length } = resolved {
-            assert_eq!(*base_type, ResolvedType::Elementary(ElementaryType::Uint(256)));
+            assert_eq!(
+                *base_type,
+                ResolvedType::Elementary(ElementaryType::Uint(256))
+            );
             assert_eq!(length, None);
         } else {
             panic!("Expected array type");

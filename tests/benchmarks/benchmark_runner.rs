@@ -1,8 +1,8 @@
-use std::fs;
 use chrono::Utc;
+use std::fs;
 
 // Use crate path for library compilation
-use crate::benchmarks::performance_comparison::{PerformanceBenchmark, BenchmarkResult};
+use crate::benchmarks::performance_comparison::{BenchmarkResult, PerformanceBenchmark};
 
 pub struct BenchmarkRunner {
     output_dir: String,
@@ -56,15 +56,26 @@ impl BenchmarkRunner {
         for result in results {
             println!("\n🔍 Dataset: {}", result.dataset_name);
 
-            if let Some(soliditydefend_metrics) = result.metrics.iter()
-                .find(|m| m.tool_name.to_lowercase().contains("soliditydefend")) {
-
+            if let Some(soliditydefend_metrics) = result
+                .metrics
+                .iter()
+                .find(|m| m.tool_name.to_lowercase().contains("soliditydefend"))
+            {
                 println!("   ⚡ SolidityDefend Performance:");
-                println!("     - Analysis time: {:.2}s", soliditydefend_metrics.analysis_time.as_secs_f64());
-                println!("     - Memory usage: {:.1}MB", soliditydefend_metrics.memory_usage as f64 / 1_000_000.0);
+                println!(
+                    "     - Analysis time: {:.2}s",
+                    soliditydefend_metrics.analysis_time.as_secs_f64()
+                );
+                println!(
+                    "     - Memory usage: {:.1}MB",
+                    soliditydefend_metrics.memory_usage as f64 / 1_000_000.0
+                );
                 println!("     - Findings: {}", soliditydefend_metrics.findings_count);
-                println!("     - Efficiency: {:.2} findings/sec",
-                    soliditydefend_metrics.findings_count as f64 / soliditydefend_metrics.analysis_time.as_secs_f64());
+                println!(
+                    "     - Efficiency: {:.2} findings/sec",
+                    soliditydefend_metrics.findings_count as f64
+                        / soliditydefend_metrics.analysis_time.as_secs_f64()
+                );
 
                 // Show comparison highlights
                 let mut fastest_competitor = None;
@@ -81,11 +92,19 @@ impl BenchmarkRunner {
                 }
 
                 if let Some(competitor) = fastest_competitor {
-                    let speed_ratio = soliditydefend_metrics.analysis_time.as_secs_f64() / competitor.analysis_time.as_secs_f64();
+                    let speed_ratio = soliditydefend_metrics.analysis_time.as_secs_f64()
+                        / competitor.analysis_time.as_secs_f64();
                     if speed_ratio < 1.0 {
-                        println!("     ✅ {}x faster than {}", 1.0/speed_ratio, competitor.tool_name);
+                        println!(
+                            "     ✅ {}x faster than {}",
+                            1.0 / speed_ratio,
+                            competitor.tool_name
+                        );
                     } else {
-                        println!("     ⚠️  {}x slower than {}", speed_ratio, competitor.tool_name);
+                        println!(
+                            "     ⚠️  {}x slower than {}",
+                            speed_ratio, competitor.tool_name
+                        );
                     }
                 }
             }
@@ -97,16 +116,25 @@ impl BenchmarkRunner {
         let mut total_findings = 0;
 
         for result in results {
-            if let Some(metrics) = result.metrics.iter()
-                .find(|m| m.tool_name.to_lowercase().contains("soliditydefend")) {
+            if let Some(metrics) = result
+                .metrics
+                .iter()
+                .find(|m| m.tool_name.to_lowercase().contains("soliditydefend"))
+            {
                 total_soliditydefend_time += metrics.analysis_time.as_secs_f64();
                 total_findings += metrics.findings_count;
             }
         }
 
-        println!("   - Average analysis time: {:.2}s per dataset", total_soliditydefend_time / total_datasets as f64);
+        println!(
+            "   - Average analysis time: {:.2}s per dataset",
+            total_soliditydefend_time / total_datasets as f64
+        );
         println!("   - Total findings discovered: {}", total_findings);
-        println!("   - Overall efficiency: {:.2} findings/sec", total_findings as f64 / total_soliditydefend_time);
+        println!(
+            "   - Overall efficiency: {:.2} findings/sec",
+            total_findings as f64 / total_soliditydefend_time
+        );
     }
 }
 

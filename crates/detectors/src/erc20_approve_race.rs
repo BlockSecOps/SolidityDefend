@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-20 approve race condition vulnerabilities (SWC-114)
 pub struct Erc20ApproveRaceDetector {
@@ -56,8 +56,7 @@ impl Detector for Erc20ApproveRaceDetector {
                 let message = format!(
                     "Function '{}' has approve race condition vulnerability. {} \
                     Vulnerable to front-running attack (SWC-114).",
-                    function.name.name,
-                    issue
+                    function.name.name, issue
                 );
 
                 let finding = self.base.create_finding(
@@ -87,7 +86,11 @@ impl Detector for Erc20ApproveRaceDetector {
 }
 
 impl Erc20ApproveRaceDetector {
-    fn check_approve_race(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_approve_race(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -100,18 +103,22 @@ impl Erc20ApproveRaceDetector {
         }
 
         // Check for race condition mitigations
-        let has_require_zero = func_source.contains("require") &&
-                              func_source.contains("allowance") &&
-                              (func_source.contains("== 0") || func_source.contains("!= 0"));
+        let has_require_zero = func_source.contains("require")
+            && func_source.contains("allowance")
+            && (func_source.contains("== 0") || func_source.contains("!= 0"));
 
         let has_expected_param = function.parameters.iter().any(|param| {
-            let param_name = param.name.as_ref().map(|n| n.name.to_lowercase()).unwrap_or_default();
+            let param_name = param
+                .name
+                .as_ref()
+                .map(|n| n.name.to_lowercase())
+                .unwrap_or_default();
             param_name.contains("expected") || param_name.contains("current")
         });
 
-        let has_safe_patterns = func_source.contains("SafeERC20") ||
-                               func_source.contains("safeApprove") ||
-                               has_expected_param;
+        let has_safe_patterns = func_source.contains("SafeERC20")
+            || func_source.contains("safeApprove")
+            || has_expected_param;
 
         if !has_require_zero && !has_safe_patterns {
             return Some("Standard ERC-20 approve without race condition protection".to_string());

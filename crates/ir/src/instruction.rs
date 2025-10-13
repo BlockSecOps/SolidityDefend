@@ -1,7 +1,7 @@
+use anyhow::{Result, anyhow};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt;
-use anyhow::{Result, anyhow};
-use serde::{Serialize, Deserialize};
 
 /// Unique identifier for IR values in SSA form
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -78,21 +78,38 @@ impl fmt::Display for IrType {
             IrType::Bytes => write!(f, "bytes"),
             IrType::String => write!(f, "string"),
             IrType::Address => write!(f, "address"),
-            IrType::Array { element_type, length } => {
-                match length {
-                    Some(len) => write!(f, "{}[{}]", element_type, len),
-                    None => write!(f, "{}[]", element_type),
-                }
-            }
-            IrType::Mapping { key_type, value_type } => {
+            IrType::Array {
+                element_type,
+                length,
+            } => match length {
+                Some(len) => write!(f, "{}[{}]", element_type, len),
+                None => write!(f, "{}[]", element_type),
+            },
+            IrType::Mapping {
+                key_type,
+                value_type,
+            } => {
                 write!(f, "mapping({} => {})", key_type, value_type)
             }
             IrType::Struct { name, .. } => write!(f, "struct {}", name),
             IrType::Contract(name) => write!(f, "contract {}", name),
-            IrType::Function { parameters, returns } => {
-                write!(f, "function({}) returns ({})",
-                    parameters.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", "),
-                    returns.iter().map(|r| r.to_string()).collect::<Vec<_>>().join(", ")
+            IrType::Function {
+                parameters,
+                returns,
+            } => {
+                write!(
+                    f,
+                    "function({}) returns ({})",
+                    parameters
+                        .iter()
+                        .map(|p| p.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", "),
+                    returns
+                        .iter()
+                        .map(|r| r.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
                 )
             }
             IrType::Void => write!(f, "void"),
@@ -207,31 +224,31 @@ pub enum Instruction {
     Cast(ValueId, CastType, IrValue, IrType),
 
     // Memory operations
-    Load(ValueId, IrValue), // Load from memory address
+    Load(ValueId, IrValue),  // Load from memory address
     Store(IrValue, IrValue), // Store value to memory address
 
     // Storage operations (Solidity-specific)
-    StorageLoad(ValueId, IrValue), // Load from storage slot
+    StorageLoad(ValueId, IrValue),  // Load from storage slot
     StorageStore(IrValue, IrValue), // Store to storage slot
 
     // Array operations
     ArrayAccess(ValueId, IrValue, IrValue), // array[index]
-    ArrayLength(ValueId, IrValue), // array.length
-    ArrayPush(IrValue, IrValue), // array.push(value)
-    ArrayPop(ValueId, IrValue), // array.pop()
+    ArrayLength(ValueId, IrValue),          // array.length
+    ArrayPush(IrValue, IrValue),            // array.push(value)
+    ArrayPop(ValueId, IrValue),             // array.pop()
 
     // Mapping operations
     MappingAccess(ValueId, IrValue, IrValue), // mapping[key]
-    MappingStore(IrValue, IrValue, IrValue), // mapping[key] = value
+    MappingStore(IrValue, IrValue, IrValue),  // mapping[key] = value
 
     // Struct operations
     StructAccess(ValueId, IrValue, String), // struct.field
-    StructStore(IrValue, String, IrValue), // struct.field = value
+    StructStore(IrValue, String, IrValue),  // struct.field = value
 
     // Control flow
-    Branch(BlockId), // Unconditional branch
+    Branch(BlockId),                              // Unconditional branch
     ConditionalBranch(IrValue, BlockId, BlockId), // Branch on condition
-    Return(Option<IrValue>), // Return with optional value
+    Return(Option<IrValue>),                      // Return with optional value
 
     // Function calls
     Call(ValueId, String, Vec<IrValue>), // Function call
@@ -242,16 +259,16 @@ pub enum Instruction {
     // Contract operations
     Create(ValueId, String, Vec<IrValue>), // Contract creation
     Create2(ValueId, IrValue, String, Vec<IrValue>), // CREATE2
-    SelfDestruct(IrValue), // selfdestruct(address)
+    SelfDestruct(IrValue),                 // selfdestruct(address)
 
     // Built-in operations
     Keccak256(ValueId, IrValue), // keccak256 hash
     Ecrecover(ValueId, IrValue, IrValue, IrValue, IrValue), // ecrecover
 
     // Blockchain operations
-    BlockHash(ValueId, IrValue), // blockhash(blockNumber)
-    Balance(ValueId, IrValue), // address.balance
-    Transfer(IrValue, IrValue), // address.transfer(amount)
+    BlockHash(ValueId, IrValue),     // blockhash(blockNumber)
+    Balance(ValueId, IrValue),       // address.balance
+    Transfer(IrValue, IrValue),      // address.transfer(amount)
     Send(ValueId, IrValue, IrValue), // address.send(amount)
 
     // Assembly operations
@@ -264,21 +281,21 @@ pub enum Instruction {
     Assign(ValueId, IrValue), // Variable assignment in SSA form
 
     // Error handling
-    Revert(Option<IrValue>), // revert with optional message
+    Revert(Option<IrValue>),           // revert with optional message
     Require(IrValue, Option<IrValue>), // require(condition, message)
-    Assert(IrValue), // assert(condition)
+    Assert(IrValue),                   // assert(condition)
 
     // Events
     EmitEvent(String, Vec<IrValue>), // Emit event
 
     // Low-level operations
-    CodeSize(ValueId, IrValue), // address.code.length
-    CodeCopy(IrValue, IrValue, IrValue), // codecopy
-    ExtCodeSize(ValueId, IrValue), // external code size
+    CodeSize(ValueId, IrValue),                      // address.code.length
+    CodeCopy(IrValue, IrValue, IrValue),             // codecopy
+    ExtCodeSize(ValueId, IrValue),                   // external code size
     ExtCodeCopy(IrValue, IrValue, IrValue, IrValue), // external code copy
 
     // Gas operations
-    Gas(ValueId), // gasleft()
+    Gas(ValueId),      // gasleft()
     GasLimit(ValueId), // block.gaslimit
     GasPrice(ValueId), // tx.gasprice
 }
@@ -305,7 +322,9 @@ impl fmt::Display for Instruction {
                 write!(f, "{} = {} {}, {}", dest, op, lhs, rhs)
             }
 
-            Instruction::LogicalAnd(dest, lhs, rhs) => write!(f, "{} = land {}, {}", dest, lhs, rhs),
+            Instruction::LogicalAnd(dest, lhs, rhs) => {
+                write!(f, "{} = land {}, {}", dest, lhs, rhs)
+            }
             Instruction::LogicalOr(dest, lhs, rhs) => write!(f, "{} = lor {}, {}", dest, lhs, rhs),
             Instruction::LogicalNot(dest, operand) => write!(f, "{} = lnot {}", dest, operand),
 
@@ -344,24 +363,40 @@ impl fmt::Display for Instruction {
             Instruction::ConditionalBranch(cond, then_block, else_block) => {
                 write!(f, "br {}, {}, {}", cond, then_block, else_block)
             }
-            Instruction::Return(value) => {
-                match value {
-                    Some(val) => write!(f, "ret {}", val),
-                    None => write!(f, "ret"),
-                }
-            }
+            Instruction::Return(value) => match value {
+                Some(val) => write!(f, "ret {}", val),
+                None => write!(f, "ret"),
+            },
 
             Instruction::Call(dest, func_name, args) => {
-                write!(f, "{} = call {}({})", dest, func_name,
-                    args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", "))
+                write!(
+                    f,
+                    "{} = call {}({})",
+                    dest,
+                    func_name,
+                    args.iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
             Instruction::ExternalCall(dest, contract, func_name, args) => {
-                write!(f, "{} = external_call {}.{}({})", dest, contract, func_name,
-                    args.iter().map(|a| a.to_string()).collect::<Vec<_>>().join(", "))
+                write!(
+                    f,
+                    "{} = external_call {}.{}({})",
+                    dest,
+                    contract,
+                    func_name,
+                    args.iter()
+                        .map(|a| a.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
             }
 
             Instruction::Phi(dest, incoming) => {
-                let incoming_str = incoming.iter()
+                let incoming_str = incoming
+                    .iter()
                     .map(|(val, block)| format!("[{}, {}]", val, block))
                     .collect::<Vec<_>>()
                     .join(", ");
@@ -370,18 +405,14 @@ impl fmt::Display for Instruction {
 
             Instruction::Assign(dest, value) => write!(f, "{} = {}", dest, value),
 
-            Instruction::Revert(msg) => {
-                match msg {
-                    Some(message) => write!(f, "revert {}", message),
-                    None => write!(f, "revert"),
-                }
-            }
-            Instruction::Require(cond, msg) => {
-                match msg {
-                    Some(message) => write!(f, "require {}, {}", cond, message),
-                    None => write!(f, "require {}", cond),
-                }
-            }
+            Instruction::Revert(msg) => match msg {
+                Some(message) => write!(f, "revert {}", message),
+                None => write!(f, "revert"),
+            },
+            Instruction::Require(cond, msg) => match msg {
+                Some(message) => write!(f, "require {}, {}", cond, message),
+                None => write!(f, "require {}", cond),
+            },
             Instruction::Assert(cond) => write!(f, "assert {}", cond),
 
             // Simplified display for other instructions
@@ -427,12 +458,13 @@ impl BasicBlock {
 
     pub fn is_terminator(&self) -> bool {
         if let Some(last_instruction) = self.instructions.last() {
-            matches!(last_instruction,
-                Instruction::Branch(_) |
-                Instruction::ConditionalBranch(_, _, _) |
-                Instruction::Return(_) |
-                Instruction::Revert(_) |
-                Instruction::SelfDestruct(_)
+            matches!(
+                last_instruction,
+                Instruction::Branch(_)
+                    | Instruction::ConditionalBranch(_, _, _)
+                    | Instruction::Return(_)
+                    | Instruction::Revert(_)
+                    | Instruction::SelfDestruct(_)
             )
         } else {
             false
@@ -481,7 +513,8 @@ impl IrFunction {
     pub fn create_block(&mut self) -> BlockId {
         let block_id = BlockId(self.next_block_id);
         self.next_block_id += 1;
-        self.basic_blocks.insert(block_id, BasicBlock::new(block_id));
+        self.basic_blocks
+            .insert(block_id, BasicBlock::new(block_id));
         block_id
     }
 
@@ -533,49 +566,49 @@ impl IrFunction {
 
     fn get_defined_value(&self, instruction: &Instruction) -> Option<ValueId> {
         match instruction {
-            Instruction::Add(dest, _, _) |
-            Instruction::Sub(dest, _, _) |
-            Instruction::Mul(dest, _, _) |
-            Instruction::Div(dest, _, _) |
-            Instruction::Mod(dest, _, _) |
-            Instruction::Exp(dest, _, _) |
-            Instruction::And(dest, _, _) |
-            Instruction::Or(dest, _, _) |
-            Instruction::Xor(dest, _, _) |
-            Instruction::Not(dest, _) |
-            Instruction::Shl(dest, _, _) |
-            Instruction::Shr(dest, _, _) |
-            Instruction::Sar(dest, _, _) |
-            Instruction::Compare(dest, _, _, _) |
-            Instruction::LogicalAnd(dest, _, _) |
-            Instruction::LogicalOr(dest, _, _) |
-            Instruction::LogicalNot(dest, _) |
-            Instruction::Cast(dest, _, _, _) |
-            Instruction::Load(dest, _) |
-            Instruction::StorageLoad(dest, _) |
-            Instruction::ArrayAccess(dest, _, _) |
-            Instruction::ArrayLength(dest, _) |
-            Instruction::ArrayPop(dest, _) |
-            Instruction::MappingAccess(dest, _, _) |
-            Instruction::StructAccess(dest, _, _) |
-            Instruction::Call(dest, _, _) |
-            Instruction::ExternalCall(dest, _, _, _) |
-            Instruction::DelegateCall(dest, _, _, _) |
-            Instruction::StaticCall(dest, _, _, _) |
-            Instruction::Create(dest, _, _) |
-            Instruction::Create2(dest, _, _, _) |
-            Instruction::Keccak256(dest, _) |
-            Instruction::Ecrecover(dest, _, _, _, _) |
-            Instruction::BlockHash(dest, _) |
-            Instruction::Balance(dest, _) |
-            Instruction::Send(dest, _, _) |
-            Instruction::Phi(dest, _) |
-            Instruction::Assign(dest, _) |
-            Instruction::CodeSize(dest, _) |
-            Instruction::ExtCodeSize(dest, _) |
-            Instruction::Gas(dest) |
-            Instruction::GasLimit(dest) |
-            Instruction::GasPrice(dest) => Some(*dest),
+            Instruction::Add(dest, _, _)
+            | Instruction::Sub(dest, _, _)
+            | Instruction::Mul(dest, _, _)
+            | Instruction::Div(dest, _, _)
+            | Instruction::Mod(dest, _, _)
+            | Instruction::Exp(dest, _, _)
+            | Instruction::And(dest, _, _)
+            | Instruction::Or(dest, _, _)
+            | Instruction::Xor(dest, _, _)
+            | Instruction::Not(dest, _)
+            | Instruction::Shl(dest, _, _)
+            | Instruction::Shr(dest, _, _)
+            | Instruction::Sar(dest, _, _)
+            | Instruction::Compare(dest, _, _, _)
+            | Instruction::LogicalAnd(dest, _, _)
+            | Instruction::LogicalOr(dest, _, _)
+            | Instruction::LogicalNot(dest, _)
+            | Instruction::Cast(dest, _, _, _)
+            | Instruction::Load(dest, _)
+            | Instruction::StorageLoad(dest, _)
+            | Instruction::ArrayAccess(dest, _, _)
+            | Instruction::ArrayLength(dest, _)
+            | Instruction::ArrayPop(dest, _)
+            | Instruction::MappingAccess(dest, _, _)
+            | Instruction::StructAccess(dest, _, _)
+            | Instruction::Call(dest, _, _)
+            | Instruction::ExternalCall(dest, _, _, _)
+            | Instruction::DelegateCall(dest, _, _, _)
+            | Instruction::StaticCall(dest, _, _, _)
+            | Instruction::Create(dest, _, _)
+            | Instruction::Create2(dest, _, _, _)
+            | Instruction::Keccak256(dest, _)
+            | Instruction::Ecrecover(dest, _, _, _, _)
+            | Instruction::BlockHash(dest, _)
+            | Instruction::Balance(dest, _)
+            | Instruction::Send(dest, _, _)
+            | Instruction::Phi(dest, _)
+            | Instruction::Assign(dest, _)
+            | Instruction::CodeSize(dest, _)
+            | Instruction::ExtCodeSize(dest, _)
+            | Instruction::Gas(dest)
+            | Instruction::GasLimit(dest)
+            | Instruction::GasPrice(dest) => Some(*dest),
             _ => None,
         }
     }
@@ -589,13 +622,17 @@ impl IrFunction {
 
 impl fmt::Display for IrFunction {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        writeln!(f, "function {}({}) -> ({}) {{",
+        writeln!(
+            f,
+            "function {}({}) -> ({}) {{",
             self.name,
-            self.parameters.iter()
+            self.parameters
+                .iter()
                 .map(|(name, ty)| format!("{}: {}", name, ty))
                 .collect::<Vec<_>>()
                 .join(", "),
-            self.return_types.iter()
+            self.return_types
+                .iter()
                 .map(|ty| ty.to_string())
                 .collect::<Vec<_>>()
                 .join(", ")
@@ -639,7 +676,6 @@ impl Lowering {
         }
     }
 
-
     /// Create a new value with the given type
     pub fn create_value(&mut self, ir_type: IrType) -> ValueId {
         let value_id = ValueId(self.value_counter);
@@ -658,7 +694,9 @@ impl Lowering {
         self.block_counter += 1;
 
         if let Some(ref mut function) = self.current_function {
-            function.basic_blocks.insert(block_id, BasicBlock::new(block_id));
+            function
+                .basic_blocks
+                .insert(block_id, BasicBlock::new(block_id));
         }
 
         block_id
@@ -699,7 +737,7 @@ mod tests {
         let add_inst = Instruction::Add(
             ValueId(1),
             IrValue::Value(ValueId(2)),
-            IrValue::ConstantInt(42)
+            IrValue::ConstantInt(42),
         );
         assert_eq!(format!("{}", add_inst), "%1 = add %2, 42");
     }
@@ -715,7 +753,7 @@ mod tests {
         block.add_instruction(Instruction::Add(
             ValueId(0),
             IrValue::ConstantInt(1),
-            IrValue::ConstantInt(2)
+            IrValue::ConstantInt(2),
         ));
         assert_eq!(block.instructions.len(), 1);
     }
@@ -749,15 +787,19 @@ mod tests {
         let val1 = function.create_value(IrType::Uint(256));
         let val2 = function.create_value(IrType::Uint(256));
 
-        function.add_instruction(
-            function.entry_block,
-            Instruction::Add(val1, IrValue::ConstantInt(1), IrValue::ConstantInt(2))
-        ).unwrap();
+        function
+            .add_instruction(
+                function.entry_block,
+                Instruction::Add(val1, IrValue::ConstantInt(1), IrValue::ConstantInt(2)),
+            )
+            .unwrap();
 
-        function.add_instruction(
-            function.entry_block,
-            Instruction::Mul(val2, IrValue::Value(val1), IrValue::ConstantInt(3))
-        ).unwrap();
+        function
+            .add_instruction(
+                function.entry_block,
+                Instruction::Mul(val2, IrValue::Value(val1), IrValue::ConstantInt(3)),
+            )
+            .unwrap();
 
         assert!(function.is_ssa_form());
     }

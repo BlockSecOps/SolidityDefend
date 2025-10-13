@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for gas griefing attack vulnerabilities
 pub struct GasGriefingDetector {
@@ -56,8 +56,7 @@ impl Detector for GasGriefingDetector {
                 let message = format!(
                     "Function '{}' has gas griefing vulnerability. {} \
                     Attackers can force users to waste gas or cause transactions to fail.",
-                    function.name.name,
-                    gas_issue
+                    function.name.name, gas_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -89,7 +88,11 @@ impl Detector for GasGriefingDetector {
 }
 
 impl GasGriefingDetector {
-    fn check_gas_griefing(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_gas_griefing(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -98,9 +101,9 @@ impl GasGriefingDetector {
 
         // Pattern 1: External call in loop without gas limit
         let has_loop = func_source.contains("for") || func_source.contains("while");
-        let has_external_call = func_source.contains(".call") ||
-                               func_source.contains(".transfer") ||
-                               func_source.contains(".send");
+        let has_external_call = func_source.contains(".call")
+            || func_source.contains(".transfer")
+            || func_source.contains(".send");
 
         if has_loop && has_external_call && !func_source.contains("gas:") {
             return Some(format!(
@@ -118,9 +121,8 @@ impl GasGriefingDetector {
         }
 
         // Pattern 3: Push pattern for mass distribution
-        let distributes_to_many = has_loop &&
-                                 (func_source.contains("transfer") ||
-                                  func_source.contains("balances["));
+        let distributes_to_many =
+            has_loop && (func_source.contains("transfer") || func_source.contains("balances["));
 
         if distributes_to_many && !func_source.contains("pull") {
             return Some(format!(

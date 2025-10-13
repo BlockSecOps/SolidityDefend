@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct TokenMintingDetector {
     base: BaseDetector,
@@ -17,7 +17,10 @@ impl TokenMintingDetector {
                 DetectorId("bridge-token-mint-control".to_string()),
                 "Bridge Token Minting Control".to_string(),
                 "Detects unsafe token minting in bridge contracts".to_string(),
-                vec![DetectorCategory::CrossChain, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::CrossChain,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::Critical,
             ),
         }
@@ -28,7 +31,11 @@ impl TokenMintingDetector {
         source.contains("bridge") || source.contains("relay") || source.contains("crosschain")
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let name = function.name.name.to_lowercase();
 
@@ -57,7 +64,10 @@ impl TokenMintingDetector {
 
         let has_access = has_modifier || has_inline_check;
 
-        let validates_message = func_source.contains("verify") && (func_source.contains("message") || func_source.contains("proof") || func_source.contains("signature"));
+        let validates_message = func_source.contains("verify")
+            && (func_source.contains("message")
+                || func_source.contains("proof")
+                || func_source.contains("signature"));
 
         let has_limits = func_source.contains("max") && func_source.contains("amount");
 
@@ -65,7 +75,8 @@ impl TokenMintingDetector {
             issues.push((
                 format!("Unrestricted token minting in '{}'", function.name.name),
                 Severity::Critical,
-                "Add access control: modifier onlyBridge { require(msg.sender == bridge); _; }".to_string()
+                "Add access control: modifier onlyBridge { require(msg.sender == bridge); _; }"
+                    .to_string(),
             ));
         }
 
@@ -81,7 +92,7 @@ impl TokenMintingDetector {
             issues.push((
                 format!("Missing mint amount limits in '{}'", function.name.name),
                 Severity::High,
-                "Add: require(amount <= MAX_MINT_AMOUNT);".to_string()
+                "Add: require(amount <= MAX_MINT_AMOUNT);".to_string(),
             ));
         }
 
@@ -153,7 +164,16 @@ impl Detector for TokenMintingDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(ctx, title, function.name.location.start().line() as u32, 0, 20, severity)
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }
@@ -177,7 +197,15 @@ mod tests {
         assert_eq!(detector.name(), "Bridge Token Minting Control");
         assert_eq!(detector.default_severity(), Severity::Critical);
         assert!(detector.is_enabled());
-        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
-        assert!(detector.categories().contains(&DetectorCategory::AccessControl));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::CrossChain)
+        );
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::AccessControl)
+        );
     }
 }

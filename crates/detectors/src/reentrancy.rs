@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for classic reentrancy vulnerabilities
 pub struct ClassicReentrancyDetector {
@@ -62,7 +62,10 @@ impl ClassicReentrancyDetector {
                     // Direct member access pattern: obj.method()
                     ast::Expression::MemberAccess { .. } => true,
                     // Nested function call pattern: obj.method{options}()
-                    ast::Expression::FunctionCall { function: inner_function, .. } => {
+                    ast::Expression::FunctionCall {
+                        function: inner_function,
+                        ..
+                    } => {
                         // Check if the inner function is a MemberAccess (e.g., msg.sender.call)
                         matches!(inner_function, ast::Expression::MemberAccess { .. })
                     }
@@ -83,18 +86,22 @@ impl ClassicReentrancyDetector {
             }
             ast::Expression::IndexAccess { base, index, .. } => {
                 // Check index access expressions for external calls
-                self.is_external_call(base) ||
-                index.map_or(false, |idx| self.is_external_call(idx))
+                self.is_external_call(base) || index.map_or(false, |idx| self.is_external_call(idx))
             }
             ast::Expression::MemberAccess { expression, .. } => {
                 // Check member access base expression for external calls
                 self.is_external_call(expression)
             }
-            ast::Expression::Conditional { condition, true_expression, false_expression, .. } => {
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
                 // Check all parts of conditional expressions for external calls
-                self.is_external_call(condition) ||
-                self.is_external_call(true_expression) ||
-                self.is_external_call(false_expression)
+                self.is_external_call(condition)
+                    || self.is_external_call(true_expression)
+                    || self.is_external_call(false_expression)
             }
             _ => false,
         }
@@ -122,37 +129,64 @@ impl ClassicReentrancyDetector {
                 // Recursively check all statements in the block
                 self.check_statements_for_external_calls(&block.statements)
             }
-            ast::Statement::If { condition, then_branch, else_branch, .. } => {
+            ast::Statement::If {
+                condition,
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 // Check condition expression and both branches
-                self.is_external_call(condition) ||
-                self.statement_has_external_call(then_branch) ||
-                else_branch.map_or(false, |stmt| self.statement_has_external_call(stmt))
+                self.is_external_call(condition)
+                    || self.statement_has_external_call(then_branch)
+                    || else_branch.map_or(false, |stmt| self.statement_has_external_call(stmt))
             }
-            ast::Statement::While { condition, body, .. } => {
+            ast::Statement::While {
+                condition, body, ..
+            } => {
                 // Check condition and loop body
                 self.is_external_call(condition) || self.statement_has_external_call(body)
             }
-            ast::Statement::For { condition, update, body, .. } => {
+            ast::Statement::For {
+                condition,
+                update,
+                body,
+                ..
+            } => {
                 // Check condition, update expression, and loop body
-                condition.as_ref().map_or(false, |cond| self.is_external_call(cond)) ||
-                update.as_ref().map_or(false, |upd| self.is_external_call(upd)) ||
-                self.statement_has_external_call(body)
+                condition
+                    .as_ref()
+                    .map_or(false, |cond| self.is_external_call(cond))
+                    || update
+                        .as_ref()
+                        .map_or(false, |upd| self.is_external_call(upd))
+                    || self.statement_has_external_call(body)
             }
             ast::Statement::VariableDeclaration { initial_value, .. } => {
                 // Check if variable is initialized with external call: bool result = call(...)
-                initial_value.as_ref().map_or(false, |expr| self.is_external_call(expr))
+                initial_value
+                    .as_ref()
+                    .map_or(false, |expr| self.is_external_call(expr))
             }
-            ast::Statement::TryStatement { expression, body, catch_clauses, .. } => {
+            ast::Statement::TryStatement {
+                expression,
+                body,
+                catch_clauses,
+                ..
+            } => {
                 // Check try expression and all catch clauses
-                self.is_external_call(expression) ||
-                self.statement_has_external_call(&ast::Statement::Block(body.clone())) ||
-                catch_clauses.iter().any(|catch_clause| {
-                    self.statement_has_external_call(&ast::Statement::Block(catch_clause.body.clone()))
-                })
+                self.is_external_call(expression)
+                    || self.statement_has_external_call(&ast::Statement::Block(body.clone()))
+                    || catch_clauses.iter().any(|catch_clause| {
+                        self.statement_has_external_call(&ast::Statement::Block(
+                            catch_clause.body.clone(),
+                        ))
+                    })
             }
             ast::Statement::Return { value, .. } => {
                 // Check if return expression contains external call: return call(...)
-                value.as_ref().map_or(false, |expr| self.is_external_call(expr))
+                value
+                    .as_ref()
+                    .map_or(false, |expr| self.is_external_call(expr))
             }
             ast::Statement::EmitStatement { event_call, .. } => {
                 // Check if emit contains external call: emit Event(call(...))
@@ -160,7 +194,9 @@ impl ClassicReentrancyDetector {
             }
             ast::Statement::RevertStatement { error_call, .. } => {
                 // Check if revert contains external call: revert Error(call(...))
-                error_call.as_ref().map_or(false, |expr| self.is_external_call(expr))
+                error_call
+                    .as_ref()
+                    .map_or(false, |expr| self.is_external_call(expr))
             }
             _ => false,
         }
@@ -171,12 +207,19 @@ impl ClassicReentrancyDetector {
             ast::Statement::Expression(ast::Expression::Assignment { .. }) => true,
             ast::Statement::Block(block) => {
                 // Recursively check all statements in the block for state changes
-                block.statements.iter().any(|s| self.statement_has_state_change(s))
+                block
+                    .statements
+                    .iter()
+                    .any(|s| self.statement_has_state_change(s))
             }
-            ast::Statement::If { then_branch, else_branch, .. } => {
+            ast::Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 // Check both branches for state changes
-                self.statement_has_state_change(then_branch) ||
-                else_branch.map_or(false, |stmt| self.statement_has_state_change(stmt))
+                self.statement_has_state_change(then_branch)
+                    || else_branch.map_or(false, |stmt| self.statement_has_state_change(stmt))
             }
             ast::Statement::While { body, .. } => {
                 // Check loop body for state changes
@@ -189,19 +232,30 @@ impl ClassicReentrancyDetector {
             ast::Statement::VariableDeclaration { initial_value, .. } => {
                 // Variable declarations themselves don't change contract state
                 // but the initial value might contain state changes
-                initial_value.as_ref().map_or(false, |expr| self.expression_has_state_change(expr))
+                initial_value
+                    .as_ref()
+                    .map_or(false, |expr| self.expression_has_state_change(expr))
             }
-            ast::Statement::TryStatement { expression, body, catch_clauses, .. } => {
+            ast::Statement::TryStatement {
+                expression,
+                body,
+                catch_clauses,
+                ..
+            } => {
                 // Check try expression, try body, and all catch clauses for state changes
-                self.expression_has_state_change(expression) ||
-                self.statement_has_state_change(&ast::Statement::Block(body.clone())) ||
-                catch_clauses.iter().any(|catch_clause| {
-                    self.statement_has_state_change(&ast::Statement::Block(catch_clause.body.clone()))
-                })
+                self.expression_has_state_change(expression)
+                    || self.statement_has_state_change(&ast::Statement::Block(body.clone()))
+                    || catch_clauses.iter().any(|catch_clause| {
+                        self.statement_has_state_change(&ast::Statement::Block(
+                            catch_clause.body.clone(),
+                        ))
+                    })
             }
             ast::Statement::Return { value, .. } => {
                 // Return expressions might contain state changes: return (balance = 0, result)
-                value.as_ref().map_or(false, |expr| self.expression_has_state_change(expr))
+                value
+                    .as_ref()
+                    .map_or(false, |expr| self.expression_has_state_change(expr))
             }
             ast::Statement::EmitStatement { event_call, .. } => {
                 // Emit expressions might contain state changes: emit Event(balance = 0)
@@ -209,7 +263,9 @@ impl ClassicReentrancyDetector {
             }
             ast::Statement::RevertStatement { error_call, .. } => {
                 // Revert expressions might contain state changes: revert Error(balance = 0)
-                error_call.as_ref().map_or(false, |expr| self.expression_has_state_change(expr))
+                error_call
+                    .as_ref()
+                    .map_or(false, |expr| self.expression_has_state_change(expr))
             }
             _ => false,
         }
@@ -229,22 +285,29 @@ impl ClassicReentrancyDetector {
             }
             ast::Expression::FunctionCall { arguments, .. } => {
                 // Check function call arguments for state changes
-                arguments.iter().any(|arg| self.expression_has_state_change(arg))
+                arguments
+                    .iter()
+                    .any(|arg| self.expression_has_state_change(arg))
             }
             ast::Expression::IndexAccess { base, index, .. } => {
                 // Check index access expressions
-                self.expression_has_state_change(base) ||
-                index.map_or(false, |idx| self.expression_has_state_change(idx))
+                self.expression_has_state_change(base)
+                    || index.map_or(false, |idx| self.expression_has_state_change(idx))
             }
             ast::Expression::MemberAccess { expression, .. } => {
                 // Check member access base expression
                 self.expression_has_state_change(expression)
             }
-            ast::Expression::Conditional { condition, true_expression, false_expression, .. } => {
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
                 // Check all parts of conditional expression
-                self.expression_has_state_change(condition) ||
-                self.expression_has_state_change(true_expression) ||
-                self.expression_has_state_change(false_expression)
+                self.expression_has_state_change(condition)
+                    || self.expression_has_state_change(true_expression)
+                    || self.expression_has_state_change(false_expression)
             }
             _ => false,
         }
@@ -362,12 +425,10 @@ impl ReadOnlyReentrancyDetector {
                 // Check if this is reading from an external contract
                 matches!(expression, ast::Expression::Identifier(_))
             }
-            ast::Expression::FunctionCall { function, .. } => {
-                match function {
-                    ast::Expression::MemberAccess { .. } => true,
-                    _ => false,
-                }
-            }
+            ast::Expression::FunctionCall { function, .. } => match function {
+                ast::Expression::MemberAccess { .. } => true,
+                _ => false,
+            },
             _ => false,
         }
     }

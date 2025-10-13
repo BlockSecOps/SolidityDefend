@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for DOS via unbounded operations
 pub struct DosUnboundedOperationDetector {
@@ -15,7 +15,8 @@ impl DosUnboundedOperationDetector {
             base: BaseDetector::new(
                 DetectorId("dos-unbounded-operation".to_string()),
                 "DOS via Unbounded Operation".to_string(),
-                "Detects unbounded loops and operations that can cause denial of service".to_string(),
+                "Detects unbounded loops and operations that can cause denial of service"
+                    .to_string(),
                 vec![DetectorCategory::Logic],
                 Severity::High,
             ),
@@ -56,25 +57,26 @@ impl Detector for DosUnboundedOperationDetector {
                 let message = format!(
                     "Function '{}' has DOS vulnerability via unbounded operation. {} \
                     Can cause out-of-gas errors blocking contract functionality.",
-                    function.name.name,
-                    dos_issue
+                    function.name.name, dos_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(834) // CWE-834: Excessive Iteration
-                .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                .with_fix_suggestion(format!(
-                    "Fix unbounded operation in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(834) // CWE-834: Excessive Iteration
+                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                    .with_fix_suggestion(format!(
+                        "Fix unbounded operation in '{}'. \
                     Add pagination for large loops, implement maximum iteration limits, \
                     use pull pattern instead of push, add circuit breakers, batch operations.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -89,7 +91,11 @@ impl Detector for DosUnboundedOperationDetector {
 }
 
 impl DosUnboundedOperationDetector {
-    fn check_unbounded_operation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_unbounded_operation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -98,14 +104,13 @@ impl DosUnboundedOperationDetector {
 
         // Pattern 1: Loop over unbounded array
         let has_loop = func_source.contains("for") || func_source.contains("while");
-        let loops_over_storage = has_loop &&
-                                (func_source.contains(".length") ||
-                                 func_source.contains("[]"));
+        let loops_over_storage =
+            has_loop && (func_source.contains(".length") || func_source.contains("[]"));
 
-        let no_iteration_limit = loops_over_storage &&
-                                !func_source.contains("MAX_") &&
-                                !func_source.contains("require(") &&
-                                !func_source.contains("<=");
+        let no_iteration_limit = loops_over_storage
+            && !func_source.contains("MAX_")
+            && !func_source.contains("require(")
+            && !func_source.contains("<=");
 
         if no_iteration_limit {
             return Some(format!(

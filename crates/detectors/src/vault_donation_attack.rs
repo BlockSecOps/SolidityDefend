@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault donation attacks via direct token transfers
 pub struct VaultDonationAttackDetector {
@@ -57,27 +57,28 @@ impl Detector for VaultDonationAttackDetector {
                     "Function '{}' is vulnerable to vault donation attack. {} \
                     Attacker can manipulate share price by directly transferring tokens to vault, \
                     causing rounding errors that steal from depositors.",
-                    function.name.name,
-                    donation_issue
+                    function.name.name, donation_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_fix_suggestion(format!(
-                    "Protect '{}' from donation attack. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_fix_suggestion(format!(
+                        "Protect '{}' from donation attack. \
                     Solutions: (1) Track assets internally instead of using balanceOf, \
                     (2) Implement donation guards that track expected vs actual balance, \
                     (3) Use virtual shares/assets to make donations economically infeasible, \
                     (4) Require minimum initial deposits.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -93,7 +94,11 @@ impl Detector for VaultDonationAttackDetector {
 
 impl VaultDonationAttackDetector {
     /// Check for donation attack vulnerabilities
-    fn check_donation_vulnerability(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_donation_vulnerability(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -108,15 +113,15 @@ impl VaultDonationAttackDetector {
         }
 
         // Pattern 1: Uses balanceOf for asset calculation without internal accounting
-        let uses_balance_of = func_source.contains("balanceOf(address(this))") ||
-                             func_source.contains("token.balanceOf(address(this))") ||
-                             func_source.contains("asset.balanceOf(address(this))") ||
-                             func_source.contains(".balanceOf(address(this))");
+        let uses_balance_of = func_source.contains("balanceOf(address(this))")
+            || func_source.contains("token.balanceOf(address(this))")
+            || func_source.contains("asset.balanceOf(address(this))")
+            || func_source.contains(".balanceOf(address(this))");
 
-        let has_internal_accounting = func_source.contains("totalDeposited") ||
-                                     func_source.contains("internalBalance") ||
-                                     func_source.contains("trackedAssets") ||
-                                     func_source.contains("accountedBalance");
+        let has_internal_accounting = func_source.contains("totalDeposited")
+            || func_source.contains("internalBalance")
+            || func_source.contains("trackedAssets")
+            || func_source.contains("accountedBalance");
 
         if uses_balance_of && !has_internal_accounting {
             return Some(format!(
@@ -126,8 +131,8 @@ impl VaultDonationAttackDetector {
         }
 
         // Pattern 2: totalAssets() implementation that uses balance directly
-        let is_total_assets = function.name.name.to_lowercase().contains("totalassets") ||
-                             function.name.name == "totalAssets";
+        let is_total_assets = function.name.name.to_lowercase().contains("totalassets")
+            || function.name.name == "totalAssets";
 
         if is_total_assets && uses_balance_of && !has_internal_accounting {
             return Some(format!(
@@ -137,10 +142,9 @@ impl VaultDonationAttackDetector {
         }
 
         // Pattern 3: Share calculation using potentially manipulable balance
-        let calculates_shares = (func_source.contains("shares") ||
-                                func_source.contains("convertToShares")) &&
-                               (func_source.contains("totalAssets()") ||
-                                func_source.contains("totalAssets"));
+        let calculates_shares = (func_source.contains("shares")
+            || func_source.contains("convertToShares"))
+            && (func_source.contains("totalAssets()") || func_source.contains("totalAssets"));
 
         if calculates_shares && uses_balance_of && !has_internal_accounting {
             return Some(format!(
@@ -149,10 +153,10 @@ impl VaultDonationAttackDetector {
         }
 
         // Pattern 4: Missing donation guards or balance validation
-        let has_donation_guard = func_source.contains("expectedBalance") ||
-                                func_source.contains("require(asset.balanceOf(address(this)) ==") ||
-                                func_source.contains("donationGuard") ||
-                                func_source.contains("balanceCheck");
+        let has_donation_guard = func_source.contains("expectedBalance")
+            || func_source.contains("require(asset.balanceOf(address(this)) ==")
+            || func_source.contains("donationGuard")
+            || func_source.contains("balanceCheck");
 
         if (is_total_assets || calculates_shares) && uses_balance_of && !has_donation_guard {
             return Some(format!(
@@ -162,15 +166,15 @@ impl VaultDonationAttackDetector {
 
         // Pattern 5: Asset balance read without update tracking
         let reads_balance = func_source.contains(".balanceOf(");
-        let updates_tracking = func_source.contains("totalDeposited +=") ||
-                              func_source.contains("totalDeposited =") ||
-                              func_source.contains("internalBalance +=") ||
-                              func_source.contains("_updateBalance");
+        let updates_tracking = func_source.contains("totalDeposited +=")
+            || func_source.contains("totalDeposited =")
+            || func_source.contains("internalBalance +=")
+            || func_source.contains("_updateBalance");
 
-        let is_deposit_withdraw = function.name.name.to_lowercase().contains("deposit") ||
-                                 function.name.name.to_lowercase().contains("withdraw") ||
-                                 function.name.name.to_lowercase().contains("mint") ||
-                                 function.name.name.to_lowercase().contains("redeem");
+        let is_deposit_withdraw = function.name.name.to_lowercase().contains("deposit")
+            || function.name.name.to_lowercase().contains("withdraw")
+            || function.name.name.to_lowercase().contains("mint")
+            || function.name.name.to_lowercase().contains("redeem");
 
         if is_deposit_withdraw && reads_balance && !updates_tracking {
             return Some(format!(
@@ -180,13 +184,12 @@ impl VaultDonationAttackDetector {
         }
 
         // Pattern 6: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("donation") ||
-            func_source.contains("direct transfer") ||
-            func_source.contains("balance manipulation")) {
-            return Some(format!(
-                "Vault donation vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("donation")
+                || func_source.contains("direct transfer")
+                || func_source.contains("balance manipulation"))
+        {
+            return Some(format!("Vault donation vulnerability marker detected"));
         }
 
         None
@@ -197,19 +200,19 @@ impl VaultDonationAttackDetector {
         let name_lower = func_name.to_lowercase();
 
         // Check function name patterns
-        let vault_name_pattern = name_lower.contains("deposit") ||
-                                name_lower.contains("withdraw") ||
-                                name_lower.contains("mint") ||
-                                name_lower.contains("redeem") ||
-                                name_lower.contains("totalassets") ||
-                                name_lower.contains("converttoshares") ||
-                                name_lower.contains("converttoassets");
+        let vault_name_pattern = name_lower.contains("deposit")
+            || name_lower.contains("withdraw")
+            || name_lower.contains("mint")
+            || name_lower.contains("redeem")
+            || name_lower.contains("totalassets")
+            || name_lower.contains("converttoshares")
+            || name_lower.contains("converttoassets");
 
         // Check source patterns
-        let vault_source_pattern = func_source.contains("shares") ||
-                                  func_source.contains("totalSupply") ||
-                                  func_source.contains("totalAssets") ||
-                                  func_source.contains("balanceOf");
+        let vault_source_pattern = func_source.contains("shares")
+            || func_source.contains("totalSupply")
+            || func_source.contains("totalAssets")
+            || func_source.contains("balanceOf");
 
         vault_name_pattern || vault_source_pattern
     }

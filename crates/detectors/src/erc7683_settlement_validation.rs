@@ -5,8 +5,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SettlementValidationDetector {
     base: BaseDetector,
@@ -18,7 +18,8 @@ impl SettlementValidationDetector {
             base: BaseDetector::new(
                 DetectorId("erc7683-settlement-validation".to_string()),
                 "ERC-7683 Settlement Validation".to_string(),
-                "Detects missing nonce, deadline, and Permit2 validation in ERC-7683 settlements".to_string(),
+                "Detects missing nonce, deadline, and Permit2 validation in ERC-7683 settlements"
+                    .to_string(),
                 vec![DetectorCategory::CrossChain],
                 Severity::High,
             ),
@@ -27,19 +28,29 @@ impl SettlementValidationDetector {
 
     fn is_erc7683_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        let has_settlement_func = source.contains("fillorder") || source.contains("fill(") || source.contains("settle");
-        let has_order_struct = source.contains("crosschainorder") || source.contains("struct order");
-        let has_keywords = source.contains("crosschain") || source.contains("bridge") || source.contains("intent");
+        let has_settlement_func =
+            source.contains("fillorder") || source.contains("fill(") || source.contains("settle");
+        let has_order_struct =
+            source.contains("crosschainorder") || source.contains("struct order");
+        let has_keywords =
+            source.contains("crosschain") || source.contains("bridge") || source.contains("intent");
 
         (has_settlement_func && has_order_struct) || (has_settlement_func && has_keywords)
     }
 
     fn is_settlement_function(&self, func_name: &str) -> bool {
         let name = func_name.to_lowercase();
-        name.contains("fill") || name.contains("settle") || name.contains("resolve") || name.contains("open")
+        name.contains("fill")
+            || name.contains("settle")
+            || name.contains("resolve")
+            || name.contains("open")
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
 
         if !self.is_settlement_function(&function.name.name) {
@@ -50,8 +61,10 @@ impl SettlementValidationDetector {
         let source_lower = source.to_lowercase();
 
         // Check nonce validation
-        let has_nonce = source_lower.contains("nonce") &&
-            (source_lower.contains("used") || source_lower.contains("filled") || source_lower.contains("require"));
+        let has_nonce = source_lower.contains("nonce")
+            && (source_lower.contains("used")
+                || source_lower.contains("filled")
+                || source_lower.contains("require"));
 
         if !has_nonce {
             issues.push((
@@ -62,26 +75,32 @@ impl SettlementValidationDetector {
         }
 
         // Check deadline validation
-        let has_deadline = (source_lower.contains("deadline") || source_lower.contains("expir")) &&
-            source_lower.contains("timestamp");
+        let has_deadline = (source_lower.contains("deadline") || source_lower.contains("expir"))
+            && source_lower.contains("timestamp");
 
         if !has_deadline {
             issues.push((
                 format!("Missing deadline validation in '{}'", function.name.name),
                 Severity::High,
-                "Add deadline check: require(block.timestamp <= order.deadline, \"Expired\");".to_string()
+                "Add deadline check: require(block.timestamp <= order.deadline, \"Expired\");"
+                    .to_string(),
             ));
         }
 
         // Check Permit2 vs approve
-        let uses_permit2 = source_lower.contains("permit2") || source_lower.contains("permittransfer");
+        let uses_permit2 =
+            source_lower.contains("permit2") || source_lower.contains("permittransfer");
         let uses_approve = source_lower.contains(".approve(") && !uses_permit2;
 
         if uses_approve {
             issues.push((
-                format!("Using approve() instead of Permit2 in '{}'", function.name.name),
+                format!(
+                    "Using approve() instead of Permit2 in '{}'",
+                    function.name.name
+                ),
                 Severity::Medium,
-                "Use Permit2: PERMIT2.permitTransferFrom(permit, details, user, signature);".to_string()
+                "Use Permit2: PERMIT2.permitTransferFrom(permit, details, user, signature);"
+                    .to_string(),
             ));
         }
 
@@ -129,15 +148,17 @@ impl Detector for SettlementValidationDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    title,
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

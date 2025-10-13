@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct LiquidityPoolManipulationDetector {
     base: BaseDetector,
@@ -25,11 +25,19 @@ impl LiquidityPoolManipulationDetector {
 
     fn is_amm_pool(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("swap") || source.contains("addliquidity") || source.contains("removeliquidity")) &&
-        (source.contains("reserve") || source.contains("balance") || source.contains("liquidity"))
+        (source.contains("swap")
+            || source.contains("addliquidity")
+            || source.contains("removeliquidity"))
+            && (source.contains("reserve")
+                || source.contains("balance")
+                || source.contains("liquidity"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
         let source = &ctx.source_code;
@@ -38,9 +46,11 @@ impl LiquidityPoolManipulationDetector {
         // Check swap functions
         if name.contains("swap") {
             // Check for K-value validation (x * y = k invariant)
-            let has_k_check = (source_lower.contains("reserve0") && source_lower.contains("reserve1")) &&
-                (source_lower.contains("*") && source_lower.contains(">="));
-            let has_invariant = source_lower.contains("invariant") || source_lower.contains("constant");
+            let has_k_check = (source_lower.contains("reserve0")
+                && source_lower.contains("reserve1"))
+                && (source_lower.contains("*") && source_lower.contains(">="));
+            let has_invariant =
+                source_lower.contains("invariant") || source_lower.contains("constant");
 
             if !has_k_check && !has_invariant {
                 issues.push((
@@ -51,11 +61,11 @@ impl LiquidityPoolManipulationDetector {
             }
 
             // Check for flash loan manipulation protection
-            let has_reentrancy_guard = source_lower.contains("nonreentrant") ||
-                source_lower.contains("locked") ||
-                source_lower.contains("reentrancyguard");
-            let has_balance_check = source_lower.contains("balanceof(address(this))") ||
-                source_lower.contains("balance") && source_lower.contains("require");
+            let has_reentrancy_guard = source_lower.contains("nonreentrant")
+                || source_lower.contains("locked")
+                || source_lower.contains("reentrancyguard");
+            let has_balance_check = source_lower.contains("balanceof(address(this))")
+                || source_lower.contains("balance") && source_lower.contains("require");
 
             if !has_reentrancy_guard {
                 issues.push((
@@ -75,8 +85,10 @@ impl LiquidityPoolManipulationDetector {
 
             // Check for price manipulation via single-block oracle
             let has_twap = source_lower.contains("twap") || source_lower.contains("timeweighted");
-            let has_cumulative = source_lower.contains("cumulative") || source_lower.contains("price0cumulative");
-            let uses_spot_price = source_lower.contains("getamountout") && !has_twap && !has_cumulative;
+            let has_cumulative =
+                source_lower.contains("cumulative") || source_lower.contains("price0cumulative");
+            let uses_spot_price =
+                source_lower.contains("getamountout") && !has_twap && !has_cumulative;
 
             if uses_spot_price {
                 issues.push((
@@ -87,27 +99,29 @@ impl LiquidityPoolManipulationDetector {
             }
 
             // Check for slippage protection
-            let has_min_output = source_lower.contains("minamount") ||
-                source_lower.contains("amountoutmin") ||
-                (source_lower.contains("amount") && source_lower.contains(">="));
+            let has_min_output = source_lower.contains("minamount")
+                || source_lower.contains("amountoutmin")
+                || (source_lower.contains("amount") && source_lower.contains(">="));
 
             if !has_min_output {
                 issues.push((
                     "No slippage protection (frontrunning risk)".to_string(),
                     Severity::High,
-                    "Add slippage: require(amountOut >= amountOutMin, \"Insufficient output\");".to_string()
+                    "Add slippage: require(amountOut >= amountOutMin, \"Insufficient output\");"
+                        .to_string(),
                 ));
             }
 
             // Check for deadline validation
-            let has_deadline = source_lower.contains("deadline") &&
-                (source_lower.contains("block.timestamp") || source_lower.contains("timestamp"));
+            let has_deadline = source_lower.contains("deadline")
+                && (source_lower.contains("block.timestamp") || source_lower.contains("timestamp"));
 
             if !has_deadline {
                 issues.push((
                     "Missing deadline parameter (stuck transaction risk)".to_string(),
                     Severity::Medium,
-                    "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");".to_string()
+                    "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");"
+                        .to_string(),
                 ));
             }
         }
@@ -115,8 +129,8 @@ impl LiquidityPoolManipulationDetector {
         // Check liquidity addition/removal
         if name.contains("addliquidity") || name.contains("mint") {
             // Check for minimum liquidity lock
-            let has_min_liquidity = source_lower.contains("minimum_liquidity") ||
-                (source_lower.contains("1000") && source_lower.contains("mint"));
+            let has_min_liquidity = source_lower.contains("minimum_liquidity")
+                || (source_lower.contains("1000") && source_lower.contains("mint"));
 
             if name.contains("addliquidity") && !has_min_liquidity {
                 issues.push((
@@ -127,8 +141,9 @@ impl LiquidityPoolManipulationDetector {
             }
 
             // Check for balanced liquidity provision
-            let has_ratio_check = source_lower.contains("amount0") && source_lower.contains("amount1") &&
-                (source_lower.contains("reserve0") || source_lower.contains("reserve1"));
+            let has_ratio_check = source_lower.contains("amount0")
+                && source_lower.contains("amount1")
+                && (source_lower.contains("reserve0") || source_lower.contains("reserve1"));
 
             if !has_ratio_check {
                 issues.push((
@@ -141,8 +156,9 @@ impl LiquidityPoolManipulationDetector {
 
         if name.contains("removeliquidity") || name.contains("burn") {
             // Check for sandwich attack protection
-            let has_min_amounts = (source_lower.contains("amount0min") && source_lower.contains("amount1min")) ||
-                source_lower.contains("minamount");
+            let has_min_amounts = (source_lower.contains("amount0min")
+                && source_lower.contains("amount1min"))
+                || source_lower.contains("minamount");
 
             if !has_min_amounts {
                 issues.push((
@@ -156,8 +172,8 @@ impl LiquidityPoolManipulationDetector {
         // Check price getter functions
         if name.contains("getprice") || name.contains("getamountout") {
             // Check for flash loan resistant pricing
-            let has_block_check = source_lower.contains("block.timestamp") ||
-                source_lower.contains("block.number");
+            let has_block_check =
+                source_lower.contains("block.timestamp") || source_lower.contains("block.number");
 
             if !has_block_check {
                 issues.push((
@@ -170,15 +186,16 @@ impl LiquidityPoolManipulationDetector {
 
         // Check for reserve synchronization
         if name.contains("sync") || name.contains("skim") {
-            let has_access_control = source_lower.contains("onlyowner") ||
-                source_lower.contains("require") ||
-                source_lower.contains("internal");
+            let has_access_control = source_lower.contains("onlyowner")
+                || source_lower.contains("require")
+                || source_lower.contains("internal");
 
             if name.contains("skim") && !has_access_control {
                 issues.push((
                     "Public skim function (reserve manipulation risk)".to_string(),
                     Severity::Medium,
-                    "Add access control: function skim() external onlyOwner or make it internal".to_string()
+                    "Add access control: function skim() external onlyOwner or make it internal"
+                        .to_string(),
                 ));
             }
         }
@@ -228,15 +245,17 @@ impl Detector for LiquidityPoolManipulationDetector {
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    format!("{} in '{}'", message, function.name.name),
-                    function.name.location.start().line() as u32,
-                    0,
-                    20,
-                    severity,
-                )
-                .with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        format!("{} in '{}'", message, function.name.name),
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
 
                 findings.push(finding);
             }

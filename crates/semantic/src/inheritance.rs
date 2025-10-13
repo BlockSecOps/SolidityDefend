@@ -1,11 +1,11 @@
-use std::collections::{HashMap, HashSet, VecDeque};
-use petgraph::{Graph, Direction};
-use petgraph::graph::{NodeIndex, EdgeIndex};
-use petgraph::visit::{EdgeRef, IntoNodeReferences};
 use anyhow::{Result, anyhow};
+use petgraph::graph::{EdgeIndex, NodeIndex};
+use petgraph::visit::{EdgeRef, IntoNodeReferences};
+use petgraph::{Direction, Graph};
+use std::collections::{HashMap, HashSet, VecDeque};
 
-use ast::{Contract, InheritanceSpecifier, SourceLocation, ContractType};
-use crate::symbols::{SymbolTable, Scope};
+use crate::symbols::{Scope, SymbolTable};
+use ast::{Contract, ContractType, InheritanceSpecifier, SourceLocation};
 
 /// Node data for the inheritance graph
 #[derive(Debug, Clone, PartialEq)]
@@ -57,7 +57,10 @@ impl InheritanceGraph {
 
         // Check for duplicate contracts
         if self.name_to_node.contains_key(&node_data.name) {
-            return Err(anyhow!("Contract '{}' already exists in inheritance graph", node_data.name));
+            return Err(anyhow!(
+                "Contract '{}' already exists in inheritance graph",
+                node_data.name
+            ));
         }
 
         let node_index = self.graph.add_node(node_data.clone());
@@ -70,19 +73,30 @@ impl InheritanceGraph {
     }
 
     /// Add inheritance relationship between child and parent contracts
-    pub fn add_inheritance(&mut self, child_name: &str, parent_spec: &InheritanceSpecifier) -> Result<EdgeIndex> {
+    pub fn add_inheritance(
+        &mut self,
+        child_name: &str,
+        parent_spec: &InheritanceSpecifier,
+    ) -> Result<EdgeIndex> {
         let parent_name = parent_spec.base.name;
 
         // Find child and parent nodes
-        let child_node = self.name_to_node.get(child_name)
+        let child_node = self
+            .name_to_node
+            .get(child_name)
             .ok_or_else(|| anyhow!("Child contract '{}' not found in graph", child_name))?;
 
-        let parent_node = self.name_to_node.get(parent_name)
+        let parent_node = self
+            .name_to_node
+            .get(parent_name)
             .ok_or_else(|| anyhow!("Parent contract '{}' not found in graph", parent_name))?;
 
         // Check for self-inheritance
         if child_node == parent_node {
-            return Err(anyhow!("Contract '{}' cannot inherit from itself", child_name));
+            return Err(anyhow!(
+                "Contract '{}' cannot inherit from itself",
+                child_name
+            ));
         }
 
         // Create edge data
@@ -101,8 +115,11 @@ impl InheritanceGraph {
         if self.has_circular_inheritance(*child_node)? {
             // Remove the edge and return error
             self.graph.remove_edge(edge_index);
-            return Err(anyhow!("Adding inheritance from '{}' to '{}' would create circular inheritance",
-                              child_name, parent_name));
+            return Err(anyhow!(
+                "Adding inheritance from '{}' to '{}' would create circular inheritance",
+                child_name,
+                parent_name
+            ));
         }
 
         Ok(edge_index)
@@ -117,7 +134,12 @@ impl InheritanceGraph {
     }
 
     /// Depth-first search to detect cycles in inheritance
-    fn dfs_cycle_check(&self, node: NodeIndex, visited: &mut HashSet<NodeIndex>, path: &mut HashSet<NodeIndex>) -> Result<bool> {
+    fn dfs_cycle_check(
+        &self,
+        node: NodeIndex,
+        visited: &mut HashSet<NodeIndex>,
+        path: &mut HashSet<NodeIndex>,
+    ) -> Result<bool> {
         if path.contains(&node) {
             return Ok(true); // Cycle detected
         }
@@ -143,7 +165,9 @@ impl InheritanceGraph {
 
     /// Get all direct parent contracts of a given contract
     pub fn get_direct_parents(&self, contract_name: &str) -> Result<Vec<&InheritanceNode>> {
-        let node_index = self.name_to_node.get(contract_name)
+        let node_index = self
+            .name_to_node
+            .get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         let mut parents = Vec::new();
@@ -159,7 +183,9 @@ impl InheritanceGraph {
 
     /// Get all ancestors (transitive closure of parents) of a given contract
     pub fn get_all_ancestors(&self, contract_name: &str) -> Result<Vec<&InheritanceNode>> {
-        let node_index = self.name_to_node.get(contract_name)
+        let node_index = self
+            .name_to_node
+            .get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         let mut ancestors = Vec::new();
@@ -192,7 +218,9 @@ impl InheritanceGraph {
 
     /// Get all direct children of a given contract
     pub fn get_direct_children(&self, contract_name: &str) -> Result<Vec<&InheritanceNode>> {
-        let node_index = self.name_to_node.get(contract_name)
+        let node_index = self
+            .name_to_node
+            .get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         let mut children = Vec::new();
@@ -208,7 +236,9 @@ impl InheritanceGraph {
 
     /// Get all descendants (transitive closure of children) of a given contract
     pub fn get_all_descendants(&self, contract_name: &str) -> Result<Vec<&InheritanceNode>> {
-        let node_index = self.name_to_node.get(contract_name)
+        let node_index = self
+            .name_to_node
+            .get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         let mut descendants = Vec::new();
@@ -246,13 +276,17 @@ impl InheritanceGraph {
         }
 
         let ancestors = self.get_all_ancestors(child_name)?;
-        Ok(ancestors.iter().any(|ancestor| ancestor.name == ancestor_name))
+        Ok(ancestors
+            .iter()
+            .any(|ancestor| ancestor.name == ancestor_name))
     }
 
     /// Get the linearized inheritance order (C3 linearization) for a contract
     /// This determines the order in which parent contracts are considered for method resolution
     pub fn get_linearized_inheritance(&self, contract_name: &str) -> Result<Vec<String>> {
-        let _node_index = self.name_to_node.get(contract_name)
+        let _node_index = self
+            .name_to_node
+            .get(contract_name)
             .ok_or_else(|| anyhow!("Contract '{}' not found", contract_name))?;
 
         // Simplified linearization - in practice, should implement C3 linearization
@@ -269,8 +303,13 @@ impl InheritanceGraph {
     }
 
     /// Find the lowest common ancestor of two contracts
-    pub fn find_lowest_common_ancestor(&self, contract1: &str, contract2: &str) -> Result<Option<String>> {
-        let ancestors1: HashSet<String> = self.get_all_ancestors(contract1)?
+    pub fn find_lowest_common_ancestor(
+        &self,
+        contract1: &str,
+        contract2: &str,
+    ) -> Result<Option<String>> {
+        let ancestors1: HashSet<String> = self
+            .get_all_ancestors(contract1)?
             .iter()
             .map(|a| a.name.clone())
             .collect();
@@ -289,7 +328,8 @@ impl InheritanceGraph {
 
     /// Get contract information by name
     pub fn get_contract_info(&self, contract_name: &str) -> Option<&InheritanceNode> {
-        self.name_to_node.get(contract_name)
+        self.name_to_node
+            .get(contract_name)
             .and_then(|&node_index| self.graph.node_weight(node_index))
     }
 
@@ -303,7 +343,10 @@ impl InheritanceGraph {
         for node_index in self.graph.node_indices() {
             if self.has_circular_inheritance(node_index)? {
                 if let Some(node_data) = self.graph.node_weight(node_index) {
-                    return Err(anyhow!("Circular inheritance detected involving contract '{}'", node_data.name));
+                    return Err(anyhow!(
+                        "Circular inheritance detected involving contract '{}'",
+                        node_data.name
+                    ));
                 }
             }
         }
@@ -347,14 +390,21 @@ impl InheritanceGraph {
                 ContractType::Interface => "ellipse",
                 ContractType::Library => "diamond",
             };
-            dot.push_str(&format!("  {} [label=\"{}\" shape={}];\n",
-                                 node_index.index(), node_data.name, shape));
+            dot.push_str(&format!(
+                "  {} [label=\"{}\" shape={}];\n",
+                node_index.index(),
+                node_data.name,
+                shape
+            ));
         }
 
         // Add edges
         for edge in self.graph.edge_references() {
-            dot.push_str(&format!("  {} -> {};\n",
-                                 edge.source().index(), edge.target().index()));
+            dot.push_str(&format!(
+                "  {} -> {};\n",
+                edge.source().index(),
+                edge.target().index()
+            ));
         }
 
         dot.push_str("}\n");
@@ -408,13 +458,18 @@ impl<'a> InheritanceGraphBuilder<'a> {
     }
 
     /// Add a specific contract and its inheritance relationships
-    pub fn add_contract_with_inheritance(&mut self, contract: &Contract, scope: Scope) -> Result<()> {
+    pub fn add_contract_with_inheritance(
+        &mut self,
+        contract: &Contract,
+        scope: Scope,
+    ) -> Result<()> {
         // Add the contract node
         self.graph.add_contract(contract, scope)?;
 
         // Add inheritance relationships
         for inheritance_spec in &contract.inheritance {
-            self.graph.add_inheritance(contract.name.name, inheritance_spec)?;
+            self.graph
+                .add_inheritance(contract.name.name, inheritance_spec)?;
         }
 
         Ok(())

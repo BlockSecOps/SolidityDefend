@@ -1,15 +1,15 @@
 /// Taint sanitizers - mechanisms that clean or validate tainted data
 #[derive(Debug, Clone, PartialEq, Hash)]
 pub enum TaintSanitizer {
-    RequireStatement,     // require()
-    AssertStatement,      // assert()
-    RevertStatement,      // revert()
-    AccessControl,        // onlyOwner, onlyAdmin, etc.
-    BoundsCheck,          // Array bounds checking
-    NullCheck,           // Null/zero address checking
-    TypeCast,            // Type conversions
-    Hashing,             // keccak256, sha256, etc.
-    Custom(String),      // Custom sanitizer
+    RequireStatement, // require()
+    AssertStatement,  // assert()
+    RevertStatement,  // revert()
+    AccessControl,    // onlyOwner, onlyAdmin, etc.
+    BoundsCheck,      // Array bounds checking
+    NullCheck,        // Null/zero address checking
+    TypeCast,         // Type conversions
+    Hashing,          // keccak256, sha256, etc.
+    Custom(String),   // Custom sanitizer
 }
 
 /// Detector for taint sanitizers
@@ -33,7 +33,10 @@ impl SanitizerDetector {
             if line.contains("revert(") {
                 sanitizers.push((line_number, TaintSanitizer::RevertStatement));
             }
-            if line.contains("onlyOwner") || line.contains("onlyAdmin") || line.contains("restricted") {
+            if line.contains("onlyOwner")
+                || line.contains("onlyAdmin")
+                || line.contains("restricted")
+            {
                 sanitizers.push((line_number, TaintSanitizer::AccessControl));
             }
             if Self::has_bounds_check(line) {
@@ -51,13 +54,18 @@ impl SanitizerDetector {
     }
 
     fn has_bounds_check(line: &str) -> bool {
-        line.contains("< length") || line.contains("> 0") ||
-        line.contains("<=") || line.contains(">=") ||
-        line.contains("bounds") || line.contains("range")
+        line.contains("< length")
+            || line.contains("> 0")
+            || line.contains("<=")
+            || line.contains(">=")
+            || line.contains("bounds")
+            || line.contains("range")
     }
 
     fn has_null_check(line: &str) -> bool {
-        line.contains("!= address(0)") || line.contains("!= 0") ||
-        line.contains("== address(0)") || line.contains("== 0")
+        line.contains("!= address(0)")
+            || line.contains("!= 0")
+            || line.contains("== address(0)")
+            || line.contains("== 0")
     }
 }

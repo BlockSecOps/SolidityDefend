@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for liquidity bootstrapping pool (LBP) manipulation vulnerabilities
 pub struct LiquidityBootstrappingAbuseDetector {
@@ -57,26 +57,27 @@ impl Detector for LiquidityBootstrappingAbuseDetector {
                     "Function '{}' has liquidity bootstrapping pool manipulation risk. {} \
                     LBP weight manipulation can cause unfair token distribution, \
                     enable whale advantage, or allow price manipulation during sale.",
-                    function.name.name,
-                    lbp_issue
+                    function.name.name, lbp_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_cwe(682) // CWE-682: Incorrect Calculation
-                .with_fix_suggestion(format!(
-                    "Secure LBP implementation in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_fix_suggestion(format!(
+                        "Secure LBP implementation in '{}'. \
                     Add: (1) Gradual weight transition with block-based limits, \
                     (2) Maximum purchase caps per address, (3) Cooldown between weight updates, \
                     (4) Minimum duration enforcement, (5) Purchase limits per transaction.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -92,7 +93,11 @@ impl Detector for LiquidityBootstrappingAbuseDetector {
 
 impl LiquidityBootstrappingAbuseDetector {
     /// Check for LBP manipulation vulnerabilities
-    fn check_lbp_abuse(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_lbp_abuse(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -100,26 +105,26 @@ impl LiquidityBootstrappingAbuseDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify LBP-related functions
-        let is_lbp_function = func_source.contains("weight") ||
-                             func_source.contains("bootstrap") ||
-                             function.name.name.to_lowercase().contains("weight") ||
-                             function.name.name.to_lowercase().contains("lbp") ||
-                             func_source.contains("updateWeight");
+        let is_lbp_function = func_source.contains("weight")
+            || func_source.contains("bootstrap")
+            || function.name.name.to_lowercase().contains("weight")
+            || function.name.name.to_lowercase().contains("lbp")
+            || func_source.contains("updateWeight");
 
         if !is_lbp_function {
             return None;
         }
 
         // Pattern 1: Weight update without rate limiting
-        let updates_weight = func_source.contains("weight =") ||
-                            func_source.contains("setWeight") ||
-                            func_source.contains("updateWeight");
+        let updates_weight = func_source.contains("weight =")
+            || func_source.contains("setWeight")
+            || func_source.contains("updateWeight");
 
-        let lacks_rate_limit = updates_weight &&
-                              !func_source.contains("lastUpdate") &&
-                              !func_source.contains("block.timestamp") &&
-                              !func_source.contains("timeSince") &&
-                              !func_source.contains("delay");
+        let lacks_rate_limit = updates_weight
+            && !func_source.contains("lastUpdate")
+            && !func_source.contains("block.timestamp")
+            && !func_source.contains("timeSince")
+            && !func_source.contains("delay");
 
         if lacks_rate_limit {
             return Some(format!(
@@ -129,11 +134,11 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 2: No maximum weight change per update
-        let lacks_max_change = updates_weight &&
-                              !func_source.contains("MAX_WEIGHT_CHANGE") &&
-                              !func_source.contains("maxDelta") &&
-                              !func_source.contains("require(delta") &&
-                              !func_source.contains("weightDelta");
+        let lacks_max_change = updates_weight
+            && !func_source.contains("MAX_WEIGHT_CHANGE")
+            && !func_source.contains("maxDelta")
+            && !func_source.contains("require(delta")
+            && !func_source.contains("weightDelta");
 
         if lacks_max_change {
             return Some(format!(
@@ -143,17 +148,17 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 3: Purchase function without per-address cap
-        let is_purchase = func_source.contains("buy") ||
-                         func_source.contains("purchase") ||
-                         func_source.contains("swap") ||
-                         function.name.name.to_lowercase().contains("buy");
+        let is_purchase = func_source.contains("buy")
+            || func_source.contains("purchase")
+            || func_source.contains("swap")
+            || function.name.name.to_lowercase().contains("buy");
 
-        let lacks_purchase_cap = is_purchase &&
-                                is_lbp_function &&
-                                !func_source.contains("maxPurchase") &&
-                                !func_source.contains("purchaseCap") &&
-                                !func_source.contains("bought[msg.sender]") &&
-                                !func_source.contains("userPurchases");
+        let lacks_purchase_cap = is_purchase
+            && is_lbp_function
+            && !func_source.contains("maxPurchase")
+            && !func_source.contains("purchaseCap")
+            && !func_source.contains("bought[msg.sender]")
+            && !func_source.contains("userPurchases");
 
         if lacks_purchase_cap {
             return Some(format!(
@@ -163,19 +168,19 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 4: No minimum LBP duration enforcement
-        let is_start_function = func_source.contains("start") ||
-                               function.name.name.to_lowercase().contains("start") ||
-                               func_source.contains("initialize");
+        let is_start_function = func_source.contains("start")
+            || function.name.name.to_lowercase().contains("start")
+            || func_source.contains("initialize");
 
-        let is_end_function = func_source.contains("end") ||
-                             func_source.contains("finalize") ||
-                             function.name.name.to_lowercase().contains("end");
+        let is_end_function = func_source.contains("end")
+            || func_source.contains("finalize")
+            || function.name.name.to_lowercase().contains("end");
 
-        let lacks_duration = (is_start_function || is_end_function) &&
-                            is_lbp_function &&
-                            !func_source.contains("MINIMUM_DURATION") &&
-                            !func_source.contains("minDuration") &&
-                            !func_source.contains("require(block.timestamp");
+        let lacks_duration = (is_start_function || is_end_function)
+            && is_lbp_function
+            && !func_source.contains("MINIMUM_DURATION")
+            && !func_source.contains("minDuration")
+            && !func_source.contains("require(block.timestamp");
 
         if lacks_duration {
             return Some(format!(
@@ -185,15 +190,14 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 5: Weight transitions not gradual/linear
-        let has_weight_calculation = updates_weight &&
-                                    (func_source.contains("startWeight") ||
-                                     func_source.contains("endWeight"));
+        let has_weight_calculation = updates_weight
+            && (func_source.contains("startWeight") || func_source.contains("endWeight"));
 
-        let lacks_gradual_transition = has_weight_calculation &&
-                                      !func_source.contains("block.timestamp") &&
-                                      !func_source.contains("elapsed") &&
-                                      !func_source.contains("progress") &&
-                                      !func_source.contains("* (");
+        let lacks_gradual_transition = has_weight_calculation
+            && !func_source.contains("block.timestamp")
+            && !func_source.contains("elapsed")
+            && !func_source.contains("progress")
+            && !func_source.contains("* (");
 
         if lacks_gradual_transition {
             return Some(format!(
@@ -205,10 +209,10 @@ impl LiquidityBootstrappingAbuseDetector {
         // Pattern 6: No transaction size limit during LBP
         let is_swap_in_lbp = is_purchase || (is_lbp_function && func_source.contains("amount"));
 
-        let lacks_tx_limit = is_swap_in_lbp &&
-                            !func_source.contains("MAX_AMOUNT") &&
-                            !func_source.contains("maxTradeSize") &&
-                            !func_source.contains("require(amount <");
+        let lacks_tx_limit = is_swap_in_lbp
+            && !func_source.contains("MAX_AMOUNT")
+            && !func_source.contains("maxTradeSize")
+            && !func_source.contains("require(amount <");
 
         if lacks_tx_limit {
             return Some(format!(
@@ -218,14 +222,13 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 7: Owner can update weights at will
-        let has_owner_control = updates_weight &&
-                               (func_source.contains("onlyOwner") ||
-                                func_source.contains("onlyAdmin"));
+        let has_owner_control = updates_weight
+            && (func_source.contains("onlyOwner") || func_source.contains("onlyAdmin"));
 
-        let lacks_timelock = has_owner_control &&
-                            !func_source.contains("timelock") &&
-                            !func_source.contains("proposedAt") &&
-                            !func_source.contains("delay");
+        let lacks_timelock = has_owner_control
+            && !func_source.contains("timelock")
+            && !func_source.contains("proposedAt")
+            && !func_source.contains("delay");
 
         if lacks_timelock {
             return Some(format!(
@@ -235,13 +238,12 @@ impl LiquidityBootstrappingAbuseDetector {
         }
 
         // Pattern 8: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("LBP") ||
-            func_source.contains("liquidity bootstrap") ||
-            func_source.contains("weight manipulation")) {
-            return Some(format!(
-                "LBP manipulation vulnerability marker detected"
-            ));
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("LBP")
+                || func_source.contains("liquidity bootstrap")
+                || func_source.contains("weight manipulation"))
+        {
+            return Some(format!("LBP manipulation vulnerability marker detected"));
         }
 
         None

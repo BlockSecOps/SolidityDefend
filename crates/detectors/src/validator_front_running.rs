@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for validator front-running vulnerabilities
 pub struct ValidatorFrontRunningDetector {
@@ -56,8 +56,7 @@ impl Detector for ValidatorFrontRunningDetector {
                 let message = format!(
                     "Function '{}' has validator front-running vulnerability. {} \
                     Validators can observe pending transactions and extract value by front-running users.",
-                    function.name.name,
-                    frontrun_issue
+                    function.name.name, frontrun_issue
                 );
 
                 let finding = self.base.create_finding(
@@ -91,7 +90,11 @@ impl Detector for ValidatorFrontRunningDetector {
 
 impl ValidatorFrontRunningDetector {
     /// Check for validator front-running vulnerabilities
-    fn check_validator_frontrunning(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_validator_frontrunning(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,25 +102,25 @@ impl ValidatorFrontRunningDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check if function involves value-extractable operations
-        let is_value_operation = func_source.contains("stake") ||
-                                func_source.contains("reward") ||
-                                func_source.contains("withdraw") ||
-                                func_source.contains("claim") ||
-                                func_source.contains("swap");
+        let is_value_operation = func_source.contains("stake")
+            || func_source.contains("reward")
+            || func_source.contains("withdraw")
+            || func_source.contains("claim")
+            || func_source.contains("swap");
 
         if !is_value_operation {
             return None;
         }
 
         // Pattern 1: Validator selection visible before execution
-        let selects_validator = func_source.contains("selectValidator") ||
-                               func_source.contains("chooseValidator") ||
-                               func_source.contains("assignValidator");
+        let selects_validator = func_source.contains("selectValidator")
+            || func_source.contains("chooseValidator")
+            || func_source.contains("assignValidator");
 
-        let no_commitment = selects_validator &&
-                           !func_source.contains("commit") &&
-                           !func_source.contains("hash") &&
-                           !func_source.contains("reveal");
+        let no_commitment = selects_validator
+            && !func_source.contains("commit")
+            && !func_source.contains("hash")
+            && !func_source.contains("reveal");
 
         if no_commitment {
             return Some(format!(
@@ -127,14 +130,14 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 2: Reward distribution without anti-frontrun protection
-        let distributes_rewards = func_source.contains("distribute") ||
-                                 func_source.contains("reward") ||
-                                 function.name.name.to_lowercase().contains("reward");
+        let distributes_rewards = func_source.contains("distribute")
+            || func_source.contains("reward")
+            || function.name.name.to_lowercase().contains("reward");
 
-        let no_protection = distributes_rewards &&
-                           !func_source.contains("commit") &&
-                           !func_source.contains("private") &&
-                           !func_source.contains("encrypted");
+        let no_protection = distributes_rewards
+            && !func_source.contains("commit")
+            && !func_source.contains("private")
+            && !func_source.contains("encrypted");
 
         if no_protection {
             return Some(format!(
@@ -144,13 +147,13 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 3: Staking without validator rotation
-        let is_staking = func_source.contains("stake") ||
-                        function.name.name.to_lowercase().contains("stake");
+        let is_staking =
+            func_source.contains("stake") || function.name.name.to_lowercase().contains("stake");
 
-        let no_rotation = is_staking &&
-                         !func_source.contains("rotate") &&
-                         !func_source.contains("shuffle") &&
-                         !func_source.contains("random");
+        let no_rotation = is_staking
+            && !func_source.contains("rotate")
+            && !func_source.contains("shuffle")
+            && !func_source.contains("random");
 
         if no_rotation {
             return Some(format!(
@@ -160,14 +163,14 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 4: Price-sensitive operations without sequencing
-        let is_price_sensitive = func_source.contains("price") ||
-                                func_source.contains("amount") ||
-                                func_source.contains("slippage");
+        let is_price_sensitive = func_source.contains("price")
+            || func_source.contains("amount")
+            || func_source.contains("slippage");
 
-        let no_fair_sequencing = is_price_sensitive &&
-                                is_value_operation &&
-                                !func_source.contains("batch") &&
-                                !func_source.contains("auction");
+        let no_fair_sequencing = is_price_sensitive
+            && is_value_operation
+            && !func_source.contains("batch")
+            && !func_source.contains("auction");
 
         if no_fair_sequencing {
             return Some(format!(
@@ -177,13 +180,13 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 5: Validator can observe withdrawal amounts
-        let is_withdrawal = func_source.contains("withdraw") ||
-                           function.name.name.to_lowercase().contains("withdraw");
+        let is_withdrawal = func_source.contains("withdraw")
+            || function.name.name.to_lowercase().contains("withdraw");
 
-        let withdrawal_visible = is_withdrawal &&
-                                func_source.contains("amount") &&
-                                !func_source.contains("private") &&
-                                !func_source.contains("encrypted");
+        let withdrawal_visible = is_withdrawal
+            && func_source.contains("amount")
+            && !func_source.contains("private")
+            && !func_source.contains("encrypted");
 
         if withdrawal_visible {
             return Some(format!(
@@ -193,14 +196,14 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 6: No MEV redistribution mechanism
-        let generates_mev = func_source.contains("liquidat") ||
-                           func_source.contains("arbitrage") ||
-                           func_source.contains("swap");
+        let generates_mev = func_source.contains("liquidat")
+            || func_source.contains("arbitrage")
+            || func_source.contains("swap");
 
-        let no_mev_sharing = generates_mev &&
-                            !func_source.contains("redistribute") &&
-                            !func_source.contains("share") &&
-                            !func_source.contains("burn");
+        let no_mev_sharing = generates_mev
+            && !func_source.contains("redistribute")
+            && !func_source.contains("share")
+            && !func_source.contains("burn");
 
         if no_mev_sharing {
             return Some(format!(
@@ -210,12 +213,11 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 7: Validator can see claim intentions
-        let is_claim = func_source.contains("claim") ||
-                      function.name.name.to_lowercase().contains("claim");
+        let is_claim =
+            func_source.contains("claim") || function.name.name.to_lowercase().contains("claim");
 
-        let claim_visible = is_claim &&
-                           !func_source.contains("commit") &&
-                           !func_source.contains("signature");
+        let claim_visible =
+            is_claim && !func_source.contains("commit") && !func_source.contains("signature");
 
         if claim_visible {
             return Some(format!(
@@ -225,14 +227,14 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 8: Continuous trading instead of batch auctions
-        let is_trading = func_source.contains("trade") ||
-                        func_source.contains("swap") ||
-                        func_source.contains("exchange");
+        let is_trading = func_source.contains("trade")
+            || func_source.contains("swap")
+            || func_source.contains("exchange");
 
-        let continuous_trading = is_trading &&
-                                !func_source.contains("batch") &&
-                                !func_source.contains("auction") &&
-                                !func_source.contains("round");
+        let continuous_trading = is_trading
+            && !func_source.contains("batch")
+            && !func_source.contains("auction")
+            && !func_source.contains("round");
 
         if continuous_trading {
             return Some(format!(
@@ -242,13 +244,12 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 9: No transaction ordering constraints
-        let has_ordering_constraint = func_source.contains("sequence") ||
-                                     func_source.contains("order") ||
-                                     func_source.contains("nonce");
+        let has_ordering_constraint = func_source.contains("sequence")
+            || func_source.contains("order")
+            || func_source.contains("nonce");
 
-        let no_ordering = is_value_operation &&
-                         !has_ordering_constraint &&
-                         func_source.contains("public");
+        let no_ordering =
+            is_value_operation && !has_ordering_constraint && func_source.contains("public");
 
         if no_ordering {
             return Some(format!(
@@ -258,13 +259,11 @@ impl ValidatorFrontRunningDetector {
         }
 
         // Pattern 10: Validator priority in queue
-        let has_queue = func_source.contains("queue") ||
-                       func_source.contains("Queue");
+        let has_queue = func_source.contains("queue") || func_source.contains("Queue");
 
-        let validator_priority = has_queue &&
-                                (func_source.contains("validator") ||
-                                 func_source.contains("isValidator")) &&
-                                !func_source.contains("fair");
+        let validator_priority = has_queue
+            && (func_source.contains("validator") || func_source.contains("isValidator"))
+            && !func_source.contains("fair");
 
         if validator_priority {
             return Some(format!(

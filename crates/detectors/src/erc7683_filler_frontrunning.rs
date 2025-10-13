@@ -3,8 +3,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct FillerFrontrunningDetector {
     base: BaseDetector,
@@ -25,11 +25,15 @@ impl FillerFrontrunningDetector {
 
     fn is_erc7683_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("fillorder") || source.contains("settle")) &&
-        (source.contains("crosschain") || source.contains("bridge"))
+        (source.contains("fillorder") || source.contains("settle"))
+            && (source.contains("crosschain") || source.contains("bridge"))
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let name = function.name.name.to_lowercase();
 
@@ -39,29 +43,35 @@ impl FillerFrontrunningDetector {
 
         let source = &ctx.source_code.to_lowercase();
 
-        let has_slippage = (source.contains("minoutput") || source.contains("minamount")) ||
-            (source.contains(">=") && source.contains("min"));
+        let has_slippage = (source.contains("minoutput") || source.contains("minamount"))
+            || (source.contains(">=") && source.contains("min"));
 
-        let has_auth = source.contains("onlyauthorized") || source.contains("onlyfiller") ||
-            source.contains("onlyrole") || source.contains("authorized[msg.sender]");
+        let has_auth = source.contains("onlyauthorized")
+            || source.contains("onlyfiller")
+            || source.contains("onlyrole")
+            || source.contains("authorized[msg.sender]");
 
         if !has_slippage && !has_auth {
             issues.push((
-                format!("Function '{}' vulnerable to front-running and MEV", function.name.name),
+                format!(
+                    "Function '{}' vulnerable to front-running and MEV",
+                    function.name.name
+                ),
                 Severity::Critical,
-                "Add slippage protection AND filler authorization".to_string()
+                "Add slippage protection AND filler authorization".to_string(),
             ));
         } else if !has_slippage {
             issues.push((
                 format!("Missing slippage protection in '{}'", function.name.name),
                 Severity::High,
-                "Add: require(outputAmount >= minOutputAmount);".to_string()
+                "Add: require(outputAmount >= minOutputAmount);".to_string(),
             ));
         } else if !has_auth {
             issues.push((
                 format!("Missing filler authorization in '{}'", function.name.name),
                 Severity::High,
-                "Add: modifier onlyAuthorizedFiller { require(authorizedFillers[msg.sender]); _; }".to_string()
+                "Add: modifier onlyAuthorizedFiller { require(authorizedFillers[msg.sender]); _; }"
+                    .to_string(),
             ));
         }
 
@@ -109,7 +119,16 @@ impl Detector for FillerFrontrunningDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(ctx, title, function.name.location.start().line() as u32, 0, 20, severity)
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

@@ -1,15 +1,8 @@
-pub mod performance_comparison;
 pub mod benchmark_runner;
+pub mod performance_comparison;
 
 pub use performance_comparison::{
-    PerformanceBenchmark,
-    PerformanceMetrics,
-    BenchmarkResult,
-    TestDataset,
-    ComplexityLevel
+    BenchmarkResult, ComplexityLevel, PerformanceBenchmark, PerformanceMetrics, TestDataset,
 };
 
-pub use benchmark_runner::{
-    BenchmarkRunner,
-    run_performance_benchmarks
-};
+pub use benchmark_runner::{BenchmarkRunner, run_performance_benchmarks};

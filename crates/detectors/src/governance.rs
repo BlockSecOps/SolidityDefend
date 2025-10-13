@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{Detector, DetectorCategory};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity, Confidence, SourceLocation};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity, SourceLocation};
 use ast;
 /// Governance vulnerability detector that implements the Detector trait
 pub struct GovernanceDetector;
@@ -27,7 +27,11 @@ impl Detector for GovernanceDetector {
     }
 
     fn categories(&self) -> Vec<DetectorCategory> {
-        vec![DetectorCategory::FlashLoan, DetectorCategory::Logic, DetectorCategory::BestPractices]
+        vec![
+            DetectorCategory::FlashLoan,
+            DetectorCategory::Logic,
+            DetectorCategory::BestPractices,
+        ]
     }
 
     fn default_severity(&self) -> Severity {
@@ -51,7 +55,10 @@ impl Detector for GovernanceDetector {
 }
 
 impl GovernanceDetector {
-    fn detect_flash_loan_governance_attacks(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn detect_flash_loan_governance_attacks(
+        &self,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
         for func in &ctx.contract.functions {
@@ -60,7 +67,8 @@ impl GovernanceDetector {
             }
 
             // Look for governance functions that check current balance without snapshots
-            if self.is_governance_function(func) && self.uses_current_balance_for_voting(ctx, func) {
+            if self.is_governance_function(func) && self.uses_current_balance_for_voting(ctx, func)
+            {
                 let finding = Finding::new(
                     self.id(),
                     Severity::Critical,
@@ -89,7 +97,10 @@ impl GovernanceDetector {
         Ok(findings)
     }
 
-    fn detect_missing_snapshot_protection(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+    fn detect_missing_snapshot_protection(
+        &self,
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
         // Check if contract has governance tokens but lacks snapshot mechanisms
@@ -149,9 +160,11 @@ impl GovernanceDetector {
                         0,
                         func.name.as_str().len() as u32,
                     ),
-                ).with_cwe(662) // CWE-662: Improper Synchronization
+                )
+                .with_cwe(662) // CWE-662: Improper Synchronization
                 .with_fix_suggestion(
-                    "Implement time-delayed voting rights requiring minimum holding periods.".to_string()
+                    "Implement time-delayed voting rights requiring minimum holding periods."
+                        .to_string(),
                 );
 
                 findings.push(finding);
@@ -163,11 +176,11 @@ impl GovernanceDetector {
 
     fn is_governance_function(&self, func: &ast::Function) -> bool {
         let governance_patterns = [
-            "propose", "vote", "castVote", "delegate", "execute", "queue"
+            "propose", "vote", "castVote", "delegate", "execute", "queue",
         ];
-        governance_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        )
+        governance_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
     }
 
     fn uses_current_balance_for_voting(&self, ctx: &AnalysisContext, func: &ast::Function) -> bool {
@@ -183,55 +196,86 @@ impl GovernanceDetector {
 
         // Enhanced patterns for current balance checks without snapshot protection
         let balance_patterns = [
-            "balanceOf(", ".balanceOf(", "votingToken.balanceOf", "token.balanceOf",
-            "governanceToken.balanceOf", "balanceOf(msg.sender)",
-            "getBalance(", "currentBalance"
+            "balanceOf(",
+            ".balanceOf(",
+            "votingToken.balanceOf",
+            "token.balanceOf",
+            "governanceToken.balanceOf",
+            "balanceOf(msg.sender)",
+            "getBalance(",
+            "currentBalance",
         ];
 
         let snapshot_patterns = [
-            "snapshot", "getPastVotes", "balanceOfAt", "checkpoints",
-            "getVotes(", "getPriorVotes", "getPastTotalSupply", "balanceAtBlockNumber"
+            "snapshot",
+            "getPastVotes",
+            "balanceOfAt",
+            "checkpoints",
+            "getVotes(",
+            "getPriorVotes",
+            "getPastTotalSupply",
+            "balanceAtBlockNumber",
         ];
 
-        let uses_balance = balance_patterns.iter().any(|&pattern| func_source.contains(pattern));
-        let uses_snapshot = snapshot_patterns.iter().any(|&pattern| func_source.contains(pattern));
+        let uses_balance = balance_patterns
+            .iter()
+            .any(|&pattern| func_source.contains(pattern));
+        let uses_snapshot = snapshot_patterns
+            .iter()
+            .any(|&pattern| func_source.contains(pattern));
 
         // Also check for governance-related balance usage in require statements
-        let has_governance_balance_check = func_source.contains("require(") &&
-            (func_source.contains("balanceOf") || func_source.contains("getBalance")) &&
-            (func_source.contains("threshold") || func_source.contains("minimum") ||
-             func_source.contains(">=") || func_source.contains("<="));
+        let has_governance_balance_check = func_source.contains("require(")
+            && (func_source.contains("balanceOf") || func_source.contains("getBalance"))
+            && (func_source.contains("threshold")
+                || func_source.contains("minimum")
+                || func_source.contains(">=")
+                || func_source.contains("<="));
 
         (uses_balance || has_governance_balance_check) && !uses_snapshot
     }
 
     fn has_governance_token_patterns(&self, ctx: &AnalysisContext) -> bool {
         let governance_indicators = [
-            "votingToken", "governanceToken", "delegate", "proposal", "voting"
+            "votingToken",
+            "governanceToken",
+            "delegate",
+            "proposal",
+            "voting",
         ];
-        governance_indicators.iter().any(|&indicator|
-            ctx.source_code.to_lowercase().contains(&indicator.to_lowercase())
-        )
+        governance_indicators.iter().any(|&indicator| {
+            ctx.source_code
+                .to_lowercase()
+                .contains(&indicator.to_lowercase())
+        })
     }
 
     fn has_snapshot_mechanisms(&self, ctx: &AnalysisContext) -> bool {
         let snapshot_patterns = [
-            "snapshot", "getPastVotes", "balanceOfAt", "checkpoints",
-            "timeWeighted", "historicalBalance"
+            "snapshot",
+            "getPastVotes",
+            "balanceOfAt",
+            "checkpoints",
+            "timeWeighted",
+            "historicalBalance",
         ];
-        snapshot_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        snapshot_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 
     fn has_time_delay_protection(&self, ctx: &AnalysisContext, _func: &ast::Function) -> bool {
         let time_delay_patterns = [
-            "timelock", "delay", "holdingPeriod", "vestingPeriod",
-            "minimumHolding", "lockPeriod"
+            "timelock",
+            "delay",
+            "holdingPeriod",
+            "vestingPeriod",
+            "minimumHolding",
+            "lockPeriod",
         ];
-        time_delay_patterns.iter().any(|&pattern|
-            ctx.source_code.contains(pattern)
-        )
+        time_delay_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.contains(pattern))
     }
 }
 
@@ -261,27 +305,38 @@ impl ExternalCallsLoopDetector {
         let func_source = source_lines[func_start_line..=func_end_line].join("\n");
 
         // Enhanced loop patterns
-        let loop_patterns = [
-            "for (", "for(", "while (", "while(", "do {", "foreach"
-        ];
-        let has_loop = loop_patterns.iter().any(|&pattern| func_source.contains(pattern));
+        let loop_patterns = ["for (", "for(", "while (", "while(", "do {", "foreach"];
+        let has_loop = loop_patterns
+            .iter()
+            .any(|&pattern| func_source.contains(pattern));
 
         // Enhanced external call patterns
         let external_call_patterns = [
-            ".call(", ".call{", ".delegatecall(", ".staticcall(",
-            ".transfer(", ".send(", "external.call", "target.call",
-            "call{value:", "(bool success", "call(data", ".call"
+            ".call(",
+            ".call{",
+            ".delegatecall(",
+            ".staticcall(",
+            ".transfer(",
+            ".send(",
+            "external.call",
+            "target.call",
+            "call{value:",
+            "(bool success",
+            "call(data",
+            ".call",
         ];
-        let has_external_call = external_call_patterns.iter().any(|&pattern| func_source.contains(pattern));
+        let has_external_call = external_call_patterns
+            .iter()
+            .any(|&pattern| func_source.contains(pattern));
 
         // Specific pattern for array iteration with external calls (like DAO execute)
-        let has_array_iteration_with_calls = func_source.contains("for (") &&
-            func_source.contains(".length") &&
-            (func_source.contains(".call") || func_source.contains("call{"));
+        let has_array_iteration_with_calls = func_source.contains("for (")
+            && func_source.contains(".length")
+            && (func_source.contains(".call") || func_source.contains("call{"));
 
         // Enhanced detection for governance execution patterns
-        let is_governance_execution = func.name.as_str().to_lowercase().contains("execute") &&
-            has_external_call && has_loop;
+        let is_governance_execution =
+            func.name.as_str().to_lowercase().contains("execute") && has_external_call && has_loop;
 
         has_loop && (has_external_call || has_array_iteration_with_calls) || is_governance_execution
     }
@@ -360,7 +415,11 @@ impl SignatureReplayDetector {
         Self
     }
 
-    fn has_signature_replay_vulnerability(&self, func: &ast::Function, ctx: &AnalysisContext) -> bool {
+    fn has_signature_replay_vulnerability(
+        &self,
+        func: &ast::Function,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations (not interface functions)
         if func.body.is_none() {
             return false;
@@ -368,12 +427,17 @@ impl SignatureReplayDetector {
 
         // Enhanced signature function detection
         let signature_patterns = [
-            "BySig", "bySignature", "WithSignature", "Signature", "ecrecover", "recover"
+            "BySig",
+            "bySignature",
+            "WithSignature",
+            "Signature",
+            "ecrecover",
+            "recover",
         ];
 
-        let is_signature_function = signature_patterns.iter().any(|&pattern|
-            func.name.as_str().contains(pattern)
-        );
+        let is_signature_function = signature_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().contains(pattern));
 
         if !is_signature_function {
             // Also check if function body contains signature verification
@@ -383,10 +447,10 @@ impl SignatureReplayDetector {
             let source_lines: Vec<&str> = ctx.source_code.lines().collect();
             if func_start < source_lines.len() && func_end < source_lines.len() {
                 let func_source = source_lines[func_start..=func_end].join("\n");
-                let contains_signature_verification = func_source.contains("ecrecover") ||
-                    func_source.contains("ECDSA.recover") ||
-                    func_source.contains("verify") ||
-                    func_source.contains("signature");
+                let contains_signature_verification = func_source.contains("ecrecover")
+                    || func_source.contains("ECDSA.recover")
+                    || func_source.contains("verify")
+                    || func_source.contains("signature");
 
                 if !contains_signature_verification {
                     return false;
@@ -398,9 +462,15 @@ impl SignatureReplayDetector {
 
         // Check function parameters for signature components (v, r, s)
         let has_signature_params = func.parameters.iter().any(|param| {
-            let param_name = param.name.as_ref().map(|n| n.as_str().to_lowercase()).unwrap_or_default();
-            param_name == "v" || param_name == "r" || param_name == "s" ||
-            param_name.contains("signature")
+            let param_name = param
+                .name
+                .as_ref()
+                .map(|n| n.as_str().to_lowercase())
+                .unwrap_or_default();
+            param_name == "v"
+                || param_name == "r"
+                || param_name == "s"
+                || param_name.contains("signature")
         });
 
         // Check if function lacks nonce protection
@@ -411,12 +481,10 @@ impl SignatureReplayDetector {
         if func_start < source_lines.len() && func_end < source_lines.len() {
             let func_source = source_lines[func_start..=func_end].join("\n");
 
-            let nonce_patterns = [
-                "nonce", "nonces", "_nonce", "counter", "replay", "used"
-            ];
-            let has_nonce_protection = nonce_patterns.iter().any(|&pattern|
-                func_source.to_lowercase().contains(pattern)
-            );
+            let nonce_patterns = ["nonce", "nonces", "_nonce", "counter", "replay", "used"];
+            let has_nonce_protection = nonce_patterns
+                .iter()
+                .any(|&pattern| func_source.to_lowercase().contains(pattern));
 
             has_signature_params && !has_nonce_protection
         } else {
@@ -498,7 +566,11 @@ impl EmergencyPauseCentralizationDetector {
         Self
     }
 
-    fn has_centralized_emergency_control(&self, func: &ast::Function, ctx: &AnalysisContext) -> bool {
+    fn has_centralized_emergency_control(
+        &self,
+        func: &ast::Function,
+        ctx: &AnalysisContext,
+    ) -> bool {
         // Only check functions with actual implementations (not interface functions)
         if func.body.is_none() {
             return false;
@@ -506,12 +578,19 @@ impl EmergencyPauseCentralizationDetector {
 
         // Enhanced emergency function patterns
         let emergency_function_patterns = [
-            "emergency", "pause", "freeze", "halt", "stop", "disable", "shutdown", "kill"
+            "emergency",
+            "pause",
+            "freeze",
+            "halt",
+            "stop",
+            "disable",
+            "shutdown",
+            "kill",
         ];
 
-        let is_emergency_function = emergency_function_patterns.iter().any(|&pattern|
-            func.name.as_str().to_lowercase().contains(pattern)
-        );
+        let is_emergency_function = emergency_function_patterns
+            .iter()
+            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern));
 
         if !is_emergency_function {
             return false;
@@ -520,21 +599,26 @@ impl EmergencyPauseCentralizationDetector {
         // Check if function has centralized access control modifiers
         let has_centralized_control = func.modifiers.iter().any(|modifier| {
             let modifier_name = modifier.name.as_str().to_lowercase();
-            modifier_name.contains("owner") ||
-            modifier_name.contains("admin") ||
-            modifier_name.contains("guardian") ||
-            modifier_name == "onlyowner" ||
-            modifier_name == "onlyadmin" ||
-            modifier_name == "onlyguardian"
+            modifier_name.contains("owner")
+                || modifier_name.contains("admin")
+                || modifier_name.contains("guardian")
+                || modifier_name == "onlyowner"
+                || modifier_name == "onlyadmin"
+                || modifier_name == "onlyguardian"
         });
 
         // Check if the contract lacks multisig or timelock protection
         let multisig_patterns = [
-            "multisig", "timelock", "delay", "consensus", "voting", "governance"
+            "multisig",
+            "timelock",
+            "delay",
+            "consensus",
+            "voting",
+            "governance",
         ];
-        let has_multisig_protection = multisig_patterns.iter().any(|&pattern|
-            ctx.source_code.to_lowercase().contains(pattern)
-        );
+        let has_multisig_protection = multisig_patterns
+            .iter()
+            .any(|&pattern| ctx.source_code.to_lowercase().contains(pattern));
 
         // Flag if it's an emergency function with centralized control and no multisig protection
         has_centralized_control && !has_multisig_protection
@@ -555,7 +639,10 @@ impl Detector for EmergencyPauseCentralizationDetector {
     }
 
     fn categories(&self) -> Vec<DetectorCategory> {
-        vec![DetectorCategory::AccessControl, DetectorCategory::BestPractices]
+        vec![
+            DetectorCategory::AccessControl,
+            DetectorCategory::BestPractices,
+        ]
     }
 
     fn default_severity(&self) -> Severity {

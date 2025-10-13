@@ -1,6 +1,6 @@
 use crate::cross_contract::{
-    CrossContractContext, CrossContractFinding, CrossContractVulnerabilityType,
-    CrossContractDetector, CrossContractUtils
+    CrossContractContext, CrossContractDetector, CrossContractFinding, CrossContractUtils,
+    CrossContractVulnerabilityType,
 };
 use crate::types::{AnalysisContext, Severity};
 use std::collections::HashSet;
@@ -58,7 +58,10 @@ impl CrossContractAnalyzer {
     }
 
     /// Detect circular dependencies between contracts
-    fn detect_circular_dependencies(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
+    fn detect_circular_dependencies(
+        &self,
+        context: &CrossContractContext,
+    ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
         let cycles = context.interaction_graph.find_cycles();
 
@@ -76,8 +79,10 @@ impl CrossContractAnalyzer {
                         and potential deadlock scenarios.",
                         cycle.join(" -> ")
                     ),
-                    mitigation: "Refactor contract architecture to eliminate circular dependencies. \
-                        Consider using interfaces, factory patterns, or dependency injection.".to_string(),
+                    mitigation:
+                        "Refactor contract architecture to eliminate circular dependencies. \
+                        Consider using interfaces, factory patterns, or dependency injection."
+                            .to_string(),
                 });
             }
         }
@@ -86,7 +91,10 @@ impl CrossContractAnalyzer {
     }
 
     /// Detect trust boundary violations
-    fn detect_trust_boundary_violations(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
+    fn detect_trust_boundary_violations(
+        &self,
+        context: &CrossContractContext,
+    ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
         for (contract_name, contract_ctx) in &context.contracts {
@@ -94,9 +102,12 @@ impl CrossContractAnalyzer {
 
             for target_contract in &interacting_contracts {
                 if let Some(target_ctx) = context.contracts.get(target_contract) {
-                    let trust_score = CrossContractUtils::calculate_trust_score(contract_ctx, target_ctx);
+                    let trust_score =
+                        CrossContractUtils::calculate_trust_score(contract_ctx, target_ctx);
 
-                    if trust_score < 0.3 && self.makes_privileged_calls(contract_ctx, target_contract) {
+                    if trust_score < 0.3
+                        && self.makes_privileged_calls(contract_ctx, target_contract)
+                    {
                         findings.push(CrossContractFinding {
                             primary_contract: contract_name.clone(),
                             affected_contracts: vec![target_contract.clone()],
@@ -121,7 +132,10 @@ impl CrossContractAnalyzer {
     }
 
     /// Detect state inconsistencies across contracts
-    fn detect_state_inconsistencies(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
+    fn detect_state_inconsistencies(
+        &self,
+        context: &CrossContractContext,
+    ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
         // Look for contracts that maintain synchronized state
@@ -143,7 +157,8 @@ impl CrossContractAnalyzer {
                             contract_name
                         ),
                         mitigation: "Implement state synchronization mechanisms such as events, \
-                            callbacks, or atomic state updates across contracts.".to_string(),
+                            callbacks, or atomic state updates across contracts."
+                            .to_string(),
                     });
                 }
             }
@@ -153,11 +168,15 @@ impl CrossContractAnalyzer {
     }
 
     /// Detect atomicity violations in multi-contract operations
-    fn detect_atomicity_violations(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
+    fn detect_atomicity_violations(
+        &self,
+        context: &CrossContractContext,
+    ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
         for (contract_name, _contract_ctx) in &context.contracts {
-            let multi_contract_operations = self.find_multi_contract_operations(context, contract_name);
+            let multi_contract_operations =
+                self.find_multi_contract_operations(context, contract_name);
 
             for operation in multi_contract_operations {
                 if !self.has_atomicity_guarantees(&operation) {
@@ -173,7 +192,8 @@ impl CrossContractAnalyzer {
                             contract_name
                         ),
                         mitigation: "Implement proper error handling, rollback mechanisms, \
-                            or use atomic multi-contract transaction patterns.".to_string(),
+                            or use atomic multi-contract transaction patterns."
+                            .to_string(),
                     });
                 }
             }
@@ -183,14 +203,18 @@ impl CrossContractAnalyzer {
     }
 
     /// Detect cross-contract reentrancy vulnerabilities
-    fn detect_cross_contract_reentrancy(&self, context: &CrossContractContext) -> Vec<CrossContractFinding> {
+    fn detect_cross_contract_reentrancy(
+        &self,
+        context: &CrossContractContext,
+    ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
         for (contract_name, _contract_ctx) in &context.contracts {
             let reentrancy_paths = self.find_reentrancy_paths(context, contract_name);
 
             for path in reentrancy_paths {
-                if path.len() > 2 { // Cross-contract reentrancy involves at least 3 contracts
+                if path.len() > 2 {
+                    // Cross-contract reentrancy involves at least 3 contracts
                     findings.push(CrossContractFinding {
                         primary_contract: contract_name.clone(),
                         affected_contracts: path.clone(),
@@ -205,7 +229,8 @@ impl CrossContractAnalyzer {
                         ),
                         mitigation: "Implement reentrancy guards across all contracts in the \
                             interaction path, use checks-effects-interactions pattern, \
-                            and consider using pull-over-push patterns.".to_string(),
+                            and consider using pull-over-push patterns."
+                            .to_string(),
                     });
                 }
             }
@@ -216,18 +241,31 @@ impl CrossContractAnalyzer {
 
     // Helper methods
 
-    fn makes_privileged_calls(&self, contract_ctx: &AnalysisContext, _target_contract: &str) -> bool {
+    fn makes_privileged_calls(
+        &self,
+        contract_ctx: &AnalysisContext,
+        _target_contract: &str,
+    ) -> bool {
         let privileged_patterns = [
-            "onlyOwner", "onlyAdmin", "restricted", "authorized",
-            "delegatecall", "selfdestruct", "upgrade"
+            "onlyOwner",
+            "onlyAdmin",
+            "restricted",
+            "authorized",
+            "delegatecall",
+            "selfdestruct",
+            "upgrade",
         ];
 
-        privileged_patterns.iter().any(|&pattern|
-            contract_ctx.source_code.contains(pattern)
-        )
+        privileged_patterns
+            .iter()
+            .any(|&pattern| contract_ctx.source_code.contains(pattern))
     }
 
-    fn find_shared_state_contracts(&self, context: &CrossContractContext, contract_name: &str) -> Vec<String> {
+    fn find_shared_state_contracts(
+        &self,
+        context: &CrossContractContext,
+        contract_name: &str,
+    ) -> Vec<String> {
         let mut shared_contracts = Vec::new();
 
         if let Some(contract_ctx) = context.contracts.get(contract_name) {
@@ -244,33 +282,49 @@ impl CrossContractAnalyzer {
 
     fn shares_state(&self, ctx1: &AnalysisContext, ctx2: &AnalysisContext) -> bool {
         // Check for common state variable names (simplified)
-        let state_vars1: HashSet<_> = ctx1.contract.state_variables.iter()
+        let state_vars1: HashSet<_> = ctx1
+            .contract
+            .state_variables
+            .iter()
             .map(|var| &var.name)
             .collect();
-        let state_vars2: HashSet<_> = ctx2.contract.state_variables.iter()
+        let state_vars2: HashSet<_> = ctx2
+            .contract
+            .state_variables
+            .iter()
             .map(|var| &var.name)
             .collect();
 
-        !state_vars1.intersection(&state_vars2).collect::<Vec<_>>().is_empty()
+        !state_vars1
+            .intersection(&state_vars2)
+            .collect::<Vec<_>>()
+            .is_empty()
     }
 
-    fn has_state_synchronization_mechanism(&self, contract_ctx: &AnalysisContext, _shared_contract: &str) -> bool {
-        let sync_patterns = [
-            "event", "emit", "callback", "sync", "notify", "update"
-        ];
+    fn has_state_synchronization_mechanism(
+        &self,
+        contract_ctx: &AnalysisContext,
+        _shared_contract: &str,
+    ) -> bool {
+        let sync_patterns = ["event", "emit", "callback", "sync", "notify", "update"];
 
-        sync_patterns.iter().any(|&pattern|
-            contract_ctx.source_code.contains(pattern)
-        )
+        sync_patterns
+            .iter()
+            .any(|&pattern| contract_ctx.source_code.contains(pattern))
     }
 
-    fn find_multi_contract_operations(&self, context: &CrossContractContext, contract_name: &str) -> Vec<MultiContractOperation> {
+    fn find_multi_contract_operations(
+        &self,
+        context: &CrossContractContext,
+        contract_name: &str,
+    ) -> Vec<MultiContractOperation> {
         let mut operations = Vec::new();
 
         if let Some(contract_ctx) = context.contracts.get(contract_name) {
             // Find functions that call multiple external contracts
             for func in &contract_ctx.contract.functions {
-                let called_contracts = self.extract_called_contracts(contract_ctx, func.name.as_str());
+                let called_contracts =
+                    self.extract_called_contracts(contract_ctx, func.name.as_str());
                 if called_contracts.len() > 1 {
                     operations.push(MultiContractOperation {
                         contracts: called_contracts,
@@ -284,7 +338,11 @@ impl CrossContractAnalyzer {
         operations
     }
 
-    fn extract_called_contracts(&self, _contract_ctx: &AnalysisContext, _function_name: &str) -> Vec<String> {
+    fn extract_called_contracts(
+        &self,
+        _contract_ctx: &AnalysisContext,
+        _function_name: &str,
+    ) -> Vec<String> {
         // This would require more sophisticated AST analysis
         // For now, return empty vector as placeholder
         Vec::new()
@@ -295,7 +353,11 @@ impl CrossContractAnalyzer {
         false // Simplified for now
     }
 
-    fn find_reentrancy_paths(&self, context: &CrossContractContext, start_contract: &str) -> Vec<Vec<String>> {
+    fn find_reentrancy_paths(
+        &self,
+        context: &CrossContractContext,
+        start_contract: &str,
+    ) -> Vec<Vec<String>> {
         let mut paths = Vec::new();
         let mut visited = HashSet::new();
         let mut current_path = Vec::new();
@@ -307,7 +369,7 @@ impl CrossContractAnalyzer {
             &mut visited,
             &mut current_path,
             &mut paths,
-            3 // Max depth for cross-contract reentrancy
+            3, // Max depth for cross-contract reentrancy
         );
 
         paths
@@ -321,7 +383,7 @@ impl CrossContractAnalyzer {
         visited: &mut HashSet<String>,
         current_path: &mut Vec<String>,
         paths: &mut Vec<Vec<String>>,
-        max_depth: usize
+        max_depth: usize,
     ) {
         if current_path.len() > max_depth {
             return;
@@ -347,7 +409,7 @@ impl CrossContractAnalyzer {
                     visited,
                     current_path,
                     paths,
-                    max_depth
+                    max_depth,
                 );
             }
         }
@@ -375,7 +437,7 @@ impl Default for CrossContractAnalyzer {
 mod tests {
     use super::*;
     use crate::types::test_utils::*;
-    use ast::{AstArena, Visibility, StateMutability};
+    use ast::{AstArena, StateMutability, Visibility};
     use semantic::SymbolTable;
 
     #[test]

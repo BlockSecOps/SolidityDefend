@@ -1,9 +1,9 @@
 use anyhow::Result;
-use console::{style, Term, Color};
+use console::{Color, Term, style};
 use crossterm::tty::IsTty;
+use detectors::types::{AnalysisContext, Finding, Severity};
 use std::collections::HashMap;
 use std::io;
-use detectors::types::{Finding, AnalysisContext, Severity};
 
 /// Console output formatter with color support
 #[derive(Debug)]
@@ -59,10 +59,7 @@ impl ConsoleFormatter {
     pub fn new(config: ConsoleConfig) -> Result<Self> {
         let term = Term::stdout();
 
-        Ok(Self {
-            config,
-            term,
-        })
+        Ok(Self { config, term })
     }
 
     /// Format findings without context (simplified)
@@ -86,7 +83,11 @@ impl ConsoleFormatter {
     }
 
     /// Format findings for console output
-    pub fn format_findings(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String> {
+    pub fn format_findings(
+        &self,
+        findings: &[Finding],
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<String> {
         let filtered_findings = self.filter_findings_by_level(findings);
 
         if filtered_findings.is_empty() {
@@ -108,7 +109,11 @@ impl ConsoleFormatter {
     }
 
     /// Format findings with fix suggestions
-    pub fn format_findings_with_fixes(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String> {
+    pub fn format_findings_with_fixes(
+        &self,
+        findings: &[Finding],
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<String> {
         let mut config_with_fixes = self.config.clone();
         config_with_fixes.show_fix_suggestions = true;
 
@@ -121,7 +126,11 @@ impl ConsoleFormatter {
     }
 
     /// Format findings with summary statistics
-    pub fn format_with_summary(&self, findings: &[Finding], ctx: &AnalysisContext<'_>) -> Result<String> {
+    pub fn format_with_summary(
+        &self,
+        findings: &[Finding],
+        ctx: &AnalysisContext<'_>,
+    ) -> Result<String> {
         let mut output = self.format_findings(findings, ctx)?;
 
         if !findings.is_empty() {
@@ -206,7 +215,12 @@ impl ConsoleFormatter {
 
         // Code snippet if enabled
         if self.config.show_code_snippets {
-            if let Some(snippet) = self.extract_code_snippet(ctx, finding.primary_location.line, finding.primary_location.column, finding.primary_location.length)? {
+            if let Some(snippet) = self.extract_code_snippet(
+                ctx,
+                finding.primary_location.line,
+                finding.primary_location.column,
+                finding.primary_location.length,
+            )? {
                 output.push(self.format_code_snippet(&snippet, finding.primary_location.line)?);
             }
         }
@@ -221,7 +235,8 @@ impl ConsoleFormatter {
         // CWE information if available
         if let Some(&cwe) = finding.cwe_ids.first() {
             let cwe_info = if self.should_use_colors() {
-                format!("   {} {}",
+                format!(
+                    "   {} {}",
                     style("CWE:").dim(),
                     style(format!("CWE-{}", cwe)).dim()
                 )
@@ -266,7 +281,10 @@ impl ConsoleFormatter {
         if let Some(&critical_count) = counts.get(&Severity::Critical) {
             if critical_count > 0 {
                 let text = if self.should_use_colors() {
-                    style(format!("{} critical", critical_count)).fg(Color::Red).bold().to_string()
+                    style(format!("{} critical", critical_count))
+                        .fg(Color::Red)
+                        .bold()
+                        .to_string()
                 } else {
                     format!("{} critical", critical_count)
                 };
@@ -277,7 +295,9 @@ impl ConsoleFormatter {
         if let Some(&high_count) = counts.get(&Severity::High) {
             if high_count > 0 {
                 let text = if self.should_use_colors() {
-                    style(format!("{} high", high_count)).fg(Color::Red).to_string()
+                    style(format!("{} high", high_count))
+                        .fg(Color::Red)
+                        .to_string()
                 } else {
                     format!("{} high", high_count)
                 };
@@ -288,7 +308,9 @@ impl ConsoleFormatter {
         if let Some(&medium_count) = counts.get(&Severity::Medium) {
             if medium_count > 0 {
                 let text = if self.should_use_colors() {
-                    style(format!("{} medium", medium_count)).fg(Color::Yellow).to_string()
+                    style(format!("{} medium", medium_count))
+                        .fg(Color::Yellow)
+                        .to_string()
                 } else {
                     format!("{} medium", medium_count)
                 };
@@ -299,7 +321,9 @@ impl ConsoleFormatter {
         if let Some(&low_count) = counts.get(&Severity::Low) {
             if low_count > 0 {
                 let text = if self.should_use_colors() {
-                    style(format!("{} low", low_count)).fg(Color::Cyan).to_string()
+                    style(format!("{} low", low_count))
+                        .fg(Color::Cyan)
+                        .to_string()
                 } else {
                     format!("{} low", low_count)
                 };
@@ -343,18 +367,24 @@ impl ConsoleFormatter {
 
         for (line_num, line_content) in &snippet.lines {
             let line_num_str = format!("{:4}", line_num);
-            let separator = if *line_num == highlight_line { "►" } else { "│" };
+            let separator = if *line_num == highlight_line {
+                "►"
+            } else {
+                "│"
+            };
 
             let formatted_line = if self.should_use_colors() {
                 if *line_num == highlight_line {
-                    format!("{} {} {} {}",
+                    format!(
+                        "{} {} {} {}",
                         style("   ").dim(),
                         style(&line_num_str).dim(),
                         style(separator).fg(Color::Red).bold(),
                         style(line_content).bold()
                     )
                 } else {
-                    format!("{} {} {} {}",
+                    format!(
+                        "{} {} {} {}",
                         style("   ").dim(),
                         style(&line_num_str).dim(),
                         style(separator).dim(),
@@ -383,7 +413,8 @@ impl ConsoleFormatter {
         let prefix = "Fix:";
 
         if self.should_use_colors() {
-            format!("   {} {} {}",
+            format!(
+                "   {} {} {}",
                 icon,
                 style(prefix).fg(Color::Blue).bold(),
                 style(fix_suggestion).dim()
@@ -394,7 +425,13 @@ impl ConsoleFormatter {
     }
 
     /// Extract code snippet around the finding
-    fn extract_code_snippet(&self, ctx: &AnalysisContext<'_>, line: u32, _column: u32, _length: u32) -> Result<Option<CodeSnippet>> {
+    fn extract_code_snippet(
+        &self,
+        ctx: &AnalysisContext<'_>,
+        line: u32,
+        _column: u32,
+        _length: u32,
+    ) -> Result<Option<CodeSnippet>> {
         let lines: Vec<&str> = ctx.source_code.lines().collect();
         let total_lines = lines.len() as u32;
 
@@ -423,13 +460,19 @@ impl ConsoleFormatter {
 
     /// Filter findings based on output level
     fn filter_findings_by_level(&self, findings: &[Finding]) -> Vec<Finding> {
-        findings.iter().filter(|finding| {
-            match self.config.output_level {
-                OutputLevel::Errors => matches!(finding.severity, Severity::Critical | Severity::High),
-                OutputLevel::Warnings => !matches!(finding.severity, Severity::Low | Severity::Info),
+        findings
+            .iter()
+            .filter(|finding| match self.config.output_level {
+                OutputLevel::Errors => {
+                    matches!(finding.severity, Severity::Critical | Severity::High)
+                }
+                OutputLevel::Warnings => {
+                    !matches!(finding.severity, Severity::Low | Severity::Info)
+                }
                 OutputLevel::All => true,
-            }
-        }).cloned().collect()
+            })
+            .cloned()
+            .collect()
     }
 
     /// Get severity icon
@@ -477,7 +520,7 @@ struct CodeSnippet {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use detectors::types::{DetectorId, Severity, Confidence, SourceLocation};
+    use detectors::types::{Confidence, DetectorId, Severity, SourceLocation};
     use std::collections::HashMap;
 
     fn create_test_finding() -> Finding {
@@ -495,9 +538,12 @@ mod tests {
     }
 
     fn create_test_context() -> AnalysisContext<'static> {
-        use ast::{Contract, ContractType, Identifier, AstArena, SourceLocation as AstSourceLocation, Position};
-        use semantic::SymbolTable;
+        use ast::{
+            AstArena, Contract, ContractType, Identifier, Position,
+            SourceLocation as AstSourceLocation,
+        };
         use bumpalo::collections::Vec as BumpVec;
+        use semantic::SymbolTable;
         use std::path::PathBuf;
 
         let source = "line 1\nline 2\nvulnerable line 10\nline 4\nline 5";
@@ -510,7 +556,7 @@ mod tests {
             location: AstSourceLocation::new(
                 PathBuf::from("test.sol"),
                 Position::new(1, 1, 0),
-                Position::new(1, 12, 11)
+                Position::new(1, 12, 11),
             ),
         };
 
@@ -529,7 +575,7 @@ mod tests {
             location: AstSourceLocation::new(
                 PathBuf::from("test.sol"),
                 Position::new(1, 1, 0),
-                Position::new(10, 100, 99)
+                Position::new(10, 100, 99),
             ),
         }));
 

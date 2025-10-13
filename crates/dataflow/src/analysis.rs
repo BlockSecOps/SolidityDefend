@@ -1,8 +1,8 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
+use std::collections::{HashMap, HashSet};
 
-use ir::{BlockId, ValueId, Instruction, IrValue};
 use cfg::ControlFlowGraph;
+use ir::{BlockId, Instruction, IrValue, ValueId};
 
 /// Core trait for all data flow analyses
 pub trait DataFlowAnalysis {
@@ -22,7 +22,12 @@ pub trait DataFlowAnalysis {
     fn transfer_instruction(&self, state: &Self::State, instruction: &Instruction) -> Self::State;
 
     /// Transfer function for an entire basic block
-    fn transfer_block(&self, state: &Self::State, _block_id: BlockId, instructions: &[Instruction]) -> Self::State {
+    fn transfer_block(
+        &self,
+        state: &Self::State,
+        _block_id: BlockId,
+        instructions: &[Instruction],
+    ) -> Self::State {
         let mut current_state = state.clone();
 
         for instruction in instructions {
@@ -47,13 +52,18 @@ pub trait DataFlowAnalysis {
     fn cfg(&self) -> &ControlFlowGraph;
 
     /// Optional: Custom convergence check
-    fn has_converged(&self, old_states: &HashMap<BlockId, Self::State>, new_states: &HashMap<BlockId, Self::State>) -> bool {
-        old_states.len() == new_states.len() &&
-        old_states.iter().all(|(block_id, old_state)| {
-            new_states.get(block_id)
-                .map(|new_state| self.states_equal(old_state, new_state))
-                .unwrap_or(false)
-        })
+    fn has_converged(
+        &self,
+        old_states: &HashMap<BlockId, Self::State>,
+        new_states: &HashMap<BlockId, Self::State>,
+    ) -> bool {
+        old_states.len() == new_states.len()
+            && old_states.iter().all(|(block_id, old_state)| {
+                new_states
+                    .get(block_id)
+                    .map(|new_state| self.states_equal(old_state, new_state))
+                    .unwrap_or(false)
+            })
     }
 
     /// Optional: Maximum number of iterations before giving up
@@ -101,7 +111,7 @@ impl<State> DataFlowResult<State> {
             DataFlowDirection::Forward => {
                 // Find entry block and return its entry state
                 self.entry_states.values().next()
-            },
+            }
             DataFlowDirection::Backward => {
                 // Find exit blocks and return one of their exit states
                 self.exit_states.values().next()
@@ -112,12 +122,8 @@ impl<State> DataFlowResult<State> {
     /// Get the final states (exit blocks for forward, entry block for backward)
     pub fn get_final_states(&self) -> Vec<&State> {
         match self.direction {
-            DataFlowDirection::Forward => {
-                self.exit_states.values().collect()
-            },
-            DataFlowDirection::Backward => {
-                self.entry_states.values().collect()
-            }
+            DataFlowDirection::Forward => self.exit_states.values().collect(),
+            DataFlowDirection::Backward => self.entry_states.values().collect(),
         }
     }
 }
@@ -138,7 +144,9 @@ impl DataFlowEngine {
         // Set boundary conditions
         match direction {
             DataFlowDirection::Forward => {
-                let entry_block = cfg.entry_block_id().unwrap_or_else(|| panic!("CFG must have an entry block"));
+                let entry_block = cfg
+                    .entry_block_id()
+                    .unwrap_or_else(|| panic!("CFG must have an entry block"));
                 entry_states.insert(entry_block, analysis.boundary_state());
 
                 // Initialize all other blocks with initial state
@@ -148,7 +156,7 @@ impl DataFlowEngine {
                     }
                     exit_states.insert(block_id, analysis.initial_state());
                 }
-            },
+            }
             DataFlowDirection::Backward => {
                 for exit_block in cfg.exit_block_ids() {
                     exit_states.insert(exit_block, analysis.boundary_state());
@@ -174,19 +182,27 @@ impl DataFlowEngine {
 
             let block_id = worklist.pop().unwrap();
             let basic_blocks = cfg.basic_blocks();
-            let block_node = basic_blocks.get(&block_id)
+            let block_node = basic_blocks
+                .get(&block_id)
                 .ok_or_else(|| anyhow::anyhow!("Block {} not found", block_id.0))?;
             let instructions = &block_node.instructions;
 
-            let old_entry = entry_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
-            let old_exit = exit_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
+            let old_entry = entry_states
+                .get(&block_id)
+                .cloned()
+                .unwrap_or_else(|| analysis.initial_state());
+            let old_exit = exit_states
+                .get(&block_id)
+                .cloned()
+                .unwrap_or_else(|| analysis.initial_state());
 
             match direction {
                 DataFlowDirection::Forward => {
                     // Compute new entry state from predecessors
                     let predecessors = cfg.predecessors(block_id);
                     if !predecessors.is_empty() {
-                        let pred_states: Vec<A::State> = predecessors.iter()
+                        let pred_states: Vec<A::State> = predecessors
+                            .iter()
                             .filter_map(|pred_id| exit_states.get(pred_id).cloned())
                             .collect();
 
@@ -197,7 +213,10 @@ impl DataFlowEngine {
                     }
 
                     // Compute new exit state using transfer function
-                    let current_entry = entry_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
+                    let current_entry = entry_states
+                        .get(&block_id)
+                        .cloned()
+                        .unwrap_or_else(|| analysis.initial_state());
                     let new_exit = analysis.transfer_block(&current_entry, block_id, &instructions);
 
                     // Check if exit state changed
@@ -211,12 +230,13 @@ impl DataFlowEngine {
                             }
                         }
                     }
-                },
+                }
                 DataFlowDirection::Backward => {
                     // Compute new exit state from successors
                     let successors = cfg.successors(block_id);
                     if !successors.is_empty() {
-                        let succ_states: Vec<A::State> = successors.iter()
+                        let succ_states: Vec<A::State> = successors
+                            .iter()
                             .filter_map(|succ_id| entry_states.get(succ_id).cloned())
                             .collect();
 
@@ -227,7 +247,10 @@ impl DataFlowEngine {
                     }
 
                     // Compute new entry state using transfer function
-                    let current_exit = exit_states.get(&block_id).cloned().unwrap_or_else(|| analysis.initial_state());
+                    let current_exit = exit_states
+                        .get(&block_id)
+                        .cloned()
+                        .unwrap_or_else(|| analysis.initial_state());
                     let new_entry = analysis.transfer_block(&current_exit, block_id, &instructions);
 
                     // Check if entry state changed
@@ -275,7 +298,8 @@ pub trait InterproceduralAnalysis: DataFlowAnalysis {
     fn transfer_call(&self, state: &Self::State, call_instruction: &Instruction) -> Self::State;
 
     /// Handle function return transfer
-    fn transfer_return(&self, state: &Self::State, return_instruction: &Instruction) -> Self::State;
+    fn transfer_return(&self, state: &Self::State, return_instruction: &Instruction)
+    -> Self::State;
 
     /// Get the call graph for interprocedural analysis
     fn call_graph(&self) -> Option<&CallGraph>;
@@ -299,7 +323,10 @@ impl CallGraph {
     }
 
     pub fn add_call(&mut self, caller: String, callee: String) {
-        self.calls.entry(caller.clone()).or_default().insert(callee.clone());
+        self.calls
+            .entry(caller.clone())
+            .or_default()
+            .insert(callee.clone());
         self.callers.entry(callee).or_default().insert(caller);
     }
 }
@@ -321,22 +348,22 @@ pub mod utils {
         let mut uses = HashSet::new();
 
         match instruction {
-            Instruction::Add(_, lhs, rhs) |
-            Instruction::Sub(_, lhs, rhs) |
-            Instruction::Mul(_, lhs, rhs) |
-            Instruction::Div(_, lhs, rhs) => {
+            Instruction::Add(_, lhs, rhs)
+            | Instruction::Sub(_, lhs, rhs)
+            | Instruction::Mul(_, lhs, rhs)
+            | Instruction::Div(_, lhs, rhs) => {
                 if let Some(id) = extract_variable_id(lhs) {
                     uses.insert(id);
                 }
                 if let Some(id) = extract_variable_id(rhs) {
                     uses.insert(id);
                 }
-            },
+            }
             Instruction::Load(_, address) => {
                 if let Some(id) = extract_variable_id(address) {
                     uses.insert(id);
                 }
-            },
+            }
             Instruction::Store(address, value) => {
                 if let Some(id) = extract_variable_id(address) {
                     uses.insert(id);
@@ -344,27 +371,27 @@ pub mod utils {
                 if let Some(id) = extract_variable_id(value) {
                     uses.insert(id);
                 }
-            },
+            }
             Instruction::Branch(_) => {
                 // Unconditional branch - no variables used
-            },
+            }
             Instruction::ConditionalBranch(condition, _, _) => {
                 if let Some(id) = extract_variable_id(condition) {
                     uses.insert(id);
                 }
-            },
+            }
             Instruction::Return(Some(value)) => {
                 if let Some(id) = extract_variable_id(value) {
                     uses.insert(id);
                 }
-            },
+            }
             Instruction::Phi(_, phi_args) => {
                 for (value, _) in phi_args {
                     if let Some(id) = extract_variable_id(value) {
                         uses.insert(id);
                     }
                 }
-            },
+            }
             _ => {
                 // Handle other instruction types as needed
             }
@@ -376,12 +403,12 @@ pub mod utils {
     /// Get the variable ID defined by an instruction, if any
     pub fn get_instruction_definition(instruction: &Instruction) -> Option<ValueId> {
         match instruction {
-            Instruction::Add(target, _, _) |
-            Instruction::Sub(target, _, _) |
-            Instruction::Mul(target, _, _) |
-            Instruction::Div(target, _, _) |
-            Instruction::Load(target, _) |
-            Instruction::Phi(target, _) => Some(*target),
+            Instruction::Add(target, _, _)
+            | Instruction::Sub(target, _, _)
+            | Instruction::Mul(target, _, _)
+            | Instruction::Div(target, _, _)
+            | Instruction::Load(target, _)
+            | Instruction::Phi(target, _) => Some(*target),
             _ => None,
         }
     }
@@ -418,7 +445,11 @@ mod tests {
             0
         }
 
-        fn transfer_instruction(&self, state: &Self::State, instruction: &Instruction) -> Self::State {
+        fn transfer_instruction(
+            &self,
+            state: &Self::State,
+            instruction: &Instruction,
+        ) -> Self::State {
             // Increment count if instruction defines a variable
             if utils::get_instruction_definition(instruction).is_some() {
                 state + 1
@@ -444,8 +475,8 @@ mod tests {
     #[test]
     fn test_dataflow_framework() {
         // Create a simple CFG for testing
-        use ir::{Instruction, IrValue, ValueId};
         use cfg::{ControlFlowGraph, EdgeType};
+        use ir::{Instruction, IrValue, ValueId};
 
         let mut cfg = ControlFlowGraph::new("test_function".to_string());
         let block1 = BlockId(1);
@@ -453,17 +484,24 @@ mod tests {
 
         let instructions1 = vec![
             Instruction::Add(ValueId(1), IrValue::ConstantInt(1), IrValue::ConstantInt(2)),
-            Instruction::Sub(ValueId(2), IrValue::Value(ValueId(1)), IrValue::ConstantInt(1)),
+            Instruction::Sub(
+                ValueId(2),
+                IrValue::Value(ValueId(1)),
+                IrValue::ConstantInt(1),
+            ),
         ];
 
-        let instructions2 = vec![
-            Instruction::Mul(ValueId(3), IrValue::Value(ValueId(2)), IrValue::ConstantInt(2)),
-        ];
+        let instructions2 = vec![Instruction::Mul(
+            ValueId(3),
+            IrValue::Value(ValueId(2)),
+            IrValue::ConstantInt(2),
+        )];
 
         cfg.add_block(block1, instructions1);
         cfg.add_block(block2, instructions2);
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         let mut analysis = TestAnalysis::new(&cfg);
         let result = analysis.analyze();

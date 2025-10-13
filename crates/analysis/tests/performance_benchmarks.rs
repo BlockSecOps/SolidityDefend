@@ -1,7 +1,7 @@
-use std::time::{Duration, Instant};
+use analysis::AnalysisEngine;
 use ast::AstArena;
 use parser::Parser;
-use analysis::AnalysisEngine;
+use std::time::{Duration, Instant};
 
 /// Performance benchmarks for large codebases
 pub struct PerformanceBenchmarks;
@@ -91,21 +91,19 @@ impl PerformanceBenchmarks {
 
             let parse_result = parser.parse(&arena, source, "benchmark.sol");
             match parse_result {
-                Ok(ast) => {
-                    match engine.analyze_source_file(&ast) {
-                        Ok(_) => {
-                            success_count += 1;
-                            let duration = start_time.elapsed();
-                            let memory_used = Self::get_memory_usage() - start_memory;
+                Ok(ast) => match engine.analyze_source_file(&ast) {
+                    Ok(_) => {
+                        success_count += 1;
+                        let duration = start_time.elapsed();
+                        let memory_used = Self::get_memory_usage() - start_memory;
 
-                            durations.push(duration);
-                            memory_usage.push(memory_used);
-                        }
-                        Err(e) => {
-                            println!("⚠️  Analysis failed in {}: {}", name, e);
-                        }
+                        durations.push(duration);
+                        memory_usage.push(memory_used);
                     }
-                }
+                    Err(e) => {
+                        println!("⚠️  Analysis failed in {}: {}", name, e);
+                    }
+                },
                 Err(e) => {
                     println!("⚠️  Parse failed in {}: {:?}", name, e);
                 }
@@ -123,16 +121,19 @@ impl PerformanceBenchmarks {
 
     /// Generate medium complexity contract
     fn generate_medium_contract() -> String {
-        let mut contract = String::from(r#"
+        let mut contract = String::from(
+            r#"
         pragma solidity ^0.8.0;
         contract MediumContract {
             mapping(address => uint256) public balances;
             uint256 public totalSupply;
-        "#);
+        "#,
+        );
 
         // Generate 10 functions with moderate complexity
         for i in 0..10 {
-            contract.push_str(&format!(r#"
+            contract.push_str(&format!(
+                r#"
             function function{}(uint256 a, uint256 b) public returns (uint256) {{
                 if (a > b) {{
                     for (uint256 j = 0; j < 5; j++) {{
@@ -143,7 +144,9 @@ impl PerformanceBenchmarks {
                     return a * b;
                 }}
             }}
-            "#, i));
+            "#,
+                i
+            ));
         }
 
         contract.push_str("}");
@@ -152,14 +155,16 @@ impl PerformanceBenchmarks {
 
     /// Generate complex contract with many functions
     fn generate_complex_contract() -> String {
-        let mut contract = String::from(r#"
+        let mut contract = String::from(
+            r#"
         pragma solidity ^0.8.0;
         contract ComplexContract {
             mapping(address => uint256) public balances;
             mapping(address => mapping(address => uint256)) public allowances;
             uint256 public totalSupply;
             address[] public holders;
-        "#);
+        "#,
+        );
 
         // Generate 25 functions with varied complexity
         for i in 0..25 {
@@ -172,7 +177,8 @@ impl PerformanceBenchmarks {
 
     /// Generate very large contract
     fn generate_very_large_contract() -> String {
-        let mut contract = String::from(r#"
+        let mut contract = String::from(
+            r#"
         pragma solidity ^0.8.0;
         contract VeryLargeContract {
             mapping(address => uint256) public balances;
@@ -181,7 +187,8 @@ impl PerformanceBenchmarks {
             uint256 public totalSupply;
             address[] public holders;
             uint256[] public tokenIds;
-        "#);
+        "#,
+        );
 
         // Generate 50 functions with high complexity
         for i in 0..50 {
@@ -198,15 +205,19 @@ impl PerformanceBenchmarks {
 
         // Generate 5 contracts
         for i in 0..5 {
-            source.push_str(&format!(r#"
+            source.push_str(&format!(
+                r#"
             contract Contract{} {{
                 uint256 public value{};
                 mapping(address => uint256) public balances{};
-            "#, i, i, i));
+            "#,
+                i, i, i
+            ));
 
             // Each contract has 10 functions
             for j in 0..10 {
-                source.push_str(&format!(r#"
+                source.push_str(&format!(
+                    r#"
                 function func{}{}(uint256 x) public returns (uint256) {{
                     if (x > {}) {{
                         return x * {};
@@ -214,7 +225,13 @@ impl PerformanceBenchmarks {
                         return x + {};
                     }}
                 }}
-                "#, i, j, j, i + 1, j + 1));
+                "#,
+                    i,
+                    j,
+                    j,
+                    i + 1,
+                    j + 1
+                ));
             }
 
             source.push_str("}\n");
@@ -225,14 +242,17 @@ impl PerformanceBenchmarks {
 
     /// Generate deeply nested contract
     fn generate_deeply_nested_contract() -> String {
-        let mut contract = String::from(r#"
+        let mut contract = String::from(
+            r#"
         pragma solidity ^0.8.0;
         contract DeeplyNested {
             uint256 public result;
-        "#);
+        "#,
+        );
 
         // Generate function with deep nesting
-        contract.push_str(r#"
+        contract.push_str(
+            r#"
         function deeplyNested(uint256 x) public returns (uint256) {
             if (x > 100) {
                 if (x > 200) {
@@ -268,7 +288,8 @@ impl PerformanceBenchmarks {
                 return 0;
             }
         }
-        "#);
+        "#,
+        );
 
         contract.push_str("}");
         contract
@@ -276,12 +297,14 @@ impl PerformanceBenchmarks {
 
     /// Generate contract with wide functions (many statements)
     fn generate_wide_functions_contract() -> String {
-        let mut contract = String::from(r#"
+        let mut contract = String::from(
+            r#"
         pragma solidity ^0.8.0;
         contract WideFunctions {
             uint256 public counter;
             mapping(address => uint256) public data;
-        "#);
+        "#,
+        );
 
         // Generate function with many sequential statements
         contract.push_str("function wideFunction() public {\n");
@@ -296,7 +319,8 @@ impl PerformanceBenchmarks {
 
     /// Generate a complex function
     fn generate_complex_function(index: usize) -> String {
-        format!(r#"
+        format!(
+            r#"
         function complexFunction{}(uint256 x, uint256 y, bool flag) public returns (uint256) {{
             uint256 result = 0;
 
@@ -324,7 +348,10 @@ impl PerformanceBenchmarks {
                 return result;
             }}
         }}
-        "#, index, index % 10)
+        "#,
+            index,
+            index % 10
+        )
     }
 
     /// Estimate memory usage (simplified implementation)
@@ -355,11 +382,19 @@ impl BenchmarkResult {
     }
 
     pub fn min_duration(&self) -> Duration {
-        self.durations.iter().min().copied().unwrap_or(Duration::ZERO)
+        self.durations
+            .iter()
+            .min()
+            .copied()
+            .unwrap_or(Duration::ZERO)
     }
 
     pub fn max_duration(&self) -> Duration {
-        self.durations.iter().max().copied().unwrap_or(Duration::ZERO)
+        self.durations
+            .iter()
+            .max()
+            .copied()
+            .unwrap_or(Duration::ZERO)
     }
 
     pub fn average_memory(&self) -> usize {
@@ -509,7 +544,10 @@ mod tests {
             assert!(result.average_duration() > Duration::ZERO);
             assert!(result.success_rate() > 0.0);
 
-            println!("✅ Simple benchmark completed: {}", result.generate_report());
+            println!(
+                "✅ Simple benchmark completed: {}",
+                result.generate_report()
+            );
         } else {
             println!("⚠️  Simple benchmark had no successes - analysis pipeline may need work");
         }
@@ -567,7 +605,10 @@ mod tests {
         let issues = results.validate_performance();
         assert!(!issues.is_empty(), "Should detect performance issues");
 
-        println!("✅ Performance validation working: {} issues detected", issues.len());
+        println!(
+            "✅ Performance validation working: {} issues detected",
+            issues.len()
+        );
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use memmap2::MmapOptions;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
@@ -47,14 +47,14 @@ pub struct StreamingConfig {
 impl Default for StreamingConfig {
     fn default() -> Self {
         Self {
-            chunk_size: 64 * 1024,        // 64KB chunks
-            buffer_size: 256 * 1024,      // 256KB buffer
+            chunk_size: 64 * 1024,   // 64KB chunks
+            buffer_size: 256 * 1024, // 256KB buffer
             enable_mmap: true,
-            streaming_threshold: 1024 * 1024, // 1MB
+            streaming_threshold: 1024 * 1024,    // 1MB
             max_buffer_memory: 16 * 1024 * 1024, // 16MB
             enable_chunk_overlap: true,
-            overlap_size: 1024,            // 1KB overlap
-            parallel_chunks: false,        // Disabled until thread-safe
+            overlap_size: 1024,     // 1KB overlap
+            parallel_chunks: false, // Disabled until thread-safe
             parallel_chunk_count: 4,
         }
     }
@@ -258,10 +258,7 @@ pub struct StreamingMetrics {
 }
 
 impl StreamingAnalyzer {
-    pub fn new(
-        config: StreamingConfig,
-        processor: Arc<dyn ChunkProcessor + Send + Sync>,
-    ) -> Self {
+    pub fn new(config: StreamingConfig, processor: Arc<dyn ChunkProcessor + Send + Sync>) -> Self {
         let buffer_size = config.buffer_size;
         Self {
             config,
@@ -309,7 +306,9 @@ impl StreamingAnalyzer {
 
         // Initialize state
         self.state.file_size = file_size;
-        self.state.context = self.processor.initialize_context(&file_path.to_string_lossy());
+        self.state.context = self
+            .processor
+            .initialize_context(&file_path.to_string_lossy());
 
         let mut all_findings = Vec::new();
         let total_chunk_time = Duration::ZERO;
@@ -347,7 +346,11 @@ impl StreamingAnalyzer {
     }
 
     /// Analyze file using memory mapping
-    fn analyze_with_mmap(&mut self, file_path: &Path, metrics: &mut StreamingMetrics) -> Result<Vec<Finding>> {
+    fn analyze_with_mmap(
+        &mut self,
+        file_path: &Path,
+        metrics: &mut StreamingMetrics,
+    ) -> Result<Vec<Finding>> {
         let file = File::open(file_path)?;
         let mmap = unsafe { MmapOptions::new().map(&file)? };
 
@@ -373,7 +376,9 @@ impl StreamingAnalyzer {
             };
 
             let chunk_start = Instant::now();
-            let result = self.processor.process_chunk(&chunk, &mut self.state.context)?;
+            let result = self
+                .processor
+                .process_chunk(&chunk, &mut self.state.context)?;
             let chunk_time = chunk_start.elapsed();
 
             findings.extend(result.findings);
@@ -398,7 +403,11 @@ impl StreamingAnalyzer {
     }
 
     /// Analyze file using regular streaming
-    fn analyze_with_streaming(&mut self, file_path: &Path, metrics: &mut StreamingMetrics) -> Result<Vec<Finding>> {
+    fn analyze_with_streaming(
+        &mut self,
+        file_path: &Path,
+        metrics: &mut StreamingMetrics,
+    ) -> Result<Vec<Finding>> {
         let mut file = File::open(file_path)?;
         let mut findings = Vec::new();
         let mut buffer = vec![0; self.config.chunk_size];
@@ -422,7 +431,9 @@ impl StreamingAnalyzer {
             };
 
             let chunk_start = Instant::now();
-            let result = self.processor.process_chunk(&chunk, &mut self.state.context)?;
+            let result = self
+                .processor
+                .process_chunk(&chunk, &mut self.state.context)?;
             let chunk_time = chunk_start.elapsed();
 
             findings.extend(result.findings);
@@ -460,10 +471,14 @@ impl StreamingAnalyzer {
             overlap_start: 0,
         };
 
-        self.state.context = self.processor.initialize_context(&file_path.to_string_lossy());
+        self.state.context = self
+            .processor
+            .initialize_context(&file_path.to_string_lossy());
 
         let analysis_start = Instant::now();
-        let result = self.processor.process_chunk(&chunk, &mut self.state.context)?;
+        let result = self
+            .processor
+            .process_chunk(&chunk, &mut self.state.context)?;
         let analysis_time = analysis_start.elapsed();
 
         let final_findings = self.processor.finalize(&self.state.context)?;

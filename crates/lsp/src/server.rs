@@ -108,7 +108,13 @@ impl SolidityDefendLanguageServer {
 
         // Now we can do async operations safely
         self.client
-            .log_message(MessageType::INFO, format!("Analysis completed for {} with {} findings", uri, findings_count))
+            .log_message(
+                MessageType::INFO,
+                format!(
+                    "Analysis completed for {} with {} findings",
+                    uri, findings_count
+                ),
+            )
             .await;
 
         findings_result
@@ -117,8 +123,8 @@ impl SolidityDefendLanguageServer {
     /// Synchronous document analysis to avoid Send issues with arena-allocated AST
     fn analyze_document_sync(&self, uri: &Url, content: &str) -> Result<Vec<Finding>> {
         use ast::AstArena;
-        use parser::Parser;
         use detectors::types::AnalysisContext;
+        use parser::Parser;
         use semantic::symbols::SymbolTable;
 
         // Create arena and parser
@@ -127,7 +133,8 @@ impl SolidityDefendLanguageServer {
 
         // Parse the document
         let file_path = uri.path();
-        let source_file = parser.parse(&arena, content, file_path)
+        let source_file = parser
+            .parse(&arena, content, file_path)
             .map_err(|e| anyhow::anyhow!("Parse error: {:?}", e))?;
 
         // Skip analysis if no contracts found
@@ -139,7 +146,12 @@ impl SolidityDefendLanguageServer {
         let mut all_findings = Vec::new();
         for contract in &source_file.contracts {
             let symbols = SymbolTable::new();
-            let ctx = AnalysisContext::new(contract, symbols, content.to_string(), file_path.to_string());
+            let ctx = AnalysisContext::new(
+                contract,
+                symbols,
+                content.to_string(),
+                file_path.to_string(),
+            );
 
             // Run detectors
             let result = self.detector_registry.run_analysis(&ctx)?;
@@ -161,14 +173,20 @@ impl SolidityDefendLanguageServer {
                     },
                     end: Position {
                         line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: (finding.primary_location.column + finding.primary_location.length).saturating_sub(1) as u32,
+                        character: (finding.primary_location.column
+                            + finding.primary_location.length)
+                            .saturating_sub(1) as u32,
                     },
                 };
 
                 let severity = match finding.severity {
-                    detectors::types::Severity::Critical | detectors::types::Severity::High => DiagnosticSeverity::ERROR,
+                    detectors::types::Severity::Critical | detectors::types::Severity::High => {
+                        DiagnosticSeverity::ERROR
+                    }
                     detectors::types::Severity::Medium => DiagnosticSeverity::WARNING,
-                    detectors::types::Severity::Low | detectors::types::Severity::Info => DiagnosticSeverity::INFORMATION,
+                    detectors::types::Severity::Low | detectors::types::Severity::Info => {
+                        DiagnosticSeverity::INFORMATION
+                    }
                 };
 
                 let mut diagnostic = Diagnostic {
@@ -185,7 +203,8 @@ impl SolidityDefendLanguageServer {
 
                 // Add CWE information if available
                 if !finding.cwe_ids.is_empty() {
-                    let cwe_info = finding.cwe_ids
+                    let cwe_info = finding
+                        .cwe_ids
                         .iter()
                         .map(|cwe| format!("CWE-{}", cwe))
                         .collect::<Vec<_>>()
@@ -389,17 +408,21 @@ impl LanguageServer for SolidityDefendLanguageServer {
                     },
                     end: Position {
                         line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: (finding.primary_location.column + finding.primary_location.length).saturating_sub(1) as u32,
+                        character: (finding.primary_location.column
+                            + finding.primary_location.length)
+                            .saturating_sub(1) as u32,
                     },
                 };
 
                 if position >= finding_range.start && position <= finding_range.end {
-                    let mut content = format!("**{}**\n\n{}", finding.detector_id.0, finding.message);
+                    let mut content =
+                        format!("**{}**\n\n{}", finding.detector_id.0, finding.message);
 
                     if !finding.cwe_ids.is_empty() {
                         content.push_str(&format!(
                             "\n\n**Security Issues:** {}",
-                            finding.cwe_ids
+                            finding
+                                .cwe_ids
                                 .iter()
                                 .map(|cwe| format!("CWE-{}", cwe))
                                 .collect::<Vec<_>>()
@@ -425,7 +448,10 @@ impl LanguageServer for SolidityDefendLanguageServer {
         Ok(None)
     }
 
-    async fn code_action(&self, params: CodeActionParams) -> jsonrpc::Result<Option<CodeActionResponse>> {
+    async fn code_action(
+        &self,
+        params: CodeActionParams,
+    ) -> jsonrpc::Result<Option<CodeActionResponse>> {
         let uri = &params.text_document.uri;
 
         if let Some(doc) = self.documents.get(uri) {
@@ -440,12 +466,16 @@ impl LanguageServer for SolidityDefendLanguageServer {
                     },
                     end: Position {
                         line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: (finding.primary_location.column + finding.primary_location.length).saturating_sub(1) as u32,
+                        character: (finding.primary_location.column
+                            + finding.primary_location.length)
+                            .saturating_sub(1) as u32,
                     },
                 };
 
                 // Check if finding overlaps with requested range
-                if finding_range.start <= params.range.end && finding_range.end >= params.range.start {
+                if finding_range.start <= params.range.end
+                    && finding_range.end >= params.range.start
+                {
                     if let Some(ref suggestion) = finding.fix_suggestion {
                         let action = CodeAction {
                             title: format!("Fix: {}", suggestion),
@@ -484,9 +514,8 @@ pub async fn start_lsp_server() -> Result<()> {
     let stdin = tokio::io::stdin();
     let stdout = tokio::io::stdout();
 
-    let (service, socket) = LspService::new(|client| {
-        SolidityDefendLanguageServer::new(client).unwrap()
-    });
+    let (service, socket) =
+        LspService::new(|client| SolidityDefendLanguageServer::new(client).unwrap());
 
     Server::new(stdin, stdout, socket).serve(service).await;
 

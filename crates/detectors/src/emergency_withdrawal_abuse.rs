@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for emergency withdrawal abuse vulnerabilities
 pub struct EmergencyWithdrawalAbuseDetector {
@@ -60,21 +60,23 @@ impl Detector for EmergencyWithdrawalAbuseDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_cwe(863) // CWE-863: Incorrect Authorization
-                .with_fix_suggestion(format!(
-                    "Refactor emergency withdrawal in function '{}' to respect lock periods \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_cwe(863) // CWE-863: Incorrect Authorization
+                    .with_fix_suggestion(format!(
+                        "Refactor emergency withdrawal in function '{}' to respect lock periods \
                     and preserve user rewards. Example: Apply emergency fee but maintain \
                     lock period checks, or preserve accumulated rewards in escrow.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -98,13 +100,11 @@ impl EmergencyWithdrawalAbuseDetector {
 
         // Check if this is an emergency withdrawal function
         let function_name = function.name.name.to_lowercase();
-        let withdrawal_patterns = [
-            "emergencywithdraw", "emergency", "withdraw"
-        ];
+        let withdrawal_patterns = ["emergencywithdraw", "emergency", "withdraw"];
 
-        let is_withdrawal_function = withdrawal_patterns.iter().any(|pattern|
-            function_name.contains(pattern)
-        );
+        let is_withdrawal_function = withdrawal_patterns
+            .iter()
+            .any(|pattern| function_name.contains(pattern));
 
         if !is_withdrawal_function {
             return false;
@@ -122,9 +122,9 @@ impl EmergencyWithdrawalAbuseDetector {
         let func_source = source_lines[func_start..=func_end].join("\n");
 
         // Check if it's an emergency withdrawal operation
-        let is_emergency_withdrawal = (func_source.contains("emergency") &&
-                                       func_source.contains("withdraw")) ||
-                                      func_source.contains("emergencyWithdraw");
+        let is_emergency_withdrawal = (func_source.contains("emergency")
+            && func_source.contains("withdraw"))
+            || func_source.contains("emergencyWithdraw");
 
         if !is_emergency_withdrawal {
             return false;
@@ -137,34 +137,33 @@ impl EmergencyWithdrawalAbuseDetector {
     /// Check for withdrawal abuse patterns
     fn check_abuse_patterns(&self, source: &str) -> bool {
         // Pattern 1: Explicit vulnerability comment about bypassing locks
-        let has_lock_bypass_marker = source.contains("VULNERABILITY") &&
-                                     (source.contains("Lock period can be bypassed") ||
-                                      source.contains("bypass with emergency"));
+        let has_lock_bypass_marker = source.contains("VULNERABILITY")
+            && (source.contains("Lock period can be bypassed")
+                || source.contains("bypass with emergency"));
 
         // Pattern 2: Explicit vulnerability comment about losing rewards
-        let has_reward_loss_marker = source.contains("VULNERABILITY") &&
-                                     (source.contains("Loses all accumulated rewards") ||
-                                      source.contains("loss of accumulated rewards"));
+        let has_reward_loss_marker = source.contains("VULNERABILITY")
+            && (source.contains("Loses all accumulated rewards")
+                || source.contains("loss of accumulated rewards"));
 
         // Pattern 3: Vulnerability comment about admin bypass
-        let has_admin_bypass_marker = source.contains("VULNERABILITY") &&
-                                      (source.contains("Can be called during flash loan") ||
-                                       source.contains("Emergency fee can be bypassed"));
+        let has_admin_bypass_marker = source.contains("VULNERABILITY")
+            && (source.contains("Can be called during flash loan")
+                || source.contains("Emergency fee can be bypassed"));
 
         // Pattern 4: Sets rewards to zero
-        let loses_rewards = source.contains("accumulatedRewards = 0") ||
-                           (source.contains("rewardDebt = 0") &&
-                            source.contains("user.amount = 0"));
+        let loses_rewards = source.contains("accumulatedRewards = 0")
+            || (source.contains("rewardDebt = 0") && source.contains("user.amount = 0"));
 
         // Pattern 5: Emergency withdrawal during flash loan
-        let flash_loan_abuse = source.contains("onlyOwner") &&
-                              source.contains("withdraw") &&
-                              !source.contains("nonReentrant");
+        let flash_loan_abuse = source.contains("onlyOwner")
+            && source.contains("withdraw")
+            && !source.contains("nonReentrant");
 
         // Pattern 6: Bypasses lock period
-        let bypasses_lock = source.contains("emergency") &&
-                           !source.contains("lockEndTime") &&
-                           !source.contains("locked");
+        let bypasses_lock = source.contains("emergency")
+            && !source.contains("lockEndTime")
+            && !source.contains("locked");
 
         // Vulnerable if has explicit vulnerability markers
         if has_lock_bypass_marker || has_reward_loss_marker || has_admin_bypass_marker {

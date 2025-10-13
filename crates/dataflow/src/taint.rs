@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
-use ir::{BlockId, ValueId, Instruction};
-use cfg::ControlFlowGraph;
 use crate::analysis::{DataFlowAnalysis, DataFlowDirection, DataFlowResult, utils};
+use cfg::ControlFlowGraph;
+use ir::{BlockId, Instruction, ValueId};
 
 /// Taint analysis for tracking data flow from sources to sinks
 ///
@@ -223,7 +223,9 @@ impl TaintInfo {
         self.confidence = self.confidence.max(other.confidence);
 
         // Merge paths if both exist
-        if let (Some(ref mut self_path), Some(ref other_path)) = (&mut self.taint_path, &other.taint_path) {
+        if let (Some(ref mut self_path), Some(ref other_path)) =
+            (&mut self.taint_path, &other.taint_path)
+        {
             self_path.extend(other_path.iter().cloned());
         } else if other.taint_path.is_some() {
             self.taint_path = other.taint_path.clone();
@@ -268,12 +270,18 @@ impl TaintState {
 
     /// Check if the return value is tainted
     pub fn is_tainted_return(&self) -> bool {
-        self.return_tainted.as_ref().map(|info| info.is_tainted).unwrap_or(false)
+        self.return_tainted
+            .as_ref()
+            .map(|info| info.is_tainted)
+            .unwrap_or(false)
     }
 
     /// Check if the return value is conditionally tainted
     pub fn is_conditionally_tainted_return(&self) -> bool {
-        self.return_tainted.as_ref().map(|info| info.is_conditional).unwrap_or(false)
+        self.return_tainted
+            .as_ref()
+            .map(|info| info.is_conditional)
+            .unwrap_or(false)
     }
 
     /// Get taint info for a variable
@@ -314,19 +322,28 @@ impl TaintState {
     /// Apply sanitization to all variables from specific sources
     pub fn sanitize_sources(&mut self, sanitized_sources: &HashSet<String>) {
         for taint_info in self.tainted_variables.values_mut() {
-            if taint_info.sources.iter().any(|s| sanitized_sources.contains(s)) {
+            if taint_info
+                .sources
+                .iter()
+                .any(|s| sanitized_sources.contains(s))
+            {
                 taint_info.sanitize();
             }
         }
 
         if let Some(ref mut return_info) = self.return_tainted {
-            if return_info.sources.iter().any(|s| sanitized_sources.contains(s)) {
+            if return_info
+                .sources
+                .iter()
+                .any(|s| sanitized_sources.contains(s))
+            {
                 return_info.sanitize();
             }
         }
 
         // Remove completely sanitized variables
-        self.tainted_variables.retain(|_, info| info.is_tainted || info.is_conditional);
+        self.tainted_variables
+            .retain(|_, info| info.is_tainted || info.is_conditional);
 
         if let Some(ref return_info) = self.return_tainted {
             if !return_info.is_tainted && !return_info.is_conditional {
@@ -420,11 +437,14 @@ impl<'a> TaintAnalysis<'a> {
 
         // Propagate taint through different instruction types
         match instruction {
-            Instruction::Add(target, lhs, rhs) |
-            Instruction::Sub(target, lhs, rhs) |
-            Instruction::Mul(target, lhs, rhs) |
-            Instruction::Div(target, lhs, rhs) => {
-                if self.propagation_rules.contains(&PropagationRule::Arithmetic) {
+            Instruction::Add(target, lhs, rhs)
+            | Instruction::Sub(target, lhs, rhs)
+            | Instruction::Mul(target, lhs, rhs)
+            | Instruction::Div(target, lhs, rhs) => {
+                if self
+                    .propagation_rules
+                    .contains(&PropagationRule::Arithmetic)
+                {
                     let mut sources = HashSet::new();
                     let mut is_tainted = false;
 
@@ -452,7 +472,7 @@ impl<'a> TaintAnalysis<'a> {
                         new_state.set_tainted(*target, taint_info);
                     }
                 }
-            },
+            }
             Instruction::Load(target, address) => {
                 if self.propagation_rules.contains(&PropagationRule::Memory) {
                     if let Some(addr_var) = utils::extract_variable_id(address) {
@@ -464,7 +484,7 @@ impl<'a> TaintAnalysis<'a> {
                         }
                     }
                 }
-            },
+            }
             Instruction::Store(_address, value) => {
                 // Storage writes are potential sinks
                 if let Some(value_var) = utils::extract_variable_id(value) {
@@ -474,14 +494,14 @@ impl<'a> TaintAnalysis<'a> {
                         }
                     }
                 }
-            },
+            }
             Instruction::Return(Some(value)) => {
                 if let Some(ret_var) = utils::extract_variable_id(value) {
                     if let Some(ret_info) = state.get_taint_info(ret_var) {
                         new_state.return_tainted = Some(ret_info.clone());
                     }
                 }
-            },
+            }
             Instruction::Phi(target, phi_args) => {
                 let mut merged_sources = HashSet::new();
                 let mut is_tainted = false;
@@ -514,7 +534,7 @@ impl<'a> TaintAnalysis<'a> {
 
                     new_state.set_tainted(*target, taint_info);
                 }
-            },
+            }
             _ => {
                 // Handle other instruction types as needed
             }
@@ -544,7 +564,10 @@ impl<'a> TaintAnalysis<'a> {
                                             tainted_variable: used_var,
                                             block_id: block_id,
                                             severity: self.assess_severity(&sink_name, taint_info),
-                                            taint_path: taint_info.taint_path.clone().unwrap_or_default(),
+                                            taint_path: taint_info
+                                                .taint_path
+                                                .clone()
+                                                .unwrap_or_default(),
                                             confidence: taint_info.confidence,
                                         };
                                         violations.push(violation);
@@ -564,7 +587,9 @@ impl<'a> TaintAnalysis<'a> {
     fn assess_severity(&self, sink_name: &str, _taint_info: &TaintInfo) -> TaintViolationSeverity {
         // This is a simplified assessment - in practice, this would be more sophisticated
         match sink_name {
-            name if name.contains("assembly") || name.contains("delegatecall") => TaintViolationSeverity::Critical,
+            name if name.contains("assembly") || name.contains("delegatecall") => {
+                TaintViolationSeverity::Critical
+            }
             name if name.contains("call") => TaintViolationSeverity::High,
             name if name.contains("storage") => TaintViolationSeverity::Medium,
             _ => TaintViolationSeverity::Low,
@@ -585,7 +610,9 @@ impl<'a> TaintAnalysis<'a> {
         }
 
         for violation in &violations {
-            *violations_by_severity.entry(violation.severity.clone()).or_insert(0) += 1;
+            *violations_by_severity
+                .entry(violation.severity.clone())
+                .or_insert(0) += 1;
         }
 
         let statistics = TaintStatistics {
@@ -610,9 +637,18 @@ impl<'a> TaintAnalysis<'a> {
 
         // Overall statistics
         report.push_str("Analysis Statistics:\n");
-        report.push_str(&format!("  Converged: {}\n", result.dataflow_result.converged));
-        report.push_str(&format!("  Iterations: {}\n", result.dataflow_result.iterations));
-        report.push_str(&format!("  Total tainted variables: {}\n", result.statistics.total_tainted));
+        report.push_str(&format!(
+            "  Converged: {}\n",
+            result.dataflow_result.converged
+        ));
+        report.push_str(&format!(
+            "  Iterations: {}\n",
+            result.dataflow_result.iterations
+        ));
+        report.push_str(&format!(
+            "  Total tainted variables: {}\n",
+            result.statistics.total_tainted
+        ));
         report.push_str(&format!("  Sources: {}\n", result.statistics.source_count));
         report.push_str(&format!("  Sinks: {}\n", result.statistics.sink_count));
 
@@ -626,16 +662,25 @@ impl<'a> TaintAnalysis<'a> {
         if !result.violations.is_empty() {
             report.push_str("\nDetailed Violations:\n");
             for (i, violation) in result.violations.iter().enumerate() {
-                report.push_str(&format!("{}. Source: {} -> Sink: {} (Severity: {:?})\n",
-                    i + 1, violation.source, violation.sink, violation.severity));
-                report.push_str(&format!("   Block: {}, Variable: {}, Confidence: {:.2}\n",
-                    violation.block_id.0, violation.tainted_variable.0, violation.confidence));
+                report.push_str(&format!(
+                    "{}. Source: {} -> Sink: {} (Severity: {:?})\n",
+                    i + 1,
+                    violation.source,
+                    violation.sink,
+                    violation.severity
+                ));
+                report.push_str(&format!(
+                    "   Block: {}, Variable: {}, Confidence: {:.2}\n",
+                    violation.block_id.0, violation.tainted_variable.0, violation.confidence
+                ));
 
                 if !violation.taint_path.is_empty() {
                     report.push_str("   Taint Path:\n");
                     for step in &violation.taint_path {
-                        report.push_str(&format!("     {} (Block {}) -> {:?}\n",
-                            step.variable, step.block_id.0, step.propagation_type));
+                        report.push_str(&format!(
+                            "     {} (Block {}) -> {:?}\n",
+                            step.variable, step.block_id.0, step.propagation_type
+                        ));
                     }
                 }
                 report.push_str("\n");
@@ -696,27 +741,66 @@ impl<'a> DataFlowAnalysis for TaintAnalysis<'a> {
 impl TaintAnalysis<'_> {
     /// Add common Solidity taint sources
     pub fn add_solidity_sources(&mut self) {
-        self.add_source("msg.sender".to_string(), TaintSource::MessageData("sender".to_string()));
-        self.add_source("msg.value".to_string(), TaintSource::MessageData("value".to_string()));
-        self.add_source("msg.data".to_string(), TaintSource::MessageData("data".to_string()));
-        self.add_source("tx.origin".to_string(), TaintSource::MessageData("origin".to_string()));
-        self.add_source("block.timestamp".to_string(), TaintSource::MessageData("timestamp".to_string()));
+        self.add_source(
+            "msg.sender".to_string(),
+            TaintSource::MessageData("sender".to_string()),
+        );
+        self.add_source(
+            "msg.value".to_string(),
+            TaintSource::MessageData("value".to_string()),
+        );
+        self.add_source(
+            "msg.data".to_string(),
+            TaintSource::MessageData("data".to_string()),
+        );
+        self.add_source(
+            "tx.origin".to_string(),
+            TaintSource::MessageData("origin".to_string()),
+        );
+        self.add_source(
+            "block.timestamp".to_string(),
+            TaintSource::MessageData("timestamp".to_string()),
+        );
     }
 
     /// Add common Solidity taint sinks
     pub fn add_solidity_sinks(&mut self) {
-        self.add_sink("delegatecall".to_string(), TaintSink::ExternalCall("delegatecall".to_string()));
-        self.add_sink("call".to_string(), TaintSink::ExternalCall("call".to_string()));
-        self.add_sink("staticcall".to_string(), TaintSink::ExternalCall("staticcall".to_string()));
-        self.add_sink("selfdestruct".to_string(), TaintSink::Function("selfdestruct".to_string()));
-        self.add_sink("suicide".to_string(), TaintSink::Function("suicide".to_string()));
+        self.add_sink(
+            "delegatecall".to_string(),
+            TaintSink::ExternalCall("delegatecall".to_string()),
+        );
+        self.add_sink(
+            "call".to_string(),
+            TaintSink::ExternalCall("call".to_string()),
+        );
+        self.add_sink(
+            "staticcall".to_string(),
+            TaintSink::ExternalCall("staticcall".to_string()),
+        );
+        self.add_sink(
+            "selfdestruct".to_string(),
+            TaintSink::Function("selfdestruct".to_string()),
+        );
+        self.add_sink(
+            "suicide".to_string(),
+            TaintSink::Function("suicide".to_string()),
+        );
     }
 
     /// Add common Solidity sanitizers
     pub fn add_solidity_sanitizers(&mut self) {
-        self.add_sanitizer("require".to_string(), TaintSanitizer::Function("require".to_string()));
-        self.add_sanitizer("assert".to_string(), TaintSanitizer::Function("assert".to_string()));
-        self.add_sanitizer("revert".to_string(), TaintSanitizer::Function("revert".to_string()));
+        self.add_sanitizer(
+            "require".to_string(),
+            TaintSanitizer::Function("require".to_string()),
+        );
+        self.add_sanitizer(
+            "assert".to_string(),
+            TaintSanitizer::Function("assert".to_string()),
+        );
+        self.add_sanitizer(
+            "revert".to_string(),
+            TaintSanitizer::Function("revert".to_string()),
+        );
     }
 }
 
@@ -734,13 +818,25 @@ mod tests {
 
         // Block 1: tainted_var = input, clean_var = 42
         let instructions1 = vec![
-            Instruction::Add(ValueId(1), IrValue::Value(ValueId(0)), IrValue::ConstantInt(0)), // tainted_var = input
-            Instruction::Add(ValueId(2), IrValue::ConstantInt(42), IrValue::ConstantInt(0)), // clean_var = 42
+            Instruction::Add(
+                ValueId(1),
+                IrValue::Value(ValueId(0)),
+                IrValue::ConstantInt(0),
+            ), // tainted_var = input
+            Instruction::Add(
+                ValueId(2),
+                IrValue::ConstantInt(42),
+                IrValue::ConstantInt(0),
+            ), // clean_var = 42
         ];
 
         // Block 2: result = tainted_var + clean_var
         let instructions2 = vec![
-            Instruction::Add(ValueId(3), IrValue::Value(ValueId(1)), IrValue::Value(ValueId(2))), // result = tainted + clean
+            Instruction::Add(
+                ValueId(3),
+                IrValue::Value(ValueId(1)),
+                IrValue::Value(ValueId(2)),
+            ), // result = tainted + clean
             Instruction::Return(Some(IrValue::Value(ValueId(3)))), // return result
         ];
 
@@ -748,7 +844,8 @@ mod tests {
         cfg.add_block(block2, instructions2);
 
         cfg.set_entry_block(block1).unwrap();
-        cfg.add_edge(block1, block2, EdgeType::Unconditional).unwrap();
+        cfg.add_edge(block1, block2, EdgeType::Unconditional)
+            .unwrap();
 
         cfg
     }
@@ -759,7 +856,10 @@ mod tests {
         let mut analysis = TaintAnalysis::new(&cfg);
 
         // Configure taint source
-        analysis.add_source("input".to_string(), TaintSource::Parameter("input".to_string()));
+        analysis.add_source(
+            "input".to_string(),
+            TaintSource::Parameter("input".to_string()),
+        );
 
         let result = analysis.analyze();
         assert!(result.is_ok());

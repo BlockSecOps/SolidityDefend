@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for upgradeable proxy pattern vulnerabilities
 pub struct UpgradeableProxyIssuesDetector {
@@ -56,26 +56,27 @@ impl Detector for UpgradeableProxyIssuesDetector {
                 let message = format!(
                     "Function '{}' has upgradeable proxy vulnerability. {} \
                     Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
-                    function.name.name,
-                    proxy_issue
+                    function.name.name, proxy_issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(665) // CWE-665: Improper Initialization
-                .with_cwe(913) // CWE-913: Improper Control of Dynamically-Managed Code Resources
-                .with_fix_suggestion(format!(
-                    "Fix proxy implementation in '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(665) // CWE-665: Improper Initialization
+                    .with_cwe(913) // CWE-913: Improper Control of Dynamically-Managed Code Resources
+                    .with_fix_suggestion(format!(
+                        "Fix proxy implementation in '{}'. \
                     Use storage gaps for future upgrades, implement initializer modifiers, \
                     add upgrade delay with timelock, validate implementation addresses, \
                     use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }
@@ -91,7 +92,11 @@ impl Detector for UpgradeableProxyIssuesDetector {
 
 impl UpgradeableProxyIssuesDetector {
     /// Check for upgradeable proxy vulnerabilities
-    fn check_upgradeable_proxy_issues(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_upgradeable_proxy_issues(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -99,26 +104,26 @@ impl UpgradeableProxyIssuesDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Check if function is related to proxy/upgrade functionality
-        let is_proxy_related = func_source.contains("delegatecall") ||
-                               func_source.contains("implementation") ||
-                               func_source.contains("upgrade") ||
-                               func_source.contains("initialize") ||
-                               function.name.name.to_lowercase().contains("upgrade") ||
-                               function.name.name.to_lowercase().contains("initialize");
+        let is_proxy_related = func_source.contains("delegatecall")
+            || func_source.contains("implementation")
+            || func_source.contains("upgrade")
+            || func_source.contains("initialize")
+            || function.name.name.to_lowercase().contains("upgrade")
+            || function.name.name.to_lowercase().contains("initialize");
 
         if !is_proxy_related {
             return None;
         }
 
         // Pattern 1: Unprotected upgrade function
-        let is_upgrade_function = func_source.contains("upgrade") ||
-                                 func_source.contains("implementation") ||
-                                 function.name.name.to_lowercase().contains("upgrade");
+        let is_upgrade_function = func_source.contains("upgrade")
+            || func_source.contains("implementation")
+            || function.name.name.to_lowercase().contains("upgrade");
 
-        let lacks_access_control = is_upgrade_function &&
-                                   !func_source.contains("onlyOwner") &&
-                                   !func_source.contains("onlyAdmin") &&
-                                   !func_source.contains("require(msg.sender");
+        let lacks_access_control = is_upgrade_function
+            && !func_source.contains("onlyOwner")
+            && !func_source.contains("onlyAdmin")
+            && !func_source.contains("require(msg.sender");
 
         if lacks_access_control {
             return Some(format!(
@@ -128,13 +133,13 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 2: Initialize function can be called multiple times
-        let is_initialize = func_source.contains("initialize") ||
-                           function.name.name.to_lowercase().contains("initialize");
+        let is_initialize = func_source.contains("initialize")
+            || function.name.name.to_lowercase().contains("initialize");
 
-        let no_initialization_guard = is_initialize &&
-                                     !func_source.contains("initializer") &&
-                                     !func_source.contains("initialized") &&
-                                     !func_source.contains("require(!initialized");
+        let no_initialization_guard = is_initialize
+            && !func_source.contains("initializer")
+            && !func_source.contains("initialized")
+            && !func_source.contains("require(!initialized");
 
         if no_initialization_guard {
             return Some(format!(
@@ -146,13 +151,13 @@ impl UpgradeableProxyIssuesDetector {
         // Pattern 3: Missing storage gap for future upgrades
         let contract_source = ctx.source_code.as_str();
 
-        let is_upgradeable_contract = contract_source.contains("Initializable") ||
-                                     contract_source.contains("UUPSUpgradeable") ||
-                                     contract_source.contains("upgradeable");
+        let is_upgradeable_contract = contract_source.contains("Initializable")
+            || contract_source.contains("UUPSUpgradeable")
+            || contract_source.contains("upgradeable");
 
-        let no_storage_gap = is_upgradeable_contract &&
-                            !contract_source.contains("__gap") &&
-                            !contract_source.contains("uint256[50]");
+        let no_storage_gap = is_upgradeable_contract
+            && !contract_source.contains("__gap")
+            && !contract_source.contains("uint256[50]");
 
         if no_storage_gap && is_proxy_related {
             return Some(format!(
@@ -164,9 +169,9 @@ impl UpgradeableProxyIssuesDetector {
         // Pattern 4: Unsafe delegatecall without implementation validation
         let uses_delegatecall = func_source.contains("delegatecall");
 
-        let no_impl_validation = uses_delegatecall &&
-                                !func_source.contains("require") &&
-                                !func_source.contains("isContract");
+        let no_impl_validation = uses_delegatecall
+            && !func_source.contains("require")
+            && !func_source.contains("isContract");
 
         if no_impl_validation {
             return Some(format!(
@@ -176,12 +181,11 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 5: No upgrade delay/timelock
-        let has_timelock = func_source.contains("timelock") ||
-                          func_source.contains("delay") ||
-                          func_source.contains("timestamp");
+        let has_timelock = func_source.contains("timelock")
+            || func_source.contains("delay")
+            || func_source.contains("timestamp");
 
-        let immediate_upgrade = is_upgrade_function &&
-                               !has_timelock;
+        let immediate_upgrade = is_upgrade_function && !has_timelock;
 
         if immediate_upgrade {
             return Some(format!(
@@ -193,9 +197,9 @@ impl UpgradeableProxyIssuesDetector {
         // Pattern 6: Constructor instead of initializer
         let is_constructor = function.name.name == "constructor";
 
-        let constructor_in_upgradeable = is_constructor &&
-                                        (contract_source.contains("upgradeable") ||
-                                         contract_source.contains("Initializable"));
+        let constructor_in_upgradeable = is_constructor
+            && (contract_source.contains("upgradeable")
+                || contract_source.contains("Initializable"));
 
         if constructor_in_upgradeable {
             return Some(format!(
@@ -217,8 +221,7 @@ impl UpgradeableProxyIssuesDetector {
         // Pattern 8: No upgrade event emission
         let emits_event = func_source.contains("emit");
 
-        let no_upgrade_event = is_upgrade_function &&
-                              !emits_event;
+        let no_upgrade_event = is_upgrade_function && !emits_event;
 
         if no_upgrade_event {
             return Some(format!(
@@ -228,12 +231,11 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 9: UUPS without _authorizeUpgrade override
-        let is_uups = contract_source.contains("UUPS") ||
-                     contract_source.contains("UUPSUpgradeable");
+        let is_uups =
+            contract_source.contains("UUPS") || contract_source.contains("UUPSUpgradeable");
 
-        let no_authorize_override = is_uups &&
-                                    !contract_source.contains("_authorizeUpgrade") &&
-                                    is_upgrade_function;
+        let no_authorize_override =
+            is_uups && !contract_source.contains("_authorizeUpgrade") && is_upgrade_function;
 
         if no_authorize_override {
             return Some(format!(
@@ -243,14 +245,13 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 10: Transparent proxy with function selector clash
-        let is_transparent_proxy = contract_source.contains("TransparentUpgradeableProxy") ||
-                                  func_source.contains("admin()") ||
-                                  func_source.contains("implementation()");
+        let is_transparent_proxy = contract_source.contains("TransparentUpgradeableProxy")
+            || func_source.contains("admin()")
+            || func_source.contains("implementation()");
 
-        let potential_clash = is_transparent_proxy &&
-                             (func_source.contains("admin") ||
-                              func_source.contains("implementation")) &&
-                             !func_source.contains("ifAdmin");
+        let potential_clash = is_transparent_proxy
+            && (func_source.contains("admin") || func_source.contains("implementation"))
+            && !func_source.contains("ifAdmin");
 
         if potential_clash {
             return Some(format!(

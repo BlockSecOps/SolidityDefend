@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for hardcoded or untrusted EntryPoint contracts in ERC-4337 wallets
 pub struct Erc4337EntrypointTrustDetector {
@@ -66,24 +66,20 @@ impl Detector for Erc4337EntrypointTrustDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(798) // CWE-798: Use of Hard-coded Credentials
-                .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
-                .with_fix_suggestion(
-                    "Implement upgradeable EntryPoint pattern: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(798) // CWE-798: Use of Hard-coded Credentials
+                    .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
+                    .with_fix_suggestion(
+                        "Implement upgradeable EntryPoint pattern: \
                     (1) Use storage variable for EntryPoint address, \
                     (2) Add secure upgrade mechanism with time-lock, \
                     (3) Emit events on EntryPoint changes, \
                     (4) Implement EntryPoint validation checks, \
                     (5) Consider multi-sig approval for EntryPoint updates."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -98,24 +94,20 @@ impl Detector for Erc4337EntrypointTrustDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(20)  // CWE-20: Improper Input Validation
-                .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                .with_fix_suggestion(
-                    "Add EntryPoint validation: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                    .with_fix_suggestion(
+                        "Add EntryPoint validation: \
                     (1) Verify msg.sender is trusted EntryPoint in validateUserOp, \
                     (2) Implement onlyEntryPoint modifier, \
                     (3) Store and validate EntryPoint address, \
                     (4) Revert on unauthorized callers, \
                     (5) Use OpenZeppelin's BaseAccount pattern."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -130,24 +122,20 @@ impl Detector for Erc4337EntrypointTrustDetector {
                     issue
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    line,
-                    0,
-                    40,
-                )
-                .with_cwe(284) // CWE-284: Improper Access Control
-                .with_cwe(862) // CWE-862: Missing Authorization
-                .with_fix_suggestion(
-                    "Protect EntryPoint updates: \
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 0, 40)
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_cwe(862) // CWE-862: Missing Authorization
+                    .with_fix_suggestion(
+                        "Protect EntryPoint updates: \
                     (1) Add onlyOwner or multi-sig requirement, \
                     (2) Implement time-lock for changes, \
                     (3) Emit EntryPointChanged event, \
                     (4) Validate new EntryPoint implements IEntryPoint, \
                     (5) Consider making EntryPoint immutable if appropriate."
-                        .to_string(),
-                );
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -158,22 +146,18 @@ impl Detector for Erc4337EntrypointTrustDetector {
             let message = "ERC-4337 wallet references EntryPoint without importing IEntryPoint interface. \
                 Missing interface validation can lead to incorrect EntryPoint interaction and security vulnerabilities.".to_string();
 
-            let finding = self.base.create_finding(
-                ctx,
-                message,
-                1,
-                0,
-                40,
-            )
-            .with_cwe(1104) // CWE-1104: Use of Unmaintained Third Party Components
-            .with_fix_suggestion(
-                "Import and validate IEntryPoint: \
+            let finding = self
+                .base
+                .create_finding(ctx, message, 1, 0, 40)
+                .with_cwe(1104) // CWE-1104: Use of Unmaintained Third Party Components
+                .with_fix_suggestion(
+                    "Import and validate IEntryPoint: \
                 (1) Import IEntryPoint from @account-abstraction/contracts, \
                 (2) Cast EntryPoint to IEntryPoint interface, \
                 (3) Validate interface support using ERC165, \
                 (4) Ensure compliance with ERC-4337 specification."
-                    .to_string(),
-            );
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -189,11 +173,11 @@ impl Detector for Erc4337EntrypointTrustDetector {
 impl Erc4337EntrypointTrustDetector {
     fn is_erc4337_wallet(&self, source: &str) -> bool {
         // Check for ERC-4337 patterns
-        source.contains("validateUserOp") ||
-        source.contains("EntryPoint") ||
-        source.contains("UserOperation") ||
-        source.contains("IAccount") ||
-        source.contains("BaseAccount")
+        source.contains("validateUserOp")
+            || source.contains("EntryPoint")
+            || source.contains("UserOperation")
+            || source.contains("IAccount")
+            || source.contains("BaseAccount")
     }
 
     fn check_hardcoded_entrypoint(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -205,11 +189,12 @@ impl Erc4337EntrypointTrustDetector {
 
             // Pattern: address constant/immutable ENTRYPOINT = 0x...
             if trimmed.contains("EntryPoint") || trimmed.contains("entryPoint") {
-                if (trimmed.contains("constant") || trimmed.contains("immutable")) &&
-                   trimmed.contains("= 0x") {
+                if (trimmed.contains("constant") || trimmed.contains("immutable"))
+                    && trimmed.contains("= 0x")
+                {
                     issues.push((
                         (idx + 1) as u32,
-                        "EntryPoint address is hardcoded as constant/immutable".to_string()
+                        "EntryPoint address is hardcoded as constant/immutable".to_string(),
                     ));
                 }
 
@@ -217,13 +202,17 @@ impl Erc4337EntrypointTrustDetector {
                 if trimmed.contains("= IEntryPoint(0x") || trimmed.contains("= EntryPoint(0x") {
                     issues.push((
                         (idx + 1) as u32,
-                        "EntryPoint initialized with hardcoded address".to_string()
+                        "EntryPoint initialized with hardcoded address".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn check_entrypoint_validation(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -244,9 +233,10 @@ impl Erc4337EntrypointTrustDetector {
 
             if in_validate_userop {
                 // Check for EntryPoint validation
-                if trimmed.contains("msg.sender") &&
-                   (trimmed.contains("entryPoint") || trimmed.contains("EntryPoint")) &&
-                   (trimmed.contains("require") || trimmed.contains("if")) {
+                if trimmed.contains("msg.sender")
+                    && (trimmed.contains("entryPoint") || trimmed.contains("EntryPoint"))
+                    && (trimmed.contains("require") || trimmed.contains("if"))
+                {
                     has_entrypoint_check = true;
                 }
 
@@ -255,7 +245,8 @@ impl Erc4337EntrypointTrustDetector {
                     if !has_entrypoint_check {
                         issues.push((
                             (validate_start_line + 1) as u32,
-                            "validateUserOp function missing EntryPoint sender validation".to_string()
+                            "validateUserOp function missing EntryPoint sender validation"
+                                .to_string(),
                         ));
                     }
                     in_validate_userop = false;
@@ -263,7 +254,11 @@ impl Erc4337EntrypointTrustDetector {
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 
     fn check_entrypoint_mutability(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -274,20 +269,22 @@ impl Erc4337EntrypointTrustDetector {
             let trimmed = line.trim();
 
             // Pattern: function that sets EntryPoint
-            if trimmed.contains("function") &&
-               (trimmed.contains("setEntryPoint") || trimmed.contains("updateEntryPoint") ||
-                trimmed.contains("changeEntryPoint")) {
-
+            if trimmed.contains("function")
+                && (trimmed.contains("setEntryPoint")
+                    || trimmed.contains("updateEntryPoint")
+                    || trimmed.contains("changeEntryPoint"))
+            {
                 // Check for access control in next few lines
                 let mut has_access_control = false;
                 let check_lines = 5.min(lines.len() - idx - 1);
 
                 for i in 0..check_lines {
                     let next_line = lines[idx + i].trim();
-                    if next_line.contains("onlyOwner") ||
-                       next_line.contains("require(msg.sender") ||
-                       next_line.contains("require(owner") ||
-                       next_line.contains("onlyAdmin") {
+                    if next_line.contains("onlyOwner")
+                        || next_line.contains("require(msg.sender")
+                        || next_line.contains("require(owner")
+                        || next_line.contains("onlyAdmin")
+                    {
                         has_access_control = true;
                         break;
                     }
@@ -296,28 +293,35 @@ impl Erc4337EntrypointTrustDetector {
                 if !has_access_control {
                     issues.push((
                         (idx + 1) as u32,
-                        "EntryPoint setter function lacks access control (onlyOwner/require)".to_string()
+                        "EntryPoint setter function lacks access control (onlyOwner/require)"
+                            .to_string(),
                     ));
                 }
             }
 
             // Pattern: direct EntryPoint assignment
-            if (trimmed.contains("entryPoint =") || trimmed.contains("EntryPoint =")) &&
-               !trimmed.contains("//") {
+            if (trimmed.contains("entryPoint =") || trimmed.contains("EntryPoint ="))
+                && !trimmed.contains("//")
+            {
                 // Check if it's in a protected context
                 let context = lines[idx.saturating_sub(3)..=idx].join(" ");
-                if !context.contains("onlyOwner") &&
-                   !context.contains("require(msg.sender") &&
-                   !context.contains("constructor") {
+                if !context.contains("onlyOwner")
+                    && !context.contains("require(msg.sender")
+                    && !context.contains("constructor")
+                {
                     issues.push((
                         (idx + 1) as u32,
-                        "EntryPoint assignment without access control check".to_string()
+                        "EntryPoint assignment without access control check".to_string(),
                     ));
                 }
             }
         }
 
-        if issues.is_empty() { None } else { Some(issues) }
+        if issues.is_empty() {
+            None
+        } else {
+            Some(issues)
+        }
     }
 }
 

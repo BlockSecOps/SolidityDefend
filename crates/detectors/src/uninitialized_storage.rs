@@ -1,8 +1,8 @@
 use anyhow::Result;
 use std::any::Any;
 
-use crate::detector::{Detector, DetectorCategory, BaseDetector};
-use crate::types::{DetectorId, Finding, AnalysisContext, Severity};
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for uninitialized storage pointer vulnerabilities
 pub struct UninitializedStorageDetector {
@@ -57,8 +57,7 @@ impl Detector for UninitializedStorageDetector {
                     "Function '{}' contains uninitialized storage pointer. {} \
                     Uninitialized local struct/array variables default to storage and point to slot 0, \
                     potentially corrupting critical state variables.",
-                    function.name.name,
-                    uninitialized_risk
+                    function.name.name, uninitialized_risk
                 );
 
                 let finding = self.base.create_finding(
@@ -90,7 +89,11 @@ impl Detector for UninitializedStorageDetector {
 }
 
 impl UninitializedStorageDetector {
-    fn check_uninitialized_storage(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn check_uninitialized_storage(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         if function.body.is_none() {
             return None;
         }
@@ -98,29 +101,35 @@ impl UninitializedStorageDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Pattern 1: Struct declaration without initialization
-        let struct_pattern = func_source.contains("struct ") &&
-                            !func_source.contains(" memory ") &&
-                            !func_source.contains(" storage ") &&
-                            !func_source.contains(" = ");
+        let struct_pattern = func_source.contains("struct ")
+            && !func_source.contains(" memory ")
+            && !func_source.contains(" storage ")
+            && !func_source.contains(" = ");
 
         // Pattern 2: Array declaration without initialization
-        let array_pattern = func_source.contains("[]") &&
-                           !func_source.contains("[] memory") &&
-                           !func_source.contains("[] storage") &&
-                           !func_source.contains(" = ");
+        let array_pattern = func_source.contains("[]")
+            && !func_source.contains("[] memory")
+            && !func_source.contains("[] storage")
+            && !func_source.contains(" = ");
 
         if struct_pattern {
-            return Some("Declares struct variable without memory/storage keyword or initialization".to_string());
+            return Some(
+                "Declares struct variable without memory/storage keyword or initialization"
+                    .to_string(),
+            );
         }
 
         if array_pattern {
-            return Some("Declares array variable without memory/storage keyword or initialization".to_string());
+            return Some(
+                "Declares array variable without memory/storage keyword or initialization"
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY") &&
-           (func_source.contains("uninitialized") ||
-            func_source.contains("storage pointer")) {
+        if func_source.contains("VULNERABILITY")
+            && (func_source.contains("uninitialized") || func_source.contains("storage pointer"))
+        {
             return Some("Uninitialized storage pointer vulnerability marker detected".to_string());
         }
 
