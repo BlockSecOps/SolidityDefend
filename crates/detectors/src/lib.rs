@@ -129,6 +129,12 @@ pub mod diamond_init_reentrancy;
 pub mod diamond_loupe_violation;
 pub mod diamond_delegatecall_zero;
 
+// Phase 22: Metamorphic Contracts & CREATE2 (2025)
+pub mod metamorphic_contract;
+pub mod create2_frontrunning;
+pub mod selfdestruct_recipient;
+pub mod extcodesize_bypass;
+
 // DeFi-specific detectors
 pub mod defi;
 
