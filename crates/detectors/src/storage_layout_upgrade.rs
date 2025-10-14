@@ -1,0 +1,495 @@
+//! Storage Layout Upgrade Violation Detection
+//!
+//! Detects upgradeable proxy patterns with storage layout violations that cause
+//! state corruption during upgrades.
+
+use anyhow::Result;
+use std::any::Any;
+
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+
+pub struct StorageLayoutUpgradeDetector {
+    base: BaseDetector,
+}
+
+impl StorageLayoutUpgradeDetector {
+    pub fn new() -> Self {
+        Self {
+            base: BaseDetector::new(
+                DetectorId("storage-layout-upgrade".to_string()),
+                "Storage Layout Upgrade Violation".to_string(),
+                "Detects upgradeable contracts with storage layout violations that cause state corruption during upgrades".to_string(),
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::Logic,
+                ],
+                Severity::Critical,
+            ),
+        }
+    }
+
+    fn check_storage_patterns(&self, ctx: &AnalysisContext) -> Vec<(String, u32, String)> {
+        let mut findings = Vec::new();
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Check if contract is upgradeable
+        let is_upgradeable = source_lower.contains("upgradeable")
+            || source_lower.contains("proxy")
+            || source_lower.contains("initializer")
+            || source_lower.contains("uups")
+            || source_lower.contains("transparent")
+            || source_lower.contains("beacon");
+
+        if !is_upgradeable {
+            return findings;
+        }
+
+        // Pattern 1: Missing storage gap in base contracts
+        if source_lower.contains("contract")
+            && (source_lower.contains("abstract") || source_lower.contains("is"))
+        {
+            let has_gap = source_lower.contains("__gap")
+                || source_lower.contains("_gap")
+                || source_lower.contains("reserved")
+                || (source_lower.contains("uint256[") && source_lower.contains("private"));
+
+            if !has_gap && is_upgradeable {
+                findings.push((
+                    "Upgradeable contract missing storage gap (future upgrade will corrupt state)".to_string(),
+                    0,
+                    "Add storage gap: uint256[50] private __gap; Reserve slots for future variables. This allows adding new state variables in future versions without corrupting storage layout.".to_string(),
+                ));
+            }
+        }
+
+        // Pattern 2: Storage gap that's too small
+        if source_lower.contains("__gap") || source_lower.contains("_gap") {
+            // Check for small gaps (less than 20 slots is risky)
+            let has_small_gap = source_lower.contains("[1]")
+                || source_lower.contains("[2]")
+                || source_lower.contains("[3]")
+                || source_lower.contains("[4]")
+                || source_lower.contains("[5]")
+                || source_lower.contains("[10]")
+                || source_lower.contains("[15]");
+
+            if has_small_gap {
+                findings.push((
+                    "Storage gap is very small (< 20 slots) - may be insufficient for future upgrades".to_string(),
+                    0,
+                    "Use larger gap: uint256[50] private __gap; Standard practice is 50 slots to allow flexibility for future upgrades. Small gaps limit upgrade options.".to_string(),
+                ));
+            }
+        }
+
+        // Pattern 3: Constant to variable conversion risk
+        if source_lower.contains("constant") && source_lower.contains("=") {
+            // This pattern is informational - constants don't use storage but can't be changed
+            findings.push((
+                "Uses constant variables (cannot be upgraded without breaking storage)".to_string(),
+                0,
+                "Note: constant variables don't use storage but cannot be changed in upgrades. Consider: (1) Keep as constant if value should never change, (2) Use immutable for constructor-set values, (3) Use storage variable with __gap if value may need to change in future upgrades.".to_string(),
+            ));
+        }
+
+        // Pattern 4: Complex inheritance without gap
+        let inheritance_count = source_lower.matches(" is ").count();
+        if inheritance_count > 1 && !source_lower.contains("__gap") {
+            findings.push((
+                "Multiple inheritance without storage gaps (complex upgrade path)".to_string(),
+                0,
+                "Add gaps to all base contracts: Each inherited contract should have its own storage gap to prevent layout conflicts during upgrades. Use: uint256[50] private __gap;".to_string(),
+            ));
+        }
+
+        // Pattern 5: Struct definitions (potential modification risk)
+        if source_lower.contains("struct") && is_upgradeable {
+            findings.push((
+                "Uses struct types (modifying struct layout will corrupt storage)".to_string(),
+                0,
+                "Warning: Never modify existing struct fields or reorder them in upgrades. To add fields: (1) Always append new fields at the end, (2) Document struct layout, (3) Consider using separate structs for new data. Struct modifications are a common cause of storage corruption.".to_string(),
+            ));
+        }
+
+        // Pattern 6: Mapping with struct values
+        if source_lower.contains("mapping") && source_lower.contains("struct") {
+            findings.push((
+                "Uses mapping with struct values (struct modification will corrupt all entries)".to_string(),
+                0,
+                "Handle carefully: Modifying struct layout in mappings affects all stored entries. Document struct layout clearly. Consider versioned structs: struct UserV1 {...}, struct UserV2 {...} with migration logic.".to_string(),
+            ));
+        }
+
+        // Pattern 7: Array of structs
+        if source_lower.contains("[]") && source_lower.contains("struct") {
+            findings.push((
+                "Uses arrays of structs (struct modification will corrupt entire array)".to_string(),
+                0,
+                "High risk: Arrays of structs are especially sensitive to layout changes. Any struct modification affects all array elements. Consider: (1) Using mapping instead, (2) Separate arrays for each field, (3) Immutable struct layout with versioning.".to_string(),
+            ));
+        }
+
+        // Pattern 8: Using delete keyword on complex types
+        if source_lower.contains("delete ") && (source_lower.contains("struct") || source_lower.contains("mapping")) {
+            findings.push((
+                "Uses delete on complex types (upgrade compatibility concern)".to_string(),
+                0,
+                "Be aware: delete behavior on structs/mappings may have subtle implications for upgrades. Document cleanup behavior. Consider explicit field clearing for important state transitions.".to_string(),
+            ));
+        }
+
+        // Pattern 9: Storage pointers in functions
+        if source_lower.contains("storage") && source_lower.contains("function") {
+            findings.push((
+                "Uses storage pointers in functions (layout changes will break pointer logic)".to_string(),
+                0,
+                "Risk: Storage pointers depend on exact storage layout. Layout changes in upgrades will break pointer references. Document storage layout carefully. Consider: (1) Minimizing storage pointer use, (2) Using explicit state variable references.".to_string(),
+            ));
+        }
+
+        // Pattern 10: No initialization gap reduction tracking
+        if source_lower.contains("__gap") && source_lower.contains("uint256") {
+            // Check if there's a comment documenting gap usage
+            let documents_gap = source_lower.contains("// gap reduced")
+                || source_lower.contains("// was __gap[50]")
+                || source_lower.contains("/// @custom:storage-gap");
+
+            if !documents_gap {
+                findings.push((
+                    "Storage gap without documentation (gap reduction tracking recommended)".to_string(),
+                    0,
+                    "Document gaps: // uint256[50] private __gap; // Reduced by X when adding Y variables. Track gap reductions to prevent double-spending storage slots across upgrades.".to_string(),
+                ));
+            }
+        }
+
+        // Pattern 11: Initializer without gap adjustment warning
+        if source_lower.contains("initializer") || source_lower.contains("initialize") {
+            // Check if contract adds new state variables after initializer
+            let has_state_vars_after_init = source_lower.contains("initializer")
+                && source_lower.contains("uint256")
+                || source_lower.contains("address")
+                || source_lower.contains("mapping");
+
+            if has_state_vars_after_init && !source_lower.contains("__gap") {
+                findings.push((
+                    "Initializer with state variables but no storage gap (upgrade blocker)".to_string(),
+                    0,
+                    "Critical: Adding state variables in upgraded implementation will change storage layout. Add gap: uint256[50] private __gap; Reduce gap when adding new variables.".to_string(),
+                ));
+            }
+        }
+
+        // Pattern 12: Diamond proxy without explicit storage slots
+        if source_lower.contains("diamond") || source_lower.contains("facet") {
+            let uses_explicit_slots = source_lower.contains("bytes32")
+                && (source_lower.contains("position") || source_lower.contains("slot"));
+
+            if !uses_explicit_slots {
+                findings.push((
+                    "Diamond proxy without explicit storage slots (facet collision risk)".to_string(),
+                    0,
+                    "Use explicit slots: bytes32 constant STORAGE_SLOT = keccak256('myapp.storage.v1'); Access via assembly or struct with explicit slot. Prevents storage collisions between facets.".to_string(),
+                ));
+            }
+        }
+
+        // Pattern 13: Internal library usage in upgradeable contracts
+        if source_lower.contains("library") && source_lower.contains("internal") {
+            findings.push((
+                "Internal library in upgradeable contract (library upgrade constraints)".to_string(),
+                0,
+                "Warning: Internal libraries are inlined into contract bytecode. Library changes require full contract redeployment. Consider: (1) External libraries with delegatecall, (2) Moving logic to implementation, (3) Accepting inlined library limitations.".to_string(),
+            ));
+        }
+
+        findings
+    }
+}
+
+impl Default for StorageLayoutUpgradeDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Detector for StorageLayoutUpgradeDetector {
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
+
+    fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        let mut findings = Vec::new();
+
+        let issues = self.check_storage_patterns(ctx);
+
+        for (message, line_offset, remediation) in issues {
+            let severity = if message.contains("missing storage gap")
+                || message.contains("corrupt")
+                || message.contains("upgrade blocker")
+            {
+                Severity::Critical
+            } else if message.contains("struct modification")
+                || message.contains("multiple inheritance")
+                || message.contains("arrays of structs")
+            {
+                Severity::High
+            } else {
+                Severity::Medium
+            };
+
+            let finding = self
+                .base
+                .create_finding_with_severity(ctx, message, line_offset, 0, 20, severity)
+                .with_fix_suggestion(remediation)
+                .with_cwe(1321); // CWE-1321: Improperly Controlled Modification of Object Prototype Attributes
+
+            findings.push(finding);
+        }
+
+        Ok(findings)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::test_utils::*;
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        assert_eq!(detector.id().to_string(), "storage-layout-upgrade");
+        assert_eq!(detector.name(), "Storage Layout Upgrade Violation");
+        assert_eq!(detector.default_severity(), Severity::Critical);
+        assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_detects_missing_storage_gap() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract UpgradeableToken {
+                uint256 public totalSupply;
+                mapping(address => uint256) public balances;
+
+                function initialize() public initializer {
+                    totalSupply = 1000000;
+                }
+                // Missing: uint256[50] private __gap;
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result.iter().any(|f| f.message.contains("gap")));
+    }
+
+    #[test]
+    fn test_detects_small_storage_gap() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract UpgradeableBase {
+                uint256 public value;
+                uint256[5] private __gap; // Too small!
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result
+            .iter()
+            .any(|f| f.message.contains("small") || f.message.contains("insufficient")));
+    }
+
+    #[test]
+    fn test_detects_struct_usage() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract UpgradeableSystem {
+                struct User {
+                    uint256 balance;
+                    address addr;
+                }
+
+                mapping(address => User) public users;
+
+                function initialize() public initializer {
+                    // Setup
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result.iter().any(|f| f.message.contains("struct")));
+    }
+
+    #[test]
+    fn test_detects_multiple_inheritance_without_gap() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract Base1 {
+                uint256 public value1;
+            }
+
+            contract Base2 {
+                uint256 public value2;
+            }
+
+            contract UpgradeableImpl is Base1, Base2 {
+                uint256 public value3;
+
+                function initialize() public initializer {
+                    value1 = 1;
+                    value2 = 2;
+                    value3 = 3;
+                }
+                // Missing: gaps in base contracts
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result
+            .iter()
+            .any(|f| f.message.contains("inheritance") || f.message.contains("gap")));
+    }
+
+    #[test]
+    fn test_detects_array_of_structs() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract UpgradeableRegistry {
+                struct Record {
+                    uint256 id;
+                    address owner;
+                }
+
+                Record[] public records;
+
+                function initialize() public initializer {}
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result
+            .iter()
+            .any(|f| f.message.contains("array") && f.message.contains("struct")));
+    }
+
+    #[test]
+    fn test_safe_upgradeable_contract() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract SafeUpgradeable {
+                uint256 public value;
+                address public owner;
+
+                // Proper storage gap for future variables
+                uint256[50] private __gap; // Allows adding 50 new variables
+
+                function initialize(address _owner) public initializer {
+                    owner = _owner;
+                    value = 0;
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        // Should have minimal critical findings
+        let critical_findings: Vec<_> = result
+            .iter()
+            .filter(|f| f.severity == Severity::Critical)
+            .collect();
+        assert!(critical_findings.is_empty());
+    }
+
+    #[test]
+    fn test_detects_diamond_without_explicit_slots() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            contract DiamondFacet {
+                uint256 public data;
+
+                function initialize() public {
+                    data = 100;
+                }
+                // Missing: explicit storage slot definition
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(!result.is_empty());
+        assert!(result
+            .iter()
+            .any(|f| f.message.contains("diamond") || f.message.contains("explicit slot")));
+    }
+
+    #[test]
+    fn test_well_designed_upgradeable_contract() {
+        let detector = StorageLayoutUpgradeDetector::new();
+        let source = r#"
+            abstract contract BaseUpgradeable {
+                uint256 public baseValue;
+                uint256[49] private __gap; // 50 - 1 used = 49 remaining
+            }
+
+            contract ImplementationV1 is BaseUpgradeable {
+                uint256 public implValue;
+
+                // Document gap reduction
+                /// @custom:storage-gap Reduced from 50 to 49 when adding implValue
+                uint256[49] private __implementationGap;
+
+                function initialize() public initializer {
+                    baseValue = 1;
+                    implValue = 2;
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        // Should have minimal or no critical findings
+        let critical_findings: Vec<_> = result
+            .iter()
+            .filter(|f| f.severity == Severity::Critical)
+            .collect();
+        assert!(critical_findings.len() <= 1);
+    }
+}

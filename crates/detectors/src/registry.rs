@@ -741,6 +741,17 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::extcodesize_bypass::ExtcodesizeBypassDetector::new(),
         ));
+
+        // Phase 23: v1.0 Milestone - Final Detectors (2025)
+        self.register(Arc::new(
+            crate::multisig_bypass::MultisigBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::permit_signature_exploit::PermitSignatureExploitDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::storage_layout_upgrade::StorageLayoutUpgradeDetector::new(),
+        ));
     }
 }
 
