@@ -1,259 +1,383 @@
 # Test Contracts
 
+**SolidityDefend v1.0.0 Test Suite**
+**Last Updated**: October 13, 2025
+**Total Contracts**: 32
+
 This directory contains Solidity test contracts with various vulnerabilities for validating the SolidityDefend analyzer.
 
-## Test Contract Inventory
+---
 
-### Basic Test Contracts
+## 📋 Quick Reference
 
-| Contract | Issues | Description |
-|----------|--------|-------------|
-| `access_control_issues.sol` | 7 | Missing access modifiers, unprotected initializers, unchecked external calls |
-| `clean_contract.sol` | 3 | Minimal issues - baseline for false positive testing |
-| `reentrancy_issues.sol` | 5 | Classic reentrancy vulnerabilities, state machine issues |
-| `validation_issues.sol` | 3 | Input validation, zero address checks, parameter consistency |
+**For detailed vulnerability inventory**, see: [VULNERABILITY_INVENTORY.md](./VULNERABILITY_INVENTORY.md)
 
-### 2025 Advanced Vulnerabilities
+This comprehensive document provides:
+- Complete vulnerability listings for each contract
+- Line numbers and severity levels
+- Expected detector IDs
+- Attack scenarios and mitigation examples
+- Testing methodology and metrics
 
-Modern attack vectors found in DeFi, DAO, and cross-chain protocols.
+---
 
-| Contract | Issues | Category | Description |
-|----------|--------|----------|-------------|
-| `2025_vulnerabilities/governance/DAOGovernance.sol` | 9 | Governance | Flash loan governance attacks, delegation vulnerabilities, external calls in loops |
-| `2025_vulnerabilities/defi/FlashLoanArbitrage.sol` | 15 | DeFi | Flash loan vulnerabilities, MEV exploitation, price oracle manipulation |
-| `2025_vulnerabilities/mev/MEVProtectedDEX.sol` | 15 | MEV | Front-running, sandwich attacks, slippage manipulation |
-| `2025_vulnerabilities/cross_chain/BridgeVault.sol` | 17 | Cross-Chain | Bridge vulnerabilities, replay attacks, validation issues |
-| `2025_vulnerabilities/yield_farming/LiquidityMining.sol` | 26 | Yield Farming | Reward manipulation, flash loan attacks, oracle exploits |
+## 📁 Directory Structure
 
-## Vulnerability Categories Tested
+The test contracts have been organized into logical categories:
 
-### Access Control (7 issues in access_control_issues.sol)
-- Missing access control modifiers on critical functions
-- Unprotected initializer functions
-- State modification without authorization
-- External call validation failures
-
-**Key Detections:**
-- `missing-access-modifiers` - Functions performing critical operations without proper access control
-- `unprotected-initializer` - Initialize functions callable by anyone
-- `unchecked-external-call` - External calls without return value checks
-
-### Reentrancy (5 issues in reentrancy_issues.sol)
-- Classic reentrancy attack vectors
-- State updates after external calls
-- Missing reentrancy guards
-
-**Key Detections:**
-- `classic-reentrancy` - State changes after external calls
-- `invalid-state-transition` - State machine vulnerabilities
-
-### Input Validation (3 issues in validation_issues.sol)
-- Missing zero address checks
-- Parameter consistency issues
-- Array bounds validation
-
-**Key Detections:**
-- `missing-zero-address-check` - Missing validation for zero addresses
-- `parameter-consistency` - Inconsistent parameter validation
-
-### Governance Attacks (9 issues in DAOGovernance.sol)
-Modern DAO governance vulnerabilities including:
-- **Flash loan governance attacks** (propose, delegate functions)
-- **Missing snapshot protection** - Using current balances instead of historical snapshots
-- **External calls in loops** - DoS vulnerability in proposal execution
-- **Missing access modifiers** - Critical governance functions without proper protection
-
-**Key Detections:**
-- `test-governance` - Flash loan attacks on voting power
-- `external-calls-loop` - External calls within loops
-- `missing-access-modifiers` - Emergency functions without access control
-
-### DeFi Vulnerabilities (15 issues in FlashLoanArbitrage.sol)
-Flash loan and arbitrage attack vectors:
-- Flash loan price manipulation
-- Oracle dependency vulnerabilities
-- MEV extraction opportunities
-- Missing slippage protection
-
-**Key Detections:**
-- `flashloan-vulnerable-patterns` - Functions vulnerable to flash loan attacks
-- `single-oracle-source` - Reliance on single price oracle
-- `front-running` - Time-sensitive operations
-
-### MEV Vulnerabilities (15 issues in MEVProtectedDEX.sol)
-Maximal Extractable Value exploitation:
-- Front-running vulnerabilities
-- Sandwich attack vectors
-- Transaction ordering dependencies
-- Block timestamp manipulation
-
-**Key Detections:**
-- `front-running` - Functions vulnerable to front-running
-- `sandwich-attack` - Price-dependent operations without protection
-- `block-dependency` - Block number/timestamp dependencies
-
-### Cross-Chain Vulnerabilities (17 issues in BridgeVault.sol)
-Bridge and cross-chain security issues:
-- Replay attack vulnerabilities
-- Message authentication failures
-- Cross-chain state inconsistencies
-- Bridge validation issues
-
-**Key Detections:**
-- Multiple access control issues
-- External call validation failures
-- Missing zero address checks
-
-### Yield Farming Vulnerabilities (26 issues in LiquidityMining.sol)
-Most complex test contract with extensive vulnerabilities:
-- Reward calculation manipulation
-- Flash loan attacks on staking
-- Oracle price manipulation
-- Division precision issues
-- Timestamp dependencies
-
-**Key Detections:**
-- `division-before-multiplication` - Precision loss vulnerabilities
-- `block-dependency` - Timestamp manipulation risks
-- `flashloan-vulnerable-patterns` - Flash loan attack vectors
-- `unchecked-external-call` - Missing return value validation
-
-## Usage
-
-Run analysis on individual contracts:
-
-```bash
-# Basic contracts
-soliditydefend tests/contracts/access_control_issues.sol
-soliditydefend tests/contracts/reentrancy_issues.sol
-soliditydefend tests/contracts/validation_issues.sol
-
-# 2025 advanced vulnerabilities
-soliditydefend tests/contracts/2025_vulnerabilities/governance/DAOGovernance.sol
-soliditydefend tests/contracts/2025_vulnerabilities/defi/FlashLoanArbitrage.sol
-soliditydefend tests/contracts/2025_vulnerabilities/mev/MEVProtectedDEX.sol
-soliditydefend tests/contracts/2025_vulnerabilities/cross_chain/BridgeVault.sol
-soliditydefend tests/contracts/2025_vulnerabilities/yield_farming/LiquidityMining.sol
+```
+tests/contracts/
+├── basic_vulnerabilities/       # Simple, focused vulnerability examples
+│   ├── access_control_issues.sol
+│   ├── reentrancy_issues.sol
+│   └── validation_issues.sol
+│
+├── clean_examples/              # Secure contracts (false positive testing)
+│   └── clean_contract.sol
+│
+├── complex_scenarios/           # Multi-vulnerability real-world scenarios
+│   └── 2025_vulnerabilities/
+│       ├── cross_chain/BridgeVault.sol
+│       ├── defi/FlashLoanArbitrage.sol
+│       ├── governance/DAOGovernance.sol
+│       ├── mev/MEVProtectedDEX.sol
+│       └── yield_farming/LiquidityMining.sol
+│
+├── cross_chain/                 # Cross-chain and bridge vulnerabilities
+│   └── phase13_legacy/
+│       ├── bridge_chain_id/           (6 contracts)
+│       ├── bridge_message_verification/ (4 contracts)
+│       └── bridge_token_minting/       (4 contracts)
+│
+├── erc4626_vaults/             # ERC-4626 vault-specific vulnerabilities
+│   ├── VulnerableVault_*.sol        (5 vulnerable contracts)
+│   └── SecureVault_*.sol            (4 secure mitigation examples)
+│
+├── README.md                    # This file
+└── VULNERABILITY_INVENTORY.md   # Detailed vulnerability documentation
 ```
 
-Run analysis on entire directory:
+---
 
+## 🎯 Contract Categories
+
+### 1. Basic Vulnerabilities (3 contracts)
+
+Simple, focused test cases for core vulnerability types.
+
+| Contract | Vulnerabilities | Primary Focus |
+|----------|----------------|---------------|
+| `access_control_issues.sol` | 4+ | Missing access control, unprotected initializers |
+| `reentrancy_issues.sol` | 2+ | Classic reentrancy, state-after-call |
+| `validation_issues.sol` | 5+ | Input validation, zero address, array bounds |
+
+**Usage**:
 ```bash
-soliditydefend tests/contracts/
+./target/release/soliditydefend tests/contracts/basic_vulnerabilities/
 ```
 
-## Phase 8-11 Test Contracts (External)
+---
 
-Comprehensive test contracts for Phases 8-11 detectors are located in `/tmp/`:
+### 2. Clean Examples (1 contract)
 
-### Phase 8: Advanced Logic & Architecture (6 contracts)
+Secure contracts for false positive testing.
 
-| Contract | Issues | Category | Description |
-|----------|--------|----------|-------------|
-| `/tmp/upgradeable_proxy_vulnerable_1.sol` | 4 | Proxy Issues | Unprotected upgrade, no init guard, unsafe delegatecall |
-| `/tmp/upgradeable_proxy_vulnerable_2.sol` | 6 | Proxy Issues | No timelock, transparent proxy issues, no storage gap |
-| `/tmp/token_supply_vulnerable_1.sol` | 7 | Token Supply | Mint without cap/access control/rate limit |
-| `/tmp/token_supply_vulnerable_2.sol` | 6 | Token Supply | Missing totalSupply updates, rebasing, flash mint |
-| `/tmp/circular_dependency_vulnerable_1.sol` | 6 | Circular Deps | Callback loops, no depth limits |
-| `/tmp/circular_dependency_vulnerable_2.sol` | 7 | Circular Deps | Cross-contract dependencies, event cycles |
+| Contract | Expected Issues | Purpose |
+|----------|----------------|---------|
+| `clean_contract.sol` | 0 | Baseline for false positive detection |
 
-**Total Phase 8 Findings**: 36 vulnerabilities detected
+**Note**: Any detections on this contract indicate false positives that need investigation.
 
-### Phase 9: Gas & Optimization Issues (10 contracts)
-
-| Contract | Issues | Category | Description |
-|----------|--------|----------|-------------|
-| `/tmp/gas_griefing_vulnerable_1.sol` | 3 | Gas | External calls in loops ✅ |
-| `/tmp/gas_griefing_vulnerable_2.sol` | 1 | Gas | Gas griefing vectors ✅ |
-| `/tmp/dos_unbounded_operation_vulnerable_1.sol` | 2 | DoS | Unbounded array iterations ✅ |
-| `/tmp/dos_unbounded_operation_vulnerable_2.sol` | 2 | DoS | Unbounded operations ✅ |
-| `/tmp/excessive_gas_usage_vulnerable_1.sol` | 0 | Gas | Inefficient loops ⚠️ Stub |
-| `/tmp/excessive_gas_usage_vulnerable_2.sol` | 0 | Gas | Gas optimization issues ⚠️ Stub |
-| `/tmp/inefficient_storage_vulnerable_1.sol` | 0 | Storage | Poor storage packing ⚠️ Stub |
-| `/tmp/inefficient_storage_vulnerable_2.sol` | 0 | Storage | Storage inefficiencies ⚠️ Stub |
-| `/tmp/redundant_checks_vulnerable_1.sol` | 0 | Validation | Duplicate requires ⚠️ Stub |
-| `/tmp/redundant_checks_vulnerable_2.sol` | 0 | Validation | Redundant validation ⚠️ Stub |
-
-**Total Phase 9 Findings**: 8 vulnerabilities detected (only functional detectors)
-
-### Phase 10: Advanced Security (8 contracts)
-
-| Contract | Issues | Category | Description |
-|----------|--------|----------|-------------|
-| `/tmp/front_running_mitigation_vulnerable_1.sol` | 0 | MEV | No MEV protection ⚠️ Stub |
-| `/tmp/front_running_mitigation_vulnerable_2.sol` | 0 | MEV | Missing commit-reveal ⚠️ Stub |
-| `/tmp/price_oracle_stale_vulnerable_1.sol` | 0 | Oracle | No staleness checks ⚠️ Stub |
-| `/tmp/price_oracle_stale_vulnerable_2.sol` | 0 | Oracle | Missing heartbeat ⚠️ Stub |
-| `/tmp/centralization_risk_vulnerable_1.sol` | 0 | Access Control | Single owner control ⚠️ Stub |
-| `/tmp/centralization_risk_vulnerable_2.sol` | 0 | Access Control | No multisig ⚠️ Stub |
-| `/tmp/insufficient_randomness_vulnerable_1.sol` | 0 | Randomness | block.timestamp RNG ⚠️ Stub |
-| `/tmp/insufficient_randomness_vulnerable_2.sol` | 0 | Randomness | blockhash randomness ⚠️ Stub |
-
-**Total Phase 10 Findings**: 0 (all stub implementations)
-
-### Phase 11: Code Quality & Best Practices (10 contracts)
-
-| Contract | Issues | Category | Description |
-|----------|--------|----------|-------------|
-| `/tmp/shadowing_variables_vulnerable_1.sol` | 0 | Code Quality | Variable shadowing ⚠️ Stub |
-| `/tmp/shadowing_variables_vulnerable_2.sol` | 0 | Code Quality | State/parameter conflicts ⚠️ Stub |
-| `/tmp/unchecked_math_vulnerable_1.sol` | 0 | Arithmetic | Unchecked operations ⚠️ Stub |
-| `/tmp/unchecked_math_vulnerable_2.sol` | 0 | Arithmetic | Overflow potential ⚠️ Stub |
-| `/tmp/missing_input_validation_vulnerable_1.sol` | 0 | Validation | No zero checks ⚠️ Stub |
-| `/tmp/missing_input_validation_vulnerable_2.sol` | 0 | Validation | Missing bounds checks ⚠️ Stub |
-| `/tmp/deprecated_functions_vulnerable_1.sol` | 0 | Code Quality | .send(), selfdestruct ⚠️ Stub |
-| `/tmp/deprecated_functions_vulnerable_2.sol` | 0 | Code Quality | throw, block.difficulty ⚠️ Stub |
-| `/tmp/unsafe_type_casting_vulnerable_1.sol` | 0 | Type Safety | Unsafe downcasts ⚠️ Stub |
-| `/tmp/unsafe_type_casting_vulnerable_2.sol` | 0 | Type Safety | int to uint conversion ⚠️ Stub |
-
-**Total Phase 11 Findings**: 0 (all stub implementations)
-
-## Expected Results Summary
-
-| Severity | Total Issues |
-|----------|-------------|
-| Critical | 40+ |
-| High | 50+ |
-| Medium | 30+ |
-| Low | 5+ |
-
-Total across all test contracts: **125+ vulnerabilities** (95+ in repository, 52+ in Phase 8-11 tests)
-
-## Notes
-
-- **clean_contract.sol** (3 issues) is expected to have minimal findings - used for false positive testing
-- Contracts in `2025_vulnerabilities/` directory represent modern attack vectors discovered in 2024-2025
-- Some contracts intentionally contain multiple instances of the same vulnerability type for comprehensive testing
-- Interface functions may trigger false positives (e.g., IERC20 functions without bodies)
-
-## Test Scripts
-
-Shell scripts for batch testing Phase 8-11 detectors are available in `/tmp/`:
-- `/tmp/test_all.sh` - Phase 8 detector tests
-- `/tmp/test_phase9.sh` - Phase 9 detector tests
-- `/tmp/test_phase10.sh` - Phase 10 detector tests
-- `/tmp/test_phase11.sh` - Phase 11 detector tests
-
-Run all tests:
+**Usage**:
 ```bash
-chmod +x /tmp/test_*.sh
-for script in /tmp/test_*.sh; do $script; done
+./target/release/soliditydefend tests/contracts/clean_examples/clean_contract.sol
 ```
 
-Comprehensive test report: `/tmp/comprehensive_test_report.md`
+---
 
-## Maintaining Test Contracts
+### 3. Complex Scenarios (5 contracts)
 
-When adding new test contracts:
-1. Document expected vulnerability count in this README
-2. List key vulnerability types being tested
-3. Add contract to appropriate category section
-4. Update total vulnerability count
-5. Verify detection with: `soliditydefend <contract-path>`
-6. For Phase 8-11 detectors, place test contracts in `/tmp/` and create corresponding test scripts
+Real-world, multi-vulnerability contracts representing modern 2025 attack patterns.
 
-## References
+| Contract | Vulnerabilities | Category | Complexity |
+|----------|----------------|----------|------------|
+| `FlashLoanArbitrage.sol` | 12+ | DeFi | High |
+| `DAOGovernance.sol` | 18+ | Governance | Very High |
+| `BridgeVault.sol` | 10+ | Cross-Chain | High |
+| `MEVProtectedDEX.sol` | 8+ | MEV | High |
+| `LiquidityMining.sol` | 10+ | Yield Farming | High |
 
-For detailed information about each vulnerability type, see:
-- [DETECTORS.md](../../docs/DETECTORS.md) - Complete detector documentation
-- [test_cases.md](2025_vulnerabilities/test_cases.md) - Detailed vulnerability descriptions
+**Key Features**:
+- Multiple vulnerability types per contract
+- Real-world attack scenarios from 2024-2025
+- Comprehensive documentation of issues
+- Attack scenario descriptions
+
+**Usage**:
+```bash
+./target/release/soliditydefend tests/contracts/complex_scenarios/2025_vulnerabilities/defi/FlashLoanArbitrage.sol
+```
+
+---
+
+### 4. Cross-Chain Vulnerabilities (14 contracts)
+
+Bridge and cross-chain security test cases.
+
+#### Bridge Chain ID Validation (6 contracts)
+- `vulnerable_simple.sol` - Basic chain-ID bypass
+- `vulnerable_complex.sol` - Complex chain-ID scenarios
+- `clean.sol` - Proper chain-ID validation
+- `test_camel.sol`, `test_medium.sol`, `test_modifier.sol` - Edge cases
+
+#### Bridge Message Verification (4 contracts)
+- `vulnerable_simple.sol` - Missing message verification
+- `vulnerable_complex.sol` - Complex verification bypass
+- `test_merkle.sol` - Merkle proof issues
+- `clean.sol` - Proper message verification
+
+#### Bridge Token Minting (4 contracts)
+- `vulnerable_simple.sol` - Unrestricted minting
+- `vulnerable_complex.sol` - Complex minting vulnerabilities
+- `test_modifier.sol` - Modifier bypass scenarios
+- `clean.sol` - Proper minting access control
+
+**Usage**:
+```bash
+./target/release/soliditydefend tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/
+```
+
+---
+
+### 5. ERC-4626 Vaults (9 contracts)
+
+Comprehensive vault security test suite.
+
+#### Vulnerable Vaults (5 contracts)
+
+| Contract | Primary Vulnerability | CWE | Severity |
+|----------|----------------------|-----|----------|
+| `VulnerableVault_Inflation.sol` | Share inflation attack | 682 | Critical |
+| `VulnerableVault_Donation.sol` | Donation attack | 682 | Critical |
+| `VulnerableVault_FeeManipulation.sol` | Fee calculation errors | 682 | High |
+| `VulnerableVault_HookReentrancy.sol` | Hook callback reentrancy | 841 | Critical |
+| `VulnerableVault_WithdrawalDOS.sol` | Withdrawal denial of service | 400 | High |
+
+#### Secure Vaults (4 mitigation examples)
+
+| Contract | Mitigation Strategy | Protected Against |
+|----------|--------------------|--------------------|
+| `SecureVault_VirtualShares.sol` | Virtual shares offset | Inflation attack |
+| `SecureVault_DeadShares.sol` | Dead shares at deployment | First depositor attack |
+| `SecureVault_MinimumDeposit.sol` | Enforced minimum deposit | Small deposit manipulation |
+| `SecureVault_InternalAccounting.sol` | Internal balance tracking | Donation attack |
+
+**Usage**:
+```bash
+# Test vulnerable vault
+./target/release/soliditydefend tests/contracts/erc4626_vaults/VulnerableVault_Inflation.sol
+
+# Verify secure vault (should have 0 vault-specific issues)
+./target/release/soliditydefend tests/contracts/erc4626_vaults/SecureVault_VirtualShares.sol
+```
+
+---
+
+## 🔍 Testing Workflow
+
+### 1. Individual Contract Analysis
+
+```bash
+./target/release/soliditydefend tests/contracts/<category>/<contract>.sol
+```
+
+### 2. Category Testing
+
+```bash
+# Test all basic vulnerabilities
+./target/release/soliditydefend tests/contracts/basic_vulnerabilities/
+
+# Test all ERC-4626 vaults
+./target/release/soliditydefend tests/contracts/erc4626_vaults/
+
+# Test all cross-chain contracts
+./target/release/soliditydefend tests/contracts/cross_chain/
+```
+
+### 3. Full Suite Testing
+
+```bash
+# Test all contracts
+./target/release/soliditydefend tests/contracts/
+
+# Generate JSON output for analysis
+find tests/contracts -name "*.sol" -type f | while read contract; do
+    ./target/release/soliditydefend "$contract" --format json > "results/$(basename $contract .sol).json"
+done
+```
+
+### 4. Comparison with Inventory
+
+```bash
+# 1. Run analysis
+./target/release/soliditydefend tests/contracts/basic_vulnerabilities/access_control_issues.sol --format json > actual.json
+
+# 2. Compare with VULNERABILITY_INVENTORY.md expected vulnerabilities
+# 3. Calculate metrics: True Positives, False Positives, False Negatives
+```
+
+---
+
+## 📊 Vulnerability Statistics
+
+### By Category
+
+| Category | Contracts | Vulnerable | Clean | Complexity |
+|----------|-----------|-----------|-------|------------|
+| Basic Vulnerabilities | 3 | 3 | 0 | Simple |
+| Clean Examples | 1 | 0 | 1 | Simple |
+| Complex Scenarios | 5 | 5 | 0 | High |
+| Cross-Chain | 14 | 9 | 5 | Medium-High |
+| ERC-4626 Vaults | 9 | 5 | 4 | Medium |
+| **TOTAL** | **32** | **22** | **10** | **Mixed** |
+
+### By Severity
+
+| Severity | Approximate Count | Percentage |
+|----------|------------------|------------|
+| Critical | 35+ | 45% |
+| High | 25+ | 32% |
+| Medium | 15+ | 19% |
+| Low | 3+ | 4% |
+| **TOTAL** | **78+** | **100%** |
+
+### Top Vulnerability Types
+
+1. **Access Control** (8+ instances) - Missing modifiers, unprotected functions
+2. **Reentrancy** (6+ instances) - Classic, read-only, cross-contract
+3. **DeFi/Oracle** (15+ instances) - Price manipulation, flash loans, oracle attacks
+4. **Governance** (12+ instances) - Flash loan attacks, delegation issues
+5. **Cross-Chain** (10+ instances) - Bridge validation, chain-ID, replay attacks
+6. **ERC-4626 Vaults** (8+ instances) - Share inflation, donation, hook reentrancy
+7. **MEV** (6+ instances) - Frontrunning, sandwich attacks, slippage
+8. **Validation** (8+ instances) - Zero address, input validation, bounds checks
+
+---
+
+## 🎓 Key Test Contracts
+
+### Best for Learning
+
+1. **access_control_issues.sol** - Start here for access control vulnerabilities
+2. **reentrancy_issues.sol** - Classic reentrancy examples
+3. **VulnerableVault_Inflation.sol** - Modern ERC-4626 attack (Cetus DEX reference)
+4. **FlashLoanArbitrage.sol** - Real-world DeFi vulnerabilities
+5. **DAOGovernance.sol** - Comprehensive governance attack vectors
+
+### Best for Benchmarking
+
+1. **clean_contract.sol** - False positive baseline
+2. **FlashLoanArbitrage.sol** - Complex multi-vulnerability detection
+3. **DAOGovernance.sol** - High vulnerability count (18+)
+4. **Cross-chain suite** - Bridge-specific detectors
+
+### Best for Specific Detectors
+
+| Detector Category | Test Contract |
+|-------------------|---------------|
+| Access Control | `access_control_issues.sol` |
+| Reentrancy | `reentrancy_issues.sol` |
+| Flash Loans | `FlashLoanArbitrage.sol` |
+| Governance | `DAOGovernance.sol` |
+| Cross-Chain | `cross_chain/phase13_legacy/bridge_*` |
+| ERC-4626 Vaults | `erc4626_vaults/VulnerableVault_*` |
+| MEV | `complex_scenarios/2025_vulnerabilities/mev/MEVProtectedDEX.sol` |
+
+---
+
+## 📖 Documentation
+
+### Main Documentation
+
+- **[VULNERABILITY_INVENTORY.md](./VULNERABILITY_INVENTORY.md)** - Complete vulnerability listings
+  - Line-by-line vulnerability documentation
+  - Expected detector IDs
+  - Attack scenarios
+  - Severity classifications
+  - Testing commands
+
+- **[../../docs/DETECTORS.md](../../docs/DETECTORS.md)** - Complete detector reference
+  - All 100 detectors documented
+  - Detection patterns
+  - CWE mappings
+  - Example code
+
+### Additional Resources
+
+- **Attack Scenarios**: See VULNERABILITY_INVENTORY.md for detailed attack descriptions
+- **Mitigation Examples**: Check secure vault contracts for best practices
+- **Testing Methodology**: VULNERABILITY_INVENTORY.md includes comprehensive testing guide
+
+---
+
+## 🔧 Maintenance
+
+### Adding New Test Contracts
+
+1. **Choose appropriate category** (or create new one)
+2. **Document vulnerabilities** in VULNERABILITY_INVENTORY.md:
+   - File location and contract name
+   - Complexity level
+   - Detailed vulnerability table with line numbers
+   - Expected detection count
+   - Test command
+3. **Update this README** with contract summary
+4. **Update statistics** (vulnerability counts, severity distribution)
+5. **Test detection**: Verify documented vulnerabilities are detected
+
+### Updating Existing Contracts
+
+1. **Update line numbers** in VULNERABILITY_INVENTORY.md if code changes
+2. **Re-test detection** to verify expected counts
+3. **Update documentation** if vulnerability patterns change
+4. **Version control**: Document changes in git commit
+
+---
+
+## ⚠️ Important Notes
+
+- **Intentional Vulnerabilities**: All vulnerable contracts contain intentional security issues for testing. DO NOT use in production.
+- **Line Numbers**: May shift if contracts are modified. Always verify against current code.
+- **Detection Counts**: Expected counts are minimums. Detectors may find additional related issues.
+- **False Positives**: Clean contracts may still trigger some detections. Document these for detector improvement.
+- **Severity Context**: Actual severity depends on contract context and usage.
+
+---
+
+## 🚀 Quick Start
+
+```bash
+# 1. Build SolidityDefend
+cargo build --release --bin soliditydefend
+
+# 2. Test basic vulnerabilities
+./target/release/soliditydefend tests/contracts/basic_vulnerabilities/access_control_issues.sol
+
+# 3. Test clean contract (false positive check)
+./target/release/soliditydefend tests/contracts/clean_examples/clean_contract.sol
+
+# 4. Test complex scenario
+./target/release/soliditydefend tests/contracts/complex_scenarios/2025_vulnerabilities/defi/FlashLoanArbitrage.sol
+
+# 5. Test full suite
+./target/release/soliditydefend tests/contracts/
+
+# 6. Compare with inventory
+# Check VULNERABILITY_INVENTORY.md for expected results
+```
+
+---
+
+**Maintained by**: SolidityDefend Development Team
+**Version**: 1.0.0
+**Last Verified**: October 13, 2025
