@@ -1,0 +1,218 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Extract changelog
+        id: changelog
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          VERSION_NO_V="${VERSION#v}"
+
+          # Extract the relevant section from CHANGELOG.md
+          if grep -q "\[${VERSION_NO_V}\]" CHANGELOG.md; then
+            # Extract content between this version and the next version or end of file
+            sed -n "/\[${VERSION_NO_V}\]/,/\[.*\]/{/\[.*\]/!p;}" CHANGELOG.md > release_notes.txt
+          else
+            echo "Release ${VERSION}" > release_notes.txt
+            echo "" >> release_notes.txt
+            echo "See CHANGELOG.md for details." >> release_notes.txt
+          fi
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          release_name: SolidityDefend ${{ steps.get_version.outputs.version }}
+          body_path: release_notes.txt
+          draft: false
+          prerelease: false
+
+  build-and-upload:
+    name: Build and Upload Assets
+    needs: create-release
+    strategy:
+      matrix:
+        include:
+          # Linux x86_64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: soliditydefend-${{ needs.create-release.outputs.version }}-x86_64-unknown-linux-gnu
+
+          # Linux ARM64
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            artifact_name: soliditydefend-${{ needs.create-release.outputs.version }}-aarch64-unknown-linux-gnu
+            cross: true
+
+          # macOS x86_64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: soliditydefend-${{ needs.create-release.outputs.version }}-x86_64-apple-darwin
+
+          # macOS ARM64 (Apple Silicon)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: soliditydefend-${{ needs.create-release.outputs.version }}-aarch64-apple-darwin
+
+          # Windows x86_64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: soliditydefend-${{ needs.create-release.outputs.version }}-x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross-compilation tools (Linux ARM64)
+        if: matrix.cross
+        run: |
+          cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build release binary
+        run: |
+          if [ "${{ matrix.cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }} --bin soliditydefend
+          else
+            cargo build --release --target ${{ matrix.target }} --bin soliditydefend
+          fi
+        shell: bash
+
+      - name: Prepare release archive
+        run: |
+          mkdir -p release
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            cp target/${{ matrix.target }}/release/soliditydefend.exe release/
+            cd release
+            7z a ../${{ matrix.artifact_name }}.zip soliditydefend.exe
+          else
+            cp target/${{ matrix.target }}/release/soliditydefend release/
+            cd release
+            tar czf ../${{ matrix.artifact_name }}.tar.gz soliditydefend
+          fi
+        shell: bash
+
+      - name: Calculate SHA256
+        id: sha256
+        run: |
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            SHA256=$(sha256sum ${{ matrix.artifact_name }}.zip | awk '{print $1}')
+            echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
+            echo "${SHA256}  ${{ matrix.artifact_name }}.zip" >> SHA256SUMS.txt
+          else
+            SHA256=$(sha256sum ${{ matrix.artifact_name }}.tar.gz | awk '{print $1}')
+            echo "sha256=${SHA256}" >> $GITHUB_OUTPUT
+            echo "${SHA256}  ${{ matrix.artifact_name }}.tar.gz" >> SHA256SUMS.txt
+          fi
+        shell: bash
+
+      - name: Upload Linux/macOS asset
+        if: matrix.os != 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.artifact_name }}.tar.gz
+          asset_name: ${{ matrix.artifact_name }}.tar.gz
+          asset_content_type: application/gzip
+
+      - name: Upload Windows asset
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./${{ matrix.artifact_name }}.zip
+          asset_name: ${{ matrix.artifact_name }}.zip
+          asset_content_type: application/zip
+
+      - name: Upload SHA256 sums
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.upload_url }}
+          asset_path: ./SHA256SUMS.txt
+          asset_name: ${{ matrix.artifact_name }}-SHA256SUMS.txt
+          asset_content_type: text/plain
+
+  update-homebrew:
+    name: Update Homebrew Formula
+    needs: [create-release, build-and-upload]
+    runs-on: ubuntu-latest
+    if: success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update Homebrew formula SHA256
+        run: |
+          VERSION="${{ needs.create-release.outputs.version }}"
+
+          # Download the release assets
+          curl -sSfL "https://github.com/${{ github.repository }}/releases/download/${VERSION}/soliditydefend-${VERSION}-x86_64-apple-darwin.tar.gz" -o darwin-x86.tar.gz
+          curl -sSfL "https://github.com/${{ github.repository }}/releases/download/${VERSION}/soliditydefend-${VERSION}-aarch64-apple-darwin.tar.gz" -o darwin-arm.tar.gz
+          curl -sSfL "https://github.com/${{ github.repository }}/releases/download/${VERSION}/soliditydefend-${VERSION}-x86_64-unknown-linux-gnu.tar.gz" -o linux.tar.gz
+
+          # Calculate SHA256
+          SHA256_X86=$(sha256sum darwin-x86.tar.gz | awk '{print $1}')
+          SHA256_ARM=$(sha256sum darwin-arm.tar.gz | awk '{print $1}')
+          SHA256_LINUX=$(sha256sum linux.tar.gz | awk '{print $1}')
+
+          # Update formula
+          sed -i "s/REPLACE_WITH_ACTUAL_SHA256_X86/${SHA256_X86}/g" Formula/soliditydefend.rb
+          sed -i "s/REPLACE_WITH_ACTUAL_SHA256_ARM64/${SHA256_ARM}/g" Formula/soliditydefend.rb
+          sed -i "s/REPLACE_WITH_ACTUAL_SHA256_LINUX/${SHA256_LINUX}/g" Formula/soliditydefend.rb
+          sed -i "s/version \".*\"/version \"${VERSION#v}\"/g" Formula/soliditydefend.rb
+
+          echo "Updated Homebrew formula with SHA256 checksums"
+
+      - name: Create PR to Homebrew tap (if tap exists)
+        run: |
+          echo "Homebrew formula updated in Formula/soliditydefend.rb"
+          echo "To publish to a Homebrew tap, commit this file to a tap repository"
+          echo "Example: https://github.com/SolidityOps/homebrew-tap"
