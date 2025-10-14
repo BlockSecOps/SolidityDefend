@@ -135,6 +135,11 @@ pub mod create2_frontrunning;
 pub mod selfdestruct_recipient;
 pub mod extcodesize_bypass;
 
+// Phase 23: v1.0 Milestone - Final Detectors (2025)
+pub mod multisig_bypass;
+pub mod permit_signature_exploit;
+pub mod storage_layout_upgrade;
+
 // DeFi-specific detectors
 pub mod defi;
 

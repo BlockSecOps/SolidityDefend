@@ -729,6 +729,22 @@ impl CliApp {
                 "EXTCODESIZE Bypass Detection",
                 "Medium",
             ),
+            // Phase 23: v1.0 Milestone - Final Detectors (2025)
+            (
+                "multisig-bypass",
+                "Multi-Signature Bypass Detection",
+                "Critical",
+            ),
+            (
+                "permit-signature-exploit",
+                "Permit Signature Exploitation",
+                "High",
+            ),
+            (
+                "storage-layout-upgrade",
+                "Storage Layout Upgrade Violation",
+                "Critical",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
