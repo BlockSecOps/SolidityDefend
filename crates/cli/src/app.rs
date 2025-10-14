@@ -708,6 +708,27 @@ impl CliApp {
                 "Diamond Delegatecall to Zero Address",
                 "Critical",
             ),
+            // Phase 22: Metamorphic Contracts & CREATE2 (2025)
+            (
+                "metamorphic-contract",
+                "Metamorphic Contract Detection",
+                "Critical",
+            ),
+            (
+                "create2-frontrunning",
+                "CREATE2 Frontrunning Protection",
+                "High",
+            ),
+            (
+                "selfdestruct-recipient-manipulation",
+                "SELFDESTRUCT Recipient Manipulation",
+                "High",
+            ),
+            (
+                "extcodesize-bypass",
+                "EXTCODESIZE Bypass Detection",
+                "Medium",
+            ),
         ];
 
         for (id, name, severity) in detector_info {

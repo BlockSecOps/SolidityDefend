@@ -727,6 +727,20 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::diamond_delegatecall_zero::DiamondDelegatecallZeroDetector::new(),
         ));
+
+        // Phase 22: Metamorphic Contracts & CREATE2 (2025)
+        self.register(Arc::new(
+            crate::metamorphic_contract::MetamorphicContractDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::create2_frontrunning::Create2FrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::selfdestruct_recipient::SelfdestructRecipientDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::extcodesize_bypass::ExtcodesizeBypassDetector::new(),
+        ));
     }
 }
 
