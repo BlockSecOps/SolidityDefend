@@ -210,6 +210,52 @@ pub mod test_utils {
             location,
         }
     }
+
+    /// Create a test context with source code
+    pub fn create_test_context(source: &str) -> super::AnalysisContext<'static> {
+        use ast::{Identifier, Position, SourceLocation as AstSourceLocation};
+        use semantic::SymbolTable;
+        use std::path::PathBuf;
+
+        let symbols = SymbolTable::new();
+        let arena = Box::leak(Box::new(AstArena::new()));
+
+        let name = arena.alloc_str("TestContract");
+        let identifier = Identifier {
+            name,
+            location: AstSourceLocation::new(
+                PathBuf::from("test.sol"),
+                Position::new(1, 1, 0),
+                Position::new(1, 12, 11),
+            ),
+        };
+
+        let contract = Box::leak(Box::new(ast::Contract {
+            name: identifier,
+            contract_type: ast::ContractType::Contract,
+            inheritance: BumpVec::new_in(&arena.bump),
+            using_for_directives: BumpVec::new_in(&arena.bump),
+            state_variables: BumpVec::new_in(&arena.bump),
+            functions: BumpVec::new_in(&arena.bump),
+            modifiers: BumpVec::new_in(&arena.bump),
+            events: BumpVec::new_in(&arena.bump),
+            errors: BumpVec::new_in(&arena.bump),
+            structs: BumpVec::new_in(&arena.bump),
+            enums: BumpVec::new_in(&arena.bump),
+            location: AstSourceLocation::new(
+                PathBuf::from("test.sol"),
+                Position::new(1, 1, 0),
+                Position::new(1, 12, 11),
+            ),
+        }));
+
+        super::AnalysisContext::new(
+            contract,
+            symbols,
+            source.to_string(),
+            "test.sol".to_string(),
+        )
+    }
 }
 
 #[derive(Debug, Clone)]
