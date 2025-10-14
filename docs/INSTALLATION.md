@@ -28,7 +28,56 @@ This guide provides detailed installation instructions for SolidityDefend on var
 
 ## Installation Methods
 
-### From Source (Recommended)
+### Quick Install (Recommended)
+
+The fastest way to install SolidityDefend is using our installation script:
+
+```bash
+curl -sSfL https://raw.githubusercontent.com/SolidityOps/SolidityDefend/main/install.sh | bash
+```
+
+This script will:
+- Automatically detect your platform (Linux, macOS, Windows)
+- Download the latest pre-compiled binary
+- Install it to `~/.local/bin` (or custom location via `INSTALL_DIR`)
+- Verify the installation
+
+**Custom installation directory:**
+```bash
+curl -sSfL https://raw.githubusercontent.com/SolidityOps/SolidityDefend/main/install.sh | INSTALL_DIR=/usr/local/bin bash
+```
+
+### Using Homebrew (macOS and Linux)
+
+For macOS and Linux users, install via Homebrew:
+
+```bash
+# Add the tap (first time only)
+brew tap SolidityOps/tap
+
+# Install SolidityDefend
+brew install soliditydefend
+
+# Update to latest version
+brew upgrade soliditydefend
+```
+
+### Binary Releases
+
+Download pre-compiled binaries from the [releases page](https://github.com/SolidityOps/SolidityDefend/releases):
+
+**Available platforms:**
+- Linux (x86_64, ARM64)
+- macOS (Intel x86_64, Apple Silicon ARM64)
+- Windows (x86_64)
+
+**Installation steps:**
+1. Download the appropriate archive for your platform
+2. Extract the binary: `tar -xzf soliditydefend-*.tar.gz` (or unzip for Windows)
+3. Move to your PATH: `mv soliditydefend /usr/local/bin/` (or add to PATH on Windows)
+4. Verify: `soliditydefend --version`
+
+### From Source
 
 Building from source ensures you get the latest features and optimal performance for your platform.
 
@@ -145,16 +194,6 @@ services:
 docker-compose run soliditydefend /workspace/*.sol
 ```
 
-### Binary Releases
-
-Pre-compiled binaries will be available for major platforms:
-
-- **Linux** (x86_64, ARM64)
-- **macOS** (Intel, Apple Silicon)
-- **Windows** (x86_64)
-
-Check the [releases page](https://github.com/soliditydefend/cli/releases) for download links.
-
 ## Verification
 
 ### Test Installation
@@ -241,12 +280,6 @@ Expected output should show detected issues.
    sudo cp target/release/soliditydefend /usr/local/bin/
    ```
 
-#### Using Homebrew (Future)
-
-```bash
-# Will be available in the future
-brew install soliditydefend
-```
 
 ### Windows
 
