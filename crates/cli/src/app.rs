@@ -592,6 +592,22 @@ impl CliApp {
             ),
             ("deprecated-functions", "Deprecated Functions", "Low"),
             ("unsafe-type-casting", "Unsafe Type Casting", "Medium"),
+            // Phase 15: DeFi Protocol Security (2025)
+            (
+                "defi-liquidity-pool-manipulation",
+                "Liquidity Pool Manipulation",
+                "Critical",
+            ),
+            (
+                "defi-jit-liquidity-attacks",
+                "JIT Liquidity Attacks",
+                "High",
+            ),
+            (
+                "defi-yield-farming-exploits",
+                "Yield Farming Exploits",
+                "High",
+            ),
             // Phase 17: Token Standard Edge Cases (2025)
             (
                 "erc20-approve-race",

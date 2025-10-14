@@ -100,6 +100,10 @@ pub enum DetectorCategory {
     Diamond,
     /// Upgradeable contract vulnerabilities
     Upgradeable,
+    /// Metamorphic contract vulnerabilities (CREATE2 + SELFDESTRUCT)
+    Metamorphic,
+    /// Contract deployment vulnerabilities
+    Deployment,
 }
 
 impl DetectorCategory {
@@ -126,6 +130,8 @@ impl DetectorCategory {
             Self::DataAvailability,
             Self::Diamond,
             Self::Upgradeable,
+            Self::Metamorphic,
+            Self::Deployment,
         ]
     }
 
@@ -152,6 +158,8 @@ impl DetectorCategory {
             Self::DataAvailability => "Data Availability",
             Self::Diamond => "Diamond Proxy (ERC-2535)",
             Self::Upgradeable => "Upgradeable Contracts",
+            Self::Metamorphic => "Metamorphic Contracts",
+            Self::Deployment => "Contract Deployment",
         }
     }
 }
