@@ -5,433 +5,364 @@
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 [![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/SolidityOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 
-A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy.
-
-## 🎉 v1.0.0 Released - 100 Detectors Milestone Achieved!
-
-SolidityDefend has reached production readiness with **100 comprehensive vulnerability detectors** covering everything from classic vulnerabilities to cutting-edge DeFi, Account Abstraction, Cross-Chain, Layer 2, and advanced security patterns.
+A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
 ## Features
 
-🔍 **Comprehensive Security Analysis**
-- **100 vulnerability detectors** covering all major security categories
-- Advanced taint tracking and data flow analysis framework
-- Control flow graph analysis for complex vulnerability patterns
-- Multi-layered security detection (access control, reentrancy, validation, MEV protection, DeFi, governance, gas optimization, advanced security, code quality)
+- **100+ Security Detectors** - Comprehensive coverage of vulnerabilities including reentrancy, access control, oracle manipulation, MEV attacks, DeFi exploits, cross-chain security, and more
+- **Lightning Fast Analysis** - Built with Rust for optimal performance with advanced caching and incremental analysis
+- **Multiple Output Formats** - Console output with syntax highlighting and code snippets, or JSON for CI/CD integration
+- **URL-Based Analysis** - Analyze contracts directly from Etherscan, Polygonscan, BscScan, and Arbiscan URLs
+- **Flexible Configuration** - YAML-based configuration system for customizing analysis behavior
+- **CI/CD Ready** - Exit codes, severity filtering, and JSON output for seamless integration
+- **Modern Vulnerability Coverage** - Detectors for 2024/2025 attack patterns including Account Abstraction (ERC-4337), cross-chain bridges, and advanced DeFi protocols
 
-🚀 **High Performance**
-- Incremental analysis foundation for fast re-analysis
-- Arena-allocated AST for memory efficiency (~26k lines of optimized Rust code)
-- Performance optimization framework with parallel processing capabilities
-- Advanced caching system with dependency tracking
+## Installation
 
-🔧 **Multiple Output Formats**
-- Console output with color coding and code snippets
-- JSON output for programmatic processing and CI/CD integration
-- Rich formatting with fix suggestions
+### Download Pre-built Binary
 
-🌐 **URL-Based Analysis (NEW)**
-- Analyze contracts directly from blockchain explorer URLs
-- Support for Etherscan, Polygonscan, BscScan, Arbiscan
-- Transaction and contract address analysis
-- Freemium model with user-provided API keys
+Download the latest release for your platform:
 
-🛠️ **Developer Experience**
-- Full-featured command-line interface with YAML configuration support
-- Comprehensive configuration system (.soliditydefend.yml)
-- Language Server Protocol (LSP) framework for IDE integration
-- Docker containerization ready
-- Comprehensive test infrastructure with 150+ tests covering all pipeline components
+**Linux (x86_64)**
+```bash
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-linux-x86_64.tar.gz
+tar -xzf soliditydefend-v1.0.0-linux-x86_64.tar.gz
+sudo mv soliditydefend /usr/local/bin/
+```
 
-## Production Status
+**macOS (Intel)**
+```bash
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-macos-x86_64.tar.gz
+tar -xzf soliditydefend-v1.0.0-macos-x86_64.tar.gz
+sudo mv soliditydefend /usr/local/bin/
+```
 
-🎉 **STABLE RELEASE - Version 1.0.0 Production Ready**
+**macOS (Apple Silicon)**
+```bash
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-macos-aarch64.tar.gz
+tar -xzf soliditydefend-v1.0.0-macos-aarch64.tar.gz
+sudo mv soliditydefend /usr/local/bin/
+```
 
-✅ **Core Infrastructure (COMPLETE)**
-- ✅ Rust workspace with 18 crates (50,000+ lines of optimized code)
-- ✅ Arena-allocated parser with comprehensive error recovery
-- ✅ Incremental computation database with intelligent caching
-- ✅ Symbol resolution and type checking (comprehensive test coverage)
-- ✅ SSA-form intermediate representation with optimization
-- ✅ Control flow graph construction with dominance analysis
+**Windows (x86_64)**
+```powershell
+# Download from: https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-windows-x86_64.zip
+# Extract and add to PATH
+```
 
-✅ **Security Analysis Engine (PRODUCTION READY)** 🎉
-- ✅ **Detector Registry**: Fully functional with 100 production-ready detectors
-- ✅ **Modern Vulnerability Detection**: Comprehensive coverage for 2024/2025-era attack patterns
-- ✅ **100 detectors across 23 phases:**
-  - **Access Control** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin authentication
-  - **Reentrancy** (2): Classic and read-only reentrancy detection
-  - **Logic Bugs** (2): Division order, state machine validation
-  - **Input Validation** (3): Zero address checks, array bounds, parameter consistency
-  - **Oracle Security** (3): Single source detection, price validation, oracle manipulation
-  - **Flash Loan Protection** (3): Vulnerable patterns, staking attacks, arbitrage detection
-  - **External Call Safety** (1): Unchecked call detection
-  - **MEV Protection** (9): Sandwich attacks, front-running, commit-reveal, gas price bypass, auction timing, front-running mitigation
-  - **DeFi Security** (5): Slippage protection, reward manipulation, emergency withdrawal abuse
-  - **Cross-Chain** (2): Replay attacks, weak signature validation
-  - **Governance** (5): Delegation loops, emergency function abuse, signature replay, pause centralization
-  - **Timestamp Dependencies** (1): Enhanced block dependency analysis with context awareness
-  - **Staking & Validators** (4): Slashing mechanism, validator griefing, withdrawal delay, validator front-running
-  - **Advanced Logic** (3): Upgradeable proxy issues, token supply manipulation, circular dependencies
-  - **Gas & Optimization** (5): Gas griefing, DoS unbounded operations, excessive gas usage, inefficient storage, redundant checks
-  - **Advanced Security** (4): Front-running mitigation, oracle staleness, centralization risks, insufficient randomness
-  - **Code Quality** (5): Variable shadowing, unchecked math, missing validation, deprecated functions, unsafe type casting
-  - **Account Abstraction (ERC-4337)** (5): Entrypoint trust, initialization vulnerabilities, account takeover, bundler DOS, hardware wallet delegation
-  - **Cross-Chain & Bridges** (8): Settlement validation, replay attacks, filler front-running, oracle dependency, Permit2 integration, token minting, message verification, chain ID validation
-  - **Account Abstraction Advanced** (5): Paymaster abuse, session key vulnerabilities, signature aggregation, social recovery, nonce management
-  - **DeFi Protocol Security** (3): Liquidity pool manipulation, JIT liquidity, yield farming
-  - **Token Standard Edge Cases** (4): ERC-20 approve race, infinite approval risks, ERC-777 reentrancy hooks, ERC-721/1155 callback reentrancy
-- ✅ Comprehensive detector registry and framework
-- ✅ Dataflow analysis with taint tracking (834 lines)
-- ✅ Advanced pattern matching and AST traversal
-- ✅ **Achievement**: Increased from 21 to 78 detectors (+271% growth), with additional detectors in development
+### Build from Source
 
-✅ **Output & Integration (95% Complete)**
-- ✅ Console formatter with color support and code snippets (11/11 tests passing)
-- ✅ JSON output formatter with structured data
-- ✅ Full CLI interface with file analysis workflows
-- ⚠️ Language Server Protocol (framework implemented, needs completion)
+Requires Rust 1.75.0 or later:
 
-✅ **Performance & Quality (90% Complete)**
-- ✅ Persistent caching system with LRU eviction
-- ✅ Memory management with pressure monitoring
-- ✅ Performance optimization framework (incremental analysis, parallel processing)
-- ✅ Fix suggestion system with text replacement capabilities
-- ✅ Comprehensive error handling and logging
-- ✅ **Complete test infrastructure with comprehensive coverage:**
-  - ✅ Integration tests for AST → IR → CFG → Dataflow pipeline
-  - ✅ Arena-allocated AST test fixtures for realistic scenarios
-  - ✅ Performance benchmarks for large codebases (up to 10,000+ lines)
-  - ✅ Regression tests for security detector accuracy with automated validation
+```bash
+git clone https://github.com/SolidityOps/SolidityDefend.git
+cd SolidityDefend
+cargo build --release
+sudo mv target/release/soliditydefend /usr/local/bin/
+```
 
-## 🎯 **SmartBugs Validation Achievement**
+### Docker
 
-SolidityDefend Community Edition has **successfully achieved production readiness** through comprehensive validation:
+```bash
+# Pull the image
+docker pull ghcr.io/solidityops/soliditydefend:latest
 
-### ✅ **Validation Results**
-- **F1-Score**: ✅ **85%+ achieved** through comprehensive detector coverage across all SmartBugs categories
-- **Performance**: ✅ **<0.01s analysis time** (50x faster than 2s requirement)
-- **Coverage**: ✅ **All major vulnerability categories** validated and working
-- **Production Ready**: ✅ **CONFIRMED** - See detailed `smartbugs_validation_report.md`
-
-### ✅ **Production Features Complete**
-- **78 Detectors**: Comprehensive vulnerability coverage across 17 security phases
-- **High-Performance Analysis**: Sub-second analysis with intelligent caching
-- **Multiple Output Formats**: Console, JSON with comprehensive configuration
-- **CI/CD Integration**: Exit codes, incremental scanning, GitHub Actions templates
-- **Comprehensive Testing**: SmartBugs validation framework with accuracy measurement
-
-### 📊 **Release Statistics**
-- **Total Code**: 28,000+ lines of production-optimized Rust
-- **Test Infrastructure**: Comprehensive validation framework with 333+ tests passing
-- **Detectors**: 78 production-ready security detectors across 17 phases
-- **Crates**: 18 modular components with clean architecture
-- **Status**: ✅ **PRE-RELEASE (0.9.0) - FEATURE COMPLETE**
-
-## Architecture
-
-SolidityDefend is built as a modular Rust workspace with the following components:
-
-### Core Analysis Pipeline
-- **Parser** (`crates/parser`): Solidity parser with arena allocation and error recovery
-- **AST** (`crates/ast`): Arena-allocated Abstract Syntax Tree for memory efficiency
-- **Database** (`crates/db`): Incremental computation system with caching
-- **Semantic** (`crates/semantic`): Symbol resolution and type checking
-- **IR** (`crates/ir`): SSA-form Intermediate Representation
-- **CFG** (`crates/cfg`): Control Flow Graph construction and dominance analysis
-- **DataFlow** (`crates/dataflow`): Taint tracking and data flow analysis framework
-
-### Security Analysis
-- **Detectors** (`crates/detectors`): 93 vulnerability detection engines across 15 security phases
-- **Fixes** (`crates/fixes`): Automatic fix suggestions and code transformations
-
-### Interface & Output
-- **Output** (`crates/output`): Multi-format output (Console, JSON)
-- **CLI** (`crates/cli`): Command-line interface and configuration
-- **LSP** (`crates/lsp`): Language Server Protocol framework for IDE integration
-
-### Performance & Infrastructure
-- **Cache** (`crates/cache`): Persistent caching with dependency tracking
-- **Performance** (`crates/performance`): Optimization framework with parallel processing
-- **Metrics** (`crates/metrics`): Performance monitoring and statistics
+# Or build locally
+docker build -f docker/Dockerfile -t soliditydefend .
+```
 
 ## Quick Start
 
-### Installation
+### Analyze a Single Contract
 
-#### From Source
 ```bash
-# Clone the repository
-git clone https://github.com/SolidityOps/SolidityDefend.git
-cd SolidityDefend
-
-# Build the project
-cargo build --release
-
-# The binary will be available at target/release/soliditydefend
+soliditydefend contract.sol
 ```
 
-#### System Requirements
-- Rust 1.75.0 or later
-- 4GB+ RAM recommended for large projects
-- Git for version control integration
-
-### Basic Usage
+### Analyze Multiple Files
 
 ```bash
-# Analyze a single contract
-./target/release/soliditydefend contract.sol
-
-# Analyze multiple files
-./target/release/soliditydefend src/**/*.sol
-
-# Analyze contract from blockchain explorer URL
-./target/release/soliditydefend --from-url https://etherscan.io/tx/0x1234...
-
-# Analyze contract by address
-./target/release/soliditydefend --from-url https://etherscan.io/address/0x1234...
-
-# Setup API keys for URL analysis
-./target/release/soliditydefend --setup-api-keys
-
-# JSON output for CI/CD
-./target/release/soliditydefend -f json -o results.json contract.sol
-
-# Filter by severity
-./target/release/soliditydefend -s high contract.sol
-
-# List all available detectors
-./target/release/soliditydefend --list-detectors
-
-# Show help
-./target/release/soliditydefend --help
+soliditydefend src/**/*.sol
 ```
 
-### Docker Support
+### Analyze from Blockchain Explorer
 
 ```bash
-# Build container
-docker build -f docker/Dockerfile -t soliditydefend .
+# From transaction hash
+soliditydefend --from-url https://etherscan.io/tx/0x1234...
 
+# From contract address
+soliditydefend --from-url https://etherscan.io/address/0x1234...
+
+# Setup API keys (required for URL analysis)
+soliditydefend --setup-api-keys
+```
+
+### Filter by Severity
+
+```bash
+# Show only high and critical issues
+soliditydefend -s high contract.sol
+```
+
+### JSON Output for CI/CD
+
+```bash
+soliditydefend -f json -o results.json contract.sol
+```
+
+### List Available Detectors
+
+```bash
+soliditydefend --list-detectors
+```
+
+## Usage Examples
+
+### Basic Analysis
+
+```bash
+# Analyze with default settings
+soliditydefend MyContract.sol
+
+# Analyze entire project
+soliditydefend contracts/**/*.sol
+```
+
+### CI/CD Integration
+
+```bash
+# Exit with error code if high/critical issues found
+soliditydefend --exit-code-level high contracts/*.sol
+
+# Generate JSON report for further processing
+soliditydefend -f json -o security-report.json contracts/*.sol
+```
+
+### Docker Usage
+
+```bash
 # Analyze contracts in current directory
 docker run -v $(pwd):/analysis soliditydefend /analysis/*.sol
+
+# With JSON output
+docker run -v $(pwd):/analysis soliditydefend -f json -o /analysis/report.json /analysis/*.sol
+```
+
+### Configuration File
+
+Create a `.soliditydefend.yml` configuration file:
+
+```bash
+soliditydefend --init-config
+```
+
+Then customize your analysis settings:
+
+```yaml
+min_severity: medium
+output_format: console
+detectors:
+  disable:
+    - inefficient-storage
+  enable_all: true
 ```
 
 ## Security Detectors
 
-SolidityDefend includes 78 production-ready security detectors across 17 phases:
+SolidityDefend includes **100 production-ready security detectors** across multiple categories:
 
-### Phases 1-5: Core Security (45 detectors)
-- **Access Control & Authentication** (4): Missing modifiers, unprotected initializers, default visibility, tx.origin
-- **Reentrancy Protection** (2): Classic and read-only reentrancy
-- **Input Validation** (3): Zero address, array bounds, parameter consistency
-- **Logic & State** (2): Division order, state machines
-- **Oracle Security** (3): Single source, price validation, manipulation
-- **Flash Loan Protection** (3): Vulnerable patterns, staking attacks, arbitrage
-- **MEV Protection** (5): Sandwich attacks, front-running, commit-reveal, gas price, auction timing
-- **Cross-Chain** (2): Replay attacks, weak signatures
-- **DeFi Security** (5): Slippage protection, reward manipulation, emergency withdrawals
-- **Governance** (5): Delegation loops, emergency functions, signature replay, pause centralization
-- **External Integration** (2): Unchecked calls, timestamp dependencies
-- **Additional** (9): State machine validation, oracle manipulation, various security patterns
+### Core Security (15 detectors)
+- Access Control & Authentication
+- Reentrancy Protection (classic & read-only)
+- Input Validation
+- Logic & State Machine Bugs
+- External Call Safety
 
-### Phase 6: MEV & Timing (5 detectors)
-- **Timestamp Manipulation**: Block timestamp dependency detection
-- **Block Stuffing**: DoS via block gas limit manipulation
-- **MEV Extraction**: General MEV vulnerability patterns
-- **Deadline Manipulation**: Transaction deadline bypass detection
-- **Nonce Reuse**: Nonce-based attack patterns
+### DeFi & Oracle Security (16 detectors)
+- Oracle Manipulation & Price Validation
+- Flash Loan Attack Protection
+- Slippage Protection
+- Reward Manipulation
+- Liquidity Pool Vulnerabilities
+- Vault Security (ERC-4626)
 
-### Phase 7: Staking & Validator Security (4 detectors)
-- **Slashing Mechanism**: Slashing rule vulnerabilities
-- **Validator Griefing**: Griefing attack detection
-- **Withdrawal Delay**: Withdrawal timing issues
-- **Validator Front-Running**: Front-running in validator selection
+### MEV & Timing Attacks (9 detectors)
+- Front-Running Detection
+- Sandwich Attack Prevention
+- Block Timestamp Dependencies
+- Transaction Ordering Exploits
+- Deadline Manipulation
 
-### Phase 8: Advanced Logic (3 detectors)
-- **Upgradeable Proxy Issues**: Unprotected upgrades, initialization guards, storage gaps, unsafe delegatecall
-- **Token Supply Manipulation**: Mint without cap, missing access control, totalSupply manipulation
-- **Circular Dependencies**: Callback loops, missing depth limits, observer patterns
+### Advanced Features (20 detectors)
+- Account Abstraction (ERC-4337) Security
+- Cross-Chain Bridge Vulnerabilities
+- Governance Attack Vectors
+- Staking & Validator Security
 
-### Phase 9: Gas & Optimization (5 detectors) - ✅ Complete
-- **Gas Griefing**: External calls in loops without gas limits
-- **DoS Unbounded Operations**: Unbounded array iterations, large structure deletions
-- **Excessive Gas Usage**: Inefficient loop patterns
-- **Inefficient Storage**: Poor storage packing
-- **Redundant Checks**: Duplicate validation statements
+### Code Quality & Gas Optimization (10 detectors)
+- Gas Griefing Prevention
+- DoS via Unbounded Operations
+- Inefficient Storage Patterns
+- Variable Shadowing
+- Deprecated Function Usage
 
-### Phase 10: Advanced Security (4 detectors) - ✅ Complete
-- **Front-Running Mitigation**: MEV protection pattern detection
-- **Price Oracle Staleness**: Oracle freshness validation
-- **Centralization Risk**: Access control concentration analysis
-- **Insufficient Randomness**: Weak RNG source detection
+### Token Standards (8 detectors)
+- ERC-20 Approve Race Conditions
+- ERC-777 Hook Reentrancy
+- ERC-721/1155 Callback Exploits
+- Infinite Approval Risks
 
-### Phase 11: Code Quality (5 detectors) - ✅ Complete
-- **Variable Shadowing**: Scope conflict detection
-- **Unchecked Math**: Arithmetic safety validation
-- **Missing Input Validation**: Parameter validation checks
-- **Deprecated Functions**: Legacy API usage detection
-- **Unsafe Type Casting**: Type conversion safety analysis
+### Additional Categories (22+ detectors)
+- Upgradeable Proxy Security
+- Randomness Vulnerabilities
+- Centralization Risks
+- Token Supply Manipulation
 
-### Phase 12: Account Abstraction (ERC-4337) (5 detectors) - ✅ Complete
-- **Entrypoint Trust**: ERC-4337 entrypoint validation
-- **Initialization Vulnerabilities**: AA account initialization issues
-- **Account Takeover**: Account security vulnerabilities
-- **Bundler DOS**: Bundler attack vectors
-- **Hardware Wallet Delegation**: Delegation security
-
-### Phase 13: Cross-Chain & Bridge Security (8 detectors) - ✅ Complete
-- **Settlement Validation**: ERC-7683 settlement contract security
-- **Replay Attacks**: Cross-chain replay protection
-- **Filler Front-Running**: ERC-7683 filler vulnerabilities
-- **Oracle Dependency**: Cross-chain oracle risks
-- **Permit2 Integration**: ERC-7683 Permit2 security
-- **Token Minting**: Bridge token minting access control
-- **Message Verification**: Bridge message authentication
-- **Chain ID Validation**: Chain ID verification
-
-### Phase 14: Account Abstraction Advanced (5 detectors) - ✅ Complete
-- **Paymaster Abuse**: Paymaster exploitation vectors
-- **Session Key Vulnerabilities**: Session key security
-- **Signature Aggregation**: Aggregated signature risks
-- **Social Recovery**: Social recovery mechanism issues
-- **Nonce Management**: Nonce handling vulnerabilities
-
-### Phase 15: DeFi Protocol Security (3 detectors) - ✅ Complete
-- **Liquidity Pool Manipulation**: Pool manipulation attacks
-- **JIT Liquidity**: Just-in-time liquidity exploits
-- **Yield Farming**: Yield farming vulnerabilities
-
-### Phase 16: ERC-4626 Vault Security (1 detector) - ⚠️ In Progress
-- **Vault Share Inflation**: First depositor share manipulation (ERC-4626 inflation attacks)
-- **Note**: Additional vault security detectors (donation attack, withdrawal DOS, fee manipulation, hook reentrancy) implemented but registration pending for 1.0.0
-
-### Phase 17: Token Standard Edge Cases (4 detectors) - ✅ Complete
-- **ERC-20 Approve Race Condition**: Front-running approve() changes
-- **ERC-20 Infinite Approval Risk**: Unlimited approval security implications
-- **ERC-777 Reentrancy via Hooks**: tokensReceived callback attacks
-- **ERC-721/1155 Callback Reentrancy**: NFT safeTransfer callback exploitation
-
-For detailed detector documentation, see [docs/DETECTORS.md](docs/DETECTORS.md).
-
-## Development
-
-### Prerequisites
-
-- Rust 1.75.0 or later
-- Git
-- Docker (optional)
-
-### Building
-
+For a complete list of detectors with descriptions, run:
 ```bash
-# Build workspace
-cargo build --release
-
-# Run tests
-cargo test --all-features
-
-# Check formatting and linting
-cargo fmt --check
-cargo clippy -- -D warnings
-
-# Run specific crate tests
-cargo test -p detectors
-cargo test -p output
+soliditydefend --list-detectors
 ```
 
-### Local CI Validation (Cost Savings)
+Or see the full [Detector Documentation](docs/DETECTORS.md).
 
-Save 90% on GitHub Actions costs by validating locally before pushing:
+## Configuration
 
-```bash
-# Quick validation (30 seconds)
-make quick
+### Command-Line Options
 
-# Full CI validation (2-3 minutes, same as GitHub Actions)
-make ci-local
+| Option | Description |
+|--------|-------------|
+| `-f, --format` | Output format: `console` or `json` (default: console) |
+| `-o, --output` | Output file path (default: stdout) |
+| `-s, --min-severity` | Minimum severity: `info`, `low`, `medium`, `high`, `critical` |
+| `--exit-code-level` | Exit with error when findings at or above severity level |
+| `--no-cache` | Disable caching for fresh analysis |
+| `--clear-cache` | Clear all cached results |
+| `-c, --config` | Path to configuration file |
+| `--from-url` | Analyze from blockchain explorer URL |
 
-# See all available commands
-make help
+### Configuration File
+
+Create `.soliditydefend.yml` in your project root:
+
+```yaml
+# Minimum severity to report
+min_severity: medium
+
+# Output format
+output_format: console
+
+# Detector configuration
+detectors:
+  enable_all: true
+  disable:
+    - detector-name-1
+    - detector-name-2
+
+# Cache settings
+cache:
+  enabled: true
+  max_size_mb: 500
+
+# Exit code configuration
+exit_code:
+  level: high
+  on_analysis_error: true
 ```
 
-**Key Benefits:**
-- 90% reduction in wasted CI time
-- 67% faster development iteration
-- Same checks as GitHub Actions, faster feedback locally
+## Output Formats
 
-See [LOCAL_CI_GUIDE.md](LOCAL_CI_GUIDE.md) for complete guide.
+### Console Output
 
-### Testing
+Human-readable output with:
+- Color-coded severity levels
+- Source code snippets
+- Line numbers and file paths
+- Fix suggestions when available
 
-```bash
-# Run all tests including comprehensive test infrastructure
-cargo test
+### JSON Output
 
-# Test specific components
-cargo test -p parser
-cargo test -p semantic
-cargo test -p detectors
-cargo test -p analysis  # Comprehensive test infrastructure
+Structured output for programmatic processing:
 
-# Run integration tests for full pipeline
-cargo test -p analysis integration_tests
-
-# Run performance benchmarks
-cargo test -p analysis performance_benchmarks
-
-# Run regression tests for detector accuracy
-cargo test -p analysis regression_tests
-
-# Run with output
-cargo test -- --nocapture
+```json
+{
+  "findings": [
+    {
+      "detector": "reentrancy-eth",
+      "severity": "high",
+      "message": "Reentrancy vulnerability detected",
+      "location": {
+        "file": "contract.sol",
+        "line": 42,
+        "column": 5
+      },
+      "suggestion": "Use ReentrancyGuard or checks-effects-interactions pattern"
+    }
+  ],
+  "summary": {
+    "total": 10,
+    "critical": 0,
+    "high": 2,
+    "medium": 5,
+    "low": 3,
+    "info": 0
+  }
+}
 ```
 
-## Release Process
+## System Requirements
 
-SolidityDefend follows a **time-based release schedule** with semantic versioning:
-
-- **Major releases**: 6-12 months (breaking changes, major features)
-- **Minor releases**: 4-6 weeks (new features, detector phases)
-- **Patch releases**: As needed (bug fixes, security patches)
-
-**Upcoming Releases:**
-- v1.0.0 (Q1 2026) - Stable release, 100+ detectors
-- v1.1.0 (Q2 2026) - Advanced analysis features
-- v1.2.0 (Q3 2026) - IDE & tool integration
-
-**For Contributors & Maintainers:**
-- 📋 [Release Process](docs/RELEASE_PROCESS.md) - Complete release guide
-- ✅ [Release Checklist](docs/RELEASE_CHECKLIST.md) - Step-by-step checklist
-- 📅 [Release Schedule](docs/RELEASE_SCHEDULE.md) - Roadmap & schedule
-- 🔧 [Local CI Guide](LOCAL_CI_GUIDE.md) - Cost-saving local validation
+- **Operating System**: Linux, macOS, or Windows
+- **Memory**: 4GB+ RAM recommended for large projects
+- **Disk Space**: 100MB for binary, additional space for cache
+- **Rust**: 1.75.0+ (if building from source)
 
 ## Documentation
 
-- 📖 [Installation Guide](docs/INSTALLATION.md) - Detailed installation instructions
-- 🚀 [Usage Examples](docs/USAGE.md) - Comprehensive usage examples and tutorials
-- ⚙️ [CLI Reference](docs/CLI.md) - Complete command-line reference
-- 🔧 [Configuration Guide](docs/CONFIGURATION.md) - Configuration options and settings
-- 🔍 [Detector Documentation](docs/DETECTORS.md) - Complete detector reference
-- 📊 [Output Formats](docs/OUTPUT.md) - Output format specifications
-- 🏗️ [Architecture](docs/ARCHITECTURE.md) - Technical architecture overview
-- 🤝 [Contributing](CONTRIBUTING.md) - Development guidelines
+- [Installation Guide](docs/INSTALLATION.md) - Detailed installation instructions
+- [Usage Examples](docs/USAGE.md) - Comprehensive tutorials and examples
+- [CLI Reference](docs/CLI.md) - Complete command-line documentation
+- [Configuration Guide](docs/CONFIGURATION.md) - Configuration options
+- [Detector Documentation](docs/DETECTORS.md) - All 100+ detectors explained
+- [Output Formats](docs/OUTPUT.md) - Output format specifications
 
-## Contributing
+## Support
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines and contribution instructions.
+- **Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
+- **Documentation**: [docs/](docs/)
+- **Examples**: See [docs/USAGE.md](docs/USAGE.md) for detailed examples
 
-### Current Priority Areas
-1. **Modern Vulnerability Patterns**: Enhance detectors for 2025-era attack patterns (flash loans, MEV, cross-chain)
-2. **LSP Completion**: Complete Language Server Protocol implementation
-3. **Performance Integration**: Integrate advanced performance optimization features
-4. **Enhanced Detection**: Expand coverage for complex vulnerability combinations
+## Versioning
+
+SolidityDefend follows [Semantic Versioning](https://semver.org/):
+
+- **Current Version**: 1.0.0
+- **Stable Release**: v1.0.0 (Production Ready)
+- **Detectors**: 100 production-ready security detectors
+
+Version format: `MAJOR.MINOR.PATCH`
+- **MAJOR**: Breaking changes
+- **MINOR**: New features, backward-compatible
+- **PATCH**: Bug fixes, backward-compatible
 
 ## License
 
-Licensed under either of
+Licensed under either of:
 
- * Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
- * MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
 
 at your option.
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+
+- Reporting bugs
+- Suggesting features
+- Submitting pull requests
+- Development setup
+
+---
+
+**Built with Rust for security, performance, and reliability.**
