@@ -1,6 +1,6 @@
 # Detector Documentation
 
-Complete reference for all 100 security detectors available in SolidityDefend v1.0.0 across 23 implementation phases.
+Complete reference for all 100 security detectors available in SolidityDefend v0.7.0-beta across 23 implementation phases.
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ Complete reference for all 100 security detectors available in SolidityDefend v1
 
 ## Overview
 
-SolidityDefend v1.0.0 includes **100 security detectors** across 23 implementation phases, covering all critical vulnerability classes in modern smart contracts. Each detector is designed to minimize false positives while ensuring comprehensive coverage of security issues. The detector execution pipeline has been validated and is production-ready with standardized Finding format and CWE mappings.
+SolidityDefend v0.7.0-beta includes **100 security detectors** across 23 implementation phases, covering all critical vulnerability classes in modern smart contracts. Each detector is designed to identify security issues, though this beta release has a known high false positive rate. The detector execution pipeline uses standardized Finding format and CWE mappings.
 
 ### Detector Statistics
 
@@ -60,7 +60,7 @@ SolidityDefend v1.0.0 includes **100 security detectors** across 23 implementati
 | Metamorphic Contracts & CREATE2 | 4 | Medium - Critical | ✅ Phase 22 |
 | Multi-Signature, Permits & Upgrades | 3 | High - Critical | ✅ Phase 23 |
 
-**Total: 100 detectors** - v1.0.0 Milestone Achieved! 🎉
+**Total: 100 detectors** - Beta Release! 🎉
 
 ### Implementation Phases
 
@@ -83,7 +83,7 @@ SolidityDefend v1.0.0 includes **100 security detectors** across 23 implementati
 - **Phase 22** (4 detectors): Metamorphic contracts & CREATE2 - ✅ Complete
 - **Phase 23** (3 detectors): Multi-sig, permits & storage upgrades - ✅ Complete
 
-**Functional Status**: 100/100 detectors (100%) fully implemented and validated - v1.0.0 Production Ready!
+**Functional Status**: 100/100 detectors (100%) fully implemented - Beta Release (known high FP rate)
 
 ## Access Control & Authentication
 
@@ -2347,7 +2347,7 @@ Detects unsafe type conversions that can lead to data loss.
 | 21 | Diamond Proxy | 5 | ✅ Complete |
 | 22 | Metamorphic & CREATE2 | 4 | ✅ Complete |
 | 23 | Multi-sig & Storage Upgrades | 3 | ✅ Complete |
-| **Total** | **All Categories** | **100** | **✅ v1.0.0 Production Ready!** |
+| **Total** | **All Categories** | **100** | **✅ Beta Release!** |
 
 ### Functional Detectors (100)
 

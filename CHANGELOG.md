@@ -5,7 +5,81 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.0.0] - 2025-10-13
+## [0.7.0-beta] - 2025-10-25
+
+### ⚠️ Beta Preview Release
+
+This is a **preview/beta release** of SolidityDefend with 100 functional security detectors. We're seeking feedback from early adopters to improve detector accuracy and reduce false positives.
+
+**Use this release for:**
+- ✅ Exploring security detector capabilities
+- ✅ Testing against your contracts
+- ✅ Providing feedback on detector accuracy
+- ✅ Evaluating coverage of security patterns
+
+**NOT recommended for:**
+- ❌ Production security audits (use professional auditors)
+- ❌ Critical deployment decisions
+- ❌ CI/CD blocking on findings (false positive rate not optimized)
+
+### What's Included
+
+- **100 Security Detectors** across 23 phases
+- **Coverage**: Reentrancy, Access Control, DeFi, L2, Cross-Chain, Token Standards
+- **Output Formats**: JSON, console, LSP
+- **Configuration Support**: YAML-based configuration
+- **CLI Interface**: Full command-line tool
+
+### Detector Categories
+
+- **Core Security**: Access control, reentrancy, input validation, logic bugs
+- **DeFi**: Oracle manipulation, flash loans, slippage protection, vault security (ERC-4626)
+- **MEV & Timing**: Front-running, sandwich attacks, timestamp dependencies
+- **Advanced**: Account Abstraction, cross-chain bridges, governance attacks
+- **Token Standards**: ERC-20/721/777/1155 vulnerabilities
+- **Code Quality**: Gas optimization, DoS prevention, deprecated functions
+
+### Known Issues
+
+- **False Positive Rate**: Some detectors flag safe patterns as vulnerabilities. This is being addressed in v1.0.0.
+- Vault security detectors may be overly conservative
+- Pattern recognition can be improved
+
+### Feedback Wanted
+
+Please report issues and feedback:
+- **GitHub Issues**: https://github.com/SolidityOps/SolidityDefend/issues
+- **False Positives**: Tag with `false-positive` label
+- **Feature Requests**: Tag with `enhancement` label
+
+### What's Next
+
+**v1.0.0 Target (December 2025)**:
+- Reduce false positive rate to <15%
+- Add confidence scoring to all findings
+- Improve safe pattern recognition
+- Incorporate your feedback!
+
+### Installation
+
+**From source:**
+```bash
+git clone https://github.com/SolidityOps/SolidityDefend
+cd SolidityDefend
+git checkout v0.7.0-beta
+cargo build --release
+```
+
+**Pre-built binaries:**
+Available on [GitHub Releases](https://github.com/SolidityOps/SolidityDefend/releases/tag/v0.7.0-beta)
+
+### Thank You
+
+Thanks for being an early adopter! Your feedback will help make SolidityDefend better for everyone.
+
+---
+
+## [1.0.0] - 2025-10-13 (Internal Milestone - Not Released)
 
 ### 🎉 Major Milestone: 100 Detectors Achievement
 
