@@ -1,56 +1,58 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-0.7.0--beta-orange.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
+[![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 [![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/SolidityOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 
+> ⚠️ **Beta Release** - This is a preview release with known limitations. We're actively working on improving detector accuracy. See [Known Limitations](#known-limitations).
+
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
-## Features
+---
 
-- **100+ Security Detectors** - Comprehensive coverage of vulnerabilities including reentrancy, access control, oracle manipulation, MEV attacks, DeFi exploits, cross-chain security, and more
-- **Lightning Fast Analysis** - Built with Rust for optimal performance with advanced caching and incremental analysis
-- **Multiple Output Formats** - Console output with syntax highlighting and code snippets, or JSON for CI/CD integration
-- **URL-Based Analysis** - Analyze contracts directly from Etherscan, Polygonscan, BscScan, and Arbiscan URLs
-- **Flexible Configuration** - YAML-based configuration system for customizing analysis behavior
-- **CI/CD Ready** - Exit codes, severity filtering, and JSON output for seamless integration
-- **Modern Vulnerability Coverage** - Detectors for 2024/2025 attack patterns including Account Abstraction (ERC-4337), cross-chain bridges, and advanced DeFi protocols
+## 🚀 Quick Start
 
-## Installation
-
-### Download Pre-built Binary
-
-Download the latest release for your platform:
-
-**Linux (x86_64)**
 ```bash
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-linux-x86_64.tar.gz
-tar -xzf soliditydefend-v1.0.0-linux-x86_64.tar.gz
-sudo mv soliditydefend /usr/local/bin/
+# Analyze a contract
+soliditydefend contract.sol
+
+# Analyze entire project
+soliditydefend contracts/**/*.sol
+
+# Show only critical and high severity issues
+soliditydefend -s high contract.sol
 ```
 
-**macOS (Intel)**
-```bash
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-macos-x86_64.tar.gz
-tar -xzf soliditydefend-v1.0.0-macos-x86_64.tar.gz
-sudo mv soliditydefend /usr/local/bin/
-```
+---
 
-**macOS (Apple Silicon)**
-```bash
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-macos-aarch64.tar.gz
-tar -xzf soliditydefend-v1.0.0-macos-aarch64.tar.gz
-sudo mv soliditydefend /usr/local/bin/
-```
+## ✨ Features
 
-**Windows (x86_64)**
-```powershell
-# Download from: https://github.com/SolidityOps/SolidityDefend/releases/download/v1.0.0/soliditydefend-v1.0.0-windows-x86_64.zip
-# Extract and add to PATH
-```
+- **100 Security Detectors** - Comprehensive coverage including reentrancy, access control, oracle manipulation, DeFi exploits, and more
+- **Lightning Fast Analysis** - Built with Rust for optimal performance
+- **Multiple Output Formats** - Console with syntax highlighting, JSON for CI/CD integration
+- **Modern Vulnerability Coverage** - Latest attack patterns including Account Abstraction (ERC-4337), cross-chain bridges, and advanced DeFi
+- **URL-Based Analysis** - Analyze contracts directly from Etherscan and other blockchain explorers
+- **CI/CD Ready** - Exit codes, severity filtering, and JSON output
+- **Flexible Configuration** - YAML-based configuration system
 
-### Build from Source
+### Detector Categories
+
+- **Core Security**: Access control, reentrancy, input validation, logic bugs
+- **DeFi**: Oracle manipulation, flash loans, slippage protection, vault security (ERC-4626)
+- **MEV & Timing**: Front-running, sandwich attacks, timestamp dependencies
+- **Advanced**: Account Abstraction, cross-chain bridges, governance attacks
+- **Token Standards**: ERC-20/721/777/1155 vulnerabilities
+- **Code Quality**: Gas optimization, DoS prevention, deprecated functions
+
+For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTORS.md](docs/DETECTORS.md)
+
+---
+
+## 📦 Installation
+
+### From Source (Recommended)
 
 Requires Rust 1.75.0 or later:
 
@@ -61,41 +63,47 @@ cargo build --release
 sudo mv target/release/soliditydefend /usr/local/bin/
 ```
 
-### Docker
+### Pre-built Binaries
 
+Download from [GitHub Releases](https://github.com/SolidityOps/SolidityDefend/releases/latest):
+
+**Linux (x86_64)**
 ```bash
-# Pull the image
-docker pull ghcr.io/solidityops/soliditydefend:latest
-
-# Or build locally
-docker build -f docker/Dockerfile -t soliditydefend .
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
+tar -xzf soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
+sudo mv soliditydefend /usr/local/bin/
 ```
 
-## Quick Start
+**macOS**
+```bash
+# Intel
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
+tar -xzf soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
 
-### Analyze a Single Contract
+# Apple Silicon
+curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
+tar -xzf soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
+
+sudo mv soliditydefend /usr/local/bin/
+```
+
+See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed instructions.
+
+---
+
+## 📖 Usage
+
+### Basic Analysis
 
 ```bash
+# Analyze a single contract
 soliditydefend contract.sol
-```
 
-### Analyze Multiple Files
-
-```bash
+# Analyze multiple files
 soliditydefend src/**/*.sol
-```
 
-### Analyze from Blockchain Explorer
-
-```bash
-# From transaction hash
-soliditydefend --from-url https://etherscan.io/tx/0x1234...
-
-# From contract address
-soliditydefend --from-url https://etherscan.io/address/0x1234...
-
-# Setup API keys (required for URL analysis)
-soliditydefend --setup-api-keys
+# Analyze entire project
+soliditydefend contracts/
 ```
 
 ### Filter by Severity
@@ -103,30 +111,50 @@ soliditydefend --setup-api-keys
 ```bash
 # Show only high and critical issues
 soliditydefend -s high contract.sol
+
+# Show critical only
+soliditydefend -s critical contract.sol
 ```
 
-### JSON Output for CI/CD
+### Output Formats
 
 ```bash
+# Console output (default)
+soliditydefend contract.sol
+
+# JSON output for CI/CD
 soliditydefend -f json -o results.json contract.sol
 ```
 
-### List Available Detectors
+### Blockchain Explorer Analysis
 
 ```bash
-soliditydefend --list-detectors
+# Analyze from transaction hash
+soliditydefend --from-url https://etherscan.io/tx/0x1234...
+
+# Analyze from contract address
+soliditydefend --from-url https://etherscan.io/address/0x1234...
+
+# Setup API keys (required for URL analysis)
+soliditydefend --setup-api-keys
 ```
 
-## Usage Examples
+### Configuration
 
-### Basic Analysis
+Create `.soliditydefend.yml` in your project:
 
+```yaml
+min_severity: medium
+output_format: console
+detectors:
+  enable_all: true
+  disable:
+    - inefficient-storage
+```
+
+Generate a config template:
 ```bash
-# Analyze with default settings
-soliditydefend MyContract.sol
-
-# Analyze entire project
-soliditydefend contracts/**/*.sol
+soliditydefend --init-config
 ```
 
 ### CI/CD Integration
@@ -135,234 +163,217 @@ soliditydefend contracts/**/*.sol
 # Exit with error code if high/critical issues found
 soliditydefend --exit-code-level high contracts/*.sol
 
-# Generate JSON report for further processing
-soliditydefend -f json -o security-report.json contracts/*.sol
+# GitHub Actions example
+- name: Security Scan
+  run: |
+    soliditydefend -f json -o security-report.json contracts/**/*.sol
+    soliditydefend --exit-code-level high contracts/**/*.sol
 ```
 
-### Docker Usage
-
-```bash
-# Analyze contracts in current directory
-docker run -v $(pwd):/analysis soliditydefend /analysis/*.sol
-
-# With JSON output
-docker run -v $(pwd):/analysis soliditydefend -f json -o /analysis/report.json /analysis/*.sol
-```
-
-### Configuration File
-
-Create a `.soliditydefend.yml` configuration file:
-
-```bash
-soliditydefend --init-config
-```
-
-Then customize your analysis settings:
-
-```yaml
-min_severity: medium
-output_format: console
-detectors:
-  disable:
-    - inefficient-storage
-  enable_all: true
-```
-
-## Security Detectors
-
-SolidityDefend includes **100 production-ready security detectors** across multiple categories:
-
-### Core Security (15 detectors)
-- Access Control & Authentication
-- Reentrancy Protection (classic & read-only)
-- Input Validation
-- Logic & State Machine Bugs
-- External Call Safety
-
-### DeFi & Oracle Security (16 detectors)
-- Oracle Manipulation & Price Validation
-- Flash Loan Attack Protection
-- Slippage Protection
-- Reward Manipulation
-- Liquidity Pool Vulnerabilities
-- Vault Security (ERC-4626)
-
-### MEV & Timing Attacks (9 detectors)
-- Front-Running Detection
-- Sandwich Attack Prevention
-- Block Timestamp Dependencies
-- Transaction Ordering Exploits
-- Deadline Manipulation
-
-### Advanced Features (20 detectors)
-- Account Abstraction (ERC-4337) Security
-- Cross-Chain Bridge Vulnerabilities
-- Governance Attack Vectors
-- Staking & Validator Security
-
-### Code Quality & Gas Optimization (10 detectors)
-- Gas Griefing Prevention
-- DoS via Unbounded Operations
-- Inefficient Storage Patterns
-- Variable Shadowing
-- Deprecated Function Usage
-
-### Token Standards (8 detectors)
-- ERC-20 Approve Race Conditions
-- ERC-777 Hook Reentrancy
-- ERC-721/1155 Callback Exploits
-- Infinite Approval Risks
-
-### Additional Categories (22+ detectors)
-- Upgradeable Proxy Security
-- Randomness Vulnerabilities
-- Centralization Risks
-- Token Supply Manipulation
-
-For a complete list of detectors with descriptions, run:
-```bash
-soliditydefend --list-detectors
-```
-
-Or see the full [Detector Documentation](docs/DETECTORS.md).
-
-## Configuration
-
-### Command-Line Options
-
-| Option | Description |
-|--------|-------------|
-| `-f, --format` | Output format: `console` or `json` (default: console) |
-| `-o, --output` | Output file path (default: stdout) |
-| `-s, --min-severity` | Minimum severity: `info`, `low`, `medium`, `high`, `critical` |
-| `--exit-code-level` | Exit with error when findings at or above severity level |
-| `--no-cache` | Disable caching for fresh analysis |
-| `--clear-cache` | Clear all cached results |
-| `-c, --config` | Path to configuration file |
-| `--from-url` | Analyze from blockchain explorer URL |
-
-### Configuration File
-
-Create `.soliditydefend.yml` in your project root:
-
-```yaml
-# Minimum severity to report
-min_severity: medium
-
-# Output format
-output_format: console
-
-# Detector configuration
-detectors:
-  enable_all: true
-  disable:
-    - detector-name-1
-    - detector-name-2
-
-# Cache settings
-cache:
-  enabled: true
-  max_size_mb: 500
-
-# Exit code configuration
-exit_code:
-  level: high
-  on_analysis_error: true
-```
-
-## Output Formats
-
-### Console Output
-
-Human-readable output with:
-- Color-coded severity levels
-- Source code snippets
-- Line numbers and file paths
-- Fix suggestions when available
-
-### JSON Output
-
-Structured output for programmatic processing:
-
-```json
-{
-  "findings": [
-    {
-      "detector": "reentrancy-eth",
-      "severity": "high",
-      "message": "Reentrancy vulnerability detected",
-      "location": {
-        "file": "contract.sol",
-        "line": 42,
-        "column": 5
-      },
-      "suggestion": "Use ReentrancyGuard or checks-effects-interactions pattern"
-    }
-  ],
-  "summary": {
-    "total": 10,
-    "critical": 0,
-    "high": 2,
-    "medium": 5,
-    "low": 3,
-    "info": 0
-  }
-}
-```
-
-## System Requirements
-
-- **Operating System**: Linux, macOS, or Windows
-- **Memory**: 4GB+ RAM recommended for large projects
-- **Disk Space**: 100MB for binary, additional space for cache
-- **Rust**: 1.75.0+ (if building from source)
-
-## Documentation
-
-- [Installation Guide](docs/INSTALLATION.md) - Detailed installation instructions
-- [Usage Examples](docs/USAGE.md) - Comprehensive tutorials and examples
-- [CLI Reference](docs/CLI.md) - Complete command-line documentation
-- [Configuration Guide](docs/CONFIGURATION.md) - Configuration options
-- [Detector Documentation](docs/DETECTORS.md) - All 100+ detectors explained
-- [Output Formats](docs/OUTPUT.md) - Output format specifications
-
-## Support
-
-- **Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
-- **Documentation**: [docs/](docs/)
-- **Examples**: See [docs/USAGE.md](docs/USAGE.md) for detailed examples
-
-## Versioning
-
-SolidityDefend follows [Semantic Versioning](https://semver.org/):
-
-- **Current Version**: 1.0.0
-- **Stable Release**: v1.0.0 (Production Ready)
-- **Detectors**: 100 production-ready security detectors
-
-Version format: `MAJOR.MINOR.PATCH`
-- **MAJOR**: Breaking changes
-- **MINOR**: New features, backward-compatible
-- **PATCH**: Bug fixes, backward-compatible
-
-## License
-
-Licensed under either of:
-
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
-
-at your option.
-
-## Contributing
-
-We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
-
-- Reporting bugs
-- Suggesting features
-- Submitting pull requests
-- Development setup
+See [docs/CLI.md](docs/CLI.md) and [docs/USAGE.md](docs/USAGE.md) for complete documentation.
 
 ---
 
-**Built with Rust for security, performance, and reliability.**
+## 🔍 Example Output
+
+```
+Analyzing: contracts/Vault.sol
+
+ ⚠️  HIGH | Reentrancy vulnerability detected
+    ├─ Location: contracts/Vault.sol:45:5
+    ├─ Function: withdraw()
+    └─ Suggestion: Use ReentrancyGuard or checks-effects-interactions pattern
+
+ ⚠️  CRITICAL | Missing access control on initialize()
+    ├─ Location: contracts/Vault.sol:12:5
+    ├─ Function: initialize(address)
+    └─ Suggestion: Add onlyOwner or similar access control modifier
+
+Summary:
+  Total: 12 findings
+  Critical: 1  High: 3  Medium: 5  Low: 3
+```
+
+---
+
+## 🛠️ Configuration Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-f, --format` | Output format: `console` or `json` | console |
+| `-o, --output` | Output file path | stdout |
+| `-s, --min-severity` | Minimum severity level | info |
+| `--exit-code-level` | Exit with error at severity level | none |
+| `--no-cache` | Disable caching | false |
+| `--clear-cache` | Clear all cached results | - |
+| `-c, --config` | Path to configuration file | `.soliditydefend.yml` |
+| `--from-url` | Analyze from blockchain explorer | - |
+| `--list-detectors` | List all available detectors | - |
+
+See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete reference.
+
+---
+
+## ⚠️ Known Limitations
+
+This is a **beta release** (v0.7.0-beta) with the following known limitations:
+
+- **False Positive Rate**: Detector accuracy is being actively improved. Some safe patterns may be flagged as vulnerabilities.
+- **Detector Tuning**: Conservative detection logic may report issues in secure implementations.
+- **Beta Quality**: Not recommended for production security decisions without manual review.
+
+### Feedback Welcome
+
+We're actively working on improving detector accuracy. Please report issues:
+
+- **False Positives**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=false-positive)
+- **Bug Reports**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=bug)
+- **Feature Requests**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=enhancement)
+
+### What's Next
+
+**v1.0.0 (Coming Soon)**:
+- Reduced false positive rate (<15% target)
+- Confidence scoring for all findings
+- Improved safe pattern recognition
+- Your feedback incorporated!
+
+---
+
+## 🏢 About
+
+### Creators
+
+SolidityDefend is developed by [Advanced Blockchain Security (ABS)](https://AdvancedBlockchainSecurity.com), a leader in blockchain security research and tooling.
+
+**Advanced Blockchain Security** specializes in:
+- Smart contract security analysis tools
+- Blockchain security research
+- Vulnerability detection and prevention
+- Security auditing platforms
+
+Visit: [AdvancedBlockchainSecurity.com](https://AdvancedBlockchainSecurity.com)
+
+### Enterprise Platform
+
+For teams and organizations, SolidityDefend is available as part of [BlockSecOps](https://BlockSecOps.com) - the premier blockchain security operations platform.
+
+**[BlockSecOps](https://BlockSecOps.com)** offers:
+- **Multi-Language Support**: Solidity, Solana, Move, and more
+- **26+ Security Tools**: SolidityDefend, Slither, Mythril, Certora, Echidna, and more
+- **Unified Dashboard**: Centralized vulnerability management
+- **CI/CD Integration**: Automated security scans
+- **Team Collaboration**: Share findings, track remediation
+- **Compliance Reporting**: SBOM, audit reports, compliance tracking
+- **Enterprise Support**: Dedicated support and SLAs
+
+Learn more: [BlockSecOps.com](https://BlockSecOps.com)
+
+---
+
+## 📚 Documentation
+
+- **[Installation Guide](docs/INSTALLATION.md)** - Detailed installation instructions
+- **[Usage Guide](docs/USAGE.md)** - Comprehensive tutorials and examples
+- **[CLI Reference](docs/CLI.md)** - Complete command-line documentation
+- **[Configuration](docs/CONFIGURATION.md)** - Configuration options and examples
+- **[Detector Documentation](docs/DETECTORS.md)** - All 74 detectors explained
+- **[Output Formats](docs/OUTPUT.md)** - Output format specifications
+
+---
+
+## 🔖 Versioning
+
+SolidityDefend follows [Semantic Versioning](https://semver.org/):
+
+- **Current Version**: v0.7.0-beta (Beta Preview)
+- **Detectors**: 74 functional security detectors
+- **Status**: Beta - Seeking feedback for v1.0.0
+
+### Version History
+
+- **v0.7.0-beta** (2025-10-25) - Beta preview with 74 detectors
+- **v0.9.0** (2025-10-09) - Internal milestone (not released)
+- **v1.0.0** (Coming Soon) - Production stable release
+
+### Roadmap
+
+**v1.0.0** (Target: December 2025)
+- Reduced false positive rate (<15%)
+- Confidence scoring
+- 100+ detectors
+- Production ready
+
+See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Whether you're reporting bugs, suggesting features, improving documentation, or submitting code:
+
+- **Report Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
+- **Submit PRs**: [Contributing Guide](CONTRIBUTING.md)
+- **Discussions**: [GitHub Discussions](https://github.com/SolidityOps/SolidityDefend/discussions)
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+- Reporting bugs and false positives
+- Suggesting new detectors
+- Development setup
+- Pull request process
+
+---
+
+## 📄 License
+
+SolidityDefend is open source software licensed under your choice of:
+
+- **Apache License, Version 2.0** ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
+- **MIT License** ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+
+You may use SolidityDefend under the terms of either license.
+
+### Why Dual License?
+
+Dual licensing (MIT OR Apache-2.0) provides maximum flexibility:
+- **MIT**: Simple and permissive
+- **Apache-2.0**: Additional patent protection
+
+Choose the license that best fits your needs.
+
+---
+
+## 🙏 Acknowledgments
+
+Built with Rust for security, performance, and reliability.
+
+Special thanks to:
+- The Rust community for excellent tooling
+- Security researchers for vulnerability patterns
+- Early beta testers for valuable feedback
+- Contributors and supporters
+
+---
+
+## 💬 Support
+
+- **Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/SolidityOps/SolidityDefend/discussions)
+- **Documentation**: [docs/](docs/)
+- **Enterprise Support**: Contact via [BlockSecOps.com](https://BlockSecOps.com)
+
+---
+
+## 🔗 Links
+
+- **GitHub**: https://github.com/SolidityOps/SolidityDefend
+- **Releases**: https://github.com/SolidityOps/SolidityDefend/releases
+- **Documentation**: [docs/](docs/)
+- **Advanced Blockchain Security**: [AdvancedBlockchainSecurity.com](https://AdvancedBlockchainSecurity.com)
+- **BlockSecOps Platform**: [BlockSecOps.com](https://BlockSecOps.com)
+
+---
+
+**Note**: This is a beta release. While we've tested extensively, use in production environments should be done with caution and manual review of findings.
+
+**Made with ❤️ by Advanced Blockchain Security**

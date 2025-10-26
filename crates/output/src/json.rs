@@ -53,7 +53,7 @@ impl JsonFormatter {
     /// Create the JSON output structure
     fn create_output(&self, findings: &[Finding]) -> Result<JsonOutput, JsonError> {
         let mut output = JsonOutput {
-            version: "1.0.0".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
             timestamp: Utc::now(),
             findings: findings.iter().map(|f| self.convert_finding(f)).collect(),
             metadata: None,
@@ -102,7 +102,7 @@ impl JsonFormatter {
             tool_version: env!("CARGO_PKG_VERSION").to_string(),
             scan_type: "static_analysis".to_string(),
             language: "solidity".to_string(),
-            rules_version: "1.0.0".to_string(),
+            rules_version: env!("CARGO_PKG_VERSION").to_string(),
         }
     }
 

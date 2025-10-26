@@ -11,8 +11,8 @@ Thank you for your interest in contributing to SolidityDefend! This document pro
 
 2. **Clone and Setup**
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
+   git clone https://github.com/SolidityOps/SolidityDefend.git
+   cd SolidityDefend
 
    # Install pre-commit hooks (optional)
    pip install pre-commit
