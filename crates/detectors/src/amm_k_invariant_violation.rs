@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::contract_classification;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for AMM constant product (K) invariant violations
 ///
@@ -291,6 +292,11 @@ impl Detector for AmmKInvariantViolationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Only run this detector on AMM contracts
+        if !contract_classification::is_amm_contract(ctx) {
+            return Ok(findings); // Not an AMM - skip analysis
+        }
+
         for function in ctx.get_functions() {
             let func_source = self.get_function_source(function, ctx);
             let func_name = &function.name.name;
@@ -342,6 +348,7 @@ impl Detector for AmmKInvariantViolationDetector {
                     issues.join("; ")
                 );
 
+                // NEW: High confidence since this IS an AMM contract
                 let finding = self
                     .base
                     .create_finding(
@@ -354,6 +361,7 @@ impl Detector for AmmKInvariantViolationDetector {
                     .with_cwe(682) // CWE-682: Incorrect Calculation
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
                     .with_cwe(20)  // CWE-20: Improper Input Validation
+                    .with_confidence(Confidence::High) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Secure AMM function '{}': Validate K invariant (reserve0 * reserve1 >= kBefore), \
                         handle fee-on-transfer tokens by measuring actual balances, \

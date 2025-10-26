@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::vault_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault donation attacks via direct token transfers
 pub struct VaultDonationAttackDetector {
@@ -51,6 +52,20 @@ impl Detector for VaultDonationAttackDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Check for protections at contract level
+        // Donation attacks are ineffective if inflation is protected OR internal accounting exists
+        if vault_patterns::has_inflation_protection(ctx) {
+            return Ok(findings); // Protected by dead shares/virtual shares/minimum deposit
+        }
+
+        if vault_patterns::has_internal_balance_tracking(ctx) {
+            return Ok(findings); // Protected by internal accounting
+        }
+
+        if vault_patterns::has_donation_guard(ctx) {
+            return Ok(findings); // Protected by explicit donation guards
+        }
+
         for function in ctx.get_functions() {
             if let Some(donation_issue) = self.check_donation_vulnerability(function, ctx) {
                 let message = format!(
@@ -59,6 +74,9 @@ impl Detector for VaultDonationAttackDetector {
                     causing rounding errors that steal from depositors.",
                     function.name.name, donation_issue
                 );
+
+                // NEW: Confidence is HIGH since we've ruled out all protections
+                let confidence = Confidence::High;
 
                 let finding = self
                     .base
@@ -71,6 +89,7 @@ impl Detector for VaultDonationAttackDetector {
                     )
                     .with_cwe(682) // CWE-682: Incorrect Calculation
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_confidence(confidence) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Protect '{}' from donation attack. \
                     Solutions: (1) Track assets internally instead of using balanceOf, \

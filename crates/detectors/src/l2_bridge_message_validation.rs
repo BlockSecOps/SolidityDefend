@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::contract_classification;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for L2 bridge message validation vulnerabilities
 pub struct L2BridgeMessageValidationDetector {
@@ -51,6 +52,11 @@ impl Detector for L2BridgeMessageValidationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Only run this detector on bridge contracts
+        if !contract_classification::is_bridge_contract(ctx) {
+            return Ok(findings); // Not a bridge - skip analysis
+        }
+
         for function in ctx.get_functions() {
             // Skip internal/private functions
             if !self.is_external_or_public(function) {
@@ -70,6 +76,7 @@ impl Detector for L2BridgeMessageValidationDetector {
                         function.name.name, issue
                     );
 
+                    // NEW: High confidence since this IS a bridge contract
                     let finding = self
                         .base
                         .create_finding(
@@ -80,6 +87,7 @@ impl Detector for L2BridgeMessageValidationDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                        .with_confidence(Confidence::High) // NEW: Set confidence
                         .with_fix_suggestion(format!(
                             "Add proper validation to '{}': \
                             (1) Verify Merkle proof against L1/L2 state root, \
@@ -105,6 +113,7 @@ impl Detector for L2BridgeMessageValidationDetector {
                         function.name.name, issue
                     );
 
+                    // NEW: High confidence since this IS a bridge contract
                     let finding = self
                         .base
                         .create_finding(
@@ -115,6 +124,7 @@ impl Detector for L2BridgeMessageValidationDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                        .with_confidence(Confidence::High) // NEW: Set confidence
                         .with_fix_suggestion(format!(
                             "Add finality checks to '{}': \
                             (1) Verify sufficient block confirmations, \

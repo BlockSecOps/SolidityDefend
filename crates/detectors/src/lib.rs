@@ -3,6 +3,9 @@ pub mod detector;
 pub mod registry;
 pub mod types;
 
+// Safe pattern recognition library
+pub mod safe_patterns;
+
 // Detector implementations
 pub mod access_control;
 pub mod amm_liquidity_manipulation;

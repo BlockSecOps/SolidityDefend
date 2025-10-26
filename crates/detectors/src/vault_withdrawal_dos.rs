@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault withdrawal DOS vulnerabilities
 pub struct VaultWithdrawalDosDetector {
@@ -51,8 +51,32 @@ impl Detector for VaultWithdrawalDosDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Check for DOS mitigations at contract level
+        let has_pull_pattern = self.has_pull_pattern(ctx);
+        let has_emergency_mechanism = self.has_emergency_mechanism(ctx);
+        let has_withdrawal_limits = self.has_withdrawal_limits(ctx);
+
         for function in ctx.get_functions() {
             if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx) {
+                // NEW: Assign confidence based on mitigations present
+                let mut mitigation_count = 0;
+                if has_pull_pattern {
+                    mitigation_count += 1;
+                }
+                if has_emergency_mechanism {
+                    mitigation_count += 1;
+                }
+                if has_withdrawal_limits {
+                    mitigation_count += 1;
+                }
+
+                // Confidence based on number of mitigations
+                let confidence = match mitigation_count {
+                    0 => Confidence::High,    // No mitigations - very vulnerable
+                    1 => Confidence::Medium,  // Some protection
+                    _ => Confidence::Low,     // Multiple protections - likely safe
+                };
+
                 let message = format!(
                     "Function '{}' is vulnerable to withdrawal DOS attack. {} \
                     Attacker can block withdrawals, causing funds to be locked indefinitely.",
@@ -70,6 +94,7 @@ impl Detector for VaultWithdrawalDosDetector {
                     )
                     .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
                     .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
+                    .with_confidence(confidence) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Protect '{}' from withdrawal DOS. \
                     Solutions: (1) Implement withdrawal limits/caps per transaction, \
@@ -241,6 +266,39 @@ impl VaultWithdrawalDosDetector {
         } else {
             String::new()
         }
+    }
+
+    /// NEW: Check for pull-over-push pattern (safer withdrawal pattern)
+    fn has_pull_pattern(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Pull pattern indicators
+        source.contains("claimableBalance")
+            || source.contains("pendingWithdrawals")
+            || source.contains("withdrawalRequest")
+            || source.contains("claim()")
+            || (source.contains("mapping") && source.contains("withdraw"))
+    }
+
+    /// NEW: Check for emergency withdrawal mechanism
+    fn has_emergency_mechanism(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        source.contains("emergencyWithdraw")
+            || source.contains("emergencyPause")
+            || source.contains("circuitBreaker")
+            || (source.contains("paused") && source.contains("whenNotPaused"))
+    }
+
+    /// NEW: Check for withdrawal limits/caps
+    fn has_withdrawal_limits(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        source.contains("withdrawalCap")
+            || source.contains("maxWithdrawal")
+            || source.contains("withdrawalLimit")
+            || source.contains("MAX_WITHDRAW")
+            || source.contains("dailyLimit")
     }
 }
 

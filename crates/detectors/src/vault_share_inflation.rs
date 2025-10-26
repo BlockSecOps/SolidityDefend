@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::vault_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for vault share inflation attacks (first depositor attack)
 pub struct VaultShareInflationDetector {
@@ -51,6 +52,12 @@ impl Detector for VaultShareInflationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Check for safe patterns at contract level FIRST
+        // If any protection is present, contract is safe - no findings needed
+        if vault_patterns::has_inflation_protection(ctx) {
+            return Ok(findings); // Contract is protected - no findings
+        }
+
         for function in ctx.get_functions() {
             if let Some(inflation_issue) = self.check_share_inflation(function, ctx) {
                 let message = format!(
@@ -59,6 +66,10 @@ impl Detector for VaultShareInflationDetector {
                     donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
                     function.name.name, inflation_issue
                 );
+
+                // NEW: Assign confidence based on context
+                // If we get here, no protections were found, so confidence is HIGH
+                let confidence = Confidence::High;
 
                 let finding = self.base.create_finding(
                     ctx,
@@ -69,6 +80,7 @@ impl Detector for VaultShareInflationDetector {
                 )
                 .with_cwe(682) // CWE-682: Incorrect Calculation
                 .with_cwe(1339) // CWE-1339: Insufficient Precision or Accuracy
+                .with_confidence(confidence) // NEW: Set confidence explicitly
                 .with_fix_suggestion(format!(
                     "Protect '{}' from share inflation attack. \
                     Solutions: (1) Mint initial shares to zero address on deployment (dead shares), \

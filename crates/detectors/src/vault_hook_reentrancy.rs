@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::reentrancy_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault reentrancy via token callback hooks
 pub struct VaultHookReentrancyDetector {
@@ -51,8 +52,29 @@ impl Detector for VaultHookReentrancyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Check for reentrancy protections at contract level
+        if reentrancy_patterns::has_reentrancy_guard(ctx) {
+            return Ok(findings); // Protected by ReentrancyGuard
+        }
+
+        // NEW: Check if using standard ERC20 (no hooks, safe)
+        if reentrancy_patterns::is_standard_erc20(ctx) {
+            return Ok(findings); // Standard ERC20 has no callback hooks
+        }
+
         for function in ctx.get_functions() {
             if let Some(reentrancy_issue) = self.check_hook_reentrancy(function, ctx) {
+                // NEW: Check for CEI pattern compliance at function level
+                let follows_cei = reentrancy_patterns::follows_cei_pattern(ctx);
+
+                // If CEI pattern followed, use LOW confidence (likely safe)
+                // Otherwise HIGH confidence (vulnerable)
+                let confidence = if follows_cei {
+                    Confidence::Low
+                } else {
+                    Confidence::High
+                };
+
                 let message = format!(
                     "Function '{}' is vulnerable to hook reentrancy attack. {} \
                     ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
@@ -70,6 +92,7 @@ impl Detector for VaultHookReentrancyDetector {
                     )
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
                     .with_cwe(362) // CWE-362: Race Condition
+                    .with_confidence(confidence) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Protect '{}' from hook reentrancy. \
                     Solutions: (1) Add nonReentrant modifier from OpenZeppelin, \

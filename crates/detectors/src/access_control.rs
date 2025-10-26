@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::erc_standard_compliance;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for missing access control modifiers on critical functions
 pub struct MissingModifiersDetector {
@@ -225,6 +226,44 @@ impl MissingModifiersDetector {
 
         false
     }
+
+    /// Check if a function is user-facing (operates on msg.sender's own resources)
+    fn is_user_facing_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+        let func_source = self.get_function_source(function, ctx);
+
+        // User-facing functions typically access msg.sender's own balance/tokens
+        let accesses_own_balance = func_source.contains("balances[msg.sender]")
+            || func_source.contains("balanceOf[msg.sender]")
+            || func_source.contains("_balances[msg.sender]")
+            || func_source.contains("userBalance[msg.sender]")
+            || func_source.contains("shares[msg.sender]");
+
+        // User-facing functions check authorization via msg.sender
+        let checks_sender = func_source.contains("msg.sender ==")
+            || func_source.contains("msg.sender !=")
+            || func_source.contains("owner == msg.sender")
+            || func_source.contains("msg.sender == owner");
+
+        // User-facing functions often have require checks on msg.sender's balance
+        let requires_sender_balance = func_source.contains("require(")
+            && func_source.contains("msg.sender")
+            && (func_source.contains("balance") || func_source.contains("shares"));
+
+        accesses_own_balance || checks_sender || requires_sender_balance
+    }
+
+    /// Get function source code for analysis
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
 }
 
 impl Detector for MissingModifiersDetector {
@@ -253,6 +292,11 @@ impl Detector for MissingModifiersDetector {
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
+            // Skip interface functions (they have no body)
+            if function.body.is_none() {
+                continue;
+            }
+
             // Skip view/pure functions, constructors, and internal functions
             if function.visibility == ast::Visibility::Internal
                 || function.visibility == ast::Visibility::Private
@@ -260,6 +304,16 @@ impl Detector for MissingModifiersDetector {
                 || function.mutability == ast::StateMutability::Pure
             {
                 continue;
+            }
+
+            // NEW: Skip ERC standard-compliant functions (they SHOULD be public)
+            if erc_standard_compliance::is_standard_compliant_function(&function.name.name, ctx) {
+                continue; // This is a required public function per ERC standards
+            }
+
+            // NEW: Skip user-facing functions (operate on msg.sender's own resources)
+            if self.is_user_facing_function(function, ctx) {
+                continue; // User-facing functions are supposed to be public
             }
 
             // Check if function name suggests it needs access control
@@ -281,6 +335,7 @@ impl Detector for MissingModifiersDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(284) // CWE-284: Improper Access Control
+                        .with_confidence(Confidence::High) // NEW: High confidence when truly missing
                         .with_fix_suggestion(format!(
                             "Add an access control modifier like 'onlyOwner' to function '{}'",
                             function.name.name

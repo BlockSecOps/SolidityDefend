@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::safe_call_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for circular dependency vulnerabilities
 pub struct CircularDependencyDetector {
@@ -53,6 +54,11 @@ impl Detector for CircularDependencyDetector {
 
         for function in ctx.get_functions() {
             if let Some(dependency_issue) = self.check_circular_dependency(function, ctx) {
+                let func_source = self.get_function_source(function, ctx);
+
+                // NEW: Calculate confidence based on protection mechanisms
+                let confidence = self.calculate_confidence(&func_source, &dependency_issue);
+
                 let message = format!(
                     "Function '{}' has circular dependency vulnerability. {} \
                     Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
@@ -70,6 +76,7 @@ impl Detector for CircularDependencyDetector {
                     )
                     .with_cwe(674) // CWE-674: Uncontrolled Recursion
                     .with_cwe(834) // CWE-834: Excessive Iteration
+                    .with_confidence(confidence) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Break circular dependency in '{}'. \
                     Use events instead of callbacks, implement depth limits for recursive calls, \
@@ -103,10 +110,16 @@ impl CircularDependencyDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
-        // Check if function makes external calls that could create circular dependencies
-        let makes_external_call = func_source.contains(".call")
-            || func_source.contains("(") && func_source.contains(")")
-            || func_source.contains("interface");
+        // NEW: Skip functions that are safe from circular dependencies
+        if safe_call_patterns::is_safe_from_circular_deps(function, &func_source, ctx) {
+            return None; // Safe pattern detected - no circular risk
+        }
+
+        // NEW: Tighter external call detection (not just any parentheses!)
+        let makes_external_call = func_source.contains(".call(")
+            || func_source.contains(".call{")
+            || func_source.contains("delegatecall")
+            || (func_source.contains("external") && func_source.contains("()"));
 
         if !makes_external_call {
             return None;
@@ -199,19 +212,31 @@ impl CircularDependencyDetector {
             ));
         }
 
-        // Pattern 6: Cross-contract state dependencies
-        let reads_external_state = func_source.contains(".balance")
-            || func_source.contains(".totalSupply")
-            || (func_source.contains(".") && func_source.contains("()"));
-
-        let dependency_cycle = reads_external_state
-            && makes_external_call
+        // Pattern 6: Cross-contract state dependencies (TIGHTENED)
+        // Only flag if BOTH reads external state AND writes state in circular manner
+        let reads_external_state = (func_source.contains(".balanceOf(address(this))")
+            || func_source.contains(".totalSupply()")
+            || func_source.contains(".getReserves()"))
             && !func_source.contains("view")
             && !func_source.contains("pure");
 
+        // Must have state writes AND external reads in vulnerable pattern
+        let has_state_writes = func_source.contains(" = ")
+            || func_source.contains("+=")
+            || func_source.contains("-=");
+
+        // Must have callback potential
+        let has_callback_potential = func_source.contains(".call(")
+            || func_source.contains("callback")
+            || func_source.contains("hook");
+
+        let dependency_cycle = reads_external_state
+            && has_state_writes
+            && has_callback_potential;
+
         if dependency_cycle {
             return Some(format!(
-                "Reads external contract state during state changes, \
+                "Reads external contract state during state changes with callback potential, \
                 creates interdependency that can deadlock"
             ));
         }
@@ -272,6 +297,40 @@ impl CircularDependencyDetector {
         }
 
         None
+    }
+
+    /// Calculate confidence based on protection mechanisms and issue type
+    fn calculate_confidence(&self, func_source: &str, issue: &str) -> Confidence {
+        let mut protection_count = 0;
+
+        // Count protection mechanisms
+        if safe_call_patterns::has_reentrancy_protection(func_source) {
+            protection_count += 1;
+        }
+
+        if safe_call_patterns::has_depth_limit(func_source) {
+            protection_count += 1;
+        }
+
+        if safe_call_patterns::has_cycle_detection(func_source) {
+            protection_count += 1;
+        }
+
+        if safe_call_patterns::has_try_catch_protection(func_source) {
+            protection_count += 1;
+        }
+
+        // Higher severity issues get higher confidence
+        let is_high_severity = issue.contains("callback")
+            || issue.contains("infinite loop")
+            || issue.contains("stack overflow");
+
+        match protection_count {
+            0 if is_high_severity => Confidence::High,    // No protection, high severity
+            0 => Confidence::Medium,                      // No protection, lower severity
+            1 => Confidence::Medium,                      // Some protection
+            _ => Confidence::Low,                         // Multiple protections (2+)
+        }
     }
 
     /// Get function source code

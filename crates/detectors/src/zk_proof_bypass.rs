@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::contract_classification;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ZK proof verification bypass vulnerabilities
 pub struct ZkProofBypassDetector {
@@ -51,6 +52,11 @@ impl Detector for ZkProofBypassDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // NEW: Only run this detector on ZK rollup contracts
+        if !contract_classification::is_zk_rollup_contract(ctx) {
+            return Ok(findings); // Not a ZK rollup - skip analysis
+        }
+
         for function in ctx.get_functions() {
             // Skip internal/private functions
             if !self.is_external_or_public(function) {
@@ -70,6 +76,7 @@ impl Detector for ZkProofBypassDetector {
                         function.name.name, issue
                     );
 
+                    // NEW: High confidence since this IS a ZK rollup contract
                     let finding = self
                         .base
                         .create_finding(
@@ -80,6 +87,7 @@ impl Detector for ZkProofBypassDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
+                        .with_confidence(Confidence::High) // NEW: Set confidence
                         .with_fix_suggestion(format!(
                             "Add ZK proof verification to '{}': \
                             (1) Call verifier contract with proof and public inputs, \
@@ -115,6 +123,7 @@ impl Detector for ZkProofBypassDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(20) // CWE-20: Improper Input Validation
+                        .with_confidence(Confidence::High) // NEW: Set confidence
                         .with_fix_suggestion(format!(
                             "Strengthen verification in '{}': \
                             (1) Implement replay protection using proof hash or batch ID, \

@@ -518,6 +518,12 @@ impl Finding {
         self
     }
 
+    /// Set confidence level for this finding
+    pub fn with_confidence(mut self, confidence: Confidence) -> Self {
+        self.confidence = confidence;
+        self
+    }
+
     /// Calculate a composite risk score based on severity and confidence
     pub fn risk_score(&self) -> u16 {
         (self.severity.score() as u16) * (self.confidence.score() as u16)

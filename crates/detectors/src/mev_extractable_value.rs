@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::mev_protection_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for generalized MEV extraction vulnerabilities
 pub struct MevExtractableValueDetector {
@@ -53,6 +54,11 @@ impl Detector for MevExtractableValueDetector {
 
         for function in ctx.get_functions() {
             if let Some(mev_issue) = self.check_mev_extractable(function, ctx) {
+                let func_source = self.get_function_source(function, ctx);
+
+                // NEW: Calculate confidence based on protections
+                let confidence = self.calculate_confidence(function, &func_source);
+
                 let message = format!(
                     "Function '{}' has extractable MEV. {} \
                     Searchers can extract value through transaction ordering, front-running, or back-running.",
@@ -70,6 +76,7 @@ impl Detector for MevExtractableValueDetector {
                     )
                     .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                    .with_confidence(confidence) // NEW: Set confidence
                     .with_fix_suggestion(format!(
                         "Reduce MEV extractability in '{}'. \
                     Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, \
@@ -103,7 +110,12 @@ impl MevExtractableValueDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
-        // Pattern 1: Public function with value transfer without protection
+        // NEW: Early exit if function has sufficient MEV protection
+        if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {
+            return None; // Protected - no MEV risk
+        }
+
+        // Pattern 1: Public function with value transfer without protection (TIGHTENED)
         let is_public = function.visibility == ast::Visibility::Public
             || function.visibility == ast::Visibility::External;
 
@@ -111,16 +123,16 @@ impl MevExtractableValueDetector {
             || func_source.contains("send")
             || func_source.contains("call{value:");
 
+        // NEW: Check for specific protections
         let lacks_mev_protection = is_public
             && has_value_transfer
-            && !func_source.contains("onlyFlashbots")
-            && !func_source.contains("mevProtected")
-            && !func_source.contains("commit")
-            && !func_source.contains("batchAuction");
+            && !mev_protection_patterns::has_slippage_protection(&func_source)
+            && !mev_protection_patterns::has_deadline_protection(&func_source)
+            && !mev_protection_patterns::is_user_operation(&func_source, &function.name.name);
 
         if lacks_mev_protection {
             return Some(format!(
-                "Public function with value transfer lacks MEV protection, \
+                "Public function with value transfer lacks MEV protection (no slippage/deadline checks), \
                 enabling front-running and back-running attacks"
             ));
         }
@@ -164,24 +176,27 @@ impl MevExtractableValueDetector {
             ));
         }
 
-        // Pattern 4: State changes visible in mempool before execution
+        // Pattern 4: State changes visible in mempool before execution (TIGHTENED)
+        // Only flag if it's NOT a user operation and affects global state
         let changes_state =
             func_source.contains("=") || func_source.contains("+=") || func_source.contains("-=");
 
-        let affects_others = func_source.contains("balance")
-            || func_source.contains("supply")
-            || func_source.contains("reserve")
-            || func_source.contains("price");
+        let affects_global_state = (func_source.contains("totalSupply")
+            || func_source.contains("reserve0")
+            || func_source.contains("reserve1")
+            || func_source.contains("globalPrice"))
+            && !func_source.contains("[msg.sender]");
 
-        let mempool_visible = is_public
+        let is_mev_vulnerable_state_change = is_public
             && changes_state
-            && affects_others
+            && affects_global_state
+            && !mev_protection_patterns::is_user_operation(&func_source, &function.name.name)
             && !func_source.contains("private")
             && !func_source.contains("encrypted");
 
-        if mempool_visible {
+        if is_mev_vulnerable_state_change {
             return Some(format!(
-                "State changes visible in public mempool before execution, \
+                "State changes to global state (totalSupply/reserves/price) visible in public mempool, \
                 allowing MEV bots to react and extract value"
             ));
         }
@@ -223,7 +238,7 @@ impl MevExtractableValueDetector {
             ));
         }
 
-        // Pattern 7: Oracle update function
+        // Pattern 7: Oracle update function without access control (TIGHTENED)
         let updates_oracle = func_source.contains("updatePrice")
             || func_source.contains("setPrice")
             || function.name.name.to_lowercase().contains("update");
@@ -231,9 +246,12 @@ impl MevExtractableValueDetector {
         let affects_defi =
             updates_oracle && (func_source.contains("price") || func_source.contains("rate"));
 
-        if affects_defi && is_public {
+        // NEW: Check for access control
+        let lacks_access_control = !mev_protection_patterns::has_mev_limiting_access_control(function);
+
+        if affects_defi && is_public && lacks_access_control {
             return Some(format!(
-                "Public oracle update function enables MEV through oracle manipulation, \
+                "Public oracle update function without access control enables MEV through oracle manipulation, \
                 can be front-run or back-run for profit"
             ));
         }
@@ -265,6 +283,17 @@ impl MevExtractableValueDetector {
         }
 
         None
+    }
+
+    /// Calculate confidence based on number of MEV protections
+    fn calculate_confidence(&self, function: &ast::Function<'_>, func_source: &str) -> Confidence {
+        let protection_count = mev_protection_patterns::count_mev_protections(function, func_source);
+
+        match protection_count {
+            0 => Confidence::High,    // No protections - high confidence in MEV risk
+            1 => Confidence::Medium,  // Some protection - medium confidence
+            _ => Confidence::Low,     // Multiple protections - low confidence (may be false positive)
+        }
     }
 
     /// Get function source code
