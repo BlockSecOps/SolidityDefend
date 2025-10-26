@@ -28,11 +28,15 @@ tarpaulin-report.html
 # Benchmark results
 /target/criterion/
 
+# Release artifacts
+releases/
+
 # Cache directories
 .soliditydefend-cache/
 
 # Test outputs
 test-outputs/
+test-results/
 temp/
 
 # Security
