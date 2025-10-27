@@ -1,13 +1,13 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.11.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-0.11.1-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 [![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Tested](https://img.shields.io/badge/validated-902%20findings-blue.svg)](#comprehensive-testing)
 
-> ✅ **Production Ready** - v0.11.0 fully tested and validated with 902 findings across 9 comprehensive test contracts. All 100 detectors confirmed working.
+> ✅ **Production Ready** - v0.11.1 fully tested and validated with 902 findings across 9 comprehensive test contracts. All 100 detectors confirmed working.
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
@@ -287,12 +287,13 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
-- **Current Version**: v0.11.0 (Production Release)
+- **Current Version**: v0.11.1 (Production Release)
 - **Detectors**: 100 fully validated security detectors
 - **Status**: ✅ Production Ready - Comprehensive testing completed
 
 ### Version History
 
+- **v0.11.1** (2025-10-27) - Patch release fixing Homebrew installation (E0583 module errors)
 - **v0.11.0** (2025-10-27) - Production release with 100 detectors, AA + Flash Loan security
 - **v0.7.0-beta** (2025-10-25) - Beta preview with 74 detectors
 - **v0.9.0** (2025-10-09) - Internal milestone (not released)

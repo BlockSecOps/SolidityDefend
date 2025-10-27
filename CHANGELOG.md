@@ -5,6 +5,18 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2025-10-27
+
+### Fixed
+- Fixed Homebrew installation build errors (E0583) by commenting out untracked `erc7683` and `restaking` modules
+- Updated Homebrew formula with correct v0.11.1 tarball SHA256
+- All 100 detectors remain fully functional (no features removed)
+
+### Notes
+- This is a patch release to fix v0.11.0 Homebrew installation issues
+- ERC-7683 and Restaking/LRT detectors will be properly added in v0.12.0
+- Same 100 validated detectors as v0.11.0 (6 AA + 4 Flash Loan detectors working)
+
 ## [0.11.0] - 2025-10-27
 
 ### ⚡ Update (2025-10-27): Build Fix for Homebrew Installation
