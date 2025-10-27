@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for ERC-4626 vault withdrawal DOS vulnerabilities
 pub struct VaultWithdrawalDosDetector {
@@ -51,13 +52,16 @@ impl Detector for VaultWithdrawalDosDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Check if this is an ERC-4626 vault
+        let is_vault = utils::is_erc4626_vault(ctx);
+
         // NEW: Check for DOS mitigations at contract level
         let has_pull_pattern = self.has_pull_pattern(ctx);
         let has_emergency_mechanism = self.has_emergency_mechanism(ctx);
         let has_withdrawal_limits = self.has_withdrawal_limits(ctx);
 
         for function in ctx.get_functions() {
-            if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx) {
+            if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx, is_vault) {
                 // NEW: Assign confidence based on mitigations present
                 let mut mitigation_count = 0;
                 if has_pull_pattern {
@@ -123,6 +127,7 @@ impl VaultWithdrawalDosDetector {
         &self,
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
+        is_vault: bool,
     ) -> Option<String> {
         if function.body.is_none() {
             return None;
@@ -164,7 +169,9 @@ impl VaultWithdrawalDosDetector {
         let checks_call_success = func_source.contains("require(")
             && (func_source.contains(".transfer(") || func_source.contains(".call"));
 
-        if has_external_call && checks_call_success {
+        // Skip for ERC-4626 vaults - they MUST transfer assets out, this is normal behavior
+        // ERC-4626 redeem/withdraw functions transfer underlying assets, not a DOS vector
+        if has_external_call && checks_call_success && !is_vault {
             return Some(format!(
                 "Withdrawal requires successful external call. Failing calls can permanently block withdrawals. \
                 Consider using pull-over-push pattern"
@@ -180,7 +187,8 @@ impl VaultWithdrawalDosDetector {
         let processes_large_amount =
             func_source.contains("amount") || func_source.contains("assets");
 
-        if !has_withdrawal_cap && processes_large_amount && is_withdrawal_function {
+        // Skip for vaults - ERC-4626 vaults have built-in limits via share balances and maxRedeem/maxWithdraw
+        if !has_withdrawal_cap && processes_large_amount && is_withdrawal_function && !is_vault {
             return Some(format!(
                 "No withdrawal cap or limit detected. Large withdrawals can drain liquidity \
                 and DOS subsequent withdrawers"

@@ -3,6 +3,9 @@ pub mod detector;
 pub mod registry;
 pub mod types;
 
+// Utility functions for context detection and pattern recognition
+pub mod utils;
+
 // Safe pattern recognition library
 pub mod safe_patterns;
 

@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for withdrawal delay vulnerabilities in staking systems
 pub struct WithdrawalDelayDetector {
@@ -51,8 +52,11 @@ impl Detector for WithdrawalDelayDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip if this is an ERC-4626 vault - asset transfers are normal, not delays
+        let is_vault = utils::is_erc4626_vault(ctx);
+
         for function in ctx.get_functions() {
-            if let Some(withdrawal_issue) = self.check_withdrawal_delay(function, ctx) {
+            if let Some(withdrawal_issue) = self.check_withdrawal_delay(function, ctx, is_vault) {
                 let message = format!(
                     "Function '{}' has withdrawal delay vulnerability. {} \
                     Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
@@ -94,6 +98,7 @@ impl WithdrawalDelayDetector {
         &self,
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
+        is_vault: bool,
     ) -> Option<String> {
         if function.body.is_none() {
             return None;
@@ -226,10 +231,13 @@ impl WithdrawalDelayDetector {
             || func_source.contains(".transfer")
             || func_source.contains(".send");
 
+        // Skip for vaults - they need to transfer assets out (that's not a delay, it's the withdrawal itself)
         let blocking_external_call = has_external_call
             && is_withdrawal_function
+            && !is_vault  // NEW: Skip if vault
             && !func_source.contains("nonReentrant")
-            && func_source.contains("require");
+            && func_source.contains("require")
+            && utils::has_actual_delay_mechanism(&func_source);  // NEW: Only flag if there's an actual delay
 
         if blocking_external_call {
             return Some(format!(

@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for token supply manipulation vulnerabilities
 pub struct TokenSupplyManipulationDetector {
@@ -51,8 +52,11 @@ impl Detector for TokenSupplyManipulationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip if this is an ERC-4626 vault - shares don't need max supply caps
+        let is_vault = utils::is_erc4626_vault(ctx);
+
         for function in ctx.get_functions() {
-            if let Some(supply_issue) = self.check_token_supply_manipulation(function, ctx) {
+            if let Some(supply_issue) = self.check_token_supply_manipulation(function, ctx, is_vault) {
                 let message = format!(
                     "Function '{}' has token supply manipulation vulnerability. {} \
                     Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
@@ -96,6 +100,7 @@ impl TokenSupplyManipulationDetector {
         &self,
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
+        is_vault: bool,
     ) -> Option<String> {
         if function.body.is_none() {
             return None;
@@ -121,7 +126,10 @@ impl TokenSupplyManipulationDetector {
             || func_source.contains("_mint")
             || function.name.name.to_lowercase().contains("mint");
 
+        // Skip supply cap check for ERC-4626 vaults - they mint shares, not tokens
+        // Shares are backed by assets and don't need a max supply cap
         let no_supply_cap = is_mint
+            && !is_vault  // NEW: Skip if vault
             && !func_source.contains("maxSupply")
             && !func_source.contains("MAX_SUPPLY")
             && !func_source.contains("cap()");
@@ -184,7 +192,8 @@ impl TokenSupplyManipulationDetector {
             || func_source.contains("totalSupply +=")
             || func_source.contains("totalSupply -=");
 
-        let direct_manipulation = modifies_total_supply && !is_mint && !is_burn;
+        // Skip for vaults - ERC-4626 vaults legitimately modify totalSupply for share tracking
+        let direct_manipulation = modifies_total_supply && !is_mint && !is_burn && !is_vault;
 
         if direct_manipulation {
             return Some(format!(
