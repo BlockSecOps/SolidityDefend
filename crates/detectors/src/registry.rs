@@ -605,21 +605,22 @@ impl DetectorRegistry {
         ));
 
         // Cross-Chain Intent & Bridge Security (Phase 13 - 2025)
-        self.register(Arc::new(
-            crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_replay_attack::ReplayAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
-        ));
+        // TODO v0.12.0: Uncomment when erc7683 detectors are added
+        // self.register(Arc::new(
+        //     crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683_replay_attack::ReplayAttackDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
+        // ));
         self.register(Arc::new(
             crate::bridge_token_minting::TokenMintingDetector::new(),
         ));
@@ -631,38 +632,40 @@ impl DetectorRegistry {
         ));
 
         // ERC-7683 Comprehensive Intent Detectors (v0.9.0 - 2025)
-        self.register(Arc::new(
-            crate::erc7683::IntentSignatureReplayDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentSolverManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentNonceManagementDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentSettlementValidationDetector::new(),
-        ));
+        // TODO v0.12.0: Uncomment when erc7683 module is added
+        // self.register(Arc::new(
+        //     crate::erc7683::IntentSignatureReplayDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683::IntentSolverManipulationDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683::IntentNonceManagementDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::erc7683::IntentSettlementValidationDetector::new(),
+        // ));
 
         // Restaking & LRT Security (v0.10.0 - 2025)
-        self.register(Arc::new(
-            crate::restaking::RestakingDelegationManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::RestakingSlashingConditionsDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::LRTShareInflationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::RestakingWithdrawalDelaysDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::AVSValidationBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::RestakingRewardsManipulationDetector::new(),
-        ));
+        // TODO v0.12.0: Uncomment when restaking module is added
+        // self.register(Arc::new(
+        //     crate::restaking::RestakingDelegationManipulationDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::restaking::RestakingSlashingConditionsDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::restaking::LRTShareInflationDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::restaking::RestakingWithdrawalDelaysDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::restaking::AVSValidationBypassDetector::new(),
+        // ));
+        // self.register(Arc::new(
+        //     crate::restaking::RestakingRewardsManipulationDetector::new(),
+        // ));
 
         // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
         self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
