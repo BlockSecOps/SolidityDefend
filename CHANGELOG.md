@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.11.0] - 2025-10-27
 
+### ⚡ Update (2025-10-27): Build Fix for Homebrew Installation
+
+**Fixed:**
+- Commented out untracked `erc7683` and `restaking` modules that caused E0583 compilation errors
+- These modules existed locally but were not committed to git, breaking tarball builds
+- Impact: Maintains 100 fully functional detectors (no functionality lost)
+- Homebrew installation now works correctly: `brew install soliditydefend`
+
+**Note:** ERC-7683 intent detectors (4) and Restaking/LRT detectors (6) will be properly added in v0.12.0 after being committed to the repository.
+
+**Validation:**
+- ✅ Comprehensive testing complete: 902 findings across 9 test contracts
+- ✅ All 100 detectors validated (simple, complex, proxy, upgradeable, live patterns)
+- ✅ v0.11.0 AA + Flash Loan detectors confirmed working (10 new detectors)
+- ✅ Build succeeds in 27s, all tests passing
+- See `TaskDocs-SolidityDefend/COMPREHENSIVE_TEST_REPORT.md` for full validation results
+
+---
+
 ### 🚀 Account Abstraction Advanced & Enhanced Flash Loan Detectors
 
 This release adds **10 new security detectors** targeting ERC-4337 Account Abstraction and Flash Loan vulnerabilities, preventing attack patterns that have caused over **$209M in real-world losses**.
