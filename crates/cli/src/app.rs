@@ -897,6 +897,11 @@ impl CliApp {
 
         let duration = start_time.elapsed();
 
+        // Deduplicate findings before output
+        // This removes duplicate findings from detectors that may run multiple times
+        // or string-based detectors that incorrectly match the same pattern repeatedly
+        let all_findings = output::deduplicate_findings(all_findings);
+
         // Output results
         match output_file {
             Some(path) => {
@@ -1346,6 +1351,9 @@ impl CliApp {
                 eprintln!("   ⚠️  Warning: Failed to clean up temporary file: {}", e);
             }
         }
+
+        // Deduplicate findings before output
+        let all_findings = output::deduplicate_findings(all_findings);
 
         // Output results
         match output_file {

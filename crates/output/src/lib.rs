@@ -5,6 +5,42 @@ pub use console::{ConsoleConfig, ConsoleFormatter};
 pub use json::{JsonError, JsonFormatter, JsonOutputBuilder};
 
 use detectors::types::{AnalysisContext, Finding};
+use std::collections::HashSet;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+
+/// Deduplicate findings based on detector_id, file, line, and message hash
+///
+/// This function removes duplicate findings that have the same:
+/// - detector_id: Same detector reported the issue
+/// - file: Same file (from primary_location)
+/// - line: Same line number (from primary_location)
+/// - message_hash: Same or very similar message content
+///
+/// This prevents the same issue from being reported multiple times when
+/// detectors run multiple analysis passes or when string-based detectors
+/// incorrectly match the same pattern multiple times.
+pub fn deduplicate_findings(findings: Vec<Finding>) -> Vec<Finding> {
+    let mut seen = HashSet::new();
+    let mut deduplicated = Vec::new();
+
+    for finding in findings {
+        // Create a unique key: (detector_id, file, line, message_hash)
+        let mut hasher = DefaultHasher::new();
+        finding.detector_id.0.hash(&mut hasher);
+        finding.primary_location.file.hash(&mut hasher);
+        finding.primary_location.line.hash(&mut hasher);
+        finding.message.hash(&mut hasher);
+        let key = hasher.finish();
+
+        // Only keep the finding if we haven't seen this key before
+        if seen.insert(key) {
+            deduplicated.push(finding);
+        }
+    }
+
+    deduplicated
+}
 
 /// Unified output formatter that supports multiple formats
 #[derive(Debug)]
