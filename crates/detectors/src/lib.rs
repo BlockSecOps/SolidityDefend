@@ -26,7 +26,6 @@ pub mod emergency_withdrawal_abuse;
 pub mod excessive_gas_usage;
 pub mod external;
 pub mod flash_loan_staking;
-pub mod flashloan;
 pub mod front_running_mitigation;
 pub mod gas_griefing;
 pub mod gas_price_manipulation;
@@ -91,12 +90,15 @@ pub mod erc7683_permit2_integration;
 pub mod erc7683_replay_attack;
 pub mod erc7683_settlement_validation;
 
-// Phase 14: Account Abstraction Advanced (2025)
-pub mod aa_nonce_management;
-pub mod aa_session_key_vulnerabilities;
-pub mod aa_signature_aggregation;
-pub mod aa_social_recovery;
-pub mod erc4337_paymaster_abuse;
+// Phase 13 v0.9.0: Comprehensive ERC-7683 Intent Detectors (2025)
+pub mod erc7683;
+
+// Phase 14 v0.10.0: Restaking & LRT Security (2025)
+pub mod restaking;
+
+// Phase 14 v0.11.0: Account Abstraction Advanced & Enhanced Flash Loans (2025)
+pub mod aa;
+pub mod flashloan;
 
 // Phase 15: DeFi Protocol Security (2025)
 pub mod defi_jit_liquidity;

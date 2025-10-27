@@ -392,9 +392,6 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
         self.register(Arc::new(crate::oracle::PriceValidationDetector::new()));
 
-        // Flash Loan Detectors
-        self.register(Arc::new(crate::flashloan::VulnerablePatternsDetector::new()));
-
         // External Call Detectors
         self.register(Arc::new(crate::external::UncheckedCallDetector::new()));
 
@@ -633,22 +630,51 @@ impl DetectorRegistry {
             crate::bridge_chain_id_validation::ChainIdValidationDetector::new(),
         ));
 
-        // Account Abstraction Advanced (Phase 14 - 2025)
+        // ERC-7683 Comprehensive Intent Detectors (v0.9.0 - 2025)
         self.register(Arc::new(
-            crate::erc4337_paymaster_abuse::PaymasterAbuseDetector::new(),
+            crate::erc7683::IntentSignatureReplayDetector::new(),
         ));
         self.register(Arc::new(
-            crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new(),
+            crate::erc7683::IntentSolverManipulationDetector::new(),
         ));
         self.register(Arc::new(
-            crate::aa_signature_aggregation::SignatureAggregationDetector::new(),
+            crate::erc7683::IntentNonceManagementDetector::new(),
         ));
         self.register(Arc::new(
-            crate::aa_social_recovery::SocialRecoveryDetector::new(),
+            crate::erc7683::IntentSettlementValidationDetector::new(),
+        ));
+
+        // Restaking & LRT Security (v0.10.0 - 2025)
+        self.register(Arc::new(
+            crate::restaking::RestakingDelegationManipulationDetector::new(),
         ));
         self.register(Arc::new(
-            crate::aa_nonce_management::NonceManagementDetector::new(),
+            crate::restaking::RestakingSlashingConditionsDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::restaking::LRTShareInflationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingWithdrawalDelaysDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::AVSValidationBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingRewardsManipulationDetector::new(),
+        ));
+
+        // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
+        self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
+        self.register(Arc::new(crate::aa::AANonceManagementDetector::new()));
+        self.register(Arc::new(crate::aa::AASessionKeyVulnerabilitiesDetector::new()));
+        self.register(Arc::new(crate::aa::AASignatureAggregationDetector::new()));
+        self.register(Arc::new(crate::aa::AASocialRecoveryDetector::new()));
+        self.register(Arc::new(crate::aa::ERC4337GasGriefingDetector::new()));
+        self.register(Arc::new(crate::flashloan::FlashloanPriceOracleManipulationDetector::new()));
+        self.register(Arc::new(crate::flashloan::FlashloanGovernanceAttackDetector::new()));
+        self.register(Arc::new(crate::flashloan::FlashmintTokenInflationDetector::new()));
+        self.register(Arc::new(crate::flashloan::FlashloanCallbackReentrancyDetector::new()));
 
         // DeFi Protocol Security (Phase 15 - 2025)
         self.register(Arc::new(
