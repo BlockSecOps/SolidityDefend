@@ -173,30 +173,47 @@ impl UnusedStateVariablesDetector {
     }
 
     fn looks_like_state_variable(&self, line: &str) -> bool {
-        // State variables typically have visibility modifiers or type declarations
-        let has_visibility = line.contains("public")
-            || line.contains("private")
-            || line.contains("internal");
+        let trimmed = line.trim();
 
-        let has_type = line.contains("uint")
-            || line.contains("int")
-            || line.contains("address")
-            || line.contains("bool")
-            || line.contains("bytes")
-            || line.contains("string")
-            || line.contains("mapping");
+        // Must end with semicolon for a state variable declaration
+        if !trimmed.ends_with(';') {
+            return false;
+        }
 
-        let is_not_function = !line.contains("function ")
-            && !line.contains("modifier ")
-            && !line.contains("constructor ")
-            && !line.contains("event ")
-            && !line.contains("error ")
-            && !line.contains("struct ")
-            && !line.contains("enum ");
+        // Exclude function calls, require statements, and other non-declarations
+        if trimmed.contains('(') || trimmed.contains("require") || trimmed.contains("assert")
+            || trimmed.contains("revert") || trimmed.starts_with("emit ")
+            || trimmed.contains(".call") || trimmed.contains(".transfer")
+            || trimmed.contains(".send") || trimmed.contains(".delegatecall") {
+            return false;
+        }
 
-        let ends_properly = line.contains(';') || line.contains('=');
+        // Exclude control flow and other statements
+        if trimmed.starts_with("if ") || trimmed.starts_with("for ")
+            || trimmed.starts_with("while ") || trimmed.starts_with("return ")
+            || trimmed.starts_with("delete ") {
+            return false;
+        }
 
-        (has_visibility || has_type) && is_not_function && ends_properly
+        // Exclude keywords that aren't state variables
+        if trimmed.starts_with("function ") || trimmed.starts_with("modifier ")
+            || trimmed.starts_with("constructor") || trimmed.starts_with("event ")
+            || trimmed.starts_with("error ") || trimmed.starts_with("struct ")
+            || trimmed.starts_with("enum ") || trimmed.starts_with("using ")
+            || trimmed.starts_with("import ") || trimmed.starts_with("pragma ") {
+            return false;
+        }
+
+        // State variables should start with a type or visibility modifier
+        let has_type_or_visibility =
+            trimmed.starts_with("uint") || trimmed.starts_with("int")
+            || trimmed.starts_with("address") || trimmed.starts_with("bool")
+            || trimmed.starts_with("bytes") || trimmed.starts_with("string")
+            || trimmed.starts_with("mapping") || trimmed.starts_with("public ")
+            || trimmed.starts_with("private ") || trimmed.starts_with("internal ")
+            || trimmed.starts_with("constant ") || trimmed.starts_with("immutable ");
+
+        has_type_or_visibility
     }
 
     fn parse_state_variable(&self, line: &str) -> Option<(String, String)> {
@@ -209,13 +226,24 @@ impl UnusedStateVariablesDetector {
             return None;
         }
 
-        // The variable name is typically after the type and visibility
-        // Format: type [visibility] name [= value]
+        // Track position in the declaration
+        let mut found_type = false;
+        let mut found_visibility = false;
+
+        // The variable name is typically after the type and optional visibility
+        // Format: type [visibility] [constant|immutable] name [= value]
         for i in 0..parts.len() {
             let part = parts[i];
 
-            // Skip type keywords and visibility modifiers
-            if self.is_type_keyword(part) || self.is_visibility_modifier(part) {
+            // Skip type keywords
+            if self.is_type_keyword(part) {
+                found_type = true;
+                continue;
+            }
+
+            // Skip visibility modifiers
+            if self.is_visibility_modifier(part) {
+                found_visibility = true;
                 continue;
             }
 
@@ -224,21 +252,36 @@ impl UnusedStateVariablesDetector {
                 continue;
             }
 
-            // Found variable name
-            if part.contains('=') {
-                let name = part.split('=').next().unwrap().trim();
-                if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
-                    return Some((name.to_string(), trimmed.to_string()));
+            // After we've seen the type, the next valid identifier is the variable name
+            if found_type || found_visibility {
+                // Handle case where name has '=' (e.g., "myVar = 10")
+                if part.contains('=') {
+                    let name = part.split('=').next().unwrap().trim();
+                    if !name.is_empty() && self.is_valid_identifier(name) {
+                        return Some((name.to_string(), trimmed.to_string()));
+                    }
+                } else if self.is_valid_identifier(part) && !self.is_keyword(part) {
+                    return Some((part.to_string(), trimmed.to_string()));
                 }
-            } else if !part.is_empty()
-                && part.chars().next().unwrap().is_alphabetic()
-                && !self.is_keyword(part)
-            {
-                return Some((part.to_string(), trimmed.to_string()));
             }
         }
 
         None
+    }
+
+    fn is_valid_identifier(&self, s: &str) -> bool {
+        if s.is_empty() {
+            return false;
+        }
+
+        // Must start with letter or underscore
+        let first_char = s.chars().next().unwrap();
+        if !first_char.is_alphabetic() && first_char != '_' {
+            return false;
+        }
+
+        // Rest must be alphanumeric or underscore
+        s.chars().all(|c| c.is_alphanumeric() || c == '_')
     }
 
     fn is_type_keyword(&self, word: &str) -> bool {

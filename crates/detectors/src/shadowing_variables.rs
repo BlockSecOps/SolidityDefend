@@ -133,33 +133,64 @@ impl ShadowingVariablesDetector {
     }
 
     fn extract_variable_name(&self, line: &str) -> Option<String> {
-        // Simplified variable name extraction
-        let parts: Vec<&str> = line.split_whitespace().collect();
+        let trimmed = line.trim().trim_end_matches(';');
+
+        // Exclude function calls and statements with parentheses
+        if trimmed.contains('(') || trimmed.contains("require") || trimmed.contains("assert") {
+            return None;
+        }
+
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+
+        if parts.len() < 2 {
+            return None;
+        }
+
+        let mut found_type = false;
 
         for (i, part) in parts.iter().enumerate() {
-            // Look for variable name after type declaration
-            if (*part == "public" || *part == "private" || *part == "internal")
-                && i + 1 < parts.len()
-            {
-                let name = parts[i + 1].trim_end_matches(';').trim_end_matches('=');
-                return Some(name.to_string());
+            // Track if we've seen a type
+            if part.starts_with("uint") || part.starts_with("int")
+                || *part == "address" || *part == "bool"
+                || part.starts_with("bytes") || part.starts_with("string")
+                || part.starts_with("mapping") {
+                found_type = true;
+                continue;
             }
 
-            // For simple declarations like "uint256 balance;"
-            if i > 0
-                && (parts[i - 1].contains("uint")
-                    || parts[i - 1].contains("address")
-                    || parts[i - 1].contains("bool")
-                    || parts[i - 1].contains("string"))
-            {
-                let name = part.trim_end_matches(';').trim_end_matches('=');
-                if !name.is_empty() && name != "public" && name != "private" && name != "internal" {
+            // Skip visibility keywords
+            if *part == "public" || *part == "private" || *part == "internal"
+                || *part == "constant" || *part == "immutable" {
+                continue;
+            }
+
+            // After we've found the type, extract the variable name
+            if found_type {
+                let name = part.trim_end_matches(';').trim_end_matches('=').trim_end_matches(',');
+
+                // Validate it's a proper identifier
+                if self.is_valid_identifier(name) {
                     return Some(name.to_string());
                 }
             }
         }
 
         None
+    }
+
+    fn is_valid_identifier(&self, s: &str) -> bool {
+        if s.is_empty() {
+            return false;
+        }
+
+        // Must start with letter or underscore
+        let first_char = s.chars().next().unwrap();
+        if !first_char.is_alphabetic() && first_char != '_' {
+            return false;
+        }
+
+        // Rest must be alphanumeric or underscore (no special characters)
+        s.chars().all(|c| c.is_alphanumeric() || c == '_')
     }
 
     fn check_shadowing(
