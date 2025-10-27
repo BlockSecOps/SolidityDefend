@@ -49,8 +49,9 @@ curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/ins
 
 ### Using Homebrew (macOS and Linux)
 
-For macOS and Linux users, install via Homebrew:
+> ⚠️ **Coming Soon** - Homebrew tap is currently being set up. Use [Binary Releases](#binary-releases) or [From Source](#from-source) installation methods for now.
 
+<!--
 ```bash
 # Add the tap (first time only)
 brew tap BlockSecOps/tap
@@ -61,6 +62,7 @@ brew install soliditydefend
 # Update to latest version
 brew upgrade soliditydefend
 ```
+-->
 
 ### Binary Releases
 
