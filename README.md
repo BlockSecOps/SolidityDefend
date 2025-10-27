@@ -1,10 +1,10 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.7.0--beta-orange.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
-[![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/SolidityOps/SolidityDefend/releases)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/SolidityOps/SolidityDefend#license)
+[![Version](https://img.shields.io/badge/version-0.7.0--beta-orange.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Beta](https://img.shields.io/badge/status-beta-orange.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/SolidityOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 
 > ⚠️ **Beta Release** - This is a preview release with known limitations. We're actively working on improving detector accuracy. See [Known Limitations](#known-limitations).
 
@@ -57,7 +57,7 @@ For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTO
 Requires Rust 1.75.0 or later:
 
 ```bash
-git clone https://github.com/SolidityOps/SolidityDefend.git
+git clone https://github.com/BlockSecOps/SolidityDefend.git
 cd SolidityDefend
 cargo build --release
 sudo mv target/release/soliditydefend /usr/local/bin/
@@ -65,11 +65,11 @@ sudo mv target/release/soliditydefend /usr/local/bin/
 
 ### Pre-built Binaries
 
-Download from [GitHub Releases](https://github.com/SolidityOps/SolidityDefend/releases/latest):
+Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
 
 **Linux (x86_64)**
 ```bash
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
 tar -xzf soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
 sudo mv soliditydefend /usr/local/bin/
 ```
@@ -77,11 +77,11 @@ sudo mv soliditydefend /usr/local/bin/
 **macOS**
 ```bash
 # Intel
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
 tar -xzf soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
 
 # Apple Silicon
-curl -LO https://github.com/SolidityOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
 tar -xzf soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
 
 sudo mv soliditydefend /usr/local/bin/
@@ -226,9 +226,9 @@ This is a **beta release** (v0.7.0-beta) with the following known limitations:
 
 We're actively working on improving detector accuracy. Please report issues:
 
-- **False Positives**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=false-positive)
-- **Bug Reports**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=bug)
-- **Feature Requests**: [Report here](https://github.com/SolidityOps/SolidityDefend/issues/new?labels=enhancement)
+- **False Positives**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=false-positive)
+- **Bug Reports**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=bug)
+- **Feature Requests**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=enhancement)
 
 ### What's Next
 
@@ -312,9 +312,9 @@ See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
 We welcome contributions! Whether you're reporting bugs, suggesting features, improving documentation, or submitting code:
 
-- **Report Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
+- **Report Issues**: [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
 - **Submit PRs**: [Contributing Guide](CONTRIBUTING.md)
-- **Discussions**: [GitHub Discussions](https://github.com/SolidityOps/SolidityDefend/discussions)
+- **Discussions**: [GitHub Discussions](https://github.com/BlockSecOps/SolidityDefend/discussions)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
 - Reporting bugs and false positives
@@ -357,8 +357,8 @@ Special thanks to:
 
 ## 💬 Support
 
-- **Issues**: [GitHub Issues](https://github.com/SolidityOps/SolidityDefend/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/SolidityOps/SolidityDefend/discussions)
+- **Issues**: [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/BlockSecOps/SolidityDefend/discussions)
 - **Documentation**: [docs/](docs/)
 - **Enterprise Support**: Contact via [BlockSecOps.com](https://BlockSecOps.com)
 
@@ -366,8 +366,8 @@ Special thanks to:
 
 ## 🔗 Links
 
-- **GitHub**: https://github.com/SolidityOps/SolidityDefend
-- **Releases**: https://github.com/SolidityOps/SolidityDefend/releases
+- **GitHub**: https://github.com/BlockSecOps/SolidityDefend
+- **Releases**: https://github.com/BlockSecOps/SolidityDefend/releases
 - **Documentation**: [docs/](docs/)
 - **Advanced Blockchain Security**: [AdvancedBlockchainSecurity.com](https://AdvancedBlockchainSecurity.com)
 - **BlockSecOps Platform**: [BlockSecOps.com](https://BlockSecOps.com)

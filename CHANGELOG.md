@@ -382,7 +382,7 @@ This is a **preview/beta release** of SolidityDefend with 100 functional securit
 ### Feedback Wanted
 
 Please report issues and feedback:
-- **GitHub Issues**: https://github.com/SolidityOps/SolidityDefend/issues
+- **GitHub Issues**: https://github.com/BlockSecOps/SolidityDefend/issues
 - **False Positives**: Tag with `false-positive` label
 - **Feature Requests**: Tag with `enhancement` label
 
@@ -398,14 +398,14 @@ Please report issues and feedback:
 
 **From source:**
 ```bash
-git clone https://github.com/SolidityOps/SolidityDefend
+git clone https://github.com/BlockSecOps/SolidityDefend
 cd SolidityDefend
 git checkout v0.7.0-beta
 cargo build --release
 ```
 
 **Pre-built binaries:**
-Available on [GitHub Releases](https://github.com/SolidityOps/SolidityDefend/releases/tag/v0.7.0-beta)
+Available on [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/tag/v0.7.0-beta)
 
 ### Thank You
 
@@ -491,7 +491,7 @@ For users upgrading from v0.9.0:
 ### Installation
 
 ```bash
-git clone https://github.com/SolidityOps/SolidityDefend
+git clone https://github.com/BlockSecOps/SolidityDefend
 cd SolidityDefend
 git checkout v1.0.0
 cargo build --release
@@ -499,7 +499,7 @@ cargo build --release
 
 Or use the binary from GitHub releases:
 ```bash
-# Download from https://github.com/SolidityOps/SolidityDefend/releases/tag/v1.0.0
+# Download from https://github.com/BlockSecOps/SolidityDefend/releases/tag/v1.0.0
 ```
 
 ### What's Next
@@ -798,6 +798,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development and release procedures.
 
 ## Links
 
-- **Repository**: https://github.com/SolidityOps/SolidityDefend
-- **Issues**: https://github.com/SolidityOps/SolidityDefend/issues
-- **Releases**: https://github.com/SolidityOps/SolidityDefend/releases
+- **Repository**: https://github.com/BlockSecOps/SolidityDefend
+- **Issues**: https://github.com/BlockSecOps/SolidityDefend/issues
+- **Releases**: https://github.com/BlockSecOps/SolidityDefend/releases

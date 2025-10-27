@@ -11,7 +11,7 @@ Thank you for your interest in contributing to SolidityDefend! This document pro
 
 2. **Clone and Setup**
    ```bash
-   git clone https://github.com/SolidityOps/SolidityDefend.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd SolidityDefend
 
    # Install pre-commit hooks (optional)

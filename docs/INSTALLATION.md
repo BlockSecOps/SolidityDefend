@@ -33,7 +33,7 @@ This guide provides detailed installation instructions for SolidityDefend on var
 The fastest way to install SolidityDefend is using our installation script:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/SolidityOps/SolidityDefend/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/install.sh | bash
 ```
 
 This script will:
@@ -44,7 +44,7 @@ This script will:
 
 **Custom installation directory:**
 ```bash
-curl -sSfL https://raw.githubusercontent.com/SolidityOps/SolidityDefend/main/install.sh | INSTALL_DIR=/usr/local/bin bash
+curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/install.sh | INSTALL_DIR=/usr/local/bin bash
 ```
 
 ### Using Homebrew (macOS and Linux)
@@ -53,7 +53,7 @@ For macOS and Linux users, install via Homebrew:
 
 ```bash
 # Add the tap (first time only)
-brew tap SolidityOps/tap
+brew tap BlockSecOps/tap
 
 # Install SolidityDefend
 brew install soliditydefend
@@ -64,7 +64,7 @@ brew upgrade soliditydefend
 
 ### Binary Releases
 
-Download pre-compiled binaries from the [releases page](https://github.com/SolidityOps/SolidityDefend/releases):
+Download pre-compiled binaries from the [releases page](https://github.com/BlockSecOps/SolidityDefend/releases):
 
 **Available platforms:**
 - Linux (x86_64, ARM64)
