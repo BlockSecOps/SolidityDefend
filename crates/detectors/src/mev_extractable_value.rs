@@ -4,6 +4,7 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::mev_protection_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for generalized MEV extraction vulnerabilities
 pub struct MevExtractableValueDetector {
@@ -109,6 +110,14 @@ impl MevExtractableValueDetector {
         }
 
         let func_source = self.get_function_source(function, ctx);
+
+        // Skip if this is an ERC-4337 paymaster/account abstraction contract
+        // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
+        // They're administrative operations that don't involve extractable value
+        let is_paymaster = utils::is_erc4337_paymaster(ctx);
+        if is_paymaster {
+            return None; // Paymaster operations are not MEV targets
+        }
 
         // NEW: Early exit if function has sufficient MEV protection
         if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {

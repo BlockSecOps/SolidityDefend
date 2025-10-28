@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for AMM liquidity manipulation attacks
 pub struct AmmLiquidityManipulationDetector {
@@ -50,6 +51,13 @@ impl Detector for AmmLiquidityManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip if this is an ERC-3156 flash loan provider
+        // Flash loans INTENTIONALLY manipulate liquidity - that's their purpose
+        let is_flash_loan_provider = utils::is_erc3156_flash_loan(ctx);
+        if is_flash_loan_provider {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(manipulation_issue) = self.check_liquidity_manipulation(function, ctx) {

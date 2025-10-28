@@ -31,6 +31,51 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     function_count >= 3 && has_shares && has_assets
 }
 
+/// Detects if the contract is an ERC-3156 flash loan provider
+///
+/// ERC-3156 flash loans have specific characteristics:
+/// - flashLoan() function for borrowing
+/// - onFlashLoan() callback for repayment validation
+/// - Balance-based repayment verification
+/// - Flash loan operations manipulate liquidity/state by design
+pub fn is_erc3156_flash_loan(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for ERC-3156 flash loan functions
+    let has_flash_loan = source.contains("function flashLoan(");
+    let has_on_flash_loan = source.contains("onFlashLoan")
+        || source.contains("IFlashBorrower")
+        || source.contains("IERC3156FlashBorrower");
+
+    // Check for ERC-3156 specific patterns
+    let has_erc3156_marker = source.contains("ERC3156")
+        || source.contains("ERC-3156")
+        || source.contains("flashFee")
+        || source.contains("maxFlashLoan");
+
+    // Check for flash loan callback validation pattern
+    let has_callback_validation = source.contains("ERC3156FlashBorrower.onFlashLoan")
+        || (source.contains("keccak256") && source.contains("onFlashLoan"));
+
+    // Check for balance-based repayment validation (common pattern)
+    let has_balance_check = (source.contains("balanceBefore") && source.contains("balanceAfter"))
+        || source.contains("repaid")
+        || (source.contains("balance") && source.contains("flashLoan"));
+
+    // Must have flashLoan function + at least 2 other indicators
+    let indicator_count = [
+        has_on_flash_loan,
+        has_erc3156_marker,
+        has_callback_validation,
+        has_balance_check,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_flash_loan && indicator_count >= 2
+}
+
 /// Detects if the contract uses OpenZeppelin libraries
 ///
 /// OpenZeppelin contracts are audited and generally safe
@@ -101,6 +146,62 @@ pub fn has_actual_delay_mechanism(function_source: &str) -> bool {
     ];
 
     delay_indicators.iter().any(|indicator| function_source.contains(indicator))
+}
+
+/// Detects if the contract is an ERC-4337 Account Abstraction contract
+///
+/// ERC-4337 contracts (Paymasters, Smart Accounts) have specific characteristics:
+/// - validatePaymasterUserOp() or validateUserOp() for validation
+/// - Session key management (temporary permissions)
+/// - Nonce management for replay protection
+/// - Social recovery patterns with guardians
+/// - Functions use msg.sender checks instead of access modifiers (pattern is intentional)
+pub fn is_erc4337_paymaster(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for ERC-4337 validation functions
+    let has_paymaster_validation = source.contains("function validatePaymasterUserOp(")
+        || source.contains("function validateUserOp(");
+
+    // Check for UserOperation type usage
+    let has_user_op = source.contains("UserOp")
+        || source.contains("userOp")
+        || source.contains("UserOperation");
+
+    // Check for ERC-4337 specific markers
+    let has_erc4337_marker = source.contains("ERC4337")
+        || source.contains("ERC-4337")
+        || source.contains("IPaymaster")
+        || source.contains("EntryPoint");
+
+    // Check for session key patterns
+    let has_session_keys = (source.contains("sessionKey") || source.contains("SessionKey"))
+        && (source.contains("addSessionKey") || source.contains("revokeSessionKey"));
+
+    // Check for nonce management (ERC-4337 specific patterns)
+    let has_nonce_management = (source.contains("function getNonce(")
+        || source.contains("function incrementNonce("))
+        && (source.contains("nonces") || source.contains("nonceSequenceNumber"));
+
+    // Check for social recovery patterns
+    let has_social_recovery = source.contains("guardian")
+        && (source.contains("initiateRecovery")
+            || source.contains("approveRecovery")
+            || source.contains("completeRecovery"));
+
+    // Must have validation function + at least 2 other indicators
+    let indicator_count = [
+        has_user_op,
+        has_erc4337_marker,
+        has_session_keys,
+        has_nonce_management,
+        has_social_recovery,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_paymaster_validation && indicator_count >= 2
 }
 
 #[cfg(test)]

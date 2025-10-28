@@ -55,8 +55,11 @@ impl Detector for TokenSupplyManipulationDetector {
         // Skip if this is an ERC-4626 vault - shares don't need max supply caps
         let is_vault = utils::is_erc4626_vault(ctx);
 
+        // Skip if this is an ERC-3156 flash loan - flash minting is required behavior
+        let is_flash_loan = utils::is_erc3156_flash_loan(ctx);
+
         for function in ctx.get_functions() {
-            if let Some(supply_issue) = self.check_token_supply_manipulation(function, ctx, is_vault) {
+            if let Some(supply_issue) = self.check_token_supply_manipulation(function, ctx, is_vault, is_flash_loan) {
                 let message = format!(
                     "Function '{}' has token supply manipulation vulnerability. {} \
                     Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
@@ -101,6 +104,7 @@ impl TokenSupplyManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
         is_vault: bool,
+        is_flash_loan: bool,
     ) -> Option<String> {
         if function.body.is_none() {
             return None;
@@ -128,8 +132,10 @@ impl TokenSupplyManipulationDetector {
 
         // Skip supply cap check for ERC-4626 vaults - they mint shares, not tokens
         // Shares are backed by assets and don't need a max supply cap
+        // Skip for ERC-3156 flash loans - they temporarily mint for flash loan duration
         let no_supply_cap = is_mint
-            && !is_vault  // NEW: Skip if vault
+            && !is_vault  // Skip if vault
+            && !is_flash_loan  // Skip if flash loan provider
             && !func_source.contains("maxSupply")
             && !func_source.contains("MAX_SUPPLY")
             && !func_source.contains("cap()");
@@ -259,11 +265,14 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 10: Flash mint without fees or limits
+        // Skip entirely for ERC-3156 flash loan providers - they have their own validation
+        // ERC-3156 flash loans validate repayment via callback and balance checks
         let is_flash_mint = func_source.contains("flashMint")
             || func_source.contains("flashLoan")
             || function.name.name.to_lowercase().contains("flash");
 
         let no_flash_controls = is_flash_mint
+            && !is_flash_loan  // Skip if flash loan provider (has ERC-3156 validation)
             && affects_supply
             && !func_source.contains("fee")
             && !func_source.contains("maxFlash");
