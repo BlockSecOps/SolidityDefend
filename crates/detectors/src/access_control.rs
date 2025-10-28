@@ -4,6 +4,7 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::erc_standard_compliance;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for missing access control modifiers on critical functions
 pub struct MissingModifiersDetector {
@@ -249,7 +250,18 @@ impl MissingModifiersDetector {
             && func_source.contains("msg.sender")
             && (func_source.contains("balance") || func_source.contains("shares"));
 
-        accesses_own_balance || checks_sender || requires_sender_balance
+        // ERC-4337 paymaster functions use msg.sender in mapping keys for access control
+        // sessionKeys[msg.sender][key], guardians[msg.sender], etc.
+        let paymaster_sender_pattern = (func_source.contains("[msg.sender]")
+            && (func_source.contains("sessionKeys")
+                || func_source.contains("guardians")
+                || func_source.contains("threshold")
+                || func_source.contains("spendingLimits")
+                || func_source.contains("deposits")))
+            || (func_source.contains("isGuardian(")
+                && func_source.contains("msg.sender"));
+
+        accesses_own_balance || checks_sender || requires_sender_balance || paymaster_sender_pattern
     }
 
     /// Get function source code for analysis

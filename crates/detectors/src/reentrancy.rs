@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for classic reentrancy vulnerabilities
 pub struct ClassicReentrancyDetector {
@@ -341,6 +342,14 @@ impl Detector for ClassicReentrancyDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip if this is an ERC-4337 paymaster/account abstraction contract
+        // Paymasters have their own security model with EntryPoint validation
+        // State changes after external calls are part of the ERC-4337 design
+        let is_paymaster = utils::is_erc4337_paymaster(ctx);
+        if is_paymaster {
+            return Ok(findings); // Paymaster reentrancy is handled by ERC-4337 spec
+        }
 
         for function in ctx.get_functions() {
             if self.has_external_call(function) && self.has_state_changes_after_calls(function) {

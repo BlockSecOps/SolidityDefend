@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for lending protocol borrow bypass vulnerabilities
 ///
@@ -332,28 +333,41 @@ impl Detector for LendingBorrowBypassDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip if this is an ERC-3156 flash loan provider
+        // Flash loans intentionally bypass collateral checks and have different validation logic
+        let is_flash_loan_provider = utils::is_erc3156_flash_loan(ctx);
+
         for function in ctx.get_functions() {
             let func_source = self.get_function_source(function, ctx);
             let func_name = &function.name.name;
 
-            let is_borrow = self.is_borrow_function(func_name, &func_source);
             let is_flash_loan = self.is_flash_loan_function(func_name, &func_source);
+            // Don't treat flash loan functions as regular borrow functions
+            // Flash loans have different validation logic (callback, balance checks)
+            let is_borrow = self.is_borrow_function(func_name, &func_source) && !is_flash_loan;
 
             let mut issues = Vec::new();
 
-            // Check for collateral validation
-            if let Some(issue) = self.check_collateral_validation(&func_source) {
-                issues.push(issue);
+            // Skip collateral/health checks for ERC-3156 flash loan providers
+            // Flash loans don't use collateral - they're instant borrow+repay in same transaction
+            if !is_flash_loan_provider {
+                // Check for collateral validation
+                if let Some(issue) = self.check_collateral_validation(&func_source) {
+                    issues.push(issue);
+                }
+
+                // Check for health factor validation
+                if let Some(issue) = self.check_health_factor(&func_source, is_borrow) {
+                    issues.push(issue);
+                }
             }
 
-            // Check for health factor validation
-            if let Some(issue) = self.check_health_factor(&func_source, is_borrow) {
-                issues.push(issue);
-            }
-
-            // Check for flash loan security
-            if let Some(issue) = self.check_flash_loan_security(&func_source, is_flash_loan) {
-                issues.push(issue);
+            // Skip flash loan security checks for ERC-3156 providers
+            // ERC-3156 has its own security model (callback validation, balance checks)
+            if is_flash_loan && !is_flash_loan_provider {
+                if let Some(issue) = self.check_flash_loan_security(&func_source, is_flash_loan) {
+                    issues.push(issue);
+                }
             }
 
             // Check for reentrancy vulnerabilities
