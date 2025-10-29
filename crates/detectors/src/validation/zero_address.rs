@@ -51,9 +51,16 @@ impl ZeroAddressDetector {
         if let Some(body) = &function.body {
             let checked_params = self.find_zero_address_checks(body, &address_params);
 
+            // Extract function source code for string-based checking
+            let function_source = self.extract_function_source(&ctx.source_code, function);
+
             // Report unchecked parameters
             for param in &address_params {
-                if !checked_params.contains(&param.name) {
+                // Use both AST-based and string-based checking (fallback for AST parsing issues)
+                let is_checked = checked_params.contains(&param.name) ||
+                                crate::utils::has_zero_address_check(&function_source, &param.name);
+
+                if !is_checked {
                     let severity = self.determine_severity_for_function(function, param);
                     let message = format!(
                         "Address parameter '{}' in function '{}' is not checked for zero address",
@@ -107,6 +114,20 @@ impl ZeroAddressDetector {
         match type_name {
             ast::TypeName::Elementary(ast::ElementaryType::Address) => true,
             _ => false,
+        }
+    }
+
+    /// Extract function source code from full source using location information
+    fn extract_function_source(&self, source: &str, function: &ast::Function<'_>) -> String {
+        let location = &function.location;
+        let start_offset = location.start().offset();
+        let end_offset = location.end().offset();
+
+        if start_offset < source.len() && end_offset <= source.len() && start_offset < end_offset {
+            source[start_offset..end_offset].to_string()
+        } else {
+            // Fallback to empty string if offsets are invalid
+            String::new()
         }
     }
 
@@ -219,18 +240,19 @@ impl ZeroAddressDetector {
                 ..
             } => {
                 if matches!(operator, ast::BinaryOperator::NotEqual) {
+                    let left_id = self.get_identifier_name(left);
+                    let right_id = self.get_identifier_name(right);
+                    let left_is_zero = self.is_zero_address(left);
+                    let right_is_zero = self.is_zero_address(right);
+
                     // Check if one side is a parameter and the other is address(0)
-                    if let (Some(param_name), true) =
-                        (self.get_identifier_name(left), self.is_zero_address(right))
-                    {
-                        if address_params.iter().any(|p| p.name == param_name) {
-                            checked_params.insert(param_name);
+                    if let (Some(param_name), true) = (&left_id, right_is_zero) {
+                        if address_params.iter().any(|p| &p.name == param_name) {
+                            checked_params.insert(param_name.clone());
                         }
-                    } else if let (Some(param_name), true) =
-                        (self.get_identifier_name(right), self.is_zero_address(left))
-                    {
-                        if address_params.iter().any(|p| p.name == param_name) {
-                            checked_params.insert(param_name);
+                    } else if let (Some(param_name), true) = (&right_id, left_is_zero) {
+                        if address_params.iter().any(|p| &p.name == param_name) {
+                            checked_params.insert(param_name.clone());
                         }
                     }
                 }
@@ -246,7 +268,7 @@ impl ZeroAddressDetector {
                 arguments,
                 ..
             } => {
-                if let ast::Expression::Identifier(id) = function {
+                if let ast::Expression::Identifier(id) = &**function {
                     if id.name == "require" && !arguments.is_empty() {
                         // Check the require condition
                         self.find_checks_in_expression(
@@ -293,13 +315,31 @@ impl ZeroAddressDetector {
     /// Check if expression represents address(0)
     fn is_zero_address(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
+            // Check for TypeCast first (address(0) is often represented as TypeCast)
+            ast::Expression::TypeCast {
+                type_name,
+                expression,
+                ..
+            } => {
+                if self.is_address_type(type_name) {
+                    if let ast::Expression::Literal { value, .. } = &**expression {
+                        return match value {
+                            ast::LiteralValue::Number(num) => *num == "0",
+                            ast::LiteralValue::HexString(hex) => *hex == "0x0" || *hex == "0x00",
+                            _ => false,
+                        };
+                    }
+                }
+                false
+            }
+
             // Direct address(0) call
             ast::Expression::FunctionCall {
                 function,
                 arguments,
                 ..
             } => {
-                if let ast::Expression::Identifier(id) = function {
+                if let ast::Expression::Identifier(id) = &**function {
                     if id.name == "address" && arguments.len() == 1 {
                         if let ast::Expression::Literal { value, .. } = &arguments[0] {
                             if let ast::LiteralValue::Number(num) = value {
@@ -309,26 +349,6 @@ impl ZeroAddressDetector {
                     }
                 }
                 false
-            }
-            // address(0x0) pattern
-            ast::Expression::TypeCast {
-                type_name,
-                expression,
-                ..
-            } => {
-                if self.is_address_type(type_name) {
-                    if let ast::Expression::Literal { value, .. } = expression {
-                        match value {
-                            ast::LiteralValue::Number(num) => *num == "0",
-                            ast::LiteralValue::HexString(hex) => *hex == "0x0" || *hex == "0x00",
-                            _ => false,
-                        }
-                    } else {
-                        false
-                    }
-                } else {
-                    false
-                }
             }
             _ => false,
         }
