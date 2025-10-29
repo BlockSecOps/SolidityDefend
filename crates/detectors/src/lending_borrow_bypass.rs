@@ -113,7 +113,10 @@ impl LendingBorrowBypassDetector {
 
         let has_liquidation_threshold = func_source.contains("liquidationThreshold")
             || func_source.contains("LIQUIDATION_THRESHOLD")
-            || func_source.contains("liquidation");
+            || func_source.contains("liquidation")
+            || func_source.contains("MIN_HEALTH_FACTOR")
+            || func_source.contains("HEALTH_FACTOR_MIN")
+            || func_source.contains("minHealthFactor");
 
         // Check if health factor is calculated with new borrow amount
         let includes_new_borrow = calculates_health_factor

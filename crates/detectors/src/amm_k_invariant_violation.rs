@@ -108,7 +108,8 @@ impl AmmKInvariantViolationDetector {
 
         // Check if reserves are synced with actual balances
         let syncs_with_balance = func_source.contains("balanceOf")
-            && (func_source.contains("reserve0 =") || func_source.contains("reserve1 ="));
+            && (func_source.contains("reserve0 =") || func_source.contains("reserve1 =")
+                || func_source.contains("reserve0 +=") || func_source.contains("reserve1 +="));
 
         if has_transfer && has_balance_check && !syncs_with_balance {
             return Some(
@@ -165,11 +166,13 @@ impl AmmKInvariantViolationDetector {
         }
 
         // Check for missing timestamp update
+        // Skip this check if using _update() function which typically handles timestamps internally
+        let uses_update_function = func_source.contains("_update(");
         let updates_timestamp = func_source.contains("blockTimestampLast")
             || func_source.contains("lastUpdate")
             || func_source.contains("block.timestamp");
 
-        if updates_reserves && !updates_timestamp {
+        if updates_reserves && !updates_timestamp && !uses_update_function {
             return Some(
                 "Reserve updates don't update timestamp, \
                 affecting TWAP oracle accuracy"
