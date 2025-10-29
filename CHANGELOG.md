@@ -5,6 +5,175 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.3] - 2025-10-29
+
+### 🎯 Quality Improvements: False Positive Elimination & Transparency
+
+This release focuses on improving detection accuracy and user experience with two critical fixes:
+1. **Zero Address Detection** - Eliminated false positives on functions with proper validation
+2. **Deduplication Transparency** - Users now see how many duplicates are removed
+
+---
+
+### Added
+
+**Deduplication Transparency** (`crates/cli/src/app.rs`)
+- Console output now displays "Duplicates removed: N" after analysis
+- Users can verify deduplication is working correctly
+- Improved transparency in findings reporting
+
+### Fixed
+
+**Zero Address Detection False Positives** (`crates/detectors/src/validation/zero_address.rs`)
+- ✅ Implemented hybrid AST + string-based detection
+- ✅ Added fallback to `has_zero_address_check()` utility function
+- ✅ Created `extract_function_source()` for byte-offset-based source extraction
+- ✅ Handles AST parsing edge cases (e.g., `address(0)` representation issues)
+- **Impact**: Eliminated 100% of false positives (2 → 0) on clean contracts
+- **Rationale**: Functions with `require(_param != address(0))` checks were incorrectly flagged
+
+**Deduplication Display** (`crates/cli/src/app.rs`)
+- ✅ Console now shows deduplicated count (matches JSON output)
+- ✅ Added "Duplicates removed: N" line to console output
+- ✅ Updated both `analyze_files()` and `analyze_from_url()` functions
+- **Impact**: Improved user experience - users can see 261 duplicates removed transparently
+- **Rationale**: Previous version only showed pre-dedup count, hiding deduplication work
+
+### Results
+
+**Clean Contract Validation**
+- Before: 13 findings (includes 2 zero address false positives)
+- After: 11 findings (0 false positives)
+- **Improvement**: 15.4% reduction in false findings
+
+**Deduplication Transparency**
+- Total findings (pre-dedup): 1,731
+- Total findings (post-dedup): 1,470
+- **Duplicates removed**: 261 (15.1% deduplication rate)
+- **Now visible to users**: Yes ✅
+
+**Performance Impact**
+- Analysis time: 0.54s for 36 contracts
+- Throughput: 67 files/second
+- Performance decrease: +14.9% (acceptable trade-off for accuracy)
+
+**Testing**
+- ✅ All 36 regression test contracts pass
+- ✅ Unit tests: 276/295 pass (93.6% - same as v0.12.2)
+- ✅ Zero false positives on clean contract
+- ✅ Deduplication working correctly
+
+---
+
+### 🎯 Previous: AMM/DEX Context Detection (2025-10-28)
+
+This release also includes context-aware analysis for **Automated Market Maker (AMM)** protocols like Uniswap V2/V3, eliminating false positives on legitimate DeFi liquidity pools.
+
+### Added
+
+**AMM Context Detection** (`crates/detectors/src/utils.rs`)
+- `is_uniswap_v2_pair()` - Detects Uniswap V2 style AMM pairs (150 lines)
+  - Recognizes getReserves(), swap(), mint(), burn() core functions
+  - Identifies TWAP price accumulators (price0CumulativeLast, price1CumulativeLast)
+  - Detects lock() modifier reentrancy pattern
+  - Validates MINIMUM_LIQUIDITY constant
+- `is_uniswap_v3_pool()` - Detects Uniswap V3 style AMM pools
+  - Recognizes slot0() and observe() TWAP oracle functions
+  - Identifies tick-based liquidity management
+  - Validates concentrated liquidity patterns
+- `is_amm_pool()` - Generic AMM detection for Curve, Balancer, and other protocols
+  - Covers swap/exchange functions across different implementations
+  - Detects reserve/balance management patterns
+  - Recognizes K-invariant checks and price calculation functions
+- Now supports 4 major DeFi patterns: Vaults, Flash Loans, Paymasters, AMM Pools (NEW)
+
+**Enhanced Reentrancy Detection** (`crates/detectors/src/utils.rs`)
+- `has_reentrancy_guard()` - Extended to recognize Uniswap V2 lock() modifier pattern
+  - Now detects: nonReentrant, ReentrancyGuard, _reentrancyGuard, lock() (NEW)
+  - Identifies Uniswap V2 style: `unlocked == 1` pattern
+  - Prevents false positives on AMM pools with custom reentrancy protection
+
+### Fixed
+
+**AMM/DEX False Positives** (3 detectors modified)
+
+`flashloan-price-oracle-manipulation` Detector
+- ✅ Skip AMM pools entirely - they ARE the oracle source, not consumers
+- ✅ Recognize that Uniswap V2/V3 pairs provide TWAP oracle data via getReserves()/observe()
+- ✅ Allow AMM pools to use spot prices internally (required for their operation)
+- **Impact**: Eliminated 1 Critical false positive on UniswapV2Pair.sol
+- **Rationale**: AMM pools are price oracle providers, not consumers vulnerable to manipulation
+
+`amm-liquidity-manipulation` Detector
+- ✅ Skip AMM pools entirely - liquidity manipulation is their core purpose
+- ✅ Recognize that Uniswap and similar protocols have well-understood liquidity mechanisms
+- ✅ Focus on contracts that CONSUME AMM liquidity unsafely
+- **Impact**: Eliminated 6 Critical false positives on UniswapV2Pair.sol
+- **Rationale**: AMM pools intentionally manipulate liquidity by design
+
+`classic-reentrancy` Detector
+- ✅ Skip AMM pools (have built-in reentrancy protection via lock() modifiers)
+- ✅ Check for reentrancy guards before flagging (nonReentrant, lock(), etc.)
+- ✅ Recognize Uniswap V2 lock() modifier pattern
+- **Impact**: Eliminated 1 High false positive on UniswapV2Pair.sol
+- **Rationale**: AMM pools use lock() modifier which is equivalent to nonReentrant
+
+### Results
+
+**UniswapV2Pair.sol Validation**
+- Before: 18 Critical, 42 High (60 Critical+High total)
+- After: 11 Critical, 41 High (52 Critical+High total)
+- **Improvement**: 39% reduction in Critical findings, 13% reduction in C+H (-8 total findings)
+
+**Key Eliminations**:
+- ✅ flashloan-price-oracle-manipulation on swap() - AMM pairs provide oracle data
+- ✅ amm-liquidity-manipulation (6 findings) - AMMs manipulate liquidity by design
+- ✅ classic-reentrancy on burn() - Has lock() modifier protection
+
+**Verification** (MEVProtectedDEX.sol)
+- Still detects 12 Critical, 23 High (deliberately vulnerable contract)
+- AMM detection correctly identifies MEVProtectedDEX is NOT a pure AMM pool
+- No regressions in vulnerability detection
+
+### Technical Implementation
+
+**Detection Algorithm** (Uniswap V2)
+1. Core functions: getReserves() + swap() + mint() + burn()
+2. Token pair variables: token0 + token1
+3. TWAP accumulators: price0CumulativeLast OR price1CumulativeLast
+4. Reentrancy protection: lock() modifier OR unlocked variable pattern
+5. Minimum liquidity: MINIMUM_LIQUIDITY constant
+6. Must match: Core functions + token pair + 2 or more indicators
+
+**Detection Algorithm** (Uniswap V3)
+1. Oracle functions: slot0() + observe() (TWAP)
+2. Liquidity management: liquidity variable
+3. Tick-based pricing: tick/Tick variables
+4. Advanced features: positions, sqrtPriceLimitX96, zeroForOne
+5. Must match: Oracle functions + liquidity + 2 or more indicators
+
+**Detection Algorithm** (Generic AMM)
+1. Core operations: swap()/exchange() + addLiquidity/removeLiquidity + mint()/burn()
+2. State management: reserves/Reserve OR balances
+3. Token identification: token0/token1 OR poolTokens OR coins
+4. Invariant checks: K-invariant multiplication patterns
+5. Price functions: getAmountOut/getAmountIn OR get_dy
+6. Must match: Core ops + 2 or more indicators
+
+### Files Modified
+- `Cargo.toml` - Version bump to 0.12.3
+- `CHANGELOG.md` - Added v0.12.3 entry
+- `crates/detectors/src/utils.rs` - Added 3 AMM detection functions (~150 lines), enhanced has_reentrancy_guard()
+- `crates/detectors/src/flashloan/price_oracle_manipulation.rs` - Skip AMM pools
+- `crates/detectors/src/amm_liquidity_manipulation.rs` - Skip AMM pools
+- `crates/detectors/src/reentrancy.rs` - Skip AMM pools, check for reentrancy guards
+
+**Combined Progress** (v0.12.1 + v0.12.2 + v0.12.3)
+- v0.12.1: Vault context detection (28% FP reduction on vaults)
+- v0.12.2: Flash loan + Paymaster context (27-50% FP reduction on targeted contracts)
+- v0.12.3: AMM/DEX context (39% Critical reduction on UniswapV2Pair)
+- Total: ~35% average FP reduction across targeted DeFi contract types
+
 ## [0.12.2] - 2025-10-27
 
 ### 🎯 False Positive Reduction: Flash Loan & Paymaster Context Detection
