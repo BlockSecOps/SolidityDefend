@@ -902,6 +902,10 @@ impl CliApp {
         // or string-based detectors that incorrectly match the same pattern repeatedly
         let all_findings = output::deduplicate_findings(all_findings);
 
+        // Update summary with deduplicated count
+        let deduplicated_count = all_findings.len();
+        let duplicates_removed = analysis_summary.total_findings - deduplicated_count;
+
         // Output results
         match output_file {
             Some(path) => {
@@ -920,7 +924,10 @@ impl CliApp {
         if analysis_summary.failed_files > 0 {
             println!("  Failed: {}", analysis_summary.failed_files);
         }
-        println!("  Issues found: {}", analysis_summary.total_findings);
+        println!("  Issues found: {}", deduplicated_count);
+        if duplicates_removed > 0 {
+            println!("  Duplicates removed: {}", duplicates_removed);
+        }
         println!("  Time taken: {:.2}s", duration.as_secs_f64());
 
         // Determine exit code based on configuration
@@ -1355,6 +1362,10 @@ impl CliApp {
         // Deduplicate findings before output
         let all_findings = output::deduplicate_findings(all_findings);
 
+        // Update summary with deduplicated count
+        let deduplicated_count = all_findings.len();
+        let duplicates_removed = analysis_summary.total_findings - deduplicated_count;
+
         // Output results
         match output_file {
             Some(path) => {
@@ -1373,7 +1384,10 @@ impl CliApp {
         if analysis_summary.failed_files > 0 {
             println!("   Failed: {}", analysis_summary.failed_files);
         }
-        println!("   Total issues found: {}", analysis_summary.total_findings);
+        println!("   Total issues found: {}", deduplicated_count);
+        if duplicates_removed > 0 {
+            println!("   Duplicates removed: {}", duplicates_removed);
+        }
 
         Ok(())
     }
