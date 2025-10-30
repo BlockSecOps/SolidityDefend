@@ -5,6 +5,33 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.5] - 2025-10-30
+
+### 🔧 Critical Fix: Missing AMM Detection Utilities
+
+This patch release fixes a critical build issue in v0.12.4 where required AMM detection utility functions were missing from the release.
+
+### Fixed
+
+**Missing AMM Detection Functions** (`crates/detectors/src/utils.rs`)
+- ✅ Added `is_uniswap_v2_pair()` - Detects Uniswap V2 style AMM pairs
+- ✅ Added `is_uniswap_v3_pool()` - Detects Uniswap V3 style AMM pools
+- ✅ Added `is_amm_pool()` - Generic AMM detection wrapper function
+- ✅ Updated `has_reentrancy_guard()` - Now recognizes Uniswap V2 lock patterns
+
+**Impact:**
+- Fixes build failures when installing from source (Homebrew, cargo install)
+- Enables AMM context detection features from v0.12.4 to work correctly
+- All 3 detectors (sandwich, slippage, MEV) now properly skip AMM pools
+
+**Lines Added:** 135 lines of AMM detection logic
+
+### Technical Details
+
+These utility functions are required by the v0.12.4 AMM context detection feature but were inadvertently omitted from the release. This patch adds them to enable proper compilation and functionality.
+
+---
+
 ## [0.12.4] - 2025-10-29
 
 ### 🎯 False Positive Reduction: AMM/DEX Context Awareness
