@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for missing slippage protection in DEX trades
 pub struct SlippageProtectionDetector {
@@ -50,6 +51,13 @@ impl Detector for SlippageProtectionDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip if this is an AMM pool - AMM pools don't need slippage protection
+        // because they ARE the market maker. Only AMM consumers need slippage protection.
+        // AMM internal operations don't have amountOutMin because they define the exchange rate.
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(line) = self.has_missing_slippage_protection(function, ctx) {

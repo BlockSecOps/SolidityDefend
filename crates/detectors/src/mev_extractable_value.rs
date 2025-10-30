@@ -53,6 +53,13 @@ impl Detector for MevExtractableValueDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip if this is an AMM pool - AMM pools INTENTIONALLY expose MEV
+        // MEV extraction (arbitrage, liquidations) is how AMM pools maintain efficient pricing.
+        // This detector should focus on contracts that CONSUME AMM data unsafely.
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(mev_issue) = self.check_mev_extractable(function, ctx) {
                 let func_source = self.get_function_source(function, ctx);
