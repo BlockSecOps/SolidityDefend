@@ -120,6 +120,24 @@ impl CliApp {
         Self::new_with_config(None)
     }
 
+    /// Display the wizard banner with version
+    fn display_banner() {
+        let version = env!("CARGO_PKG_VERSION");
+        let version_line = format!("v{}", version);
+        let total_width = 39; // Width between the box borders
+        let padding = total_width - version_line.len();
+        let left_padding = padding / 2;
+        let right_padding = padding - left_padding;
+
+        println!("╔═══════════════════════════════════════╗");
+        println!("║       🧙  SOLIDITY DEFEND 🧙          ║");
+        println!("║    Smart Contract Security Analyzer   ║");
+        println!("║{:left_pad$}{}{:right_pad$}║", "", version_line, "",
+                 left_pad = left_padding, right_pad = right_padding);
+        println!("╚═══════════════════════════════════════╝");
+        println!();
+    }
+
     pub fn new_with_config(config_file: Option<&Path>) -> Result<Self> {
         // Load configuration with fallback chain
         let config = SolidityDefendConfig::load_from_defaults_and_file(config_file)?;
@@ -864,6 +882,7 @@ impl CliApp {
         use_cache: bool,
         exit_config: ExitCodeConfig,
     ) -> Result<()> {
+        Self::display_banner();
         println!("Starting analysis...");
         let start_time = Instant::now();
 
@@ -1260,6 +1279,7 @@ impl CliApp {
         min_severity: Severity,
         use_cache: bool,
     ) -> Result<()> {
+        Self::display_banner();
         println!("🔍 Analyzing contract from URL: {}", url);
 
         // Create URL fetcher with user API keys

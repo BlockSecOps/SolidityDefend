@@ -5,6 +5,43 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.6] - 2025-10-30
+
+### 🎨 CLI Enhancement: Wizard Banner
+
+This release adds a professional wizard-themed banner to the CLI, enhancing user experience with a visually appealing startup display.
+
+### Added
+
+**CLI Wizard Banner** (`crates/cli/src/app.rs`)
+- ✨ Added `display_banner()` function with wizard-themed ASCII box art
+- 🧙 Displays at startup of all analysis operations (file and URL-based)
+- 📦 Shows current version dynamically from `CARGO_PKG_VERSION`
+- 🎯 Properly centered with dynamic padding for any version string length
+
+**Banner Design:**
+```
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v0.12.6                ║
+╚═══════════════════════════════════════╝
+```
+
+**Implementation Details:**
+- Integrated into `analyze_files()` method (line 878)
+- Integrated into `analyze_from_url()` method (line 1275)
+- Version line uses calculated padding for perfect alignment
+- Box width: 39 characters between borders
+
+**User Experience:**
+- Professional, visually appealing CLI presentation
+- Wizard theme aligns with "defend" branding
+- Clear version visibility on every run
+- No configuration required - always displays
+
+---
+
 ## [0.12.5] - 2025-10-30
 
 ### 🔧 Critical Fix: Missing AMM Detection Utilities
