@@ -1,13 +1,13 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.12.4-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-0.12.6-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
 [![Detectors](https://img.shields.io/badge/detectors-100-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 
-> ✅ **Production Ready** - v0.12.4 with context-aware analysis. Intelligently reduces false positives by recognizing DeFi patterns (Vaults, Flash Loans, Paymasters, AMMs). All 100 detectors confirmed working.
+> ✅ **Production Ready** - v0.12.6 with enhanced CLI and context-aware analysis. Features wizard-themed banner, intelligent false positive reduction by recognizing DeFi patterns (Vaults, Flash Loans, Paymasters, AMMs). All 100 detectors confirmed working.
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
