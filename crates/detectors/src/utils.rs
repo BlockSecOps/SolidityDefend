@@ -95,6 +95,9 @@ pub fn has_reentrancy_guard(function_source: &str, contract_source: &str) -> boo
         || function_source.contains("ReentrancyGuard")
         || contract_source.contains("ReentrancyGuard")
         || function_source.contains("_reentrancyGuard")
+        || function_source.contains("lock()") // Uniswap V2 style lock modifier
+        || function_source.contains("modifier lock") // Lock modifier definition
+        || (contract_source.contains("unlocked") && contract_source.contains("== 1")) // Uniswap V2 lock pattern
 }
 
 /// Detects if the contract uses SafeERC20 for token transfers
@@ -202,6 +205,138 @@ pub fn is_erc4337_paymaster(ctx: &AnalysisContext) -> bool {
     .count();
 
     has_paymaster_validation && indicator_count >= 2
+}
+
+/// Detects if the contract is a Uniswap V2 style AMM pair
+///
+/// Uniswap V2 pairs have specific characteristics:
+/// - getReserves() function returning reserve amounts
+/// - swap() function for token exchanges
+/// - mint() and burn() for liquidity management
+/// - token0 and token1 address variables
+/// - TWAP price accumulator variables (price0CumulativeLast, price1CumulativeLast)
+/// - Reentrancy lock pattern
+/// - These contracts ARE the oracle source and should not be flagged for using spot prices
+pub fn is_uniswap_v2_pair(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for core V2 pair functions
+    let has_get_reserves = source.contains("function getReserves()")
+        && (source.contains("reserve0") || source.contains("_reserve0"));
+    let has_swap = source.contains("function swap(");
+    let has_mint = source.contains("function mint(");
+    let has_burn = source.contains("function burn(");
+
+    // Check for token pair variables
+    let has_token_pair = source.contains("token0") && source.contains("token1");
+
+    // Check for TWAP price accumulators (key indicator of V2)
+    let has_price_cumulative = source.contains("price0CumulativeLast")
+        || source.contains("price1CumulativeLast")
+        || source.contains("priceCumulative");
+
+    // Check for reentrancy lock pattern (common in V2)
+    let has_lock_pattern = source.contains("modifier lock()")
+        || (source.contains("unlocked") && source.contains("== 1"));
+
+    // Check for MINIMUM_LIQUIDITY constant (V2 specific)
+    let has_minimum_liquidity = source.contains("MINIMUM_LIQUIDITY");
+
+    // Must have core functions + token pair + at least 2 other indicators
+    let core_functions = has_get_reserves && has_swap && has_mint && has_burn;
+    let indicator_count = [
+        has_price_cumulative,
+        has_lock_pattern,
+        has_minimum_liquidity,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    core_functions && has_token_pair && indicator_count >= 2
+}
+
+/// Detects if the contract is a Uniswap V3 style AMM pool
+///
+/// Uniswap V3 pools have specific characteristics:
+/// - slot0() function with tick and price info
+/// - observe() function for TWAP oracle
+/// - Tick-based liquidity management
+/// - Advanced fee tiers and concentrated liquidity
+/// - These contracts provide TWAP oracle functionality
+pub fn is_uniswap_v3_pool(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for V3 core functions
+    let has_slot0 = source.contains("function slot0()") || source.contains("slot0() ");
+    let has_observe = source.contains("function observe(") || source.contains("observe(uint32[] ");
+
+    // Check for V3 swap function signature
+    let has_v3_swap = source.contains("function swap(")
+        && (source.contains("sqrtPriceLimitX96") || source.contains("zeroForOne"));
+
+    // Check for tick-based liquidity
+    let has_ticks = source.contains("tick") || source.contains("Tick");
+    let has_liquidity = source.contains("liquidity");
+
+    // Check for V3 position management
+    let has_positions = source.contains("position") || source.contains("Position");
+
+    // Check for fee tiers (V3 specific)
+    let has_fee_tier = source.contains("fee") && (source.contains("500") || source.contains("3000") || source.contains("10000"));
+
+    // Must have slot0 + observe (TWAP oracle) + at least 2 other V3 indicators
+    let has_v3_oracle = has_slot0 && has_observe;
+    let indicator_count = [has_v3_swap, has_ticks, has_positions, has_fee_tier]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+    has_v3_oracle && has_liquidity && indicator_count >= 2
+}
+
+/// Detects if the contract is any type of AMM/DEX pool
+///
+/// This is a generic AMM detection that covers various AMM implementations
+/// including Uniswap V2/V3, Curve, Balancer, etc.
+pub fn is_amm_pool(ctx: &AnalysisContext) -> bool {
+    // Check for specific AMM types first
+    if is_uniswap_v2_pair(ctx) || is_uniswap_v3_pool(ctx) {
+        return true;
+    }
+
+    let source = ctx.source_code.as_str();
+
+    // Generic AMM indicators
+    let has_swap = source.contains("function swap(") || source.contains("function exchange(");
+    let has_liquidity_ops = (source.contains("function addLiquidity")
+        || source.contains("function removeLiquidity"))
+        && (source.contains("function mint(") || source.contains("function burn("));
+
+    // Check for reserve or balance management
+    let has_reserves = source.contains("reserve") || source.contains("Reserve");
+    let has_pool_tokens = (source.contains("token0") && source.contains("token1"))
+        || source.contains("poolTokens")
+        || source.contains("coins");
+
+    // Check for AMM-specific patterns
+    let has_k_invariant = source.contains("* balance") || source.contains("balance0 * balance1");
+    let has_price_calculation = source.contains("getAmountOut")
+        || source.contains("getAmountIn")
+        || source.contains("get_dy");
+
+    // Must have swap + liquidity operations + at least 2 other indicators
+    let indicator_count = [
+        has_reserves,
+        has_pool_tokens,
+        has_k_invariant,
+        has_price_calculation,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_swap && has_liquidity_ops && indicator_count >= 2
 }
 
 #[cfg(test)]
