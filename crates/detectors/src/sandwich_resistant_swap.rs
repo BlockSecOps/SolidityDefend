@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for missing MEV sandwich attack protection in swaps
 pub struct SandwichResistantSwapDetector {
@@ -50,6 +51,13 @@ impl Detector for SandwichResistantSwapDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip if this is an AMM pool - AMM pools ARE the market maker
+        // They don't need sandwich protection because they SET the price
+        // Only contracts that CONSUME AMM prices need sandwich protection
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(sandwich_issue) = self.check_sandwich_protection(function, ctx) {
