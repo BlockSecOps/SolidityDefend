@@ -138,18 +138,18 @@ impl Create2FrontrunningDetector {
 
         // Pattern 5: Assembly CREATE2 without proper checks
         if source_lower.contains("assembly") && source_lower.contains("create2") {
-            findings.push((
-                "Uses assembly CREATE2 (harder to audit, bypass safety checks)".to_string(),
-                0,
-                "Assembly CREATE2 bypasses Solidity safety checks. Ensure: (1) salt is unpredictable, (2) address is validated before use, (3) deployment success is checked".to_string(),
-            ));
+            // Check if there's salt commitment or other frontrunning protection
+            let has_salt_commitment = source_lower.contains("saltcommitment")
+                || source_lower.contains("commitsalt")
+                || (source_lower.contains("commitment") && source_lower.contains("salt"));
 
             // Check for deployment success validation
             let has_success_check = source_lower.contains("iszero(")
                 || (source_lower.contains("if") && source_lower.contains("create2"))
                 || source_lower.contains("require");
 
-            if !has_success_check {
+            // Only flag if no salt commitment AND no success check
+            if !has_salt_commitment && !has_success_check {
                 findings.push((
                     "Assembly CREATE2 without deployment success check".to_string(),
                     0,
@@ -158,25 +158,10 @@ impl Create2FrontrunningDetector {
             }
         }
 
-        // Pattern 6: Deterministic address calculation exposed
-        if source_lower.contains("getaddress")
-            || source_lower.contains("computeaddress")
-            || source_lower.contains("predictaddress")
-        {
-            let exposes_address = (source_lower.contains("function")
-                && (source_lower.contains("getaddress")
-                    || source_lower.contains("computeaddress")
-                    || source_lower.contains("predictaddress")))
-                && (source_lower.contains("public") || source_lower.contains("external"));
-
-            if exposes_address {
-                findings.push((
-                    "Public function exposes CREATE2 address calculation (enables frontrunning)".to_string(),
-                    0,
-                    "Consider: (1) Make address computation internal, (2) Use commit-reveal for deployment, (3) Add deployment authorization to prevent griefing".to_string(),
-                ));
-            }
-        }
+        // Pattern 6: Deterministic address calculation exposed (disabled - this is standard behavior)
+        // Public computeAddress() is a standard feature of CREATE2 factories
+        // Frontrunning protection should be via salt commitment, not hiding the address
+        // if source_lower.contains("getaddress") || ... { ... }
 
         // Pattern 7: CREATE2 factory without nonce tracking
         if (source_lower.contains("factory") || source_lower.contains("deployer"))
@@ -186,29 +171,24 @@ impl Create2FrontrunningDetector {
                 || source_lower.contains("deploymentcount")
                 || source_lower.contains("counter");
 
-            if !has_nonce {
+            // Salt commitment is actually better than nonce for frontrunning protection
+            let has_salt_commitment = source_lower.contains("saltcommitment")
+                || source_lower.contains("commitsalt")
+                || (source_lower.contains("commitment") && source_lower.contains("salt"));
+
+            if !has_nonce && !has_salt_commitment {
                 findings.push((
                     "CREATE2 factory without nonce/counter tracking".to_string(),
                     0,
-                    "Track deployments: mapping(address => uint256) public nonces; Use in salt to prevent address prediction attacks".to_string(),
+                    "Track deployments: mapping(address => uint256) public nonces; Use in salt to prevent address prediction attacks. Or use salt commitment for stronger protection.".to_string(),
                 ));
             }
         }
 
-        // Pattern 8: CREATE2 with insufficient gas
-        if source_lower.contains("create2") {
-            let has_gas_check = source_lower.contains("gasleft")
-                || source_lower.contains("gas")
-                || (source_lower.contains("require") && source_lower.contains("sufficient"));
-
-            if !has_gas_check {
-                findings.push((
-                    "CREATE2 without gas sufficiency check".to_string(),
-                    0,
-                    "Check gas: require(gasleft() >= MIN_DEPLOYMENT_GAS, \"Insufficient gas\"); to prevent partial deployment failures".to_string(),
-                ));
-            }
-        }
+        // Pattern 8: CREATE2 with insufficient gas (disabled - too broad)
+        // Most CREATE2 usage doesn't need explicit gas checks
+        // The EVM will revert if there's insufficient gas
+        // if source_lower.contains("create2") { ... }
 
         findings
     }
@@ -411,24 +391,27 @@ mod tests {
 
     #[test]
     fn test_detects_assembly_create2() {
+        // This test verifies assembly CREATE2 without success check is detected
         let detector = Create2FrontrunningDetector::new();
         let source = r#"
             contract Factory {
-                function deploy(bytes32 salt, bytes memory bytecode) external {
+                function deploy(bytes32 salt, bytes memory bytecode) external returns (address) {
                     address deployed;
                     assembly {
                         deployed := create2(0, add(bytecode, 0x20), mload(bytecode), salt)
                     }
+                    return deployed;
                 }
             }
         "#;
 
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
+        // Should detect CREATE2 without deployment success check
         assert!(!result.is_empty());
         assert!(result
             .iter()
-            .any(|f| f.message.contains("assembly CREATE2")));
+            .any(|f| f.message.contains("CREATE2") && f.message.contains("success")));
     }
 
     #[test]
@@ -460,10 +443,11 @@ mod tests {
 
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
-        assert!(!result.is_empty());
-        assert!(result
+        // Pattern intentionally disabled: computeAddress is a standard feature
+        let has_address_calc_finding = result
             .iter()
-            .any(|f| f.message.contains("exposes CREATE2 address calculation")));
+            .any(|f| f.message.contains("exposes CREATE2 address calculation"));
+        assert!(!has_address_calc_finding, "computeAddress is a standard feature, not a vulnerability");
     }
 
     #[test]

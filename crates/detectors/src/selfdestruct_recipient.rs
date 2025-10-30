@@ -117,12 +117,25 @@ impl SelfdestructRecipientDetector {
         }
 
         // Pattern 3: SELFDESTRUCT in constructor (metamorphic pattern)
+        // Need to check if they're actually in the same code block, not just anywhere in file
         if source_lower.contains("constructor") && source_lower.contains("selfdestruct") {
-            findings.push((
-                "SELFDESTRUCT in constructor (metamorphic contract pattern)".to_string(),
-                0,
-                "Using selfdestruct in constructor enables metamorphic contracts via CREATE2. This allows changing contract code at the same address, bypassing immutability assumptions.".to_string(),
-            ));
+            // More precise check: Look for "constructor" followed by "selfdestruct" within reasonable distance
+            if let Some(constructor_pos) = source_lower.find("constructor") {
+                if let Some(selfdestruct_pos) = source_lower.find("selfdestruct") {
+                    // Only flag if selfdestruct appears within 500 chars after constructor keyword
+                    if selfdestruct_pos > constructor_pos && selfdestruct_pos - constructor_pos < 500 {
+                        // Additional check: Make sure there's no other function definition between them
+                        let between = &source_lower[constructor_pos..selfdestruct_pos];
+                        if !between.contains("function ") {
+                            findings.push((
+                                "SELFDESTRUCT in constructor (metamorphic contract pattern)".to_string(),
+                                0,
+                                "Using selfdestruct in constructor enables metamorphic contracts via CREATE2. This allows changing contract code at the same address, bypassing immutability assumptions.".to_string(),
+                            ));
+                        }
+                    }
+                }
+            }
         }
 
         // Pattern 4: SELFDESTRUCT without balance check
@@ -131,7 +144,13 @@ impl SelfdestructRecipientDetector {
                 || source_lower.contains("balance")
                 || source_lower.contains("getbalance");
 
-            if !has_balance_check {
+            // Timelock + recipient validation is also a safety pattern
+            let has_timelock = source_lower.contains("timestamp")
+                && (source_lower.contains("delay") || source_lower.contains("days") || source_lower.contains("hours"));
+            let has_recipient_check = source_lower.contains("recipient")
+                && source_lower.contains("require");
+
+            if !has_balance_check && !has_timelock && !has_recipient_check {
                 findings.push((
                     "SELFDESTRUCT without checking contract balance".to_string(),
                     0,
@@ -142,11 +161,26 @@ impl SelfdestructRecipientDetector {
 
         // Pattern 5: Assembly SELFDESTRUCT
         if source_lower.contains("assembly") && source_lower.contains("selfdestruct") {
-            findings.push((
-                "Uses assembly SELFDESTRUCT (difficult to audit)".to_string(),
-                0,
-                "Assembly selfdestruct bypasses Solidity safety checks. Ensure recipient address is thoroughly validated and access control is enforced.".to_string(),
-            ));
+            // Check if they're actually in the same assembly block
+            if let Some(assembly_pos) = source_lower.find("assembly") {
+                if let Some(selfdestruct_pos) = source_lower.find("selfdestruct") {
+                    // Only flag if selfdestruct appears within 300 chars after "assembly {"
+                    if selfdestruct_pos > assembly_pos && selfdestruct_pos - assembly_pos < 300 {
+                        // Make sure there's no closing brace between them (which would indicate end of assembly block)
+                        let between = &source_lower[assembly_pos..selfdestruct_pos];
+                        // Simple heuristic: if there's "}" without matching "{", we've exited the assembly block
+                        let open_braces = between.matches('{').count();
+                        let close_braces = between.matches('}').count();
+                        if open_braces > close_braces {
+                            findings.push((
+                                "Uses assembly SELFDESTRUCT (difficult to audit)".to_string(),
+                                0,
+                                "Assembly selfdestruct bypasses Solidity safety checks. Ensure recipient address is thoroughly validated and access control is enforced.".to_string(),
+                            ));
+                        }
+                    }
+                }
+            }
         }
 
         // Pattern 6: SELFDESTRUCT with zero address

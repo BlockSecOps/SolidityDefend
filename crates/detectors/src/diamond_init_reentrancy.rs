@@ -207,9 +207,14 @@ impl Detector for DiamondInitReentrancyDetector {
             }
 
             // Pattern 5: Missing initialization status tracking
+            // Check both contract source AND full source (for library/file-level patterns)
+            let tracks_in_contract = self.tracks_initialization_status(&contract_source);
+            let tracks_in_file = self.tracks_initialization_status(&ctx.source_code);
+
             if self.is_diamond_proxy(&contract_source)
                 && self.has_initialization(&contract_source)
-                && !self.tracks_initialization_status(&contract_source)
+                && !tracks_in_contract
+                && !tracks_in_file
             {
                 let message = format!(
                     "Contract '{}' supports initialization but doesn't track initialization status. \
@@ -405,9 +410,26 @@ impl DiamondInitReentrancyDetector {
             "initializer modifier",
         ];
 
-        status_patterns
-            .iter()
-            .any(|pattern| source.contains(pattern))
+        // Check standalone variables
+        if status_patterns.iter().any(|pattern| source.contains(pattern)) {
+            return true;
+        }
+
+        // Check for struct-based initialization tracking (Diamond storage pattern)
+        // Look for "bool initialized" within a struct
+        if source.contains("struct") && source.contains("bool initialized") {
+            return true;
+        }
+
+        // Check for initializer modifier pattern
+        if source.contains("modifier initializer")
+            && (source.contains("!initialized") || source.contains("!_initialized"))
+            && (source.contains("initialized = true") || source.contains("_initialized = true"))
+        {
+            return true;
+        }
+
+        false
     }
 
     fn get_contract_source(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> String {

@@ -63,11 +63,19 @@ impl ExtcodesizeBypassDetector {
                     || source_lower.contains("eq")
                     || source_lower.contains("require");
 
-                if has_validation {
+                // Check if code documents the constructor bypass limitation
+                let documents_limitation = source_lower.contains("during construction")
+                    || source_lower.contains("constructor")
+                        && (source_lower.contains("codesize is 0")
+                            || source_lower.contains("returns 0")
+                            || source_lower.contains("bypass"))
+                    || source_lower.contains("isinconstruction"); // Companion function
+
+                if has_validation && !documents_limitation {
                     findings.push((
                         "Uses EXTCODESIZE in assembly for validation (bypassable during constructor)".to_string(),
                         0,
-                        "EXTCODESIZE returns 0 during contract construction. Attackers can bypass this check by calling from their constructor. Consider alternative validation methods.".to_string(),
+                        "EXTCODESIZE returns 0 during contract construction. Attackers can bypass this check by calling from their constructor. Consider alternative validation methods or document this limitation.".to_string(),
                     ));
                 }
             }
@@ -79,7 +87,14 @@ impl ExtcodesizeBypassDetector {
             let iscontract_uses_extcodesize = source_lower.contains("function iscontract")
                 && (source_lower.contains(".code.length") || source_lower.contains("extcodesize"));
 
-            if iscontract_uses_extcodesize {
+            // Check if code documents the limitation or has companion functions
+            let documents_limitation = source_lower.contains("during construction")
+                || source_lower.contains("constructor")
+                    && (source_lower.contains("codesize is 0")
+                        || source_lower.contains("returns 0"))
+                || source_lower.contains("isinconstruction"); // Companion function handles construction case
+
+            if iscontract_uses_extcodesize && !documents_limitation {
                 findings.push((
                     "isContract() function relies on EXTCODESIZE (bypassable during constructor)".to_string(),
                     0,
