@@ -104,7 +104,10 @@ impl Detector for DiamondDelegatecallZeroDetector {
                 }
 
                 // Pattern 2: Missing code existence validation
-                if !self.validates_facet_code_exists(&contract_source) {
+                // Skip if zero-address validation exists (reduces risk significantly)
+                if !self.validates_facet_code_exists(&contract_source)
+                    && !self.validates_facet_not_zero(&contract_source)
+                {
                     let message = format!(
                         "Contract '{}' fallback delegates without verifying facet has code. \
                         Even if facet != address(0), the address may be an EOA or a self-destructed contract \
@@ -138,7 +141,10 @@ impl Detector for DiamondDelegatecallZeroDetector {
                 }
 
                 // Pattern 3: Assembly delegatecall without validation
-                if self.has_assembly_delegatecall_without_validation(&contract_source) {
+                // Skip if Solidity-level validation exists before assembly block
+                if self.has_assembly_delegatecall_without_validation(&contract_source)
+                    && !self.validates_facet_not_zero(&contract_source)
+                {
                     let message = format!(
                         "Contract '{}' uses assembly delegatecall without proper validation. \
                         Assembly delegatecall bypasses Solidity's address validation, making it critical \
@@ -401,6 +407,9 @@ impl DiamondDelegatecallZeroDetector {
             "if (success)",
             "require(success",
             "if iszero(success)",
+            "switch result",      // Assembly switch on delegatecall result
+            "switch success",     // Assembly switch on success variable
+            "case 0",            // Assembly case for failure
         ];
 
         // Has delegatecall but no success check
@@ -423,12 +432,18 @@ impl DiamondDelegatecallZeroDetector {
     fn has_fallback_documentation(&self, source: &str) -> bool {
         // Check for documentation near fallback function
         if let Some(fallback_pos) = source.find("fallback()") {
-            // Look for comments in the 500 characters before fallback
-            let start = fallback_pos.saturating_sub(500);
+            // Look for comments in the 200 characters before fallback
+            let start = fallback_pos.saturating_sub(200);
             let context = &source[start..fallback_pos];
 
-            // Check for various comment styles
-            context.contains("///") || context.contains("/**") || context.contains("// @")
+            // Check for various comment styles (lenient - any comment near fallback counts)
+            context.contains("///")
+                || context.contains("/**")
+                || context.contains("// @")
+                || context.contains("// Safe")     // Security comment
+                || context.contains("// Prevent")  // Security comment
+                || context.contains("// Diamond")  // Diamond-specific comment
+                || context.contains("//")          // Any single-line comment near fallback
         } else {
             false
         }

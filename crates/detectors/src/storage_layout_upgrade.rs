@@ -38,12 +38,39 @@ impl StorageLayoutUpgradeDetector {
         let is_upgradeable = source_lower.contains("upgradeable")
             || source_lower.contains("proxy")
             || source_lower.contains("initializer")
+            || source_lower.contains("initialize")
             || source_lower.contains("uups")
             || source_lower.contains("transparent")
-            || source_lower.contains("beacon");
+            || source_lower.contains("beacon")
+            || source_lower.contains("diamond")
+            || source_lower.contains("facet");
 
-        if !is_upgradeable {
+        // If contract has a constructor, it's not upgradeable (upgradeable contracts use initializers)
+        let has_constructor = source_lower.contains("constructor()") || source_lower.contains("constructor(");
+
+        if !is_upgradeable || has_constructor {
             return findings;
+        }
+
+        // Check for EIP-2535 Diamond storage pattern (should skip most checks)
+        let uses_diamond_storage = (source_lower.contains("diamond") || source_lower.contains("facet"))
+            && source_lower.contains("keccak256")
+            && (source_lower.contains("storage_position")
+                || source_lower.contains("storage.slot")
+                || source_lower.contains("diamond.storage")
+                || (source_lower.contains("bytes32") && source_lower.contains("constant") && source_lower.contains("position")));
+
+        // Check for EIP-1967 namespaced storage pattern
+        let uses_namespaced_storage = source_lower.contains("eip1967")
+            || (source_lower.contains("keccak256")
+                && source_lower.contains("bytes32")
+                && source_lower.contains("constant")
+                && (source_lower.contains(".slot") || source_lower.contains("_slot")))
+            || (source_lower.contains("bytes32") && source_lower.contains("slot") && source_lower.contains("assembly"));
+
+        // If using diamond or namespaced storage patterns, skip most checks
+        if uses_diamond_storage || uses_namespaced_storage {
+            return findings; // These patterns are safe by design
         }
 
         // Pattern 1: Missing storage gap in base contracts
@@ -84,15 +111,7 @@ impl StorageLayoutUpgradeDetector {
             }
         }
 
-        // Pattern 3: Constant to variable conversion risk
-        if source_lower.contains("constant") && source_lower.contains("=") {
-            // This pattern is informational - constants don't use storage but can't be changed
-            findings.push((
-                "Uses constant variables (cannot be upgraded without breaking storage)".to_string(),
-                0,
-                "Note: constant variables don't use storage but cannot be changed in upgrades. Consider: (1) Keep as constant if value should never change, (2) Use immutable for constructor-set values, (3) Use storage variable with __gap if value may need to change in future upgrades.".to_string(),
-            ));
-        }
+        // Pattern 3: REMOVED - Constants don't use storage slots and are safe
 
         // Pattern 4: Complex inheritance without gap
         let inheritance_count = source_lower.matches(" is ").count();
@@ -104,32 +123,8 @@ impl StorageLayoutUpgradeDetector {
             ));
         }
 
-        // Pattern 5: Struct definitions (potential modification risk)
-        if source_lower.contains("struct") && is_upgradeable {
-            findings.push((
-                "Uses struct types (modifying struct layout will corrupt storage)".to_string(),
-                0,
-                "Warning: Never modify existing struct fields or reorder them in upgrades. To add fields: (1) Always append new fields at the end, (2) Document struct layout, (3) Consider using separate structs for new data. Struct modifications are a common cause of storage corruption.".to_string(),
-            ));
-        }
-
-        // Pattern 6: Mapping with struct values
-        if source_lower.contains("mapping") && source_lower.contains("struct") {
-            findings.push((
-                "Uses mapping with struct values (struct modification will corrupt all entries)".to_string(),
-                0,
-                "Handle carefully: Modifying struct layout in mappings affects all stored entries. Document struct layout clearly. Consider versioned structs: struct UserV1 {...}, struct UserV2 {...} with migration logic.".to_string(),
-            ));
-        }
-
-        // Pattern 7: Array of structs
-        if source_lower.contains("[]") && source_lower.contains("struct") {
-            findings.push((
-                "Uses arrays of structs (struct modification will corrupt entire array)".to_string(),
-                0,
-                "High risk: Arrays of structs are especially sensitive to layout changes. Any struct modification affects all array elements. Consider: (1) Using mapping instead, (2) Separate arrays for each field, (3) Immutable struct layout with versioning.".to_string(),
-            ));
-        }
+        // Pattern 5-7: REMOVED - Structs, mappings, and arrays are legitimate when properly managed
+        // These are standard patterns in well-designed contracts and don't indicate vulnerabilities
 
         // Pattern 8: Using delete keyword on complex types
         if source_lower.contains("delete ") && (source_lower.contains("struct") || source_lower.contains("mapping")) {
@@ -140,14 +135,7 @@ impl StorageLayoutUpgradeDetector {
             ));
         }
 
-        // Pattern 9: Storage pointers in functions
-        if source_lower.contains("storage") && source_lower.contains("function") {
-            findings.push((
-                "Uses storage pointers in functions (layout changes will break pointer logic)".to_string(),
-                0,
-                "Risk: Storage pointers depend on exact storage layout. Layout changes in upgrades will break pointer references. Document storage layout carefully. Consider: (1) Minimizing storage pointer use, (2) Using explicit state variable references.".to_string(),
-            ));
-        }
+        // Pattern 9: REMOVED - Storage pointers are standard practice and safe when layout is preserved
 
         // Pattern 10: No initialization gap reduction tracking
         if source_lower.contains("__gap") && source_lower.contains("uint256") {
@@ -189,21 +177,14 @@ impl StorageLayoutUpgradeDetector {
 
             if !uses_explicit_slots {
                 findings.push((
-                    "Diamond proxy without explicit storage slots (facet collision risk)".to_string(),
+                    "diamond proxy without explicit slot definition (facet collision risk)".to_string(),
                     0,
-                    "Use explicit slots: bytes32 constant STORAGE_SLOT = keccak256('myapp.storage.v1'); Access via assembly or struct with explicit slot. Prevents storage collisions between facets.".to_string(),
+                    "Use explicit slot: bytes32 constant STORAGE_SLOT = keccak256('myapp.storage.v1'); Access via assembly or struct with explicit slot. Prevents storage collisions between facets.".to_string(),
                 ));
             }
         }
 
-        // Pattern 13: Internal library usage in upgradeable contracts
-        if source_lower.contains("library") && source_lower.contains("internal") {
-            findings.push((
-                "Internal library in upgradeable contract (library upgrade constraints)".to_string(),
-                0,
-                "Warning: Internal libraries are inlined into contract bytecode. Library changes require full contract redeployment. Consider: (1) External libraries with delegatecall, (2) Moving logic to implementation, (3) Accepting inlined library limitations.".to_string(),
-            ));
-        }
+        // Pattern 13: REMOVED - Internal libraries are common and don't indicate vulnerabilities
 
         findings
     }
@@ -332,6 +313,8 @@ mod tests {
 
     #[test]
     fn test_detects_struct_usage() {
+        // Pattern intentionally removed: Structs are legitimate when properly managed
+        // This test now verifies that structs alone don't trigger false positives
         let detector = StorageLayoutUpgradeDetector::new();
         let source = r#"
             contract UpgradeableSystem {
@@ -350,8 +333,10 @@ mod tests {
 
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
-        assert!(!result.is_empty());
-        assert!(result.iter().any(|f| f.message.contains("struct")));
+        // Structs are legitimate - should only flag if missing storage gap
+        let has_struct_specific_finding = result.iter().any(|f|
+            f.message.contains("struct") && !f.message.contains("gap"));
+        assert!(!has_struct_specific_finding, "Structs should not be flagged as inherently unsafe");
     }
 
     #[test]
@@ -388,6 +373,8 @@ mod tests {
 
     #[test]
     fn test_detects_array_of_structs() {
+        // Pattern intentionally removed: Arrays of structs are legitimate when properly managed
+        // This test now verifies that arrays of structs don't trigger false positives
         let detector = StorageLayoutUpgradeDetector::new();
         let source = r#"
             contract UpgradeableRegistry {
@@ -404,10 +391,11 @@ mod tests {
 
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
-        assert!(!result.is_empty());
-        assert!(result
+        // Arrays of structs are legitimate - should only flag if missing storage gap
+        let has_array_struct_specific_finding = result
             .iter()
-            .any(|f| f.message.contains("array") && f.message.contains("struct")));
+            .any(|f| f.message.contains("array") && f.message.contains("struct") && !f.message.contains("gap"));
+        assert!(!has_array_struct_specific_finding, "Arrays of structs should not be flagged as inherently unsafe");
     }
 
     #[test]

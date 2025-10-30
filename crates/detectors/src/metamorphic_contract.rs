@@ -38,10 +38,40 @@ impl MetamorphicContractDetector {
         // Early exit if no CREATE2 or SELFDESTRUCT
         let has_create2 = source_lower.contains("create2");
         let has_selfdestruct =
-            source_lower.contains("selfdestruct") || source_lower.contains("suicide");
+            source_lower.contains("selfdestruct")
+            || source_lower.contains("suicide")
+            || (source_lower.contains("function destroy") && source_lower.contains("external"))
+            || (source_lower.contains("function kill") && source_lower.contains("external"))
+            || (source_lower.contains("function terminate") && source_lower.contains("external"));
 
         if !has_create2 && !has_selfdestruct {
             return findings;
+        }
+
+        // Check for legitimate factory patterns (skip if present)
+        let has_salt_commitment = (source_lower.contains("salthash") || source_lower.contains("saltcommitment"))
+            && (source_lower.contains("mapping") || source_lower.contains("timestamp"));
+
+        let has_factory_pattern = source_lower.contains("factory")
+            || (source_lower.contains("deploy") && source_lower.contains("function"))
+            || source_lower.contains("counterfactual");
+
+        let has_access_control = source_lower.contains("onlyowner")
+            || (source_lower.contains("require") && source_lower.contains("msg.sender"))
+            || source_lower.contains("ownable")
+            || source_lower.contains("accesscontrol");
+
+        let has_selfdestruct_timelock = source_lower.contains("selfdestruct")
+            && source_lower.contains("timestamp")
+            && (source_lower.contains("delay") || source_lower.contains("days") || source_lower.contains("hours"));
+
+        // If it's a legitimate factory with proper security, skip most checks
+        let is_legitimate_factory = has_factory_pattern
+            && has_access_control
+            && (has_salt_commitment || !has_selfdestruct || has_selfdestruct_timelock);
+
+        if is_legitimate_factory {
+            return findings; // Legitimate deterministic deployment factory
         }
 
         // Pattern 1: Full metamorphic pattern (CREATE2 + SELFDESTRUCT in constructor)
@@ -158,8 +188,9 @@ impl MetamorphicContractDetector {
 
         // Pattern 8: No codehash validation after CREATE2
         if has_create2 {
-            let has_codehash_validation = source_lower.contains("codehash")
-                || (source_lower.contains("extcodehash") && source_lower.contains("require"));
+            // Look for actual codehash validation patterns, not just comments
+            let has_codehash_validation = (source_lower.contains(".codehash") || source_lower.contains("extcodehash"))
+                && (source_lower.contains("require") || source_lower.contains("assert") || source_lower.contains("=="));
 
             if !has_codehash_validation && has_selfdestruct {
                 findings.push((

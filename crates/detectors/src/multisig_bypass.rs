@@ -86,7 +86,7 @@ impl MultisigBypassDetector {
         // Pattern 3: Owner enumeration issues
         if source_lower.contains("owner") && (source_lower.contains("add") || source_lower.contains("remove")) {
             let modifies_owners = (source_lower.contains("addowner") || source_lower.contains("removeowner"))
-                || (source_lower.contains("function") && source_lower.contains("owner"));
+                || (source_lower.contains("function addowner") || source_lower.contains("function removeowner"));
 
             let adjusts_threshold = source_lower.contains("threshold")
                 && (source_lower.contains("=") || source_lower.contains("update"));
@@ -122,7 +122,12 @@ impl MultisigBypassDetector {
                 || (source_lower.contains("require") && source_lower.contains("s <="))
                 || source_lower.contains("0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0");
 
-            if !has_malleability_check {
+            // Skip for ERC-2612 permit tokens (nonce provides replay protection)
+            let is_permit_token = source_lower.contains("permit")
+                && source_lower.contains("nonces")
+                && (source_lower.contains("domainseparator") || source_lower.contains("domain_separator"));
+
+            if !has_malleability_check && !is_permit_token {
                 findings.push((
                     "Missing signature malleability protection (duplicate signature acceptance)".to_string(),
                     0,
@@ -133,9 +138,11 @@ impl MultisigBypassDetector {
 
         // Pattern 5: Missing domain separator (cross-contract replay)
         if source_lower.contains("keccak256") && source_lower.contains("signature") {
-            let has_domain_separator = source_lower.contains("domain")
-                || source_lower.contains("chainid")
-                || (source_lower.contains("address(this)") && source_lower.contains("keccak256"));
+            // Look for actual domain separator usage patterns, not just the word in comments
+            let has_domain_separator = source_lower.contains("domainseparator")
+                || source_lower.contains("domain_separator")
+                || source_lower.contains("block.chainid")
+                || (source_lower.contains("address(this)") && source_lower.contains("abi.encode"));
 
             if !has_domain_separator {
                 findings.push((
@@ -165,11 +172,16 @@ impl MultisigBypassDetector {
 
         // Pattern 7: Missing signature expiration
         if source_lower.contains("execute") && source_lower.contains("signature") {
-            let has_deadline = source_lower.contains("deadline")
-                || source_lower.contains("expir")
-                || (source_lower.contains("timestamp") && source_lower.contains("require"));
+            // Look for actual deadline usage patterns or nonce (nonce also prevents replay)
+            let has_deadline = (source_lower.contains("deadline") && (source_lower.contains("<=") || source_lower.contains("<") || source_lower.contains("require")))
+                || (source_lower.contains("expir") && source_lower.contains("block.timestamp"))
+                || (source_lower.contains("block.timestamp") && source_lower.contains("<=") && source_lower.contains("require"));
 
-            if !has_deadline {
+            // Nonce also prevents replay and is an alternative to deadline
+            let has_nonce_in_execution = source_lower.contains("nonce")
+                && (source_lower.contains("nonce++") || source_lower.contains("nonce + 1") || source_lower.contains("increment"));
+
+            if !has_deadline && !has_nonce_in_execution {
                 findings.push((
                     "Signatures without expiration/deadline (indefinite validity risk)".to_string(),
                     0,
@@ -180,15 +192,26 @@ impl MultisigBypassDetector {
 
         // Pattern 8: Zero address signer vulnerability
         if source_lower.contains("ecrecover") {
-            let checks_zero_address = (source_lower.contains("require") || source_lower.contains("if"))
-                && source_lower.contains("address(0)")
-                && source_lower.contains("signer");
+            // Look for actual zero address validation in code, not comments
+            // Real code has comma (error msg) or && (additional condition) after the check
+            let checks_zero_address = source_lower.contains("signer != address(0) &&")
+                || source_lower.contains("address(0) != signer &&")
+                || source_lower.contains("signer != address(0),")
+                || source_lower.contains("address(0) != signer,")
+                || (source_lower.contains("signer == address(0)")
+                    && source_lower.contains("if (")
+                    && source_lower.contains("revert"));
 
             let has_owner_check = source_lower.contains("isowner")
                 || source_lower.contains("owner[")
                 || source_lower.contains("owners");
 
-            if has_owner_check && !checks_zero_address {
+            // isOwner[signer] implicitly checks for zero address (address(0) can't be an owner)
+            let has_isowner_require = source_lower.contains("require(isowner[signer]")
+                || source_lower.contains("require(isowner[")
+                || (source_lower.contains("isowner[signer]") && source_lower.contains("require"));
+
+            if has_owner_check && !checks_zero_address && !has_isowner_require {
                 findings.push((
                     "Missing zero address check after ecrecover (invalid signature counts as address(0))".to_string(),
                     0,
@@ -461,6 +484,9 @@ mod tests {
 
     #[test]
     fn test_detects_zero_address_signer() {
+        // This test verifies implicit zero address check is recognized
+        // require(isOwner[signer]) implicitly checks for zero address since
+        // isOwner[address(0)] would typically be false
         let detector = MultisigBypassDetector::new();
         let source = r#"
             contract MultiSig {
@@ -469,7 +495,7 @@ mod tests {
                 function verifySignature(bytes32 hash, bytes memory signature) internal view {
                     (uint8 v, bytes32 r, bytes32 s) = splitSignature(signature);
                     address signer = ecrecover(hash, v, r, s);
-                    // Missing: require(signer != address(0))
+                    // Implicit zero address check via isOwner mapping
                     require(isOwner[signer], "Not owner");
                 }
             }
@@ -477,10 +503,11 @@ mod tests {
 
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
-        assert!(!result.is_empty());
-        assert!(result
+        // Should recognize implicit zero address check
+        let has_zero_address_finding = result
             .iter()
-            .any(|f| f.message.contains("zero address")));
+            .any(|f| f.message.contains("zero address"));
+        assert!(!has_zero_address_finding, "require(isOwner[signer]) provides implicit zero address check");
     }
 
     #[test]

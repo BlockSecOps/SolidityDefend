@@ -176,8 +176,13 @@ impl Detector for DiamondLoupeViolationDetector {
             }
 
             // Pattern 4: Missing Facet struct definition
+            // Check both contract source AND full source (for file-level structs)
+            let has_struct_in_contract = self.has_facet_struct_definition(&contract_source);
+            let has_struct_in_file = self.has_facet_struct_definition(&ctx.source_code);
+
             if self.has_loupe_functions(&contract_source)
-                && !self.has_facet_struct_definition(&contract_source)
+                && !has_struct_in_contract
+                && !has_struct_in_file
             {
                 let message = format!(
                     "Contract '{}' implements loupe functions but missing required Facet struct. \

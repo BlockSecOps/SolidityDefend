@@ -60,6 +60,12 @@ impl Detector for DiamondSelectorCollisionDetector {
 
         // Check for selector collision issues
         let contract = ctx.contract;
+
+        // Skip interfaces - they don't have implementation
+        if contract.contract_type == ast::ContractType::Interface {
+            return Ok(findings);
+        }
+
         let contract_source = self.get_contract_source(contract, ctx);
 
         // Check for diamondCut function

@@ -108,9 +108,9 @@ impl SelfdestructAbuseDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
-        // Check for selfdestruct usage
+        // Check for actual selfdestruct CALL, not just the word "selfdestruct" in function name/comments
         let has_selfdestruct =
-            func_source.contains("selfdestruct") || func_source.contains("suicide"); // Old keyword
+            func_source.contains("selfdestruct(") || func_source.contains("suicide("); // Old keyword
 
         if !has_selfdestruct {
             return None;
@@ -242,14 +242,17 @@ impl SelfdestructAbuseDetector {
         None
     }
 
-    /// Get function source code
+    /// Get function source code (including a few lines before to catch modifiers)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
+        // Include 3 lines before function to catch modifiers on previous lines
+        let extended_start = start.saturating_sub(3);
+
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
-        if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+        if extended_start < source_lines.len() && end < source_lines.len() {
+            source_lines[extended_start..=end].join("\n")
         } else {
             String::new()
         }
