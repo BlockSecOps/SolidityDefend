@@ -59,6 +59,13 @@ impl Detector for AmmLiquidityManipulationDetector {
             return Ok(findings);
         }
 
+        // Skip if this is an AMM pool - AMM pools INTENTIONALLY manipulate liquidity
+        // Uniswap V2/V3 and similar AMMs have well-understood liquidity mechanisms
+        // This detector should focus on contracts that CONSUME AMM liquidity unsafely
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(manipulation_issue) = self.check_liquidity_manipulation(function, ctx) {
                 let message = format!(

@@ -19,7 +19,7 @@ pub fn is_erc20_function(function_name: &str, ctx: &AnalysisContext) -> bool {
     // Check if function name matches ERC20 standard
     let is_standard_function = erc20_functions
         .iter()
-        .any(|&func| name_lower == func);
+        .any(|&func| name_lower == func.to_lowercase());
 
     if !is_standard_function {
         return false;
@@ -64,21 +64,20 @@ pub fn is_erc4626_function(function_name: &str, ctx: &AnalysisContext) -> bool {
     // Check if function name matches ERC4626 standard
     let is_standard_function = erc4626_functions
         .iter()
-        .any(|&func| name_lower == func);
+        .any(|&func| name_lower == func.to_lowercase());
 
     if !is_standard_function {
         return false;
     }
 
-    // Verify this is actually an ERC4626 vault contract
-    let is_erc4626_contract = source.contains("ERC4626")
-        || source.contains("IERC4626")
+    // Verify this is actually an ERC4626 vault contract (not just mentioned in comments)
+    let is_erc4626_contract = source.contains("is ERC4626")
+        || source.contains("is IERC4626")
+        || source.contains("import") && (source.contains("ERC4626") || source.contains("IERC4626"))
         || (source.contains("deposit")
             && source.contains("withdraw")
-            && source.contains("totalAssets"))
-        || source.contains("// ERC-4626")
-        || source.contains("// ERC4626")
-        || (source.contains("Vault") && source.contains("shares"));
+            && source.contains("totalAssets")
+            && source.contains("shares"));
 
     is_erc4626_contract && is_standard_function
 }
@@ -193,6 +192,7 @@ pub fn get_implemented_standards(ctx: &AnalysisContext) -> Vec<&'static str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::test_utils::create_test_context;
 
     #[test]
     fn test_erc20_function_detection() {
@@ -302,8 +302,6 @@ mod tests {
 
     // Helper function to create mock context for tests
     fn create_mock_context(source: &str) -> AnalysisContext<'static> {
-        // This would need proper implementation based on AnalysisContext structure
-        // For now, this is a placeholder
-        unimplemented!("Mock context creation for tests")
+        create_test_context(source)
     }
 }

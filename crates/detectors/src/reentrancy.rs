@@ -272,6 +272,19 @@ impl ClassicReentrancyDetector {
         }
     }
 
+    /// Get function source code
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
     /// Check if an expression contains state changes (assignments)
     fn expression_has_state_change(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
@@ -351,8 +364,21 @@ impl Detector for ClassicReentrancyDetector {
             return Ok(findings); // Paymaster reentrancy is handled by ERC-4337 spec
         }
 
+        // Skip if this is an AMM pool - AMM pools have lock() modifiers for reentrancy protection
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if self.has_external_call(function) && self.has_state_changes_after_calls(function) {
+                // Get function source to check for reentrancy guards
+                let func_source = self.get_function_source(function, ctx);
+
+                // Skip if function has reentrancy guard (nonReentrant, lock(), etc.)
+                if utils::has_reentrancy_guard(&func_source, &ctx.source_code) {
+                    continue;
+                }
+
                 let message = format!(
                     "Function '{}' may be vulnerable to reentrancy attacks due to state changes after external calls",
                     function.name.name
