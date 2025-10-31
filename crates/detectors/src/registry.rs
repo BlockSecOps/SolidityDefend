@@ -781,6 +781,96 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::storage_layout_upgrade::StorageLayoutUpgradeDetector::new(),
         ));
+
+        // Phase 24: EIP-1153 Transient Storage Security (2025)
+        self.register(Arc::new(
+            crate::transient::TransientStorageReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transient::TransientStorageComposabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transient::TransientStorageStateLeakDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transient::TransientStorageMisuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transient::TransientReentrancyGuardDetector::new(),
+        ));
+
+        // Phase 25: EIP-7702 Account Delegation Security (2025)
+        self.register(Arc::new(
+            crate::eip7702::EIP7702InitFrontrunDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702::EIP7702DelegateAccessControlDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702::EIP7702StorageCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702::EIP7702TxOriginBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702::EIP7702SweeperDetectionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702::EIP7702BatchPhishingDetector::new(),
+        ));
+
+        // Phase 26: ERC-7821 Batch Executor Security (2025)
+        self.register(Arc::new(
+            crate::erc7821::ERC7821BatchAuthorizationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7821::ERC7821TokenApprovalDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7821::ERC7821ReplayProtectionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7821::ERC7821MsgSenderValidationDetector::new(),
+        ));
+
+        // Phase 27: ERC-7683 Intent-Based Security (2025)
+        self.register(Arc::new(
+            crate::erc7683::IntentCrossChainValidationDetector::new(),
+        ));
+
+        // Phase 28: Privacy & Storage Security (2025)
+        self.register(Arc::new(
+            crate::privacy::PrivateVariableExposureDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::privacy::PlaintextSecretStorageDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::privacy::MissingCommitRevealDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::privacy::StorageSlotPredictabilityDetector::new(),
+        ));
+
+        // Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
+        self.register(Arc::new(
+            crate::owasp2025::LogicErrorPatternsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::owasp2025::OracleTimeWindowAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::owasp2025::OracleStalenesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::owasp2025::EnhancedInputValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::owasp2025::Post080OverflowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::owasp2025::EnhancedAccessControlDetector::new(),
+        ));
     }
 }
 

@@ -148,6 +148,24 @@ pub mod multisig_bypass;
 pub mod permit_signature_exploit;
 pub mod storage_layout_upgrade;
 
+// Phase 24: EIP-1153 Transient Storage Security (2025)
+pub mod transient;
+
+// Phase 25: EIP-7702 Account Delegation Security (2025)
+pub mod eip7702;
+
+// Phase 26: ERC-7821 Batch Executor Security (2025)
+pub mod erc7821;
+
+// Phase 27: ERC-7683 Intent-Based Security (2025)
+pub mod erc7683;
+
+// Phase 28: Private Data & Storage Security (2025)
+pub mod privacy;
+
+// Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
+pub mod owasp2025;
+
 // DeFi-specific detectors
 pub mod defi;
 
