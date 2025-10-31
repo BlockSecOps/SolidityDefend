@@ -763,6 +763,162 @@ impl CliApp {
                 "Storage Layout Upgrade Violation",
                 "Critical",
             ),
+            // Phase 24: EIP-1153 Transient Storage Security (2025)
+            (
+                "transient-storage-reentrancy",
+                "Transient Storage Reentrancy",
+                "Critical",
+            ),
+            (
+                "transient-storage-composability",
+                "Transient Storage Composability",
+                "High",
+            ),
+            (
+                "transient-storage-state-leak",
+                "Transient Storage State Leak",
+                "Medium",
+            ),
+            (
+                "transient-storage-misuse",
+                "Transient Storage Misuse",
+                "Medium",
+            ),
+            (
+                "transient-reentrancy-guard",
+                "Transient Reentrancy Guard",
+                "Medium",
+            ),
+            // Phase 25: EIP-7702 Account Delegation Security (2025)
+            (
+                "eip7702-init-frontrun",
+                "EIP-7702 Initialization Front-Running",
+                "Critical",
+            ),
+            (
+                "eip7702-delegate-access-control",
+                "EIP-7702 Delegate Access Control",
+                "Critical",
+            ),
+            (
+                "eip7702-storage-collision",
+                "EIP-7702 Storage Collision",
+                "High",
+            ),
+            (
+                "eip7702-txorigin-bypass",
+                "EIP-7702 tx.origin Bypass",
+                "High",
+            ),
+            (
+                "eip7702-sweeper-detection",
+                "EIP-7702 Sweeper Detection",
+                "Critical",
+            ),
+            (
+                "eip7702-batch-phishing",
+                "EIP-7702 Batch Phishing",
+                "High",
+            ),
+            // Phase 26: ERC-7821 Batch Executor Security (2025)
+            (
+                "erc7821-batch-authorization",
+                "ERC-7821 Batch Authorization",
+                "High",
+            ),
+            (
+                "erc7821-token-approval",
+                "ERC-7821 Token Approval",
+                "High",
+            ),
+            (
+                "erc7821-replay-protection",
+                "ERC-7821 Replay Protection",
+                "High",
+            ),
+            (
+                "erc7821-msg-sender-validation",
+                "ERC-7821 msg.sender Validation",
+                "Medium",
+            ),
+            // Phase 27: ERC-7683 Intent-Based Security (2025)
+            (
+                "erc7683-crosschain-validation",
+                "ERC-7683 Cross-Chain Validation",
+                "Critical",
+            ),
+            (
+                "intent-signature-replay",
+                "Intent Signature Replay Attack",
+                "High",
+            ),
+            (
+                "intent-solver-manipulation",
+                "Intent Solver Manipulation",
+                "High",
+            ),
+            (
+                "intent-nonce-management",
+                "Intent Nonce Management",
+                "Medium",
+            ),
+            (
+                "intent-settlement-validation",
+                "Intent Settlement Validation",
+                "High",
+            ),
+            // Phase 28: Privacy & Storage Security (2025)
+            (
+                "private-variable-exposure",
+                "Private Variable Exposure",
+                "Medium",
+            ),
+            (
+                "plaintext-secret-storage",
+                "Plaintext Secret Storage",
+                "High",
+            ),
+            (
+                "missing-commit-reveal",
+                "Missing Commit-Reveal Scheme",
+                "Medium",
+            ),
+            (
+                "storage-slot-predictability",
+                "Storage Slot Predictability",
+                "Medium",
+            ),
+            // Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
+            (
+                "logic-error-patterns",
+                "Logic Error Patterns (OWASP 2025)",
+                "High",
+            ),
+            (
+                "oracle-time-window-attack",
+                "Oracle Time-Window Attack (OWASP 2025)",
+                "High",
+            ),
+            (
+                "oracle-staleness-heartbeat",
+                "Oracle Staleness/Heartbeat (OWASP 2025)",
+                "High",
+            ),
+            (
+                "enhanced-input-validation",
+                "Enhanced Input Validation (OWASP 2025)",
+                "Medium",
+            ),
+            (
+                "post-080-overflow",
+                "Post-0.8.0 Overflow (OWASP 2025)",
+                "Medium",
+            ),
+            (
+                "enhanced-access-control",
+                "Enhanced Access Control (OWASP 2025)",
+                "High",
+            ),
         ];
 
         for (id, name, severity) in detector_info {

@@ -837,6 +837,18 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::erc7683::IntentCrossChainValidationDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::erc7683::IntentSignatureReplayDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683::IntentSolverManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683::IntentNonceManagementDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683::IntentSettlementValidationDetector::new(),
+        ));
 
         // Phase 28: Privacy & Storage Security (2025)
         self.register(Arc::new(
