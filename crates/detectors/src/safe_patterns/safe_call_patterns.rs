@@ -35,10 +35,11 @@ pub fn makes_safe_erc20_calls(func_source: &str, ctx: &AnalysisContext) -> bool 
         .iter()
         .any(|&call| func_source.contains(call));
 
-    // Not safe if it has callbacks or hooks
-    let has_callbacks = func_source.contains("callback")
-        || func_source.contains("onTransfer")
-        || func_source.contains("beforeTransfer");
+    // Not safe if it has callbacks or hooks (case-insensitive check)
+    let func_lower = func_source.to_lowercase();
+    let has_callbacks = func_lower.contains("callback")
+        || func_lower.contains("ontransfer")
+        || func_lower.contains("beforetransfer");
 
     only_safe_calls && !has_callbacks
 }
@@ -254,6 +255,7 @@ pub fn is_safe_from_circular_deps(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::test_utils::create_test_context;
 
     #[test]
     fn test_safe_erc20_calls() {
@@ -304,6 +306,6 @@ mod tests {
     }
 
     fn create_mock_context(source: &str) -> AnalysisContext<'static> {
-        unimplemented!("Mock context for tests")
+        create_test_context(source)
     }
 }

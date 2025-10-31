@@ -15,6 +15,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 use ast;
 
 pub struct FlashloanPriceOracleManipulationDetector {
@@ -105,6 +106,13 @@ impl Detector for FlashloanPriceOracleManipulationDetector {
         let mut findings = Vec::new();
 
         if !self.is_defi_protocol(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip if this is an AMM pool - AMM pools ARE the oracle source, not consumers
+        // Uniswap V2/V3 pairs provide TWAP oracle data via getReserves()/observe()
+        // They should not be flagged for using spot prices internally
+        if utils::is_amm_pool(ctx) {
             return Ok(findings);
         }
 
