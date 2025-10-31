@@ -12,9 +12,11 @@ pub mod signature_replay;
 pub mod solver_manipulation;
 pub mod nonce_management;
 pub mod settlement_validation;
+pub mod crosschain_validation;
 
 pub use classification::*;
 pub use signature_replay::IntentSignatureReplayDetector;
 pub use solver_manipulation::IntentSolverManipulationDetector;
 pub use nonce_management::IntentNonceManagementDetector;
 pub use settlement_validation::IntentSettlementValidationDetector;
+pub use crosschain_validation::IntentCrossChainValidationDetector;

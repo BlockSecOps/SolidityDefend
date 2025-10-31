@@ -1,6 +1,6 @@
 # Detector Documentation
 
-Complete reference for all 100 security detectors available in SolidityDefend v0.12.4 across 24 implementation phases.
+Complete reference for all 130 security detectors available in SolidityDefend v0.15.0 across 29 implementation phases.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Complete reference for all 100 security detectors available in SolidityDefend v0
 
 ## Overview
 
-SolidityDefend v0.12.4 includes **100 security detectors** across 24 implementation phases, covering all critical vulnerability classes in modern smart contracts including advanced ERC-4337 Account Abstraction and Flash Loan vulnerabilities.
+SolidityDefend v0.15.0 includes **130 security detectors** across 29 implementation phases, covering all critical vulnerability classes in modern smart contracts including EIP-1153 Transient Storage, EIP-7702 Account Delegation, ERC-7821 Batch Executor, ERC-7683 Intent-Based, Privacy/Storage security, and OWASP 2025 Top 10 alignment.
 
 ### Context-Aware Analysis (v0.12+)
 
@@ -75,9 +75,14 @@ Each detector uses standardized Finding format and CWE mappings.
 | Diamond Proxy & Upgrades | 5 | Medium - Critical | ✅ Phase 21 |
 | Metamorphic Contracts & CREATE2 | 4 | Medium - Critical | ✅ Phase 22 |
 | Multi-Signature, Permits & Upgrades | 3 | High - Critical | ✅ Phase 23 |
-| **AA Advanced & Flash Loans (v0.11.0)** | **10** | **Low - Critical** | ✅ **Phase 24 (NEW)** |
+| **EIP-1153 Transient Storage (v0.15.0)** | **5** | **Medium - Critical** | ✅ **Phase 24 (NEW)** |
+| **EIP-7702 Account Delegation (v0.15.0)** | **6** | **High - Critical** | ✅ **Phase 25 (NEW)** |
+| **ERC-7821 Batch Executor (v0.15.0)** | **4** | **Medium - Critical** | ✅ **Phase 26 (NEW)** |
+| **ERC-7683 Intent-Based (v0.15.0)** | **5** | **Critical** | ✅ **Phase 27 (NEW)** |
+| **Privacy & Storage (v0.15.0)** | **4** | **Medium - High** | ✅ **Phase 28 (NEW)** |
+| **OWASP 2025 Top 10 Gaps (v0.15.0)** | **6** | **Medium - Critical** | ✅ **Phase 29 (NEW)** |
 
-**Total: 100 detectors** - Production Release v0.12.4! 🎉
+**Total: 130 detectors** - Production Release v0.15.0! 🎉
 
 ### Implementation Phases
 
@@ -98,10 +103,18 @@ Each detector uses standardized Finding format and CWE mappings.
 - **Phase 20** (5 detectors): L2 & rollup security - ✅ Complete
 - **Phase 21** (5 detectors): Diamond proxy & advanced upgrades - ✅ Complete
 - **Phase 22** (4 detectors): Metamorphic contracts & CREATE2 - ✅ Complete
-- **Phase 23** (3 detectors): Multi-sig, permits & storage upgrades - ✅ Complete
-- **Phase 24** (10 detectors): Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0) - ✅ Complete
+- **Phase 23** (3 detectors): Multi-signature, permits & upgrades - ✅ Complete
+- **Phase 24** (5 detectors): EIP-1153 transient storage security - ✅ Complete (v0.15.0)
+- **Phase 25** (6 detectors): EIP-7702 account delegation security - ✅ Complete (v0.15.0)
+- **Phase 26** (4 detectors): ERC-7821 batch executor security - ✅ Complete (v0.15.0)
+- **Phase 27** (5 detectors): ERC-7683 intent-based security - ✅ Complete (v0.15.0)
+- **Phase 28** (4 detectors): Privacy & storage security - ✅ Complete (v0.15.0)
+- **Phase 29** (6 detectors): OWASP 2025 Top 10 gaps - ✅ Complete (v0.15.0)
 
-**Functional Status**: 100/100 detectors (100%) fully implemented - Production Release v0.12.4 with Context-Aware Analysis
+**Functional Status**: 130/130 detectors (100%) fully implemented - Production Release v0.15.0
+
+**Remaining for v1.0**:
+- **Phase 30** (5 detectors): Advanced DeFi security - 📋 Planned (135 total for v1.0)
 
 ## Access Control & Authentication
 
@@ -2788,3 +2801,782 @@ These detectors prevent attack patterns from documented exploits totaling **$209
 - [CLI Reference](CLI.md) - Command-line options for detector configuration
 - [Configuration Guide](CONFIGURATION.md) - Advanced detector configuration
 - [Output Formats](OUTPUT.md) - Understanding detector output
+---
+
+## Phase 24: EIP-1153 Transient Storage Security (v0.15.0)
+
+Breaking changes from Solidity 0.8.24+ transient storage introduce new attack vectors. These 5 detectors address vulnerabilities worth **billions in potential losses** from broken security assumptions.
+
+### Transient Storage Reentrancy
+
+**ID:** `transient-storage-reentrancy`
+**Severity:** Critical
+**Category:** Reentrancy
+
+**Description:**
+Detects low-gas reentrancy vulnerabilities via EIP-1153 transient storage (TSTORE/TLOAD). **CRITICAL**: EIP-1153 breaks the decade-old assumption that `transfer()` and `send()` are safe against reentrancy.
+
+**What it Finds:**
+- State changes after `transfer()` or `send()` calls
+- Reentrancy patterns vulnerable to transient storage attacks
+- Contracts using Solidity 0.8.24+ without proper reentrancy guards
+
+**Why This Matters:**
+With only 100 gas cost per TSTORE, attackers can now modify state within the 2300 gas stipend of `transfer()` and `send()`.
+
+**Example Vulnerable Code:**
+```solidity
+contract Vulnerable {
+    mapping(address => uint256) public balances;
+
+    function withdraw() public {
+        uint256 amount = balances[msg.sender];
+        require(amount > 0);
+
+        // ❌ UNSAFE: transfer() no longer prevents reentrancy
+        payable(msg.sender).transfer(amount);
+
+        balances[msg.sender] = 0;  // Too late!
+    }
+}
+
+contract Attacker {
+    uint256 transient counter;  // Only 100 gas per TSTORE!
+
+    receive() external payable {
+        if (counter < 10) {
+            counter++;  // Reentrancy with 2300 gas!
+            Vulnerable(msg.sender).withdraw();
+        }
+    }
+}
+```
+
+**Recommended Fix:**
+```solidity
+// Fix 1: Checks-Effects-Interactions
+function withdraw() public {
+    uint256 amount = balances[msg.sender];
+    require(amount > 0);
+    
+    // ✅ Update state BEFORE external call
+    balances[msg.sender] = 0;
+    
+    payable(msg.sender).transfer(amount);
+}
+
+// Fix 2: Use ReentrancyGuard
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+function withdraw() public nonReentrant {
+    uint256 amount = balances[msg.sender];
+    require(amount > 0);
+    
+    balances[msg.sender] = 0;
+    payable(msg.sender).transfer(amount);
+}
+```
+
+**Real-World Impact:** ChainSecurity TSTORE Low Gas Reentrancy research (2024) - Breaks transfer()/send() safety assumptions
+
+---
+
+### Transient Storage Composability
+
+**ID:** `transient-storage-composability`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects composability issues in contracts using EIP-1153 transient storage. Transient storage is cleared at the end of each transaction, breaking multi-call and atomic transaction patterns.
+
+**What it Finds:**
+- Functions that write transient storage but are called separately from readers
+- Missing cleanup between transient storage operations
+- Multicall incompatibilities
+
+**Example Vulnerable Code:**
+```solidity
+contract TokenSwap {
+    uint256 transient private swapState;
+
+    function startSwap(uint256 amount) public {
+        swapState = amount;  // TSTORE
+    }
+
+    function completeSwap() public {
+        require(swapState > 0, "No active swap");  // May fail!
+        // ... swap logic
+    }
+}
+
+// ❌ This multicall will FAIL:
+multicall.aggregate([
+    tokenSwap.startSwap(100),  // Sets transient state
+    tokenSwap.completeSwap()   // State is GONE if separate call
+]);
+```
+
+**Recommended Fix:**
+```solidity
+// Fix: Combine into single atomic function
+function atomicSwap(uint256 amount) public {
+    // Set AND use transient state in same call
+    uint256 transient swapState = amount;
+    require(swapState > 0);
+    // ... logic
+}
+```
+
+---
+
+### Transient Storage State Leak
+
+**ID:** `transient-storage-state-leak`
+**Severity:** Medium
+**Category:** Logic, Best Practices
+
+**Description:**
+Detects missing cleanup of transient storage that could poison transaction state for subsequent calls in multicall scenarios.
+
+**What it Finds:**
+- Functions modifying transient storage without explicit cleanup
+- Early returns that skip cleanup
+- Missing `delete` statements for transient variables
+
+**Recommended Fix:**
+```solidity
+// Good pattern: Explicit cleanup
+function process() public {
+    transientState = msg.value;
+    // ... logic
+    
+    // ✅ Explicit cleanup
+    delete transientState;
+}
+
+// Or use modifier for guaranteed cleanup
+modifier cleanupTransient() {
+    _;
+    delete transientState;  // Always runs
+}
+```
+
+---
+
+### Transient Storage Misuse
+
+**ID:** `transient-storage-misuse`
+**Severity:** Medium  
+**Category:** Logic
+
+**Description:**
+Detects persistent data incorrectly stored in transient storage, causing critical state loss between transactions.
+
+**What it Finds:**
+- User balances, allowances, ownership in transient storage
+- Contract configuration (owner, paused state) marked transient
+- Transient variables read in view functions (always return 0)
+
+**Example Vulnerable Code:**
+```solidity
+contract MisuseExample {
+    // ❌ BAD: User balances in transient storage!
+    mapping(address => uint256) transient public balances;
+
+    function deposit() public payable {
+        balances[msg.sender] += msg.value;
+        // Lost at end of transaction!
+    }
+
+    function withdraw() public {
+        // Always zero in a new transaction!
+        uint256 amount = balances[msg.sender];
+    }
+}
+```
+
+**Recommended Fix:**
+```solidity
+// ✅ Use regular storage for persistent data
+mapping(address => uint256) public balances;
+```
+
+---
+
+### Transient Reentrancy Guard
+
+**ID:** `transient-reentrancy-guard`
+**Severity:** Medium
+**Category:** Reentrancy
+
+**Description:**
+Detects transient reentrancy guards that may not protect against new EIP-1153 attack vectors with low-gas calls.
+
+**What it Finds:**
+- Transient reentrancy guards combined with low-gas calls
+- Missing read-only reentrancy protection for view functions
+- Guards that don't account for transient state manipulation
+
+**Recommended Fix:**
+```solidity
+uint256 transient private locked;
+
+modifier nonReentrant() {
+    require(locked == 0, "Reentrant");
+    locked = 1;
+    _;
+    locked = 0;
+}
+
+// ✅ Also protect view functions
+function getBalance(address user) public view returns (uint256) {
+    require(locked == 0, "No read during state change");
+    return balances[user];
+}
+```
+
+---
+
+## Phase 25: EIP-7702 Account Delegation Security (v0.15.0)
+
+EIP-7702 enables EOA code delegation in the Pectra upgrade, but created **$12M+ in 2025 phishing losses**. These 6 detectors prevent the attack patterns responsible for 97% of malicious delegations.
+
+### EIP-7702 Initialization Front-Running
+
+**ID:** `eip7702-init-frontrun`
+**Severity:** Critical
+**Category:** Access Control
+
+**Description:**
+Detects unprotected initialization in EIP-7702 delegate contracts vulnerable to front-running attacks. **CRITICAL**: $1.54M lost in August 2025 single attack via initialization front-running.
+
+**What it Finds:**
+- Public/external initialization functions without authorization
+- Missing signature verification in initialization
+- Unprotected owner/admin setup
+
+**Attack Scenario:**
+```solidity
+contract VulnerableDelegate {
+    address public owner;
+
+    // ❌ VULNERABLE: Anyone can call first
+    function initialize(address _owner) public {
+        require(owner == address(0), "Already initialized");
+        owner = _owner;
+    }
+}
+
+// Attack:
+// 1. User signs EIP-7702 authorization for VulnerableDelegate
+// 2. Attacker front-runs with initialize(attackerAddress)
+// 3. Attacker now owns user's EOA delegation
+// 4. Attacker drains all assets
+```
+
+**Recommended Fix:**
+```solidity
+// Fix 1: Authorization-based initialization
+function initialize(address _owner, bytes memory signature) public {
+    require(owner == address(0));
+    
+    // ✅ Verify user signed this specific initialization
+    bytes32 hash = keccak256(abi.encodePacked(_owner, address(this)));
+    address signer = ECDSA.recover(hash, signature);
+    require(signer == _owner, "Invalid signature");
+    
+    owner = _owner;
+}
+
+// Fix 2: Constructor initialization (if possible)
+constructor(address _owner) {
+    owner = _owner;  // ✅ Set during deployment
+}
+```
+
+**Real-World Loss:** $1.54M (August 2025)
+
+---
+
+### EIP-7702 Delegate Access Control
+
+**ID:** `eip7702-delegate-access-control`
+**Severity:** Critical
+**Category:** Access Control
+
+**Description:**
+Detects missing authorization in EIP-7702 delegate execute functions that allow arbitrary execution and token drainage.
+
+**What it Finds:**
+- Execute/call functions without owner checks
+- Batch operations without authorization
+- Delegatecall operations accessible to anyone
+
+**Recommended Fix:**
+```solidity
+address public owner;
+
+function execute(address target, bytes calldata data) external payable {
+    require(msg.sender == owner, "Not authorized");
+    (bool success, ) = target.call{value: msg.value}(data);
+    require(success, "Call failed");
+}
+```
+
+---
+
+### EIP-7702 Storage Collision
+
+**ID:** `eip7702-storage-collision`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects storage layout mismatches between EOA and delegate contracts that can corrupt state.
+
+**Recommended Fix:**
+```solidity
+// Use EIP-7201 namespaced storage
+bytes32 private constant STORAGE_LOCATION = 
+    keccak256("myprotocol.delegate.storage");
+
+struct DelegateStorage {
+    address owner;
+    mapping(address => uint256) balances;
+}
+
+function _getStorage() private pure returns (DelegateStorage storage $) {
+    assembly { $.slot := STORAGE_LOCATION }
+}
+```
+
+---
+
+### EIP-7702 tx.origin Bypass
+
+**ID:** `eip7702-txorigin-bypass`
+**Severity:** High
+**Category:** Auth
+
+**Description:**
+Detects contracts using `tx.origin` for authentication, which breaks with EIP-7702 delegation.
+
+**Impact:**
+- Before: `tx.origin == msg.sender` for EOAs
+- After EIP-7702: `tx.origin != msg.sender` (msg.sender is delegate)
+
+**Recommended Fix:**
+```solidity
+// ❌ BREAKS with EIP-7702
+require(tx.origin == owner);
+
+// ✅ Use msg.sender instead
+require(msg.sender == owner);
+```
+
+---
+
+### EIP-7702 Sweeper Detection
+
+**ID:** `eip7702-sweeper-detection`
+**Severity:** Critical
+**Category:** DeFi
+
+**Description:**
+Detects malicious sweeper contracts - **97% of 2025 EIP-7702 delegations were sweepers**.
+
+**What it Finds:**
+- Contracts that transfer entire balance (address(this).balance)
+- Batch token operations without access control
+- Approve + transferFrom patterns
+- Minimal interface with no legitimate business logic
+
+**Risk Scoring:**
+The detector assigns risk scores based on multiple indicators:
+- Transfers ALL balance: +3 points
+- Batch token operations: +2 points
+- Approve + transferFrom: +2 points
+- No access control: +2 points
+- Minimal interface: +1 point
+
+**Score ≥ 4/10 = CRITICAL finding**
+
+**Real-World Impact:**
+- August 2025: $1.54M single transaction
+- 15,000+ wallets drained
+- 90% malicious delegation rate (Wintermute analysis)
+
+---
+
+### EIP-7702 Batch Phishing
+
+**ID:** `eip7702-batch-phishing`
+**Severity:** High
+**Category:** MEV
+
+**Description:**
+Detects batch execution patterns used in phishing attacks to drain multiple assets in one transaction.
+
+**What it Finds:**
+- Unprotected batch execution functions
+- Loops with external calls without authorization
+- Multi-asset drainage patterns
+
+**Attack Pattern:**
+1. Phishing site prompts EIP-7702 delegation
+2. Malicious batch function executes multiple calls
+3. Drains ETH, all ERC-20s, all NFTs in single transaction
+4. User sees only one transaction signature
+
+**Recommended Fix:**
+```solidity
+function batchExecute(Call[] calldata calls) external {
+    require(msg.sender == owner, "Not authorized");
+    
+    for (uint i = 0; i < calls.length; i++) {
+        (bool success,) = calls[i].target.call(calls[i].data);
+        require(success, "Call failed");
+    }
+}
+```
+
+---
+
+### Usage Examples
+
+**Scan for EIP-1153 Vulnerabilities:**
+```bash
+soliditydefend --detectors transient-storage-reentrancy,transient-storage-composability contracts/
+```
+
+**Scan for EIP-7702 Vulnerabilities:**
+```bash
+soliditydefend --detectors eip7702-init-frontrun,eip7702-sweeper-detection contracts/Delegate.sol
+```
+
+**All Phase 24 & 25 Detectors:**
+```bash
+soliditydefend --severity critical,high contracts/
+```
+
+### Real-World Exploit Prevention
+
+These detectors prevent attack patterns from documented exploits totaling **$12M+**:
+
+| Detector | Prevents | Loss Amount | Incident |
+|----------|----------|-------------|----------|
+| eip7702-init-frontrun | Front-running initialization | $1.54M | August 2025 |
+| eip7702-sweeper-detection | Malicious sweeper contracts | $12M+ | 2025 phishing campaigns |
+| transient-storage-reentrancy | Low-gas reentrancy | N/A | ChainSecurity research (2024) |
+
+
+---
+
+## Phase 26: ERC-7821 Batch Executor Security (v0.15.0)
+
+ERC-7821 defines minimal batch executor interfaces. These 4 detectors address security in batch execution patterns.
+
+### ERC-7821 Batch Authorization
+
+**ID:** `erc7821-batch-authorization`
+**Severity:** High
+**Category:** Access Control
+
+**Description:**
+Detects missing authorization in ERC-7821 batch executor implementations allowing arbitrary execution.
+
+**Recommended Fix:**
+```solidity
+address public owner;
+
+function executeBatch(
+    address[] calldata targets,
+    bytes[] calldata datas
+) external {
+    require(msg.sender == owner, "Not authorized");
+    
+    for (uint i = 0; i < targets.length; i++) {
+        (bool success,) = targets[i].call(datas[i]);
+        require(success);
+    }
+}
+```
+
+---
+
+### ERC-7821 Token Approval
+
+**ID:** `erc7821-token-approval`
+**Severity:** Critical
+**Category:** DeFi
+
+**Description:**
+Detects unsafe token approval patterns in batch executors. ERC-7821 should integrate with Permit2 for secure approvals.
+
+**Recommended Fix:**
+```solidity
+import {IPermit2} from "permit2/interfaces/IPermit2.sol";
+
+IPermit2 public constant PERMIT2 = IPermit2(0x000000000022D473030F116dDEE9F6B43aC78BA3);
+
+function executeBatch(
+    IPermit2.PermitTransferFrom memory permit,
+    bytes calldata signature
+) external {
+    PERMIT2.permitTransferFrom(
+        permit,
+        IPermit2.SignatureTransferDetails({to: address(this), requestedAmount: amount}),
+        msg.sender,
+        signature
+    );
+}
+```
+
+---
+
+### ERC-7821 Replay Protection
+
+**ID:** `erc7821-replay-protection`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects missing nonce or replay protection in batch executors.
+
+**Recommended Fix:**
+```solidity
+mapping(address => uint256) public nonces;
+
+function executeBatch(
+    uint256 nonce,
+    bytes calldata signature
+) external {
+    require(nonce == nonces[msg.sender], "Invalid nonce");
+    nonces[msg.sender]++;
+    
+    // Execute batch...
+}
+```
+
+---
+
+### ERC-7821 msg.sender Validation
+
+**ID:** `erc7821-msg-sender-validation`
+**Severity:** Medium
+**Category:** Auth
+
+**Description:**
+Detects msg.sender authentication issues in batch execution context (settler vs executor confusion).
+
+---
+
+## Phase 27: ERC-7683 Intent-Based Security (v0.15.0)
+
+ERC-7683 enables cross-chain intent systems. These 5 detectors address intent settlement security.
+
+### Intent Signature Replay
+
+**ID:** `intent-signature-replay`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects signature replay vulnerabilities in intent-based systems.
+
+---
+
+### Intent Solver Manipulation
+
+**ID:** `intent-solver-manipulation`  
+**Severity:** High
+**Category:** MEV
+
+**Description:**
+Detects solver/filler centralization and manipulation risks.
+
+---
+
+### Intent Nonce Management
+
+**ID:** `intent-nonce-management`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects improper nonce management in intent systems.
+
+---
+
+### Intent Settlement Validation
+
+**ID:** `intent-settlement-validation`
+**Severity:** High
+**Category:** Logic
+
+**Description:**
+Detects missing validation in intent settlement contracts.
+
+---
+
+### Intent Cross-Chain Validation
+
+**ID:** `erc7683-crosschain-validation`
+**Severity:** Critical
+**Category:** CrossChain
+
+**Description:**
+Detects missing cross-chain message validation in intent settlement contracts.
+
+**Recommended Fix:**
+```solidity
+function settle(
+    CrossChainOrder calldata order,
+    bytes calldata originProof
+) external {
+    // ✅ Validate origin chain
+    require(
+        order.originChainId == EXPECTED_ORIGIN_CHAIN,
+        "Invalid origin chain"
+    );
+    
+    // ✅ Validate destination matches current chain
+    require(
+        order.destinationChainId == block.chainid,
+        "Wrong destination chain"
+    );
+    
+    // ✅ Verify cross-chain proof
+    require(
+        _verifyMerkleProof(originProof, order),
+        "Invalid proof"
+    );
+}
+```
+
+---
+
+## Phase 28: Private Data & Storage Security (v0.15.0)
+
+Educational detectors for common privacy mistakes. These 4 detectors help developers understand blockchain data visibility.
+
+### Private Variable Exposure
+
+**ID:** `private-variable-exposure`
+**Severity:** High
+**Category:** Best Practices
+
+**Description:**
+Detects sensitive data in "private" variables. **All blockchain storage is publicly readable.**
+
+**What it Finds:**
+- Passwords, secrets, keys in private variables
+- Misunderstanding of "private" visibility
+
+**Critical Reminder:**
+```solidity
+// ❌ INSECURE - "private" does NOT encrypt!
+string private password = "mysecret123";
+
+// ✅ SECURE - Store hash only
+bytes32 public passwordHash = keccak256("password");
+```
+
+**How to Read Private Variables:**
+Any private variable can be read using `eth_getStorageAt` RPC call. The "private" keyword only prevents other contracts from accessing it, not users.
+
+---
+
+### Storage Slot Predictability
+
+**ID:** `storage-slot-predictability`
+**Severity:** Medium
+**Category:** Best Practices
+
+**Description:**
+Detects predictable storage slots used for sensitive data.
+
+**Recommended Fix:**
+```solidity
+// ✅ Hash before storing
+mapping(address => bytes32) public seedHashes;
+seedHashes[user] = keccak256(abi.encode(seed, salt));
+```
+
+---
+
+### Missing Commit-Reveal
+
+**ID:** `missing-commit-reveal`
+**Severity:** Medium
+**Category:** Best Practices
+
+**Description:**
+Detects auctions/bidding without commit-reveal protection.
+
+**Recommended Fix:**
+```solidity
+mapping(address => bytes32) public commitments;
+
+// Phase 1: Commit
+function commitBid(bytes32 commitment) external {
+    commitments[msg.sender] = commitment;
+}
+
+// Phase 2: Reveal
+function revealBid(uint256 amount, bytes32 salt) external payable {
+    bytes32 commitment = keccak256(abi.encode(amount, salt));
+    require(commitment == commitments[msg.sender]);
+    require(msg.value == amount);
+}
+```
+
+---
+
+### Plaintext Secret Storage
+
+**ID:** `plaintext-secret-storage`
+**Severity:** High
+**Category:** Best Practices
+
+**Description:**
+Detects unhashed secrets stored on-chain.
+
+**Recommended Fix:**
+```solidity
+// ❌ INSECURE
+string private password = "mysecret";
+
+// ✅ SECURE
+bytes32 public passwordHash = keccak256("mysecret");
+
+function authenticate(string memory input) public {
+    require(keccak256(bytes(input)) == passwordHash);
+}
+```
+
+---
+
+## Usage Examples
+
+**Scan for ERC-7821 Vulnerabilities:**
+```bash
+soliditydefend --detectors erc7821-batch-authorization,erc7821-token-approval contracts/
+```
+
+**Scan for ERC-7683 Intent Vulnerabilities:**
+```bash
+soliditydefend --detectors intent-signature-replay,intent-settlement-validation contracts/
+```
+
+**Scan for Privacy Issues:**
+```bash
+soliditydefend --detectors private-variable-exposure,plaintext-secret-storage contracts/
+```
+
+**All v0.15.0 Detectors:**
+```bash
+soliditydefend --severity critical,high,medium contracts/
+```
+
