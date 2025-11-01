@@ -1,6 +1,9 @@
-# Build artifacts
+# Build artifacts (except Cargo.lock which is needed)
 target/
-Cargo.lock
+*.rlib
+*.so
+*.dylib
+*.dll
 
 # IDE files
 .vscode/
@@ -8,28 +11,36 @@ Cargo.lock
 *.swp
 *.swo
 *~
+*.iml
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Git
 .git/
 .gitignore
+.gitattributes
+.github/
 
-# Documentation
+# Documentation (not needed in container)
 docs/
 *.md
 !README.md
+LICENSE*
 
-# Test files
+# Test files (not needed for production build)
 tests/fixtures/
+tests/test-output/
 test-output/
+test-results/
 
 # Temporary files
 tmp/
 temp/
 *.tmp
+*.bak
 
 # Logs
 *.log
@@ -37,15 +48,35 @@ logs/
 
 # Cache directories
 .cache/
-.cargo/
 node_modules/
 
 # Development artifacts
 .env
-.env.local
+.env.*
+!.env.example
 coverage/
 benchmarks/
+flamegraph/
+perf.data*
 
 # CI/CD artifacts
 ci-artifacts/
 build-info.json
+.circleci/
+.travis.yml
+.gitlab-ci.yml
+
+# Docker files (no need to copy into image)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Package manager files
+package*.json
+yarn.lock
+pnpm-lock.yaml
+
+# Editor backups
+*~
+\#*\#
+.\#*

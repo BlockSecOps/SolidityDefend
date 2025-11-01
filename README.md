@@ -63,7 +63,24 @@ For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTO
 
 ## 📦 Installation
 
-### From Source (Recommended)
+### Docker (Recommended for Quick Start)
+
+The fastest way to get started without installing dependencies:
+
+```bash
+# Build the image
+docker build -t soliditydefend:latest .
+
+# Analyze a contract
+docker run --rm -v $(pwd):/workspace soliditydefend:latest contract.sol
+
+# Or use with Docker Compose
+docker-compose run --rm soliditydefend contracts/
+```
+
+See [docs/DOCKER.md](docs/DOCKER.md) for comprehensive Docker usage, CI/CD integration, and advanced configurations.
+
+### From Source
 
 Requires Rust 1.75.0 or later:
 
@@ -306,6 +323,7 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 ## 📚 Documentation
 
+- **[Docker Guide](docs/DOCKER.md)** - Docker installation, usage, and CI/CD integration
 - **[Installation Guide](docs/INSTALLATION.md)** - Detailed installation instructions
 - **[Usage Guide](docs/USAGE.md)** - Comprehensive tutorials and examples
 - **[CLI Reference](docs/CLI.md)** - Complete command-line documentation
