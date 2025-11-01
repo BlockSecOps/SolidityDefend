@@ -919,6 +919,32 @@ impl CliApp {
                 "Enhanced Access Control (OWASP 2025)",
                 "High",
             ),
+            // Phase 30: Advanced DeFi Patterns (v1.0 Milestone - 2025)
+            (
+                "jit-liquidity-sandwich",
+                "JIT Liquidity Sandwich Attack",
+                "High",
+            ),
+            (
+                "hook-reentrancy-enhanced",
+                "Hook-Based Reentrancy Enhanced",
+                "High",
+            ),
+            (
+                "yield-farming-manipulation",
+                "Yield Farming Reward Manipulation",
+                "Medium",
+            ),
+            (
+                "pool-donation-enhanced",
+                "Pool Donation Attack Enhanced",
+                "High",
+            ),
+            (
+                "amm-invariant-manipulation",
+                "AMM Invariant Manipulation",
+                "High",
+            ),
         ];
 
         for (id, name, severity) in detector_info {

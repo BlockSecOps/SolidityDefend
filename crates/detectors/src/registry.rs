@@ -883,6 +883,23 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::owasp2025::EnhancedAccessControlDetector::new(),
         ));
+
+        // Phase 30: Advanced DeFi Patterns (v1.0 Milestone - 2025)
+        self.register(Arc::new(
+            crate::defi_advanced::JitLiquiditySandwichDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_advanced::HookReentrancyEnhancedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_advanced::YieldFarmingManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_advanced::PoolDonationEnhancedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::defi_advanced::AmmInvariantManipulationDetector::new(),
+        ));
     }
 }
 
