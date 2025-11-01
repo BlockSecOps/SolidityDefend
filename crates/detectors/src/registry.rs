@@ -646,26 +646,25 @@ impl DetectorRegistry {
         //     crate::erc7683::IntentSettlementValidationDetector::new(),
         // ));
 
-        // Restaking & LRT Security (v0.10.0 - 2025)
-        // TODO v0.12.0: Uncomment when restaking module is added
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingDelegationManipulationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingSlashingConditionsDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::LRTShareInflationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingWithdrawalDelaysDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::AVSValidationBypassDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingRewardsManipulationDetector::new(),
-        // ));
+        // Phase 31: Restaking & LRT Security (v0.17.0 - 2025)
+        self.register(Arc::new(
+            crate::restaking::RestakingDelegationManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingSlashingConditionsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::LRTShareInflationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingWithdrawalDelaysDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::AVSValidationBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingRewardsManipulationDetector::new(),
+        ));
 
         // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
         self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));

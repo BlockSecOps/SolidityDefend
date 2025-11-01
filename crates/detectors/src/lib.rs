@@ -96,8 +96,8 @@ pub mod bridge_token_minting;
 // Phase 13 v0.9.0: Comprehensive ERC-7683 Intent Detectors (2025) - TODO: Add to v0.12.0
 // pub mod erc7683;
 
-// Phase 14 v0.10.0: Restaking & LRT Security (2025) - TODO: Add to v0.12.0
-// pub mod restaking;
+// Phase 31: Restaking & LRT Security (v0.17.0)
+pub mod restaking;
 
 // Phase 24 v0.11.0: Account Abstraction Advanced & Enhanced Flash Loans (2025)
 pub mod aa;

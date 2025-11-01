@@ -945,6 +945,37 @@ impl CliApp {
                 "AMM Invariant Manipulation",
                 "High",
             ),
+            // Phase 31: Restaking & LRT Security
+            (
+                "restaking-delegation-manipulation",
+                "Restaking Delegation Manipulation",
+                "Critical",
+            ),
+            (
+                "restaking-slashing-conditions",
+                "Restaking Slashing Conditions",
+                "Critical",
+            ),
+            (
+                "lrt-share-inflation",
+                "LRT Share Inflation Attack",
+                "Critical",
+            ),
+            (
+                "restaking-withdrawal-delays",
+                "Restaking Withdrawal Delays",
+                "High",
+            ),
+            (
+                "avs-validation-bypass",
+                "AVS Validation Bypass",
+                "High",
+            ),
+            (
+                "restaking-rewards-manipulation",
+                "Restaking Rewards Manipulation",
+                "Medium",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
