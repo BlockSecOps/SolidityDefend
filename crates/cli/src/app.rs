@@ -199,6 +199,13 @@ impl CliApp {
                     .default_value("info"),
             )
             .arg(
+                Arg::new("confidence")
+                    .long("min-confidence")
+                    .help("Minimum confidence level")
+                    .value_parser(["low", "medium", "high", "confirmed"])
+                    .default_value("low"),
+            )
+            .arg(
                 Arg::new("list-detectors")
                     .long("list-detectors")
                     .help("List all available detectors")
@@ -341,10 +348,18 @@ impl CliApp {
                 _ => Severity::Info,
             };
 
+            let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str() {
+                "low" => detectors::types::Confidence::Low,
+                "medium" => detectors::types::Confidence::Medium,
+                "high" => detectors::types::Confidence::High,
+                "confirmed" => detectors::types::Confidence::Confirmed,
+                _ => detectors::types::Confidence::Low,
+            };
+
             let output_file = matches.get_one::<String>("output").map(PathBuf::from);
             let use_cache = !matches.get_flag("no-cache");
 
-            return app.analyze_from_url(url, format, output_file, min_severity, use_cache);
+            return app.analyze_from_url(url, format, output_file, min_severity, min_confidence, use_cache);
         }
 
         let files: Vec<&str> = matches
@@ -366,6 +381,14 @@ impl CliApp {
             "high" => Severity::High,
             "critical" => Severity::Critical,
             _ => Severity::Info,
+        };
+
+        let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str() {
+            "low" => detectors::types::Confidence::Low,
+            "medium" => detectors::types::Confidence::Medium,
+            "high" => detectors::types::Confidence::High,
+            "confirmed" => detectors::types::Confidence::Confirmed,
+            _ => detectors::types::Confidence::Low,
         };
 
         let output_file = matches.get_one::<String>("output").map(PathBuf::from);
@@ -407,6 +430,7 @@ impl CliApp {
             format,
             output_file,
             min_severity,
+            min_confidence,
             use_cache,
             exit_config,
         )
@@ -1285,6 +1309,7 @@ impl CliApp {
         format: OutputFormat,
         output_file: Option<PathBuf>,
         min_severity: Severity,
+        min_confidence: detectors::types::Confidence,
         use_cache: bool,
         exit_config: ExitCodeConfig,
     ) -> Result<()> {
@@ -1299,7 +1324,7 @@ impl CliApp {
             println!("Analyzing: {}", file_path);
             analysis_summary.total_files += 1;
 
-            match self.analyze_file(file_path, min_severity, use_cache) {
+            match self.analyze_file(file_path, min_severity, min_confidence, use_cache) {
                 Ok((findings, from_cache)) => {
                     let cache_indicator = if from_cache { " (cached)" } else { "" };
                     println!("  Found {} issues{}", findings.len(), cache_indicator);
@@ -1412,6 +1437,7 @@ impl CliApp {
         &self,
         file_path: &str,
         min_severity: Severity,
+        min_confidence: detectors::types::Confidence,
         use_cache: bool,
     ) -> Result<(Vec<Finding>, bool)> {
         // Read file
@@ -1419,7 +1445,7 @@ impl CliApp {
             .map_err(|e| anyhow!("Failed to read file {}: {}", file_path, e))?;
 
         // Create configuration hash for caching
-        let config_hash = self.generate_config_hash(&min_severity);
+        let config_hash = self.generate_config_hash(&min_severity, &min_confidence);
 
         // Check cache if enabled
         if use_cache {
@@ -1427,12 +1453,12 @@ impl CliApp {
             if let Some(cached_result) =
                 self.cache_manager.analysis_cache().get_analysis(&cache_key)
             {
-                // Convert cached findings back to Finding objects and filter by severity
+                // Convert cached findings back to Finding objects and filter by severity and confidence
                 let findings: Vec<Finding> = cached_result
                     .findings
                     .iter()
                     .map(|cached_finding| self.cached_finding_to_finding(cached_finding, file_path))
-                    .filter(|f| f.severity >= min_severity)
+                    .filter(|f| f.severity >= min_severity && f.confidence >= min_confidence)
                     .collect();
 
                 return Ok((findings, true)); // true = from cache
@@ -1520,23 +1546,24 @@ impl CliApp {
                 .store_analysis(cache_key, cached_result);
         }
 
-        // Filter by severity
+        // Filter by severity and confidence
         let filtered_findings: Vec<_> = analysis_result
             .findings
             .into_iter()
-            .filter(|f| f.severity >= min_severity)
+            .filter(|f| f.severity >= min_severity && f.confidence >= min_confidence)
             .collect();
 
         Ok((filtered_findings, false)) // false = not from cache
     }
 
     /// Generate a configuration hash for cache invalidation
-    fn generate_config_hash(&self, min_severity: &Severity) -> String {
+    fn generate_config_hash(&self, min_severity: &Severity, min_confidence: &detectors::types::Confidence) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
         let mut hasher = DefaultHasher::new();
         min_severity.hash(&mut hasher);
+        min_confidence.hash(&mut hasher);
         // Add other configuration that affects analysis results
         format!("{:x}", hasher.finish())
     }
@@ -1587,7 +1614,7 @@ impl CliApp {
             findings: cached_findings,
             metadata,
             file_path: file_path.to_string(),
-            config_hash: self.generate_config_hash(&Severity::Info), // TODO: Pass actual severity
+            config_hash: self.generate_config_hash(&Severity::Info, &detectors::types::Confidence::Low), // TODO: Pass actual severity/confidence
         })
     }
 
@@ -1683,6 +1710,7 @@ impl CliApp {
         format: OutputFormat,
         output_file: Option<PathBuf>,
         min_severity: Severity,
+        min_confidence: detectors::types::Confidence,
         use_cache: bool,
     ) -> Result<()> {
         Self::display_banner();
@@ -1759,7 +1787,7 @@ impl CliApp {
             analysis_summary.total_files += 1;
 
             // Analyze the temporary file
-            match self.analyze_file(&temp_path, min_severity, use_cache) {
+            match self.analyze_file(&temp_path, min_severity, min_confidence, use_cache) {
                 Ok((findings, from_cache)) => {
                     let cache_indicator = if from_cache { " (cached)" } else { "" };
                     println!("   Found {} issues{}", findings.len(), cache_indicator);

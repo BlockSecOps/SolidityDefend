@@ -343,7 +343,7 @@ impl std::fmt::Display for Severity {
 }
 
 /// Confidence level in the accuracy of a finding
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Confidence {
     /// Low confidence - might be a false positive
     Low,
