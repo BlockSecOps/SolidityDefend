@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct MEVSandwichVulnerableDetector {
     base: BaseDetector,
@@ -60,6 +61,14 @@ impl Detector for MEVSandwichVulnerableDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip AMM pool contracts - sandwich attacks on AMM swaps are expected/intentional
+        // AMMs provide liquidity and price discovery through arbitrage (which includes sandwiches)
+        // This detector should focus on contracts that CONSUME AMM data without slippage protection
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Check for DEX swap operations

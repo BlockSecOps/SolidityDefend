@@ -15,6 +15,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct AmmInvariantManipulationDetector {
     base: BaseDetector,
@@ -67,6 +68,14 @@ impl Detector for AmmInvariantManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip standard AMM implementations (UniswapV2/V3, Curve, Balancer)
+        // These are battle-tested implementations with proper invariant checks
+        // This detector should focus on custom AMM implementations
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Check for AMM swap functionality

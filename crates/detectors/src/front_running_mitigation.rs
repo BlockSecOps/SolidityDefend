@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for missing front-running protection mechanisms
 pub struct FrontRunningMitigationDetector {
@@ -50,6 +51,13 @@ impl Detector for FrontRunningMitigationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip AMM pool contracts - front-running/sandwich attacks are EXPECTED on AMM swaps
+        // AMMs enable arbitrage and MEV as part of their price discovery mechanism
+        // This detector should focus on user-facing contracts that consume AMM data
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(frontrun_issue) = self.check_frontrunning_risk(function, ctx) {

@@ -295,13 +295,183 @@ pub fn is_uniswap_v3_pool(ctx: &AnalysisContext) -> bool {
     has_v3_oracle && has_liquidity && indicator_count >= 2
 }
 
+/// Detects if the contract is a Uniswap V4 style AMM with hooks
+///
+/// Uniswap V4 characteristics:
+/// - Hook system (beforeSwap, afterSwap, beforeAddLiquidity, afterAddLiquidity, etc.)
+/// - PoolManager singleton pattern
+/// - Delta accounting system (BalanceDelta)
+/// - EIP-1153 transient storage usage
+/// - Dynamic fee structure based on hooks
+pub fn is_uniswap_v4_pool(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for V4 hook functions
+    let has_before_swap = source.contains("function beforeSwap(")
+        || source.contains("beforeSwap(address,PoolKey");
+    let has_after_swap =
+        source.contains("function afterSwap(") || source.contains("afterSwap(address,PoolKey");
+
+    // Check for V4 hook system
+    let has_hooks = (source.contains("beforeSwap")
+        || source.contains("afterSwap")
+        || source.contains("beforeAddLiquidity")
+        || source.contains("afterAddLiquidity"))
+        && (source.contains("IHooks") || source.contains("BaseHook"));
+
+    // Check for PoolManager pattern
+    let has_pool_manager = source.contains("PoolManager")
+        || source.contains("IPoolManager")
+        || source.contains("poolManager");
+
+    // Check for BalanceDelta type (V4 specific)
+    let has_balance_delta = source.contains("BalanceDelta") || source.contains("toBalanceDelta");
+
+    // Check for transient storage (EIP-1153, V4 uses this heavily)
+    let has_transient_storage = source.contains("tstore") || source.contains("tload");
+
+    // Check for V4 PoolKey structure
+    let has_pool_key = source.contains("PoolKey") || source.contains("poolKey");
+
+    // Must have hooks + at least 2 other V4 indicators
+    let indicator_count = [
+        has_pool_manager,
+        has_balance_delta,
+        has_transient_storage,
+        has_pool_key,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_hooks && indicator_count >= 2
+}
+
+/// Detects if the contract is a Curve Finance style AMM
+///
+/// Curve Finance characteristics:
+/// - StableSwap algorithm for low-slippage stablecoin swaps
+/// - exchange() function with int128 token indices
+/// - get_virtual_price() for share price calculation
+/// - A (amplification coefficient) parameter
+/// - coins() and balances() arrays for pool tokens
+/// - Meta pools and factory pools
+pub fn is_curve_amm(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for Curve-specific exchange function
+    let has_exchange = source.contains("function exchange(int128")
+        || (source.contains("function exchange(") && source.contains("int128"));
+
+    // Check for virtual price (key Curve concept)
+    let has_virtual_price = source.contains("function get_virtual_price(")
+        || source.contains("get_virtual_price()");
+
+    // Check for amplification coefficient (StableSwap algorithm)
+    let has_amplification = source.contains("function A()")
+        || source.contains("function get_A()")
+        || source.contains("amplification");
+
+    // Check for Curve token arrays (coins, balances)
+    let has_coins_array = source.contains("function coins(")
+        || source.contains("coins[") || source.contains("coins(uint256");
+    let has_balances_array = source.contains("function balances(")
+        || source.contains("balances[") || source.contains("balances(uint256");
+
+    // Check for Curve-specific patterns
+    let has_curve_marker =
+        source.contains("StableSwap") || source.contains("Curve") || source.contains("CurveFi");
+
+    // Check for dy calculation (Curve naming convention)
+    let has_dy_calculation =
+        source.contains("get_dy") || source.contains("calc_token_amount") || source.contains("dy");
+
+    // Must have exchange function + at least 3 other indicators
+    let indicator_count = [
+        has_virtual_price,
+        has_amplification,
+        has_coins_array && has_balances_array,
+        has_curve_marker,
+        has_dy_calculation,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_exchange && indicator_count >= 3
+}
+
+/// Detects if the contract is a Balancer style AMM
+///
+/// Balancer characteristics:
+/// - Weighted pools with customizable token weights
+/// - Stable pools with amplification parameter
+/// - onSwap() hook function for pool logic
+/// - getPoolId() returning bytes32 pool identifier
+/// - Vault-based architecture (pool tokens held by Vault)
+/// - getNormalizedWeights() for weighted pools
+/// - getAmplificationParameter() for stable pools
+pub fn is_balancer_amm(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for Balancer Vault architecture
+    let has_pool_id = source.contains("function getPoolId()")
+        || source.contains("getPoolId() ")
+        || source.contains("poolId");
+
+    // Check for onSwap hook (Balancer pool interface)
+    let has_on_swap = source.contains("function onSwap(") && source.contains("SwapRequest");
+
+    // Check for Balancer weighted pool functions
+    let has_normalized_weights = source.contains("function getNormalizedWeights(")
+        || source.contains("getNormalizedWeights()");
+
+    // Check for Balancer stable pool functions
+    let has_amplification_param = source.contains("function getAmplificationParameter(")
+        || source.contains("getAmplificationParameter()");
+
+    // Check for Balancer marker interfaces
+    let has_balancer_marker = source.contains("IBalancer")
+        || source.contains("BasePool")
+        || source.contains("IVault")
+        || source.contains("Balancer");
+
+    // Check for Balancer pool token management
+    let has_pool_tokens = source.contains("function getPoolTokens(")
+        || source.contains("getPoolTokens()")
+        || source.contains("IERC20[] ");
+
+    // Check for Balancer-specific patterns
+    let has_balancer_math =
+        source.contains("WeightedMath") || source.contains("StableMath") || source.contains("_calcOutGivenIn");
+
+    // Must have pool ID + at least 2 other Balancer indicators
+    let indicator_count = [
+        has_on_swap,
+        has_normalized_weights || has_amplification_param,
+        has_balancer_marker,
+        has_pool_tokens,
+        has_balancer_math,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_pool_id && indicator_count >= 2
+}
+
 /// Detects if the contract is any type of AMM/DEX pool
 ///
 /// This is a generic AMM detection that covers various AMM implementations
-/// including Uniswap V2/V3, Curve, Balancer, etc.
+/// including Uniswap V2/V3/V4, Curve, Balancer, etc.
 pub fn is_amm_pool(ctx: &AnalysisContext) -> bool {
     // Check for specific AMM types first
-    if is_uniswap_v2_pair(ctx) || is_uniswap_v3_pool(ctx) {
+    if is_uniswap_v2_pair(ctx)
+        || is_uniswap_v3_pool(ctx)
+        || is_uniswap_v4_pool(ctx)
+        || is_curve_amm(ctx)
+        || is_balancer_amm(ctx)
+    {
         return true;
     }
 
