@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::{access_control_patterns, modern_eip_patterns};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for vulnerabilities allowing EntryPoint replacement attacks
@@ -54,6 +55,38 @@ impl Detector for AaAccountTakeoverDetector {
 
         // Check for ERC-4337 patterns
         if !self.is_erc4337_contract(contract_source) {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong AA/access control protections (return early)
+        if modern_eip_patterns::has_safe_metatx_pattern(ctx) {
+            // Safe meta-tx pattern includes comprehensive signature validation + replay protection
+            // This prevents signature bypass and ensures proper authentication
+            if access_control_patterns::has_two_step_ownership(ctx) {
+                if access_control_patterns::has_timelock_pattern(ctx) {
+                    // Comprehensive protection: EIP-712 sigs + two-step ownership + timelock
+                    // Prevents all account takeover vectors
+                    return Ok(findings);
+                }
+            }
+        }
+
+        // Level 2: Standard access control protections
+        let has_timelock = access_control_patterns::has_timelock_pattern(ctx);
+        let has_multisig = access_control_patterns::has_multisig_pattern(ctx);
+        let has_two_step_ownership = access_control_patterns::has_two_step_ownership(ctx);
+        let has_role_hierarchy = access_control_patterns::has_role_hierarchy_pattern(ctx);
+
+        // Early return if strong governance protections are present
+        if has_timelock && has_multisig {
+            // Timelock + multisig provides strong protection against unauthorized changes
+            return Ok(findings);
+        }
+
+        if has_two_step_ownership && (has_timelock || has_multisig) {
+            // Two-step ownership with additional protection is sufficient
             return Ok(findings);
         }
 
