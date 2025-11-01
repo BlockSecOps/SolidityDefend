@@ -166,6 +166,9 @@ pub mod privacy;
 // Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
 pub mod owasp2025;
 
+// Phase 30: Advanced DeFi Patterns (v1.0 Milestone - 2025)
+pub mod defi_advanced;
+
 // DeFi-specific detectors
 pub mod defi;
 

@@ -5,6 +5,63 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2025-10-31
+
+### 🎯 Phase 30: Advanced DeFi Security Patterns (5 New Detectors)
+
+This release completes **Phase 30** with **5 advanced DeFi security detectors**, bringing the total to **135 detectors** and achieving **100% completion** of planned detector coverage for the v1.0 milestone.
+
+These detectors focus on sophisticated attack patterns in modern DeFi protocols, including JIT liquidity manipulation, Uniswap V4 hook vulnerabilities, yield farming exploits, pool donation attacks, and AMM invariant violations.
+
+---
+
+### Added
+
+#### **Phase 30: Advanced DeFi Patterns (5 detectors)**
+
+Modern DeFi attack patterns requiring specialized detection:
+
+- **jit-liquidity-sandwich** (High)
+  - Just-in-time liquidity sandwich attacks
+  - Detects missing time-lock protections on liquidity removal
+  - Identifies instant liquidity activation vulnerabilities
+  - Checks for time-weighted fee distribution
+
+- **hook-reentrancy-enhanced** (High)
+  - Uniswap V4 hook-specific reentrancy vulnerabilities
+  - Detects unprotected external calls in beforeSwap/afterSwap hooks
+  - Validates callback sender authorization
+  - Identifies hook-based reentry attack surfaces
+
+- **yield-farming-manipulation** (Medium)
+  - Yield farming reward calculation exploits
+  - Detects TVL-based rewards without time-weighting
+  - Identifies missing minimum staking duration
+  - Validates share-based reward inflation protection
+
+- **pool-donation-enhanced** (High)
+  - Advanced pool donation and share inflation attacks
+  - ERC-4626 vault first-depositor manipulation
+  - Detects missing virtual/dead shares protection
+  - Validates minimum deposit requirements
+
+- **amm-invariant-manipulation** (High)
+  - AMM constant product (K) invariant violations
+  - Detects unprotected reserve updates
+  - Identifies missing TWAP implementations
+  - Validates flash swap reentrancy protection
+  - Checks fee-on-transfer token compatibility
+
+---
+
+### Summary
+
+**Detector Count**: 130 → **135** (+5)
+**Coverage**: Advanced DeFi security patterns complete
+**Focus**: MEV, liquidity manipulation, invariant violations, modern AMM vulnerabilities
+
+---
+
 ## [0.15.0] - 2025-10-31
 
 ### 🎯 Major Release: Phases 24-29 Implementation (30 New Detectors)
