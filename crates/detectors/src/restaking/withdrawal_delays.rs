@@ -22,7 +22,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::vault_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 use crate::restaking::classification::*;
 use ast;
 
@@ -412,6 +413,14 @@ impl Detector for RestakingWithdrawalDelaysDetector {
 
         // Only run on restaking/LRT contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong restaking protocol protections (return early)
+        if vault_patterns::has_eigenlayer_delegation_pattern(ctx) {
+            // EigenLayer has battle-tested withdrawal queue with 7-day delay
             return Ok(findings);
         }
 

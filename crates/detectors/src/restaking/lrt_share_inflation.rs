@@ -22,7 +22,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::vault_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 use crate::restaking::classification::*;
 use ast;
 
@@ -411,6 +412,19 @@ impl Detector for LRTShareInflationDetector {
 
         // Only run on LRT contracts (Liquid Restaking Tokens / ERC-4626 vaults)
         if !is_lrt_contract(ctx) && !is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong LRT protocol protections (return early)
+        if vault_patterns::has_lrt_peg_protection(ctx) {
+            // LRT peg protection includes share inflation protection
+            return Ok(findings);
+        }
+
+        if vault_patterns::has_inflation_protection(ctx) {
+            // Comprehensive inflation protection (dead shares, virtual shares, minimum deposit)
             return Ok(findings);
         }
 
