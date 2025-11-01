@@ -99,6 +99,30 @@ pub mod bridge_token_minting;
 // Phase 31: Restaking & LRT Security (v0.17.0)
 pub mod restaking;
 
+// Phase 32: Advanced Access Control (v0.18.0)
+pub mod access_control_advanced;
+
+// Phase 33: ERC-4337 AA Advanced (v0.19.0)
+pub mod aa_advanced;
+
+// Phase 34: Flash Loan Enhanced (v0.20.0)
+pub mod flashloan_enhanced;
+
+// Phase 35: Token Standards Extended (v0.21.0)
+pub mod token_standards_extended;
+
+// Phase 36: MEV Protection Enhanced (v0.22.0)
+pub mod mev_enhanced;
+
+// Phase 37: Zero-Knowledge Proofs (v1.0.0)
+pub mod zk_proofs;
+
+// Phase 38: Modular Blockchain (v1.0.0)
+pub mod modular_blockchain;
+
+// Phase 39: AI Agent Security (v1.0.0)
+pub mod ai_agent;
+
 // Phase 24 v0.11.0: Account Abstraction Advanced & Enhanced Flash Loans (2025)
 pub mod aa;
 pub mod flashloan;

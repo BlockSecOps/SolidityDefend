@@ -976,6 +976,199 @@ impl CliApp {
                 "Restaking Rewards Manipulation",
                 "Medium",
             ),
+            // Phase 32: Advanced Access Control
+            (
+                "role-hierarchy-bypass",
+                "Role Hierarchy Bypass",
+                "Critical",
+            ),
+            (
+                "time-locked-admin-bypass",
+                "Time-Locked Admin Bypass",
+                "Critical",
+            ),
+            (
+                "multi-role-confusion",
+                "Multi-Role Confusion",
+                "High",
+            ),
+            (
+                "privilege-escalation-paths",
+                "Privilege Escalation Paths",
+                "High",
+            ),
+            (
+                "guardian-role-centralization",
+                "Guardian Role Centralization",
+                "Medium",
+            ),
+            // Phase 33: ERC-4337 AA Advanced
+            (
+                "aa-calldata-encoding-exploit",
+                "AA Calldata Encoding Exploit",
+                "Critical",
+            ),
+            (
+                "aa-paymaster-fund-drain",
+                "AA Paymaster Fund Drain",
+                "Critical",
+            ),
+            (
+                "aa-signature-aggregation-bypass",
+                "AA Signature Aggregation Bypass",
+                "High",
+            ),
+            (
+                "aa-user-operation-replay",
+                "AA User Operation Replay",
+                "High",
+            ),
+            (
+                "aa-entry-point-reentrancy",
+                "AA Entry Point Reentrancy",
+                "Medium",
+            ),
+            (
+                "aa-bundler-dos-enhanced",
+                "AA Bundler DOS Enhanced",
+                "High",
+            ),
+            // Phase 34: Flash Loan Enhanced
+            (
+                "flash-loan-price-manipulation-advanced",
+                "Flash Loan Price Manipulation Advanced",
+                "Critical",
+            ),
+            (
+                "flash-loan-governance-attack",
+                "Flash Loan Governance Attack",
+                "Critical",
+            ),
+            (
+                "flash-loan-reentrancy-combo",
+                "Flash Loan Reentrancy Combo",
+                "Critical",
+            ),
+            (
+                "flash-loan-collateral-swap",
+                "Flash Loan Collateral Swap",
+                "High",
+            ),
+            // Phase 35: Token Standards Extended
+            (
+                "erc20-transfer-return-bomb",
+                "ERC-20 Transfer Return Bomb",
+                "Medium",
+            ),
+            (
+                "erc721-enumeration-dos",
+                "ERC-721 Enumeration DOS",
+                "Medium",
+            ),
+            (
+                "erc1155-batch-validation",
+                "ERC-1155 Batch Validation",
+                "Medium",
+            ),
+            (
+                "token-decimal-confusion",
+                "Token Decimal Confusion",
+                "High",
+            ),
+            (
+                "token-permit-front-running",
+                "Token Permit Front-Running",
+                "Medium",
+            ),
+            // Phase 36: MEV Protection Enhanced
+            (
+                "mev-sandwich-vulnerable-swaps",
+                "MEV Sandwich Vulnerable Swaps",
+                "High",
+            ),
+            (
+                "mev-backrun-opportunities",
+                "MEV Backrun Opportunities",
+                "Medium",
+            ),
+            (
+                "mev-priority-gas-auction",
+                "MEV Priority Gas Auction",
+                "Medium",
+            ),
+            (
+                "mev-toxic-flow-exposure",
+                "MEV Toxic Flow Exposure",
+                "Medium",
+            ),
+            // Phase 37: Zero-Knowledge Proofs
+            (
+                "zk-proof-malleability",
+                "ZK Proof Malleability",
+                "Critical",
+            ),
+            (
+                "zk-trusted-setup-bypass",
+                "ZK Trusted Setup Bypass",
+                "High",
+            ),
+            (
+                "zk-circuit-under-constrained",
+                "ZK Circuit Under-Constrained",
+                "Critical",
+            ),
+            (
+                "zk-recursive-proof-validation",
+                "ZK Recursive Proof Validation",
+                "High",
+            ),
+            // Phase 38: Modular Blockchain
+            (
+                "celestia-data-availability",
+                "Celestia Data Availability",
+                "High",
+            ),
+            (
+                "cross-rollup-atomicity",
+                "Cross-Rollup Atomicity",
+                "Critical",
+            ),
+            (
+                "optimistic-fraud-proof-timing",
+                "Optimistic Fraud Proof Timing",
+                "High",
+            ),
+            (
+                "cross-chain-message-ordering",
+                "Cross-Chain Message Ordering",
+                "High",
+            ),
+            (
+                "sovereign-rollup-validation",
+                "Sovereign Rollup Validation",
+                "Medium",
+            ),
+            // Phase 39: AI Agent Security
+            (
+                "ai-agent-prompt-injection",
+                "AI Agent Prompt Injection",
+                "High",
+            ),
+            (
+                "ai-agent-decision-manipulation",
+                "AI Agent Decision Manipulation",
+                "High",
+            ),
+            (
+                "autonomous-contract-oracle-dependency",
+                "Autonomous Contract Oracle Dependency",
+                "Medium",
+            ),
+            (
+                "ai-agent-resource-exhaustion",
+                "AI Agent Resource Exhaustion",
+                "Medium",
+            ),
         ];
 
         for (id, name, severity) in detector_info {
