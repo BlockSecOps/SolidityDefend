@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct OracleTimeWindowAttackDetector {
     base: BaseDetector,
@@ -60,6 +61,13 @@ impl Detector for OracleTimeWindowAttackDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip AMM pool contracts - they ARE the oracle/price source, not consumers
+        // UniswapV2/V3 pools provide TWAP data via cumulative price tracking
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
 
         // Check for oracle usage

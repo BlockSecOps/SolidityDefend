@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct MEVToxicFlowDetector {
     base: BaseDetector,
@@ -60,6 +61,14 @@ impl Detector for MEVToxicFlowDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip standard AMM implementations (Uniswap V2/V3, Curve, Balancer)
+        // These protocols intentionally don't have dynamic fees or toxic flow protection
+        // and operate with known MEV risks as part of their design
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Check for AMM/DEX functionality

@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for oracle price manipulation via flash loans
 pub struct OracleManipulationDetector {
@@ -51,6 +52,13 @@ impl Detector for OracleManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip AMM pool contracts - they ARE the oracle source, not consumers
+        // Uniswap V2/V3 pools implement TWAP oracles themselves (cumulative price tracking)
+        // This detector should focus on contracts that CONSUME oracle data unsafely
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if self.is_vulnerable_to_oracle_manipulation(function, ctx) {
@@ -165,14 +173,22 @@ impl OracleManipulationDetector {
 
     /// Check for specific oracle manipulation vulnerability patterns
     fn has_manipulation_vulnerability(&self, source: &str) -> bool {
+        // Check if using safe TWAP implementation first
+        let has_safe_twap = source.contains("TWAP")
+            || source.contains("twap")
+            || source.contains("getTWAP")
+            || source.contains("timeWeighted")
+            || source.contains("cumulative") // Uniswap V2/V3 cumulative price
+            || source.contains("Cumulative")
+            || source.contains("observe(") // Uniswap V3 oracle observation
+            || source.contains("observations[") // V3 observation array
+            || (source.contains("price0") && source.contains("price1") && source.contains("Last")); // V2 price tracking
+
         // Pattern 1: Uses spot price without TWAP
         let uses_spot_price = (source.contains("getPrice")
             || source.contains("latestPrice")
             || source.contains("getReserves"))
-            && !source.contains("TWAP")
-            && !source.contains("twap")
-            && !source.contains("getTWAP")
-            && !source.contains("timeWeighted");
+            && !has_safe_twap;
 
         // Pattern 2: Direct reserve manipulation
         let uses_reserves = source.contains("getReserves")

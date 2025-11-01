@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for validator front-running vulnerabilities
 pub struct ValidatorFrontRunningDetector {
@@ -50,6 +51,12 @@ impl Detector for ValidatorFrontRunningDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip AMM pool contracts - validator MEV is expected and inherent to their design
+        // AMMs enable price discovery and arbitrage through validator ordering
+        if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(frontrun_issue) = self.check_validator_frontrunning(function, ctx) {
