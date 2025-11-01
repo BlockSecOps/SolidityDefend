@@ -1,6 +1,6 @@
 # Multi-stage build for SolidityDefend
 # Builder stage
-FROM rust:1.75-slim-bullseye AS builder
+FROM rust:1.80-slim-bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \

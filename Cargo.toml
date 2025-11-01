@@ -32,7 +32,7 @@ homepage = "https://github.com/BlockSecOps/SolidityDefend"
 description = "A static analysis security tool for Solidity smart contracts"
 keywords = ["solidity", "security", "static-analysis", "blockchain", "smart-contracts"]
 categories = ["development-tools", "command-line-utilities"]
-rust-version = "1.75.0"
+rust-version = "1.80.0"
 
 [workspace.dependencies]
 # Core Analysis Libraries
