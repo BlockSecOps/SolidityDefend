@@ -80,6 +80,8 @@ pub mod withdrawal_delay;
 pub mod aa_account_takeover;
 pub mod aa_bundler_dos;
 pub mod aa_initialization_vulnerability;
+pub mod aa_session_key_vulnerabilities;
+pub mod aa_social_recovery;
 pub mod erc4337_entrypoint_trust;
 pub mod hardware_wallet_delegation;
 
