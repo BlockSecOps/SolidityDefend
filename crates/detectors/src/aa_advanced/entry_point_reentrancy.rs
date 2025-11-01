@@ -7,7 +7,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::{modern_eip_patterns, reentrancy_patterns};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 pub struct AAEntryPointReentrancyDetector {
     base: BaseDetector,
@@ -68,6 +69,26 @@ impl Detector for AAEntryPointReentrancyDetector {
             || lower.contains("entrypoint");
 
         if !is_aa_contract {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong reentrancy protections (return early)
+        if reentrancy_patterns::has_reentrancy_guard(ctx) {
+            // OpenZeppelin ReentrancyGuard protects all entry points
+            return Ok(findings);
+        }
+
+        // Level 2: EIP-1153 transient storage protection
+        if modern_eip_patterns::has_safe_transient_storage_pattern(ctx) {
+            // Transient storage provides gas-efficient reentrancy protection
+            return Ok(findings);
+        }
+
+        // Level 3: CEI pattern compliance
+        if reentrancy_patterns::follows_cei_pattern(ctx) {
+            // Checks-effects-interactions pattern reduces reentrancy risk
             return Ok(findings);
         }
 

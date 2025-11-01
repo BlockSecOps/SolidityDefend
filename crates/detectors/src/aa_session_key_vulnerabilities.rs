@@ -4,6 +4,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::access_control_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SessionKeyVulnerabilitiesDetector {
@@ -186,6 +187,29 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
         let mut findings = Vec::new();
 
         if !self.is_session_key_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection for comprehensive session key implementations
+
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Check for comprehensive session key protection (all critical features)
+        let has_expiration = source_lower.contains("expirationtime") || source_lower.contains("validuntil");
+        let has_spending_limit = source_lower.contains("spendinglimit") || source_lower.contains("maxvalue");
+        let has_target_whitelist = source_lower.contains("targetwhitelist") || source_lower.contains("allowedtargets");
+        let has_operation_limit = source_lower.contains("operationlimit") || source_lower.contains("operationcount");
+        let has_revocation = source_lower.contains("revoke") || source_lower.contains("isactive");
+
+        // If contract has comprehensive session key protections, return early
+        if has_expiration && has_spending_limit && has_target_whitelist && has_operation_limit && has_revocation {
+            // Comprehensive session key implementation with all security features
+            return Ok(findings);
+        }
+
+        // Also check for role-based access control patterns
+        if access_control_patterns::has_role_hierarchy_pattern(ctx) {
+            // Role-based access control provides structured permission management
             return Ok(findings);
         }
 

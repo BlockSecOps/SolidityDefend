@@ -76,8 +76,13 @@ impl Detector for VaultShareInflationDetector {
             return Ok(findings);
         }
 
+        if vault_patterns::has_internal_balance_tracking(ctx) {
+            // Internal accounting prevents donation attacks - share price unaffected by direct transfers
+            return Ok(findings);
+        }
+
         // Level 3: Advanced DeFi patterns (reduce confidence if present)
-        let has_internal_tracking = vault_patterns::has_internal_balance_tracking(ctx);
+        let has_internal_tracking = false; // Already checked above
         let has_donation_guard = vault_patterns::has_donation_guard(ctx);
         let has_strategy_isolation = vault_patterns::has_strategy_isolation(ctx);
         let has_reward_distribution = vault_patterns::has_safe_reward_distribution(ctx);
