@@ -232,6 +232,210 @@ pub fn has_donation_guard(ctx: &AnalysisContext) -> bool {
     false
 }
 
+/// Detect EigenLayer restaking patterns
+///
+/// EigenLayer-specific patterns for delegated staking and operator management.
+///
+/// Patterns detected:
+/// - `IDelegationManager` interface usage
+/// - `delegateTo` function calls
+/// - `undelegate` with proper withdrawal delay
+/// - `queueWithdrawal` pattern
+/// - `completeQueuedWithdrawal` with delay check
+pub fn has_eigenlayer_delegation_pattern(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+
+    // Pattern 1: IDelegationManager interface
+    if source.contains("IDelegationManager") || source.contains("delegationManager") {
+        return true;
+    }
+
+    // Pattern 2: delegateTo function
+    if source.contains("delegateTo(") {
+        return true;
+    }
+
+    // Pattern 3: Withdrawal queue pattern (safe delegation)
+    if source.contains("queueWithdrawal") && source.contains("completeQueuedWithdrawal") {
+        return true;
+    }
+
+    // Pattern 4: Withdrawal delay tracking
+    if source.contains("withdrawalDelay") || source.contains("WITHDRAWAL_DELAY") {
+        return true;
+    }
+
+    // Pattern 5: Operator validation
+    if source.contains("isOperator") || source.contains("operatorDetails") {
+        return true;
+    }
+
+    false
+}
+
+/// Detect LRT (Liquid Restaking Token) peg stability patterns
+///
+/// Patterns for maintaining 1:1 peg between LRT and underlying assets.
+///
+/// Patterns detected:
+/// - Price oracle validation
+/// - Redemption rate bounds checking
+/// - Peg deviation limits
+/// - Emergency pause on depeg
+pub fn has_lrt_peg_protection(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+
+    // Pattern 1: Redemption rate bounds
+    if source.contains("redemptionRate") && (source.contains("require(") || source.contains("if (")) {
+        if source.contains("MAX_") || source.contains("MIN_") {
+            return true;
+        }
+    }
+
+    // Pattern 2: Peg deviation checks
+    if source.contains("pegDeviation") || source.contains("priceDeviation") {
+        return true;
+    }
+
+    // Pattern 3: Exchange rate validation
+    if source.contains("exchangeRate") && source.contains("bounds") {
+        return true;
+    }
+
+    // Pattern 4: Circuit breaker on depeg
+    if (source.contains("pause()") || source.contains("_pause()"))
+        && (source.contains("depeg") || source.contains("deviation")) {
+        return true;
+    }
+
+    // Pattern 5: Price oracle with staleness check
+    if source.contains("getPrice") && source.contains("timestamp") {
+        return true;
+    }
+
+    false
+}
+
+/// Detect slashing-aware accounting patterns
+///
+/// Proper accounting for slashing events in restaking protocols.
+///
+/// Patterns detected:
+/// - Slashing event handling
+/// - Double accounting prevention
+/// - Slashed balance tracking
+/// - User share adjustment after slashing
+pub fn has_slashing_accounting_pattern(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+
+    // Pattern 1: Slashing event listener
+    if source.contains("onSlash") || source.contains("handleSlashing") {
+        return true;
+    }
+
+    // Pattern 2: Slashed balance tracking
+    if source.contains("slashedAmount") || source.contains("totalSlashed") {
+        return true;
+    }
+
+    // Pattern 3: Share adjustment after slashing
+    if source.contains("adjustShares") && source.contains("slash") {
+        return true;
+    }
+
+    // Pattern 4: Principal tracking separate from yield
+    if source.contains("principalBalance") && source.contains("rewardBalance") {
+        return true;
+    }
+
+    // Pattern 5: Beacon chain slashing check
+    if source.contains("beaconBalance") && source.contains("slash") {
+        return true;
+    }
+
+    false
+}
+
+/// Detect safe reward distribution patterns
+///
+/// Patterns for secure reward accrual and distribution in staking protocols.
+///
+/// Patterns detected:
+/// - Reward snapshot mechanism
+/// - Accrued rewards per share tracking
+/// - Claim with checkpoint
+/// - Reward debt tracking (Sushi MasterChef style)
+pub fn has_safe_reward_distribution(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+
+    // Pattern 1: Reward per share accumulator
+    if source.contains("rewardPerShare") || source.contains("accRewardPerShare") {
+        return true;
+    }
+
+    // Pattern 2: User reward debt (prevents retroactive claims)
+    if source.contains("rewardDebt") {
+        return true;
+    }
+
+    // Pattern 3: Checkpoint system
+    if source.contains("checkpoint") && source.contains("rewards") {
+        return true;
+    }
+
+    // Pattern 4: Snapshot mechanism
+    if source.contains("snapshot") && (source.contains("reward") || source.contains("balance")) {
+        return true;
+    }
+
+    // Pattern 5: Pending rewards calculation
+    if source.contains("pendingRewards") && source.contains("lastUpdate") {
+        return true;
+    }
+
+    false
+}
+
+/// Detect multi-strategy risk isolation
+///
+/// Patterns for isolating risks between different strategies in restaking.
+///
+/// Patterns detected:
+/// - Per-strategy accounting
+/// - Strategy cap limits
+/// - Independent withdrawal queues
+/// - Strategy failure isolation
+pub fn has_strategy_isolation(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+
+    // Pattern 1: Per-strategy balance tracking
+    if source.contains("strategyBalance") || source.contains("balanceByStrategy") {
+        return true;
+    }
+
+    // Pattern 2: Strategy cap enforcement
+    if source.contains("strategyCap") || source.contains("MAX_STRATEGY_") {
+        return true;
+    }
+
+    // Pattern 3: Strategy whitelist
+    if source.contains("isStrategyApproved") || source.contains("approvedStrategies") {
+        return true;
+    }
+
+    // Pattern 4: Independent withdrawal queues per strategy
+    if source.contains("withdrawalQueue") && source.contains("strategy") {
+        return true;
+    }
+
+    // Pattern 5: Strategy failure handling without affecting others
+    if source.contains("strategyFailed") || source.contains("pauseStrategy") {
+        return true;
+    }
+
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
