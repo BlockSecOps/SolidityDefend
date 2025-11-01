@@ -7,7 +7,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::{cross_chain_patterns, modern_eip_patterns};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 pub struct AAUserOperationReplayDetector {
     base: BaseDetector,
@@ -70,6 +71,23 @@ impl Detector for AAUserOperationReplayDetector {
 
         if !is_aa_contract {
             return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong AA/meta-tx patterns (return early)
+        if modern_eip_patterns::has_safe_metatx_pattern(ctx) {
+            // Safe meta-tx pattern includes comprehensive nonce tracking and replay protection
+            return Ok(findings);
+        }
+
+        // Level 2: Cross-chain protection patterns
+        if cross_chain_patterns::has_nonce_replay_protection(ctx) {
+            // Nonce-based replay protection prevents user operation replay
+            if cross_chain_patterns::has_chain_id_validation(ctx) {
+                // Chain ID validation prevents cross-chain replay
+                return Ok(findings);
+            }
         }
 
         // Pattern 1: Missing nonce validation

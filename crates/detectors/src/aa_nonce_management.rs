@@ -4,7 +4,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::modern_eip_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 pub struct NonceManagementDetector {
     base: BaseDetector,
@@ -203,6 +204,18 @@ impl Detector for NonceManagementDetector {
         let mut findings = Vec::new();
 
         if !self.is_nonce_management_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 2 Enhancement: Safe pattern detection with dynamic confidence
+
+        // Level 1: Strong meta-transaction/AA patterns (return early)
+        if modern_eip_patterns::has_safe_metatx_pattern(ctx) {
+            // Safe meta-tx pattern includes:
+            // - Per-user nonce mapping
+            // - Domain separator (EIP-712)
+            // - Signature verification with nonce
+            // - Replay protection
             return Ok(findings);
         }
 
