@@ -52,31 +52,70 @@ impl Detector for VaultDonationAttackDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // NEW: Check for protections at contract level
-        // Donation attacks are ineffective if inflation is protected OR internal accounting exists
+        // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
+
+        // Level 1: Strong protections (return early - no findings)
+        // EigenLayer/LRT protocols with comprehensive protections
+        if vault_patterns::has_eigenlayer_delegation_pattern(ctx) {
+            // EigenLayer has battle-tested withdrawal delay and delegation patterns
+            return Ok(findings);
+        }
+
+        if vault_patterns::has_lrt_peg_protection(ctx) {
+            // LRT protocols (Renzo, Puffer, etc.) have robust peg stability mechanisms
+            return Ok(findings);
+        }
+
+        if vault_patterns::has_slashing_accounting_pattern(ctx) {
+            // Slashing-aware accounting implies sophisticated restaking contract
+            return Ok(findings);
+        }
+
+        // Level 2: Standard inflation protections (return early - no findings)
         if vault_patterns::has_inflation_protection(ctx) {
-            return Ok(findings); // Protected by dead shares/virtual shares/minimum deposit
+            // Protected by dead shares/virtual shares/minimum deposit
+            return Ok(findings);
         }
 
         if vault_patterns::has_internal_balance_tracking(ctx) {
-            return Ok(findings); // Protected by internal accounting
+            // Protected by internal accounting - donation can't affect share price
+            return Ok(findings);
         }
 
         if vault_patterns::has_donation_guard(ctx) {
-            return Ok(findings); // Protected by explicit donation guards
+            // Protected by explicit donation guards
+            return Ok(findings);
         }
+
+        // Level 3: Advanced DeFi patterns (lower confidence if present)
+        let has_strategy_isolation = vault_patterns::has_strategy_isolation(ctx);
+        let has_reward_distribution = vault_patterns::has_safe_reward_distribution(ctx);
+
+        // Calculate protection score for confidence calibration
+        let mut protection_score = 0;
+        if has_strategy_isolation { protection_score += 1; }
+        if has_reward_distribution { protection_score += 1; }
 
         for function in ctx.get_functions() {
             if let Some(donation_issue) = self.check_donation_vulnerability(function, ctx) {
                 let message = format!(
-                    "Function '{}' is vulnerable to vault donation attack. {} \
+                    "Function '{}' may be vulnerable to vault donation attack. {} \
                     Attacker can manipulate share price by directly transferring tokens to vault, \
                     causing rounding errors that steal from depositors.",
                     function.name.name, donation_issue
                 );
 
-                // NEW: Confidence is HIGH since we've ruled out all protections
-                let confidence = Confidence::High;
+                // Phase 2: Dynamic confidence scoring based on detected patterns
+                let confidence = if protection_score == 0 {
+                    // No protections detected - high confidence vulnerability
+                    Confidence::High
+                } else if protection_score == 1 {
+                    // Some protections but not comprehensive - medium confidence
+                    Confidence::Medium
+                } else {
+                    // Multiple partial protections - low confidence
+                    Confidence::Low
+                };
 
                 let finding = self
                     .base
@@ -89,13 +128,15 @@ impl Detector for VaultDonationAttackDetector {
                     )
                     .with_cwe(682) // CWE-682: Incorrect Calculation
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                    .with_confidence(confidence) // NEW: Set confidence
+                    .with_confidence(confidence)
                     .with_fix_suggestion(format!(
                         "Protect '{}' from donation attack. \
                     Solutions: (1) Track assets internally instead of using balanceOf, \
                     (2) Implement donation guards that track expected vs actual balance, \
-                    (3) Use virtual shares/assets to make donations economically infeasible, \
-                    (4) Require minimum initial deposits.",
+                    (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), \
+                    (4) Require minimum initial deposits, \
+                    (5) Use dead shares pattern (Uniswap V2 style), \
+                    (6) Consider EigenLayer delegation pattern for restaking protocols.",
                         function.name.name
                     ));
 

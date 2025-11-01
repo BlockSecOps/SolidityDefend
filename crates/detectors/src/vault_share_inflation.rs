@@ -52,24 +52,63 @@ impl Detector for VaultShareInflationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // NEW: Check for safe patterns at contract level FIRST
-        // If any protection is present, contract is safe - no findings needed
-        if vault_patterns::has_inflation_protection(ctx) {
-            return Ok(findings); // Contract is protected - no findings
+        // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
+
+        // Level 1: Strong restaking protocol protections (return early)
+        if vault_patterns::has_eigenlayer_delegation_pattern(ctx) {
+            // EigenLayer has proven share price manipulation protections
+            return Ok(findings);
         }
+
+        if vault_patterns::has_lrt_peg_protection(ctx) {
+            // LRT protocols (Renzo, Puffer) have robust peg stability + share inflation protection
+            return Ok(findings);
+        }
+
+        if vault_patterns::has_slashing_accounting_pattern(ctx) {
+            // Slashing-aware accounting includes sophisticated share calculations
+            return Ok(findings);
+        }
+
+        // Level 2: Standard inflation protections (return early)
+        if vault_patterns::has_inflation_protection(ctx) {
+            // Protected by dead shares/virtual shares/minimum deposit
+            return Ok(findings);
+        }
+
+        // Level 3: Advanced DeFi patterns (reduce confidence if present)
+        let has_internal_tracking = vault_patterns::has_internal_balance_tracking(ctx);
+        let has_donation_guard = vault_patterns::has_donation_guard(ctx);
+        let has_strategy_isolation = vault_patterns::has_strategy_isolation(ctx);
+        let has_reward_distribution = vault_patterns::has_safe_reward_distribution(ctx);
+
+        // Calculate protection score for confidence calibration
+        let mut protection_score = 0;
+        if has_internal_tracking { protection_score += 2; } // Strong protection
+        if has_donation_guard { protection_score += 1; }
+        if has_strategy_isolation { protection_score += 1; }
+        if has_reward_distribution { protection_score += 1; }
 
         for function in ctx.get_functions() {
             if let Some(inflation_issue) = self.check_share_inflation(function, ctx) {
                 let message = format!(
-                    "Function '{}' is vulnerable to vault share inflation attack. {} \
+                    "Function '{}' may be vulnerable to vault share inflation attack. {} \
                     First depositor can manipulate share price by depositing 1 wei, \
                     donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
                     function.name.name, inflation_issue
                 );
 
-                // NEW: Assign confidence based on context
-                // If we get here, no protections were found, so confidence is HIGH
-                let confidence = Confidence::High;
+                // Phase 2: Dynamic confidence scoring based on detected patterns
+                let confidence = if protection_score == 0 {
+                    // No protections detected - high confidence vulnerability
+                    Confidence::High
+                } else if protection_score <= 2 {
+                    // Some protections but not comprehensive - medium confidence
+                    Confidence::Medium
+                } else {
+                    // Multiple partial protections - low confidence
+                    Confidence::Low
+                };
 
                 let finding = self.base.create_finding(
                     ctx,
@@ -80,13 +119,15 @@ impl Detector for VaultShareInflationDetector {
                 )
                 .with_cwe(682) // CWE-682: Incorrect Calculation
                 .with_cwe(1339) // CWE-1339: Insufficient Precision or Accuracy
-                .with_confidence(confidence) // NEW: Set confidence explicitly
+                .with_confidence(confidence)
                 .with_fix_suggestion(format!(
                     "Protect '{}' from share inflation attack. \
-                    Solutions: (1) Mint initial shares to zero address on deployment (dead shares), \
-                    (2) Implement virtual shares/assets (ERC4626 with offset), \
-                    (3) Enforce minimum first deposit amount, \
-                    (4) Use higher precision decimals (1e18 instead of 1e6).",
+                    Solutions: (1) Mint initial shares to zero address on deployment (dead shares - Uniswap V2 pattern), \
+                    (2) Implement virtual shares/assets (OpenZeppelin ERC4626 with decimalsOffset), \
+                    (3) Enforce minimum first deposit amount (>= 1e6 recommended), \
+                    (4) Use higher precision decimals (1e18 instead of 1e6), \
+                    (5) Track assets internally instead of using balanceOf, \
+                    (6) Consider EigenLayer delegation pattern for restaking vaults.",
                     function.name.name
                 ));
 

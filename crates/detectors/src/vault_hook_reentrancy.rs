@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::safe_patterns::reentrancy_patterns;
+use crate::safe_patterns::{modern_eip_patterns, reentrancy_patterns};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault reentrancy via token callback hooks
@@ -52,34 +52,54 @@ impl Detector for VaultHookReentrancyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // NEW: Check for reentrancy protections at contract level
+        // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
+
+        // Level 1: Strong reentrancy protections (return early)
         if reentrancy_patterns::has_reentrancy_guard(ctx) {
-            return Ok(findings); // Protected by ReentrancyGuard
+            // OpenZeppelin ReentrancyGuard protects all entry points
+            return Ok(findings);
         }
 
-        // NEW: Check if using standard ERC20 (no hooks, safe)
-        if reentrancy_patterns::is_standard_erc20(ctx) {
-            return Ok(findings); // Standard ERC20 has no callback hooks
+        // Level 2: EIP-1153 transient storage protection (Solidity 0.8.24+)
+        if modern_eip_patterns::has_safe_transient_storage_pattern(ctx) {
+            // Transient storage (tstore/tload) provides gas-efficient reentrancy protection
+            return Ok(findings);
         }
+
+        // Level 3: Standard ERC20 (no hooks, safe)
+        if reentrancy_patterns::is_standard_erc20(ctx) {
+            // Standard ERC20 has no callback hooks - safe from hook reentrancy
+            return Ok(findings);
+        }
+
+        // Level 4: Advanced DeFi patterns (reduce confidence if present)
+        let follows_cei = reentrancy_patterns::follows_cei_pattern(ctx);
+        let has_read_only_protection = reentrancy_patterns::has_read_only_reentrancy_protection(ctx);
+
+        // Calculate protection score for confidence calibration
+        let mut protection_score = 0;
+        if follows_cei { protection_score += 2; } // CEI pattern is strong protection
+        if has_read_only_protection { protection_score += 1; }
 
         for function in ctx.get_functions() {
             if let Some(reentrancy_issue) = self.check_hook_reentrancy(function, ctx) {
-                // NEW: Check for CEI pattern compliance at function level
-                let follows_cei = reentrancy_patterns::follows_cei_pattern(ctx);
-
-                // If CEI pattern followed, use LOW confidence (likely safe)
-                // Otherwise HIGH confidence (vulnerable)
-                let confidence = if follows_cei {
-                    Confidence::Low
-                } else {
-                    Confidence::High
-                };
-
                 let message = format!(
-                    "Function '{}' is vulnerable to hook reentrancy attack. {} \
+                    "Function '{}' may be vulnerable to hook reentrancy attack. {} \
                     ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
                     function.name.name, reentrancy_issue
                 );
+
+                // Phase 2: Dynamic confidence scoring based on detected patterns
+                let confidence = if protection_score == 0 {
+                    // No protections detected - high confidence vulnerability
+                    Confidence::High
+                } else if protection_score == 1 {
+                    // Minimal protections - medium confidence
+                    Confidence::Medium
+                } else {
+                    // CEI pattern followed - low confidence (likely safe)
+                    Confidence::Low
+                };
 
                 let finding = self
                     .base
@@ -92,14 +112,16 @@ impl Detector for VaultHookReentrancyDetector {
                     )
                     .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
                     .with_cwe(362) // CWE-362: Race Condition
-                    .with_confidence(confidence) // NEW: Set confidence
+                    .with_confidence(confidence)
                     .with_fix_suggestion(format!(
                         "Protect '{}' from hook reentrancy. \
-                    Solutions: (1) Add nonReentrant modifier from OpenZeppelin, \
-                    (2) Follow checks-effects-interactions pattern, \
-                    (3) Update state before external calls with callbacks, \
-                    (4) Validate token doesn't implement hooks (ERC-777/ERC-1363), \
-                    (5) Use reentrancy guard on all vault entry points.",
+                    Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, \
+                    (2) Follow checks-effects-interactions (CEI) pattern strictly, \
+                    (3) Update state BEFORE external calls with callbacks, \
+                    (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), \
+                    (5) Use reentrancy guard on all vault entry points, \
+                    (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), \
+                    (7) Use SafeERC20 wrapper library for token operations.",
                         function.name.name
                     ));
 

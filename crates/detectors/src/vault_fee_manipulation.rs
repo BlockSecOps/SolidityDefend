@@ -2,7 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::safe_patterns::access_control_patterns;
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for ERC-4626 vault fee manipulation vulnerabilities
 pub struct VaultFeeManipulationDetector {
@@ -51,13 +52,54 @@ impl Detector for VaultFeeManipulationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
+
+        // Level 1: Strong governance patterns (return early)
+        if access_control_patterns::has_timelock_pattern(ctx) {
+            // Timelock provides delay for users to react to fee changes
+            if access_control_patterns::has_multisig_pattern(ctx) {
+                // Timelock + multi-sig = comprehensive protection
+                return Ok(findings);
+            }
+        }
+
+        // Level 2: Access control patterns (reduce confidence if present)
+        let has_timelock = access_control_patterns::has_timelock_pattern(ctx);
+        let has_multisig = access_control_patterns::has_multisig_pattern(ctx);
+        let has_role_hierarchy = access_control_patterns::has_role_hierarchy_pattern(ctx);
+        let has_pause = access_control_patterns::has_pause_pattern(ctx);
+        let has_two_step_ownership = access_control_patterns::has_two_step_ownership(ctx);
+
+        // Calculate protection score for confidence calibration
+        let mut protection_score = 0;
+        if has_timelock { protection_score += 3; } // Critical for fee changes
+        if has_multisig { protection_score += 2; } // Prevents single admin abuse
+        if has_role_hierarchy { protection_score += 1; }
+        if has_pause { protection_score += 1; }
+        if has_two_step_ownership { protection_score += 1; }
+
         for function in ctx.get_functions() {
             if let Some(fee_issue) = self.check_fee_manipulation(function, ctx) {
                 let message = format!(
-                    "Function '{}' is vulnerable to fee manipulation attack. {} \
+                    "Function '{}' may be vulnerable to fee manipulation attack. {} \
                     Attacker can front-run fee changes to extract value from depositors.",
                     function.name.name, fee_issue
                 );
+
+                // Phase 2: Dynamic confidence scoring based on detected patterns
+                let confidence = if protection_score == 0 {
+                    // No protections detected - high confidence vulnerability
+                    Confidence::High
+                } else if protection_score <= 2 {
+                    // Minimal protections - medium confidence
+                    Confidence::Medium
+                } else if protection_score <= 4 {
+                    // Some protections but not comprehensive - medium-low confidence
+                    Confidence::Medium
+                } else {
+                    // Multiple strong protections - low confidence FP
+                    Confidence::Low
+                };
 
                 let finding = self
                     .base
@@ -70,13 +112,16 @@ impl Detector for VaultFeeManipulationDetector {
                     )
                     .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource with Improper Synchronization
                     .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_confidence(confidence)
                     .with_fix_suggestion(format!(
                         "Protect '{}' from fee manipulation. \
-                    Solutions: (1) Implement timelock delay on fee updates (24-48 hours), \
-                    (2) Emit events before fee changes take effect, \
-                    (3) Add maximum fee change limits per update, \
-                    (4) Require multi-sig approval for fee changes, \
-                    (5) Use gradual fee ramping instead of instant updates.",
+                    Solutions: (1) Implement timelock delay on fee updates (24-48 hours minimum), \
+                    (2) Emit events before fee changes take effect with advance notice, \
+                    (3) Add maximum fee change limits per update (e.g., max 2% fee), \
+                    (4) Require multi-sig approval for fee changes (Gnosis Safe pattern), \
+                    (5) Use gradual fee ramping instead of instant updates (Curve style), \
+                    (6) Implement MEV protection patterns for fee-dependent operations, \
+                    (7) Consider OpenZeppelin TimelockController for governance.",
                         function.name.name
                     ));
 

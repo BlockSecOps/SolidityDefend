@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::{access_control_patterns, vault_patterns};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 use crate::utils;
 
@@ -55,37 +56,58 @@ impl Detector for VaultWithdrawalDosDetector {
         // Check if this is an ERC-4626 vault
         let is_vault = utils::is_erc4626_vault(ctx);
 
-        // NEW: Check for DOS mitigations at contract level
+        // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
+
+        // Level 1: Strong restaking protocol protections (return early)
+        if vault_patterns::has_eigenlayer_delegation_pattern(ctx) {
+            // EigenLayer has battle-tested withdrawal queue + delay mechanisms
+            return Ok(findings);
+        }
+
+        // Level 2: Advanced DeFi patterns (return early if comprehensive)
+        let has_pause = access_control_patterns::has_pause_pattern(ctx);
+        let has_timelock = access_control_patterns::has_timelock_pattern(ctx);
+
+        if has_pause && has_timelock {
+            // Pause + timelock = comprehensive DOS protection
+            return Ok(findings);
+        }
+
+        // Level 3: Basic mitigations (reduce confidence if present)
         let has_pull_pattern = self.has_pull_pattern(ctx);
         let has_emergency_mechanism = self.has_emergency_mechanism(ctx);
         let has_withdrawal_limits = self.has_withdrawal_limits(ctx);
 
+        // Calculate protection score for confidence calibration
+        let mut protection_score = 0;
+        if has_pause { protection_score += 2; } // Critical for DOS prevention
+        if has_timelock { protection_score += 1; }
+        if has_pull_pattern { protection_score += 2; } // Strong protection
+        if has_emergency_mechanism { protection_score += 2; } // Critical
+        if has_withdrawal_limits { protection_score += 1; }
+
         for function in ctx.get_functions() {
             if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx, is_vault) {
-                // NEW: Assign confidence based on mitigations present
-                let mut mitigation_count = 0;
-                if has_pull_pattern {
-                    mitigation_count += 1;
-                }
-                if has_emergency_mechanism {
-                    mitigation_count += 1;
-                }
-                if has_withdrawal_limits {
-                    mitigation_count += 1;
-                }
-
-                // Confidence based on number of mitigations
-                let confidence = match mitigation_count {
-                    0 => Confidence::High,    // No mitigations - very vulnerable
-                    1 => Confidence::Medium,  // Some protection
-                    _ => Confidence::Low,     // Multiple protections - likely safe
-                };
-
                 let message = format!(
-                    "Function '{}' is vulnerable to withdrawal DOS attack. {} \
+                    "Function '{}' may be vulnerable to withdrawal DOS attack. {} \
                     Attacker can block withdrawals, causing funds to be locked indefinitely.",
                     function.name.name, dos_issue
                 );
+
+                // Phase 2: Dynamic confidence scoring based on detected patterns
+                let confidence = if protection_score == 0 {
+                    // No mitigations - very vulnerable
+                    Confidence::High
+                } else if protection_score <= 2 {
+                    // Minimal protection
+                    Confidence::Medium
+                } else if protection_score <= 4 {
+                    // Some protections
+                    Confidence::Medium
+                } else {
+                    // Multiple strong protections - likely safe
+                    Confidence::Low
+                };
 
                 let finding = self
                     .base
@@ -98,14 +120,17 @@ impl Detector for VaultWithdrawalDosDetector {
                     )
                     .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
                     .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
-                    .with_confidence(confidence) // NEW: Set confidence
+                    .with_confidence(confidence)
                     .with_fix_suggestion(format!(
                         "Protect '{}' from withdrawal DOS. \
-                    Solutions: (1) Implement withdrawal limits/caps per transaction, \
-                    (2) Add circuit breakers for emergency withdrawals, \
-                    (3) Avoid unbounded loops in withdrawal queue processing, \
-                    (4) Implement partial withdrawal support, \
-                    (5) Use pull-over-push pattern for failed withdrawals.",
+                    Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), \
+                    (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), \
+                    (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), \
+                    (4) Implement partial withdrawal support for queue processing, \
+                    (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), \
+                    (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, \
+                    (7) Add emergency pause mechanism for DOS situations, \
+                    (8) Implement timelock for critical parameter changes.",
                         function.name.name
                     ));
 
