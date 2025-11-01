@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.0.1-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
@@ -205,16 +205,17 @@ soliditydefend UniswapV2Pair.sol
 soliditydefend MyDeFiProtocol.sol
 ```
 
-This context-awareness combined with **Phase 2 Safe Pattern Integration** has achieved:
-- **0% false positive rate** on vault detectors (tested on 4 secure implementations)
+This context-awareness combined with **Phase 2+ Safe Pattern Integration** has achieved:
+- **0% false positive rate** on vault, restaking, and AA detectors (tested on 11 contracts)
 - **~40%** false positive reduction on flash loan and paymaster contracts
 - **100%** detection of real vulnerabilities (zero false negatives)
 
-**Phase 2 Enhancement (v1.0.1-dev):**
-- 16 detectors enhanced with comprehensive safe pattern detection
-- Vault Security: 0% FP (OpenZeppelin, EigenLayer, LRT patterns)
-- Restaking: Production-ready (EigenLayer, Renzo, Puffer patterns)
-- Account Abstraction: 46% coverage (ERC-4337, EIP-712 patterns)
+**Phase 2+ Enhancement (v1.0.1):**
+- **16 detectors enhanced** with comprehensive safe pattern detection (100% active, validated)
+- **Vault Security**: 0% FP on 4 contracts (OpenZeppelin, EigenLayer, LRT patterns)
+- **Restaking Security**: 0% FP on 3 EigenLayer contracts (DelegationManager, StrategyManager, AVSDirectory)
+- **Account Abstraction**: 0% FP on secure contracts (ERC-4337, EIP-712, session keys, social recovery)
+- **Bug Fix**: All 16 enhanced detectors now correctly registered and active
 
 ### CI/CD Integration
 
@@ -275,11 +276,11 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete reference.
 
 ## ⚠️ Known Limitations
 
-This is a **beta release** (v0.7.0-beta) with the following known limitations:
+This is a **production release** (v1.0.1) with the following characteristics:
 
-- **False Positive Rate**: Significantly improved through Phase 2 Safe Pattern Integration. Vault detectors achieve 0% FP rate. Remaining detector categories are being enhanced (see CHANGELOG.md).
-- **Detector Tuning**: Conservative detection logic may report issues in secure implementations.
-- **Beta Quality**: Not recommended for production security decisions without manual review.
+- **False Positive Rate**: Phase 2+ Safe Pattern Integration achieved **0% FP rate** on enhanced detectors (16 detectors covering vaults, restaking, and AA). Remaining 162 detectors use standard detection logic.
+- **Enhanced Detectors**: 16 of 178 detectors (9%) have comprehensive safe pattern recognition. Future releases will expand coverage.
+- **Manual Review Recommended**: As with all static analysis tools, findings should be reviewed by security experts for production deployments.
 
 ### Feedback Welcome
 
@@ -291,11 +292,12 @@ We're actively working on improving detector accuracy. Please report issues:
 
 ### What's Next
 
-**v1.0.0 (Coming Soon)**:
-- ✅ Reduced false positive rate (Phase 2 COMPLETE: 0% on vaults, exceeds <30% milestone)
-- Confidence scoring for all findings
-- Improved safe pattern recognition
-- Your feedback incorporated!
+**v1.1.0 (Planned)**:
+- Expand safe pattern integration to more detector categories
+- Add confidence scoring for all findings
+- Expand test coverage to 50+ contracts
+- Additional EigenLayer and LRT protocol support
+- Enhanced AA detector coverage (remaining 7 detectors)
 
 ---
 

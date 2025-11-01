@@ -796,9 +796,9 @@ impl DetectorRegistry {
         // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
         self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
         self.register(Arc::new(crate::aa::AANonceManagementDetector::new()));
-        self.register(Arc::new(crate::aa::AASessionKeyVulnerabilitiesDetector::new()));
+        self.register(Arc::new(crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new())); // Phase 2+ enhanced
         self.register(Arc::new(crate::aa::AASignatureAggregationDetector::new()));
-        self.register(Arc::new(crate::aa::AASocialRecoveryDetector::new()));
+        self.register(Arc::new(crate::aa_social_recovery::SocialRecoveryDetector::new())); // Phase 2+ enhanced
         self.register(Arc::new(crate::aa::ERC4337GasGriefingDetector::new()));
         self.register(Arc::new(crate::flashloan::FlashloanPriceOracleManipulationDetector::new()));
         self.register(Arc::new(crate::flashloan::FlashloanGovernanceAttackDetector::new()));
