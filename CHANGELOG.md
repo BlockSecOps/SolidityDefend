@@ -5,6 +5,378 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.0] - 2025-11-01
+
+### 🎉 v1.0.0 Milestone - Complete Security Suite
+
+**178 Total Detectors** - SolidityDefend v1.0.0 represents the completion of our comprehensive security analysis platform covering all major smart contract vulnerability categories from 2023-2025.
+
+This release adds 13 new detectors across three cutting-edge security domains:
+- **Zero-Knowledge Proofs** (zkSync, Scroll, Polygon zkEVM)
+- **Modular Blockchain Architecture** (Celestia, Avail, cross-rollup)
+- **AI Agent Security** (Autonomous contracts, LLM integration)
+
+Ready for BlockSecOps integration.
+
+---
+
+### Added
+
+#### **Phase 37: Zero-Knowledge Proofs (4 detectors)**
+
+- **zk-proof-malleability** (Critical)
+  - Detects proof malleability attacks via missing uniqueness checks
+  - Identifies proofs not bound to transactions/users
+  - Validates proof hash commitment and nonce usage
+  - Real-world impact: Prevents zkSync/Scroll proof replay attacks
+
+- **zk-trusted-setup-bypass** (High)
+  - Detects compromised trusted setup validation
+  - Identifies missing verifying key parameter validation
+  - Validates trusted setup ceremony integrity
+  - Real-world impact: SNARK/Groth16 setup security
+
+- **zk-circuit-under-constrained** (Critical)
+  - Detects under-constrained circuits allowing invalid proofs
+  - Identifies missing range constraints on public inputs
+  - Validates circuit constraint completeness
+  - Real-world impact: Prevents invalid state transitions in ZK rollups
+
+- **zk-recursive-proof-validation** (High)
+  - Detects recursive proof validation issues
+  - Identifies missing batch verification and depth limits
+  - Validates proof composition security
+  - Real-world impact: Polygon zkEVM, Scroll recursion security
+
+#### **Phase 38: Modular Blockchain (5 detectors)**
+
+- **celestia-data-availability** (High)
+  - Detects data availability layer verification issues
+  - Identifies missing DA proofs, merkle validation, data root checks
+  - Validates Celestia/Avail integration security
+  - Real-world impact: Prevents data withholding attacks
+
+- **cross-rollup-atomicity** (Critical)
+  - Detects cross-rollup atomic operation issues
+  - Identifies missing atomic locks and rollback mechanisms
+  - Validates multi-rollup transaction consistency
+  - Real-world impact: Prevents partial execution across rollups
+
+- **optimistic-fraud-proof-timing** (High)
+  - Detects fraud proof challenge period bypass
+  - Identifies missing timestamp validation in challenge windows
+  - Validates dispute resolution timing security
+  - Real-world impact: Optimism/Arbitrum fraud proof security
+
+- **cross-chain-message-ordering** (High)
+  - Detects message ordering issues across chains
+  - Identifies missing sequence numbers and nonces
+  - Validates cross-chain message replay protection
+  - Real-world impact: Prevents message reordering attacks
+
+- **sovereign-rollup-validation** (Medium)
+  - Detects sovereign rollup state transition validation issues
+  - Identifies missing state validation in transitions
+  - Validates rollup state integrity
+  - Real-world impact: Sovereign SDK security
+
+#### **Phase 39: AI Agent Security (4 detectors)**
+
+- **ai-agent-prompt-injection** (High)
+  - Detects prompt injection vulnerabilities in AI contracts
+  - Identifies AI oracle inputs without sanitization
+  - Validates prompt validation and filtering
+  - Real-world impact: Prevents malicious AI behavior manipulation
+
+- **ai-agent-decision-manipulation** (High)
+  - Detects AI decision manipulation via oracle/input poisoning
+  - Identifies missing input validation and consensus
+  - Validates multi-oracle decision aggregation
+  - Real-world impact: Prevents single-point oracle manipulation
+
+- **autonomous-contract-oracle-dependency** (Medium)
+  - Detects oracle dependency creating single point of failure
+  - Identifies missing fallback oracle mechanisms
+  - Validates redundancy in autonomous execution
+  - Real-world impact: Autonomous contract resilience
+
+- **ai-agent-resource-exhaustion** (Medium)
+  - Detects computational DOS attacks via AI processing
+  - Identifies missing gas limits and rate limiting
+  - Validates resource consumption controls
+  - Real-world impact: Prevents AI inference DOS
+
+---
+
+### Metrics
+
+- **Total Detectors**: 178 (+13 from v0.22.0)
+- **Phase 37**: Zero-Knowledge Proofs (zkSync, Scroll, Polygon zkEVM)
+- **Phase 38**: Modular Blockchain (Celestia, Avail, cross-rollup)
+- **Phase 39**: AI Agent Security (Autonomous contracts, LLM integration)
+- **Critical Detectors**: 3 new (zk-proof-malleability, zk-circuit-under-constrained, cross-rollup-atomicity)
+- **Real-world Coverage**: 2025 ZK rollup vulnerabilities, modular DA security, AI agent risks
+
+---
+
+## [0.22.0] - 2025-11-01
+
+### 🎯 Phase 36: MEV Protection Enhanced (4 New Detectors)
+
+MEV attacks cost DeFi users **$700M+ in extracted value in 2024**. This release adds 4 enhanced detectors targeting sandwich attacks, backrun opportunities, priority gas auctions, and toxic flow exposure.
+
+Addresses production MEV patterns affecting Uniswap V3, Balancer V2, and Curve pools.
+
+---
+
+### Added
+
+#### **Phase 36: MEV Protection Enhanced (4 detectors)**
+
+- **mev-sandwich-vulnerable-swaps** (High)
+- **mev-backrun-opportunities** (Medium)
+- **mev-priority-gas-auction** (Medium)
+- **mev-toxic-flow-exposure** (Medium)
+
+### Metrics
+
+- **Total Detectors**: 165 (+4 from v0.21.0)
+
+---
+
+## [0.21.0] - 2025-11-01
+
+### 🎯 Phase 35: Token Standards Extended (5 New Detectors)
+
+Token standard vulnerabilities continue to plague DeFi. This release adds 5 detectors covering ERC-20 return bombs, ERC-721 enumeration DOS, ERC-1155 batch validation, decimal confusion, and permit front-running.
+
+---
+
+### Added
+
+#### **Phase 35: Token Standards Extended (5 detectors)**
+
+- **erc20-transfer-return-bomb** (Medium)
+- **erc721-enumeration-dos** (Medium)
+- **erc1155-batch-validation** (Medium)
+- **token-decimal-confusion** (High)
+- **token-permit-front-running** (Medium)
+
+### Metrics
+
+- **Total Detectors**: 161 (+5 from v0.20.0)
+
+---
+
+## [0.20.0] - 2025-11-01
+
+### 🎯 Phase 34: Flash Loan Enhanced (4 New Detectors)
+
+Flash loan attacks remain a critical DeFi threat. This release adds 4 enhanced detectors covering price manipulation, governance attacks, reentrancy combos, and collateral swaps.
+
+---
+
+### Added
+
+#### **Phase 34: Flash Loan Enhanced (4 detectors)**
+
+- **flash-loan-price-manipulation-advanced** (Critical)
+- **flash-loan-governance-attack** (Critical)
+- **flash-loan-reentrancy-combo** (Critical)
+- **flash-loan-collateral-swap** (High)
+
+### Metrics
+
+- **Total Detectors**: 156 (+4 from v0.19.0)
+
+---
+
+## [0.19.0] - 2025-11-01
+
+### 🎯 Phase 33: ERC-4337 AA Advanced (6 New Detectors)
+
+ERC-4337 Account Abstraction is being adopted by **Coinbase, Safe, and Uniswap wallets**. This release adds 6 advanced detectors covering sophisticated AA vulnerabilities discovered in 2024 production deployments.
+
+Addresses critical attack vectors including calldata manipulation after signature validation, paymaster fund drainage, signature aggregation bypass, and enhanced bundler DOS patterns.
+
+---
+
+### Added
+
+#### **Phase 33: ERC-4337 AA Advanced (6 detectors)**
+
+- **aa-calldata-encoding-exploit** (Critical)
+  - Detects calldata manipulation after signature validation
+  - Identifies UserOperation field modifications post-validation
+  - Validates calldata hash coverage in signatures
+  - Real-world impact: Based on 2024 AA wallet vulnerability
+
+- **aa-paymaster-fund-drain** (Critical)
+  - Detects paymaster sponsorship abuse patterns
+  - Identifies missing gas limit caps and rate limiting
+  - Validates per-user spending limits and balance checks
+  - Real-world impact: Prevents paymaster wallet drainage attacks
+
+- **aa-signature-aggregation-bypass** (High)
+  - Detects signature aggregation vulnerabilities
+  - Identifies missing individual signature verification in batches
+  - Validates operation uniqueness and timestamp expiry
+  - Real-world impact: Prevents unauthorized batch operation execution
+
+- **aa-user-operation-replay** (High)
+  - Detects UserOperation replay across bundlers and chains
+  - Identifies missing nonce validation and chain ID checks
+  - Validates UserOp hash completeness and execution tracking
+  - Real-world impact: Prevents double-spending and cross-chain replay
+
+- **aa-entry-point-reentrancy** (Medium)
+  - Detects reentrancy in handleOps and validateUserOp
+  - Identifies state changes after external calls in validation
+  - Validates reentrancy guards and callback target whitelisting
+  - Real-world impact: AA-specific reentrancy exploitation vector
+
+- **aa-bundler-dos-enhanced** (High)
+  - Enhanced bundler DOS detection with 2024 patterns
+  - Identifies unbounded computation and expensive operations
+  - Validates gas limits, timeouts, and external call complexity
+  - Real-world impact: Production bundler attacks and gas griefing
+
+---
+
+### Metrics
+
+- **Total Detectors**: 152 (+6 from v0.18.0)
+- **Phase 33 Focus**: ERC-4337 Account Abstraction (Coinbase, Safe, Uniswap wallets)
+- **Critical Detectors**: 2 new (aa-calldata-encoding-exploit, aa-paymaster-fund-drain)
+- **Real-world Coverage**: 2024 AA wallet vulnerabilities, bundler DOS patterns
+
+---
+
+## [0.18.0] - 2025-11-01
+
+### 🎯 Phase 32: Advanced Access Control (5 New Detectors)
+
+Access control vulnerabilities caused **$953.2M in losses in 2024 alone** (67% of total losses). This release adds 5 advanced detectors targeting role hierarchy violations, timelock bypass, privilege escalation, and centralization risks.
+
+This phase addresses real-world exploits including the **KiloEx DEX $7M loss** (2024) and instant rug pulls despite timelock promises.
+
+---
+
+### Added
+
+#### **Phase 32: Advanced Access Control (5 detectors)**
+
+- **role-hierarchy-bypass** (Critical)
+  - Detects role hierarchy violations in OpenZeppelin AccessControl systems
+  - Identifies missing DEFAULT_ADMIN_ROLE checks
+  - Validates role admin hierarchy with _setRoleAdmin
+  - Real-world impact: Based on KiloEx DEX $7M loss (2024)
+
+- **time-locked-admin-bypass** (Critical)
+  - Detects timelock circumvention and missing delay enforcement
+  - Identifies admin functions bypassing timelock
+  - Validates complete timelock flow (propose→queue→execute)
+  - Real-world impact: Prevents instant rug pulls despite timelock promises
+
+- **multi-role-confusion** (High)
+  - Detects functions with contradictory role requirements
+  - Identifies inconsistent access patterns on paired functions
+  - Validates role documentation and purpose clarity
+  - Real-world impact: Prevents overlapping roles on critical storage
+
+- **privilege-escalation-paths** (High)
+  - Detects indirect paths to gain higher privileges
+  - Identifies delegatecall in privileged contexts without validation
+  - Validates two-step ownership transfer patterns
+  - Real-world impact: Prevents function chains that escalate access
+
+- **guardian-role-centralization** (Medium)
+  - Detects guardian/emergency roles with excessive power
+  - Identifies single-EOA guardian assignments (not multisig)
+  - Validates guardian scope limitations and revocation mechanisms
+  - Real-world impact: Prevents single point of failure and rug pull risk
+
+---
+
+### Metrics
+
+- **Total Detectors**: 146 (+5 from v0.17.0)
+- **Phase 32 Focus**: Advanced Access Control ($953.2M in 2024 losses)
+- **Critical Detectors**: 2 new (role-hierarchy-bypass, time-locked-admin-bypass)
+- **Real-world Coverage**: KiloEx DEX exploit, timelock bypass patterns
+
+---
+
+## [0.17.0] - 2025-11-01
+
+### 🎯 Phase 31: Restaking & LRT Security (6 New Detectors)
+
+**First-to-Market**: SolidityDefend is now the **only open-source security tool** with comprehensive coverage for restaking protocols and Liquid Restaking Tokens (LRTs), protecting **$15B+ TVL** in the EigenLayer ecosystem.
+
+This release adds 6 critical security detectors for restaking protocols (EigenLayer, Renzo, Puffer, Kelp DAO), addressing delegation manipulation, slashing vulnerabilities, share inflation attacks, withdrawal delays, AVS validation, and rewards manipulation.
+
+---
+
+### Added
+
+#### **Phase 31: Restaking & LRT Security (6 detectors)**
+
+Comprehensive security coverage for restaking protocols and LRTs:
+
+- **restaking-delegation-manipulation** (Critical)
+  - Detects improper delegation validation in restaking protocols
+  - Identifies unauthorized operator changes
+  - Validates delegation authorization checks
+  - Real-world impact: Protects against operator centralization and fund redirection
+
+- **restaking-slashing-conditions** (Critical)
+  - Detects missing slashing protection mechanisms
+  - Identifies unbounded slashing amounts
+  - Validates slashing delay/cooldown periods
+  - Real-world impact: Prevents loss of staked principal due to AVS failures
+
+- **lrt-share-inflation** (Critical)
+  - Detects ERC-4626-style first depositor attacks on LRTs
+  - Identifies missing minimum share protection
+  - Validates virtual shares/dead shares implementation
+  - Real-world impact: Based on Kelp DAO HIGH severity finding (Nov 2023)
+
+- **restaking-withdrawal-delays** (High)
+  - Detects missing withdrawal delay enforcement
+  - Identifies queue manipulation vulnerabilities
+  - Validates withdrawal queue implementation
+  - Real-world impact: Prevents Renzo ezETH depeg scenario ($65M+ liquidations, April 2024)
+
+- **avs-validation-bypass** (High)
+  - Detects AVS registration without proper validation
+  - Identifies missing operator whitelist checks
+  - Validates AVS metadata and interface checks
+  - Real-world impact: Prevents malicious AVS from slashing operator stakes
+
+- **restaking-rewards-manipulation** (Medium)
+  - Detects reward calculation exploits
+  - Identifies points system gaming vulnerabilities
+  - Validates time-weighted reward distribution
+  - Real-world impact: Addresses Renzo airdrop farming controversy
+
+---
+
+### Summary
+
+**Detector Count**: 135 → **141** (+6)
+**Coverage**: First-to-market restaking/LRT security
+**Market Impact**: Protects $15B+ TVL in EigenLayer ecosystem
+**Differentiation**: Only tool with comprehensive restaking coverage
+
+### Market Leadership
+
+- ✅ **First-to-Market**: No competitor (Slither, Mythril, Aderyn) has restaking detectors
+- ✅ **Massive TAM**: $15B+ TVL needs security tooling
+- ✅ **Real Demand**: EigenLayer ecosystem growing rapidly
+- ✅ **Strategic**: Covers fastest-growing DeFi primitive of 2025
+
+---
+
 ## [0.16.0] - 2025-10-31
 
 ### 🎯 Phase 30: Advanced DeFi Security Patterns (5 New Detectors)

@@ -646,26 +646,152 @@ impl DetectorRegistry {
         //     crate::erc7683::IntentSettlementValidationDetector::new(),
         // ));
 
-        // Restaking & LRT Security (v0.10.0 - 2025)
-        // TODO v0.12.0: Uncomment when restaking module is added
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingDelegationManipulationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingSlashingConditionsDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::LRTShareInflationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingWithdrawalDelaysDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::AVSValidationBypassDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::restaking::RestakingRewardsManipulationDetector::new(),
-        // ));
+        // Phase 31: Restaking & LRT Security (v0.17.0 - 2025)
+        self.register(Arc::new(
+            crate::restaking::RestakingDelegationManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingSlashingConditionsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::LRTShareInflationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingWithdrawalDelaysDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::AVSValidationBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::restaking::RestakingRewardsManipulationDetector::new(),
+        ));
+
+        // Phase 32: Advanced Access Control (v0.18.0 - 2025)
+        self.register(Arc::new(
+            crate::access_control_advanced::RoleHierarchyBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control_advanced::TimeLockedAdminBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control_advanced::MultiRoleConfusionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control_advanced::PrivilegeEscalationPathsDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::access_control_advanced::GuardianRoleCentralizationDetector::new(),
+        ));
+
+        // Phase 33: ERC-4337 AA Advanced (v0.19.0 - 2025)
+        self.register(Arc::new(
+            crate::aa_advanced::AACalldataEncodingExploitDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AAPaymasterFundDrainDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AASignatureAggregationBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AAUserOperationReplayDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AAEntryPointReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AABundlerDosEnhancedDetector::new(),
+        ));
+
+        // Phase 34: Flash Loan Enhanced (v0.20.0 - 2025)
+        self.register(Arc::new(
+            crate::flashloan_enhanced::FlashLoanPriceManipulationAdvancedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan_enhanced::FlashLoanGovernanceAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan_enhanced::FlashLoanReentrancyComboDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan_enhanced::FlashLoanCollateralSwapDetector::new(),
+        ));
+
+        // Phase 35: Token Standards Extended (v0.21.0 - 2025)
+        self.register(Arc::new(
+            crate::token_standards_extended::ERC20TransferReturnBombDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_standards_extended::ERC721EnumerationDosDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_standards_extended::ERC1155BatchValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_standards_extended::TokenDecimalConfusionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_standards_extended::TokenPermitFrontRunningDetector::new(),
+        ));
+
+        // Phase 36: MEV Protection Enhanced (v0.22.0 - 2025)
+        self.register(Arc::new(
+            crate::mev_enhanced::MEVSandwichVulnerableDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::mev_enhanced::MEVBackrunOpportunitiesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::mev_enhanced::MEVPriorityGasAuctionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::mev_enhanced::MEVToxicFlowDetector::new(),
+        ));
+
+        // Phase 37: Zero-Knowledge Proofs (v1.0.0 - 2025)
+        self.register(Arc::new(
+            crate::zk_proofs::ZKProofMalleabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::zk_proofs::ZKTrustedSetupBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::zk_proofs::ZKCircuitUnderConstrainedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::zk_proofs::ZKRecursiveProofValidationDetector::new(),
+        ));
+
+        // Phase 38: Modular Blockchain (v1.0.0 - 2025)
+        self.register(Arc::new(
+            crate::modular_blockchain::CelestiaDataAvailabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::modular_blockchain::CrossRollupAtomicityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::modular_blockchain::OptimisticFraudProofTimingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::modular_blockchain::CrossChainMessageOrderingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::modular_blockchain::SovereignRollupValidationDetector::new(),
+        ));
+
+        // Phase 39: AI Agent Security (v1.0.0 - 2025)
+        self.register(Arc::new(
+            crate::ai_agent::AIAgentPromptInjectionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::ai_agent::AIAgentDecisionManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::ai_agent::AutonomousContractOracleDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::ai_agent::AIAgentResourceExhaustionDetector::new(),
+        ));
 
         // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
         self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));

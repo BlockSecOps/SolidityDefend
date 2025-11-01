@@ -1,14 +1,14 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-0.16.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.0.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.75+-blue.svg)](https://blog.rust-lang.org/2023/12/28/Rust-1.75.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-135-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-178-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 
-> ✅ **Production Ready** - v0.16.0 with 135 security detectors including advanced DeFi patterns (JIT liquidity, hook reentrancy, yield farming manipulation), OWASP 2025 Top 10 alignment, EIP-7702, EIP-1153, ERC-7821, ERC-7683, and privacy/storage security. First open-source tool with comprehensive coverage of 2025's most critical vulnerabilities ($1.42B+ in analyzed patterns).
+> ✅ **v1.0.0 Released** - Complete security suite with 178 detectors covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs (zkSync/Polygon zkEVM), modular blockchain (Celestia/Avail), AI agent security, OWASP 2025 Top 10, EIP-7702, EIP-1153, ERC-7821, ERC-7683, and privacy/storage security. First and only open-source tool with comprehensive EigenLayer/restaking and ZK rollup coverage.
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
@@ -31,7 +31,7 @@ soliditydefend -s high contract.sol
 
 ## ✨ Features
 
-- **135 Security Detectors** - Comprehensive coverage including reentrancy, access control, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
+- **178 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
 - **OWASP 2025 Aligned** 🆕 - Full coverage of OWASP Smart Contract Top 10 (2025) addressing $1.42B in analyzed vulnerability patterns
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
@@ -44,14 +44,17 @@ soliditydefend -s high contract.sol
 ### Detector Categories
 
 - **Core Security**: Access control, reentrancy, input validation, logic bugs
-- **OWASP 2025** 🆕: Logic errors ($63.8M), oracle security, input validation ($14.6M), overflow ($223M Cetus), access control ($953M)
-- **Modern EIPs** 🆕: EIP-7702 delegation phishing, EIP-1153 transient storage reentrancy
+- **OWASP 2025**: Logic errors ($63.8M), oracle security, input validation ($14.6M), overflow ($223M Cetus), access control ($953M)
+- **Modern EIPs**: EIP-7702 delegation phishing, EIP-1153 transient storage reentrancy
 - **DeFi**: Oracle manipulation, flash loans, slippage protection, vault security (ERC-4626)
-- **Intent-Based** 🆕: ERC-7683 cross-chain validation, ERC-7821 batch executor security
-- **MEV & Timing**: Front-running, sandwich attacks, timestamp dependencies
+- **Intent-Based**: ERC-7683 cross-chain validation, ERC-7821 batch executor security
+- **MEV & Timing**: Front-running, sandwich attacks, timestamp dependencies, MEV protection
 - **Advanced**: Account Abstraction (ERC-4337), cross-chain bridges, governance attacks
-- **Privacy** 🆕: Storage visibility, commit-reveal schemes, secret exposure
-- **Token Standards**: ERC-20/721/777/1155 vulnerabilities
+- **Privacy**: Storage visibility, commit-reveal schemes, secret exposure
+- **Token Standards**: ERC-20/721/777/1155 vulnerabilities, permit front-running, decimal confusion
+- **Zero-Knowledge** 🆕: ZK proof malleability, trusted setup validation, circuit constraints (zkSync, Scroll, Polygon zkEVM)
+- **Modular Blockchain** 🆕: Celestia/Avail data availability, cross-rollup atomicity, fraud proof timing
+- **AI Agent Security** 🆕: Prompt injection, decision manipulation, oracle dependency, resource exhaustion
 - **Code Quality**: Gas optimization, DoS prevention, deprecated functions
 
 For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTORS.md](docs/DETECTORS.md)
