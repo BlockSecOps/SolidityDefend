@@ -7,10 +7,8 @@ Loaded configuration from: .soliditydefend.yml
 
 Starting analysis...
 Analyzing: tests/real-contracts/uniswap/UniswapV2Pair-simplified.sol
-  Found 123 issues
-Found 96 issues in 1 file:
-● parameter-consistency Parameter 'owner' in function 'balanceOf' may shadow a state variable 13:32
-
+  Found 112 issues
+Found 85 issues in 1 file:
 ● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 19:0
 
 ● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 30:0
@@ -75,27 +73,7 @@ Found 96 issues in 1 file:
 
 ● missing-zero-address-check Address parameter 'to' in function 'mint' is not checked for zero address 53:27
 
-● missing-zero-address-check Address parameter 'to' in function 'burn' is not checked for zero address 73:27
-
 ● missing-zero-address-check Address parameter 'to' in function 'swap' is not checked for zero address 96:67
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 53:27
-
-● parameter-consistency Parameter 'to' is declared but never used 53:27
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 73:27
-
-● parameter-consistency Parameter 'amount0Out' of type 'uint' may need validation 96:27
-
-● parameter-consistency Parameter 'amount1Out' of type 'uint' may need validation 96:47
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 96:67
-
-● parameter-consistency Parameter ordering in function 'swap': address parameter 'to' should typically come before amount parameter 'amount1Out' 96:14
-
-● parameter-consistency Parameter 'x' is declared but never used 159:26
-
-● parameter-consistency Parameter 'y' is declared but never used 159:37
 
 ● unchecked-external-call External call in function 'burn' does not check return value 73:14
 
@@ -202,12 +180,12 @@ Found 96 issues in 1 file:
 ● transient-storage-reentrancy Classic reentrancy pattern with transient storage risk in 'swap' 96:0
 
 
-Summary: 13 critical, 23 high, 40 medium, 20 low
+Summary: 13 critical, 22 high, 35 medium, 15 low
 
 Analysis complete:
   Files analyzed: 1
   Successful: 1
-  Issues found: 96
+  Issues found: 85
   Duplicates removed: 27
   Time taken: 0.02s
 

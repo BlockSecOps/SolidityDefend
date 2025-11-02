@@ -7,8 +7,8 @@ Loaded configuration from: .soliditydefend.yml
 
 Starting analysis...
 Analyzing: tests/real-contracts/compound/cDAI.sol
-  Found 369 issues
-Found 117 issues in 1 file:
+  Found 326 issues
+Found 74 issues in 1 file:
 ● inefficient-storage Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations. 39:0
 
 ● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 42:0
@@ -65,12 +65,6 @@ Found 117 issues in 1 file:
 
 ● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
 
-● parameter-consistency Parameter 'owner' in function 'allowance' may shadow a state variable 90:32
-
-● parameter-consistency Parameter 'owner' in function 'balanceOf' may shadow a state variable 91:32
-
-● parameter-consistency Parameter 'owner' in function 'balanceOfUnderlying' may shadow a state variable 92:42
-
 ● missing-access-modifiers Function 'mint' performs critical operations but lacks access control modifiers 175:14
 
 ● missing-access-modifiers Function 'exchangeRateCurrent' performs critical operations but lacks access control modifiers 270:14
@@ -97,14 +91,6 @@ Found 117 issues in 1 file:
 
 ● missing-zero-address-check Address parameter 'borrower' in function 'liquidateBorrow' is not checked for zero address 205:38
 
-● missing-zero-address-check Address parameter 'dst' in function 'transfer' is not checked for zero address 210:31
-
-● missing-zero-address-check Address parameter 'src' in function 'transferFrom' is not checked for zero address 215:35
-
-● missing-zero-address-check Address parameter 'dst' in function 'transferFrom' is not checked for zero address 215:48
-
-● missing-zero-address-check Address parameter 'spender' in function 'approve' is not checked for zero address 220:30
-
 ● missing-zero-address-check Address parameter 'owner' in function 'balanceOfUnderlying' is not checked for zero address 235:42
 
 ● missing-zero-address-check Address parameter 'account' in function 'borrowBalanceCurrent' is not checked for zero address 260:43
@@ -112,78 +98,6 @@ Found 117 issues in 1 file:
 ● missing-zero-address-check Address parameter 'liquidator' in function 'seize' is not checked for zero address 290:28
 
 ● missing-zero-address-check Address parameter 'borrower' in function 'seize' is not checked for zero address 290:48
-
-● missing-zero-address-check Address parameter 'callee' in function 'delegateTo' is not checked for zero address 330:33
-
-● parameter-consistency Parameter 'underlying_' of type 'address' may need validation 143:17
-
-● parameter-consistency Parameter 'initialExchangeRateMantissa_' of type 'uint' may need validation 146:14
-
-● parameter-consistency Parameter 'implementation_' of type 'address' may need validation 151:17
-
-● parameter-consistency Parameter 'implementation_' of type 'address' may need validation 164:41
-
-● parameter-consistency Parameter 'mintAmount' of type 'uint' may need validation 175:24
-
-● parameter-consistency Parameter 'redeemAmount' of type 'uint' may need validation 185:36
-
-● parameter-consistency Parameter 'borrowAmount' of type 'uint' may need validation 190:26
-
-● parameter-consistency Parameter 'repayAmount' of type 'uint' may need validation 195:31
-
-● parameter-consistency Parameter 'borrower' of type 'address' may need validation 200:40
-
-● parameter-consistency Parameter 'repayAmount' of type 'uint' may need validation 200:55
-
-● parameter-consistency Parameter 'borrower' of type 'address' may need validation 205:38
-
-● parameter-consistency Parameter 'repayAmount' of type 'uint' may need validation 205:53
-
-● parameter-consistency Parameter 'dst' of type 'address' may need validation 210:31
-
-● parameter-consistency Parameter 'amount' of type 'uint' may need validation 210:41
-
-● parameter-consistency Parameter 'src' of type 'address' may need validation 215:35
-
-● parameter-consistency Parameter 'dst' of type 'address' may need validation 215:48
-
-● parameter-consistency Parameter 'amount' of type 'uint' may need validation 215:61
-
-● parameter-consistency Parameter 'spender' of type 'address' may need validation 220:30
-
-● parameter-consistency Parameter 'amount' of type 'uint' may need validation 220:47
-
-● parameter-consistency Parameter 'owner' of type 'address' may need validation 225:32
-
-● parameter-consistency Parameter 'spender' of type 'address' may need validation 225:47
-
-● parameter-consistency Parameter 'owner' in function 'allowance' may shadow a state variable 225:32
-
-● parameter-consistency Parameter 'owner' of type 'address' may need validation 230:32
-
-● parameter-consistency Parameter 'owner' in function 'balanceOf' may shadow a state variable 230:32
-
-● parameter-consistency Parameter 'owner' of type 'address' may need validation 235:42
-
-● parameter-consistency Parameter 'owner' in function 'balanceOfUnderlying' may shadow a state variable 235:42
-
-● parameter-consistency Parameter 'account' of type 'address' may need validation 240:41
-
-● parameter-consistency Parameter 'account' of type 'address' may need validation 260:43
-
-● parameter-consistency Parameter 'account' of type 'address' may need validation 265:42
-
-● parameter-consistency Parameter 'liquidator' of type 'address' may need validation 290:28
-
-● parameter-consistency Parameter 'borrower' of type 'address' may need validation 290:48
-
-● parameter-consistency Parameter 'addAmount' of type 'uint' may need validation 315:32
-
-● parameter-consistency Parameter 'reduceAmount' of type 'uint' may need validation 320:35
-
-● parameter-consistency Parameter 'callee' of type 'address' may need validation 330:33
-
-● parameter-consistency Parameter 'data' is declared but never used 340:52
 
 ● storage-collision Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state. 354:5
 
@@ -244,14 +158,14 @@ Found 117 issues in 1 file:
 ● erc20-approve-race Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114). 220:14
 
 
-Summary: 22 critical, 33 high, 27 medium, 35 low
+Summary: 22 critical, 22 high, 20 medium, 10 low
 
 Analysis complete:
   Files analyzed: 1
   Successful: 1
-  Issues found: 117
+  Issues found: 74
   Duplicates removed: 252
-  Time taken: 0.22s
+  Time taken: 0.17s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues

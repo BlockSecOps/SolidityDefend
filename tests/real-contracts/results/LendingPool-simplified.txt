@@ -7,8 +7,8 @@ Loaded configuration from: .soliditydefend.yml
 
 Starting analysis...
 Analyzing: tests/real-contracts/aave/LendingPool-simplified.sol
-  Found 157 issues
-Found 97 issues in 1 file:
+  Found 133 issues
+Found 73 issues in 1 file:
 ● inefficient-storage Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations. 29:0
 
 ● centralization-risk Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
@@ -27,11 +27,11 @@ Found 97 issues in 1 file:
 
 ● unused-state-variables State variable 'currentLiquidityRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 32:0
 
+● unused-state-variables State variable 'variableBorrowIndex' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 31:0
+
 ● unused-state-variables State variable 'currentVariableBorrowRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 33:0
 
 ● unused-state-variables State variable 'data' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
-
-● unused-state-variables State variable 'variableBorrowIndex' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 31:0
 
 ● multisig-bypass Missing threshold validation (can be set to zero or exceed owner count) 0:0
 
@@ -87,8 +87,6 @@ Found 97 issues in 1 file:
 
 ● parameter-consistency Parameter ordering in function 'deposit': address parameter 'onBehalfOf' should typically come before amount parameter 'amount' 46:14
 
-● parameter-consistency Parameter 'referralCode' is declared but never used 50:16
-
 ● parameter-consistency Parameter 'asset' of type 'address' may need validation 61:17
 
 ● parameter-consistency Parameter 'amount' of type 'uint' may need validation 62:17
@@ -105,14 +103,6 @@ Found 97 issues in 1 file:
 
 ● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 79:17
 
-● parameter-consistency Parameter 'asset' is declared but never used 75:17
-
-● parameter-consistency Parameter 'amount' is declared but never used 76:17
-
-● parameter-consistency Parameter 'interestRateMode' is declared but never used 77:17
-
-● parameter-consistency Parameter 'referralCode' is declared but never used 78:16
-
 ● parameter-consistency Parameter 'asset' of type 'address' may need validation 91:17
 
 ● parameter-consistency Parameter 'amount' of type 'uint' may need validation 92:17
@@ -120,14 +110,6 @@ Found 97 issues in 1 file:
 ● parameter-consistency Parameter 'rateMode' of type 'uint' may need validation 93:17
 
 ● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 94:17
-
-● parameter-consistency Parameter 'asset' is declared but never used 91:17
-
-● parameter-consistency Parameter 'amount' is declared but never used 92:17
-
-● parameter-consistency Parameter 'rateMode' is declared but never used 93:17
-
-● parameter-consistency Parameter 'onBehalfOf' is declared but never used 94:17
 
 ● parameter-consistency Function 'flashLoan' has multiple array parameters (assets, amounts, modes) but no length consistency validation 102:14
 
@@ -141,41 +123,11 @@ Found 97 issues in 1 file:
 
 ● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 107:17
 
-● parameter-consistency Parameter 'receiverAddress' is declared but never used 103:17
-
-● parameter-consistency Parameter 'assets' is declared but never used 104:28
-
-● parameter-consistency Parameter 'amounts' is declared but never used 105:28
-
-● parameter-consistency Parameter 'modes' is declared but never used 106:28
-
-● parameter-consistency Parameter 'onBehalfOf' is declared but never used 107:17
-
-● parameter-consistency Parameter 'params' is declared but never used 108:24
-
-● parameter-consistency Parameter 'referralCode' is declared but never used 109:16
-
 ● parameter-consistency Parameter 'collateralAsset' of type 'address' may need validation 118:17
 
 ● parameter-consistency Parameter 'debtAsset' of type 'address' may need validation 119:17
 
 ● parameter-consistency Parameter 'user' of type 'address' may need validation 120:17
-
-● parameter-consistency Parameter 'collateralAsset' is declared but never used 118:17
-
-● parameter-consistency Parameter 'debtAsset' is declared but never used 119:17
-
-● parameter-consistency Parameter 'debtToCover' is declared but never used 121:17
-
-● parameter-consistency Parameter 'receiveAToken' is declared but never used 122:14
-
-● parameter-consistency Parameter 'user' of type 'address' may need validation 135:41
-
-● parameter-consistency Parameter 'user' is declared but never used 135:41
-
-● parameter-consistency Parameter 'asset' of type 'address' may need validation 162:37
-
-● parameter-consistency Parameter 'asset' is declared but never used 162:37
 
 ● uninitialized-storage Function 'flashLoan' contains uninitialized storage pointer. Declares array variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables. 102:14
 
@@ -204,12 +156,12 @@ Found 97 issues in 1 file:
 ● erc777-reentrancy-hooks Function 'withdraw' is vulnerable to ERC-777 hook reentrancy. Interacts with ERC-777 tokens without reentrancy guard Historical losses: $18.8M+ (Cream Finance), $25M (LendfMe), $300k (Uniswap V1). 60:14
 
 
-Summary: 6 critical, 16 high, 46 medium, 29 low
+Summary: 6 critical, 16 high, 24 medium, 27 low
 
 Analysis complete:
   Files analyzed: 1
   Successful: 1
-  Issues found: 97
+  Issues found: 73
   Duplicates removed: 60
   Time taken: 0.02s
 

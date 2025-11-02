@@ -323,6 +323,20 @@ impl ParameterConsistencyDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // Skip view/pure functions - they don't modify state so validation is less critical
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return findings;
+        }
+
+        // Skip internal/private functions - they're called by trusted code
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
+            return findings;
+        }
+
         if let Some(body) = &function.body {
             let validated_params = self.find_validated_parameters(body);
 
@@ -574,50 +588,23 @@ impl ParameterConsistencyDetector {
     /// Check for parameter shadowing
     fn check_parameter_shadowing(
         &self,
-        params: &[ParameterInfo],
-        function: &ast::Function<'_>,
-        ctx: &AnalysisContext<'_>,
+        _params: &[ParameterInfo],
+        _function: &ast::Function<'_>,
+        _ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
-        let mut findings = Vec::new();
+        let findings = Vec::new();
 
-        // Check for parameters with names that might shadow state variables
-        let common_state_var_names = [
-            "owner",
-            "admin",
-            "balance",
-            "token",
-            "paused",
-            "initialized",
-            "totalSupply",
-            "decimals",
-            "name",
-            "symbol",
-        ];
-
-        for param in params {
-            if common_state_var_names.contains(&param.name.as_str()) {
-                let message = format!(
-                    "Parameter '{}' in function '{}' may shadow a state variable",
-                    param.name, function.name.name
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        param.location.start().line() as u32,
-                        param.location.start().column() as u32,
-                        param.location.byte_length() as u32,
-                    )
-                    .with_cwe(1177) // CWE-1177: Use of Prohibited Code
-                    .with_fix_suggestion(format!(
-                        "Consider renaming parameter '{}' to avoid shadowing",
-                        param.name
-                    ));
-                findings.push(finding);
-            }
-        }
+        // DISABLED: Parameter shadowing check is overly pedantic
+        // Common parameter names like "owner", "token", "balance" are legitimate
+        // and don't necessarily shadow state variables. Many legitimate patterns:
+        // - transferOwnership(address owner) - parameter "owner" is the new owner
+        // - transfer(address token, uint amount) - parameter "token" is the token to transfer
+        // - deposit(uint balance) - parameter "balance" is the deposit amount
+        //
+        // The Solidity compiler already warns about actual shadowing (same name in scope).
+        // This check creates noise with false positives on legitimate parameter names.
+        //
+        // TODO: Only flag if we can prove the parameter name actually shadows a state variable
 
         findings
     }
@@ -625,34 +612,23 @@ impl ParameterConsistencyDetector {
     /// Check parameter usage patterns in function body
     fn check_parameter_usage_patterns(
         &self,
-        block: &ast::Block<'_>,
-        params: &[ParameterInfo],
-        ctx: &AnalysisContext<'_>,
+        _block: &ast::Block<'_>,
+        _params: &[ParameterInfo],
+        _ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
-        let mut findings = Vec::new();
+        let findings = Vec::new();
 
-        // Find unused parameters
-        let used_params = self.find_used_parameters(block);
-        for param in params {
-            if !used_params.contains(&param.name) {
-                let message = format!("Parameter '{}' is declared but never used", param.name);
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        param.location.start().line() as u32,
-                        param.location.start().column() as u32,
-                        param.location.byte_length() as u32,
-                    )
-                    .with_cwe(563) // CWE-563: Assignment to Variable without Use
-                    .with_fix_suggestion(format!(
-                        "Remove unused parameter '{}' or use it in the function",
-                        param.name
-                    ));
-                findings.push(finding);
-            }
-        }
+        // DISABLED: "Unused parameter" detection is unreliable
+        // The find_used_parameters() function doesn't correctly identify all usage patterns:
+        // - Mapping access: balanceOf[param]
+        // - Array access: items[param]
+        // - Struct member access patterns
+        // - Parameters used in modifiers
+        //
+        // This causes many false positives where parameters ARE used but flagged as unused.
+        // The Solidity compiler already warns about truly unused parameters.
+        //
+        // TODO: Improve AST traversal to correctly identify all parameter usage patterns
 
         findings
     }
@@ -795,6 +771,26 @@ impl Detector for ParameterConsistencyDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip analysis for standard protocols - they follow established patterns
+        // ERC20, ERC721, ERC4626, etc. have well-defined interfaces with specific behaviors
+        let source_lower = ctx.source_code.to_lowercase();
+        let is_standard_token = (source_lower.contains("function transfer(address")
+            || source_lower.contains("function transferfrom("))
+            && source_lower.contains("balanceof")
+            && source_lower.contains("erc20")
+            || source_lower.contains("erc721")
+            || source_lower.contains("erc1155");
+
+        if is_standard_token {
+            // Only check array length consistency for standard tokens
+            // Skip pedantic parameter validation checks
+            for function in ctx.get_functions() {
+                let params = self.extract_parameter_info(function);
+                findings.extend(self.check_array_length_consistency(&params, function, ctx));
+            }
+            return Ok(findings);
+        }
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {

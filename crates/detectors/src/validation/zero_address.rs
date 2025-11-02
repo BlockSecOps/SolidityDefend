@@ -40,6 +40,30 @@ impl ZeroAddressDetector {
             return findings;
         }
 
+        // Skip internal/private functions - they're called by trusted code
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
+            return findings;
+        }
+
+        // Skip standard token interface functions - zero address behavior is by design
+        // ERC20: transfer to address(0) burns tokens (allowed by spec)
+        // ERC20: approve address(0) revokes approval (allowed by spec)
+        // ERC721: transferFrom to address(0) burns NFT (allowed by spec)
+        let func_name_lower = function.name.name.to_lowercase();
+        let is_standard_token_function = func_name_lower == "transfer"
+            || func_name_lower == "transferfrom"
+            || func_name_lower == "approve"
+            || func_name_lower == "safetransfer"
+            || func_name_lower == "safetransferfrom"
+            || func_name_lower == "burn"  // Burn explicitly sends to zero
+            || func_name_lower == "burnfrom";
+
+        if is_standard_token_function {
+            return findings;
+        }
+
         // Find address parameters
         let address_params = self.find_address_parameters(function);
 

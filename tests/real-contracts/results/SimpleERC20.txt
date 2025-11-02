@@ -7,47 +7,13 @@ Loaded configuration from: .soliditydefend.yml
 
 Starting analysis...
 Analyzing: tests/real-contracts/tokens/SimpleERC20.sol
-  Found 50 issues
-Found 50 issues in 1 file:
-● missing-zero-address-check Address parameter 'to' in function 'transfer' is not checked for zero address 43:31
-
-● missing-zero-address-check Address parameter 'spender' in function 'approve' is not checked for zero address 51:30
-
-● missing-zero-address-check Address parameter 'from' in function 'transferFrom' is not checked for zero address 57:35
-
-● missing-zero-address-check Address parameter 'to' in function 'transferFrom' is not checked for zero address 57:49
-
+  Found 33 issues
+Found 33 issues in 1 file:
 ● missing-zero-address-check Address parameter 'to' in function 'mint' is not checked for zero address 70:27
 
 ● missing-zero-address-check Address parameter 'account' in function 'addMinter' is not checked for zero address 86:32
 
 ● missing-zero-address-check Address parameter 'account' in function 'removeMinter' is not checked for zero address 90:35
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 43:31
-
-● parameter-consistency Parameter 'to' is declared but never used 43:31
-
-● parameter-consistency Parameter 'spender' of type 'address' may need validation 51:30
-
-● parameter-consistency Parameter 'amount' of type 'uint' may need validation 51:47
-
-● parameter-consistency Parameter 'from' of type 'address' may need validation 57:35
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 57:49
-
-● parameter-consistency Parameter 'to' is declared but never used 57:49
-
-● parameter-consistency Parameter 'to' of type 'address' may need validation 70:27
-
-● parameter-consistency Parameter 'amount' of type 'uint' may need validation 70:39
-
-● parameter-consistency Parameter 'to' is declared but never used 70:27
-
-● parameter-consistency Parameter 'amount' is declared but never used 70:39
-
-● parameter-consistency Parameter 'account' of type 'address' may need validation 86:32
-
-● parameter-consistency Parameter 'account' of type 'address' may need validation 90:35
 
 ● amm-liquidity-manipulation Function 'onlyMinter' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 32:14
 
@@ -110,13 +76,13 @@ Found 50 issues in 1 file:
 ● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
 
 
-Summary: 10 critical, 16 high, 9 medium, 15 low
+Summary: 10 critical, 9 high, 5 medium, 9 low
 
 Analysis complete:
   Files analyzed: 1
   Successful: 1
-  Issues found: 50
-  Time taken: 0.01s
+  Issues found: 33
+  Time taken: 0.02s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues
