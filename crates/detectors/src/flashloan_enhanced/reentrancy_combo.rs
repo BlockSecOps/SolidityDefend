@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct FlashLoanReentrancyComboDetector {
     base: BaseDetector,
@@ -69,6 +70,17 @@ impl Detector for FlashLoanReentrancyComboDetector {
             || lower.contains("executeoperation");
 
         if !is_flash_loan {
+            return Ok(findings);
+        }
+
+        // Skip flash loan PROVIDERS - they implement flash loan logic, not vulnerabilities
+        // Flash loan providers (Aave, Compound, ERC-3156) MUST:
+        // 1. Execute callback on borrower (onFlashLoan/executeOperation)
+        // 2. Handle callback execution which involves external calls
+        // 3. Verify repayment after callback completes
+        // This is the standard flash loan pattern per ERC-3156, not a Penpie-style attack.
+        // This detector should focus on flash loan CONSUMERS with unsafe state management.
+        if utils::is_flash_loan_provider(ctx) {
             return Ok(findings);
         }
 

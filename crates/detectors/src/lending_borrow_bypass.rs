@@ -336,9 +336,20 @@ impl Detector for LendingBorrowBypassDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip known lending protocols - they have audited implementations
+        // Compound cTokens, Aave LendingPool, MakerDAO Vat have proper:
+        // - Health factor checks (accountLiquidity, healthFactor)
+        // - Collateral factor validation (LTV, collateralFactor)
+        // - Liquidation mechanisms
+        // - Interest rate calculations
+        // This detector should focus on CUSTOM lending implementations
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
         // Skip if this is an ERC-3156 flash loan provider
         // Flash loans intentionally bypass collateral checks and have different validation logic
-        let is_flash_loan_provider = utils::is_erc3156_flash_loan(ctx);
+        let is_flash_loan_provider = utils::is_flash_loan_provider(ctx);
 
         for function in ctx.get_functions() {
             let func_source = self.get_function_source(function, ctx);
