@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 pub struct FlashLoanCollateralSwapDetector {
     base: BaseDetector,
@@ -61,6 +62,17 @@ impl Detector for FlashLoanCollateralSwapDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
         let lower = ctx.source_code.to_lowercase();
+
+        // Skip known lending protocols - they have audited collateral management
+        // Compound, Aave, MakerDAO manage risk through:
+        // - Compound: Collateral factors via Comptroller
+        // - Aave: Isolation mode, LTV ratios, health factor monitoring
+        // - MakerDAO: Ilk-based collateral types with separate debt ceilings
+        // These protocols don't use "isolation mode" keyword but have equivalent safeguards.
+        // This detector should focus on CUSTOM lending implementations without proper risk management.
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
 
         // Check for lending/collateral functionality
         let is_lending = lower.contains("collateral")

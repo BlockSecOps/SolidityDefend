@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity, SourceLocation};
+use crate::utils;
 use ast;
 /// Governance vulnerability detector that implements the Detector trait
 pub struct GovernanceDetector;
@@ -40,6 +41,17 @@ impl Detector for GovernanceDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip lending protocols - they are NOT governance tokens
+        // Lending protocol tokens (cTokens, aTokens) have "delegate" for proxy patterns,
+        // not governance delegation. Known protocols have separate governance tokens:
+        // - Compound: COMP token (not cTokens)
+        // - Aave: AAVE token (not aTokens)
+        // - MakerDAO: MKR token (not Dai or Vat)
+        // This detector should focus on actual governance tokens with voting mechanisms.
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
 
         // Run all governance vulnerability detection methods
         findings.extend(self.detect_flash_loan_governance_attacks(ctx)?);
