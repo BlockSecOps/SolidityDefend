@@ -12,6 +12,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 use ast;
 
 pub struct FlashloanCallbackReentrancyDetector {
@@ -72,6 +73,17 @@ impl Detector for FlashloanCallbackReentrancyDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip flash loan PROVIDERS - they MUST call back to borrowers
+        // Flash loan providers (Aave, Compound, ERC-3156) are REQUIRED to:
+        // 1. Call onFlashLoan() callback on the borrower
+        // 2. Verify borrowed amount + fee is returned
+        // 3. Handle callback execution (which may involve external calls)
+        // This is by design per ERC-3156 standard, not a vulnerability.
+        // This detector should focus on flash loan CONSUMERS with unsafe callback handling.
+        if utils::is_flash_loan_provider(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             let func_name = function.name.name.to_lowercase();

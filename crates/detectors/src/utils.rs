@@ -509,6 +509,426 @@ pub fn is_amm_pool(ctx: &AnalysisContext) -> bool {
     has_swap && has_liquidity_ops && indicator_count >= 2
 }
 
+/// Detects if the contract is a Compound-style cToken
+///
+/// Compound cTokens are interest-bearing tokens that represent deposits:
+/// - mint() to deposit underlying assets
+/// - redeem() to withdraw underlying assets
+/// - borrow() to borrow against collateral
+/// - repayBorrow() to repay borrowed assets
+/// - liquidateBorrow() for undercollateralized positions
+/// - Exchange rate and interest rate calculations
+pub fn is_compound_ctoken(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for cToken core functions (mint/redeem/borrow/repay)
+    let has_mint = source.contains("function mint(") && source.contains("mintAmount");
+    let has_redeem = source.contains("function redeem(") && source.contains("redeemTokens");
+    let has_borrow = source.contains("function borrow(") && source.contains("borrowAmount");
+    let has_repay_borrow = source.contains("function repayBorrow(")
+        || source.contains("function repayBorrowBehalf(");
+
+    // Check for liquidation function (Compound-specific signature)
+    let has_liquidate_borrow = source.contains("function liquidateBorrow(")
+        && source.contains("cTokenCollateral");
+
+    // Check for exchange rate (cToken to underlying conversion)
+    let has_exchange_rate = source.contains("function exchangeRateCurrent(")
+        || source.contains("function exchangeRateStored(")
+        || source.contains("exchangeRate");
+
+    // Check for interest rate functions
+    let has_interest_rates = (source.contains("function borrowRatePerBlock(")
+        || source.contains("function supplyRatePerBlock("))
+        || (source.contains("borrowRate") && source.contains("supplyRate"));
+
+    // Check for comptroller reference
+    let has_comptroller = source.contains("comptroller")
+        || source.contains("Comptroller")
+        || source.contains("IComptroller");
+
+    // Check for underlying asset
+    let has_underlying =
+        source.contains("underlying") || source.contains("UNDERLYING_ASSET_ADDRESS");
+
+    // Check for Compound-specific markers
+    let has_compound_marker = source.contains("CToken")
+        || source.contains("cToken")
+        || source.contains("CErc20")
+        || source.contains("CEther");
+
+    // Must have core lending operations + at least 3 other indicators
+    let core_operations = has_mint && has_redeem && has_borrow && has_repay_borrow;
+    let indicator_count = [
+        has_liquidate_borrow,
+        has_exchange_rate,
+        has_interest_rates,
+        has_comptroller,
+        has_underlying,
+        has_compound_marker,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    core_operations && indicator_count >= 3
+}
+
+/// Detects if the contract is a Compound Comptroller (risk management)
+///
+/// Comptroller manages risk parameters across all cToken markets:
+/// - enterMarkets() to enable collateral
+/// - exitMarket() to disable collateral
+/// - getAccountLiquidity() to check account health
+/// - liquidateBorrowAllowed() for liquidation validation
+/// - Market parameters and collateral factors
+pub fn is_compound_comptroller(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for market entry/exit functions
+    let has_enter_markets = source.contains("function enterMarkets(")
+        && source.contains("cTokens")
+        && source.contains("[]");
+    let has_exit_market =
+        source.contains("function exitMarket(") && source.contains("cToken");
+
+    // Check for account liquidity calculation
+    let has_account_liquidity = source.contains("function getAccountLiquidity(")
+        || source.contains("function getHypotheticalAccountLiquidity(");
+
+    // Check for liquidation allowed validation
+    let has_liquidate_allowed = source.contains("function liquidateBorrowAllowed(")
+        || source.contains("function liquidateCalculateSeizeTokens(");
+
+    // Check for markets mapping
+    let has_markets_mapping = (source.contains("mapping") && source.contains("markets"))
+        || source.contains("function markets(");
+
+    // Check for collateral factor
+    let has_collateral_factor = source.contains("collateralFactor")
+        || source.contains("collateralFactorMantissa")
+        || source.contains("CollateralFactor");
+
+    // Check for Comptroller markers
+    let has_comptroller_marker = source.contains("Comptroller")
+        || source.contains("comptroller")
+        || source.contains("IComptroller");
+
+    // Check for price oracle
+    let has_oracle = source.contains("oracle") && source.contains("PriceOracle");
+
+    // Must have market management + at least 3 other indicators
+    let has_market_management = has_enter_markets && has_exit_market;
+    let indicator_count = [
+        has_account_liquidity,
+        has_liquidate_allowed,
+        has_markets_mapping,
+        has_collateral_factor,
+        has_comptroller_marker,
+        has_oracle,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_market_management && indicator_count >= 3
+}
+
+/// Detects if the contract is an Aave LendingPool
+///
+/// Aave LendingPool is the core lending protocol contract:
+/// - deposit() to supply assets
+/// - withdraw() to retrieve supplied assets
+/// - borrow() to borrow assets
+/// - repay() to repay borrowed assets
+/// - liquidationCall() for liquidating undercollateralized positions
+/// - flashLoan() for flash loan functionality
+pub fn is_aave_lending_pool(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for Aave V2/V3 core functions
+    let has_deposit = source.contains("function deposit(")
+        && source.contains("onBehalfOf")
+        && source.contains("referralCode");
+    let has_withdraw =
+        source.contains("function withdraw(") && source.contains("asset");
+    let has_borrow = source.contains("function borrow(")
+        && source.contains("interestRateMode")
+        && source.contains("asset");
+    let has_repay = source.contains("function repay(") && source.contains("rateMode");
+
+    // Check for liquidation call (Aave-specific signature)
+    let has_liquidation_call = source.contains("function liquidationCall(")
+        && (source.contains("debtToCover") || source.contains("collateralAsset"));
+
+    // Check for flash loan function
+    let has_flash_loan = source.contains("function flashLoan(")
+        && source.contains("receiverAddress")
+        && source.contains("assets")
+        && source.contains("[]");
+
+    // Check for reserve data
+    let has_reserve_data = source.contains("function getReserveData(")
+        || source.contains("ReserveData")
+        || source.contains("getReserveNormalizedIncome");
+
+    // Check for user account data
+    let has_user_account_data = source.contains("function getUserAccountData(")
+        || source.contains("healthFactor")
+        || source.contains("totalDebtETH");
+
+    // Check for Aave markers
+    let has_aave_marker = source.contains("LendingPool")
+        || source.contains("ILendingPool")
+        || source.contains("ADDRESSES_PROVIDER")
+        || source.contains("POOL");
+
+    // Check for aToken integration
+    let has_atoken = source.contains("aToken") || source.contains("IAToken");
+
+    // Must have core operations + at least 3 other indicators
+    let core_operations = has_deposit && has_withdraw && has_borrow && has_repay;
+    let indicator_count = [
+        has_liquidation_call,
+        has_flash_loan,
+        has_reserve_data,
+        has_user_account_data,
+        has_aave_marker,
+        has_atoken,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    core_operations && indicator_count >= 3
+}
+
+/// Detects if the contract is an Aave aToken (interest-bearing token)
+///
+/// Aave aTokens are rebasing tokens that represent deposits in Aave:
+/// - POOL() reference to LendingPool
+/// - UNDERLYING_ASSET_ADDRESS() for the underlying asset
+/// - scaledBalanceOf() for balance calculations
+/// - mint() and burn() only callable by LendingPool
+pub fn is_aave_atoken(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for POOL reference (Aave V3) or getLendingPool (V2)
+    let has_pool = source.contains("function POOL()")
+        || source.contains("function pool()")
+        || source.contains("function getLendingPool()");
+
+    // Check for underlying asset address
+    let has_underlying = source.contains("function UNDERLYING_ASSET_ADDRESS()")
+        || source.contains("_underlyingAsset");
+
+    // Check for scaled balance (rebasing token pattern)
+    let has_scaled_balance = source.contains("function scaledBalanceOf(")
+        || source.contains("scaledTotalSupply")
+        || source.contains("_userState");
+
+    // Check for mint function (only callable by LendingPool)
+    let has_mint = source.contains("function mint(")
+        && (source.contains("onlyPool") || source.contains("onlyLendingPool"));
+
+    // Check for burn function (only callable by LendingPool)
+    let has_burn = source.contains("function burn(")
+        && (source.contains("onlyPool") || source.contains("receiverOfUnderlying"));
+
+    // Check for Aave aToken markers
+    let has_atoken_marker = source.contains("AToken")
+        || source.contains("aToken")
+        || source.contains("IAToken")
+        || source.contains("IncentivizedERC20");
+
+    // Check for interest accrual
+    let has_interest = source.contains("liquidityIndex")
+        || source.contains("getIncentivesController")
+        || source.contains("_accrueToTreasury");
+
+    // Must have pool reference + scaled balance + at least 2 other indicators
+    let indicator_count = [
+        has_underlying,
+        has_mint,
+        has_burn,
+        has_atoken_marker,
+        has_interest,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_pool && has_scaled_balance && indicator_count >= 2
+}
+
+/// Detects if the contract is a MakerDAO Vat (vault system)
+///
+/// MakerDAO Vat is the core CDP (Collateralized Debt Position) engine:
+/// - frob() to adjust vault collateral and debt
+/// - fork() to split vaults
+/// - grab() for liquidations
+/// - urns mapping for vault data
+/// - ilks mapping for collateral type data
+pub fn is_makerdao_vault(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for frob function (adjust collateral/debt)
+    let has_frob = source.contains("function frob(")
+        && source.contains("ilk")
+        && source.contains("dink")
+        && source.contains("dart");
+
+    // Check for fork function (split vault)
+    let has_fork = source.contains("function fork(") && source.contains("ilk");
+
+    // Check for grab function (liquidation)
+    let has_grab = source.contains("function grab(") && source.contains("ilk");
+
+    // Check for urns mapping (vault data)
+    let has_urns = (source.contains("mapping") && source.contains("urns"))
+        || source.contains("function urns(");
+
+    // Check for ilks mapping (collateral type data)
+    let has_ilks = (source.contains("mapping") && source.contains("ilks"))
+        || source.contains("function ilks(");
+
+    // Check for gem mapping (collateral balances)
+    let has_gem =
+        (source.contains("mapping") && source.contains("gem")) || source.contains("function gem(");
+
+    // Check for MakerDAO Vat markers
+    let has_vat_marker = source.contains("Vat")
+        || source.contains("vat")
+        || source.contains("ilk")
+        || source.contains("bytes32");
+
+    // Check for debt and collateral terms
+    let has_debt_terms = source.contains("art") // normalized debt
+        || source.contains("ink") // locked collateral
+        || source.contains("rate") // debt multiplier
+        || source.contains("spot"); // price with safety margin
+
+    // Must have frob + at least 3 other indicators
+    let indicator_count = [
+        has_fork || has_grab,
+        has_urns,
+        has_ilks,
+        has_gem,
+        has_vat_marker,
+        has_debt_terms,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_frob && indicator_count >= 3
+}
+
+/// Detects if the contract is any type of lending protocol
+///
+/// This is a generic lending protocol detection that covers various implementations
+/// including Compound, Aave, MakerDAO, and custom lending protocols
+pub fn is_lending_protocol(ctx: &AnalysisContext) -> bool {
+    // Check for specific lending protocol types first
+    if is_compound_ctoken(ctx)
+        || is_compound_comptroller(ctx)
+        || is_aave_lending_pool(ctx)
+        || is_aave_atoken(ctx)
+        || is_makerdao_vault(ctx)
+    {
+        return true;
+    }
+
+    let source = ctx.source_code.as_str();
+
+    // Generic lending protocol indicators
+    let has_deposit_withdraw = (source.contains("function deposit(")
+        || source.contains("function supply("))
+        && (source.contains("function withdraw(") || source.contains("function redeem("));
+
+    let has_borrow_repay = source.contains("function borrow(")
+        && (source.contains("function repay(") || source.contains("function repayBorrow("));
+
+    // Check for collateral management
+    let has_collateral = source.contains("collateral")
+        || source.contains("Collateral")
+        || source.contains("collateralFactor")
+        || source.contains("LTV");
+
+    // Check for liquidation
+    let has_liquidation = source.contains("liquidat") || source.contains("Liquidat");
+
+    // Check for health factor / account liquidity
+    let has_health_check = source.contains("healthFactor")
+        || source.contains("accountLiquidity")
+        || source.contains("getAccountLiquidity");
+
+    // Check for interest rate calculations
+    let has_interest_rates = source.contains("interestRate")
+        || source.contains("borrowRate")
+        || source.contains("supplyRate")
+        || source.contains("utilizationRate");
+
+    // Must have deposit/withdraw + borrow/repay + at least 2 other indicators
+    let indicator_count = [
+        has_collateral,
+        has_liquidation,
+        has_health_check,
+        has_interest_rates,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    has_deposit_withdraw && has_borrow_repay && indicator_count >= 2
+}
+
+/// Detects if the contract is a flash loan provider
+///
+/// Flash loan providers include:
+/// - ERC-3156 compliant contracts
+/// - Aave LendingPool (provides flash loans)
+/// - Compound-style flash loans
+/// - Custom flash loan implementations
+pub fn is_flash_loan_provider(ctx: &AnalysisContext) -> bool {
+    // Check for ERC-3156 compliance first
+    if is_erc3156_flash_loan(ctx) {
+        return true;
+    }
+
+    // Check if it's Aave LendingPool (provides flash loans)
+    if is_aave_lending_pool(ctx) {
+        return true;
+    }
+
+    let source = ctx.source_code.as_str();
+
+    // Check for flash loan function signatures
+    let has_flash_loan_function = source.contains("function flashLoan(")
+        && (source.contains("receiverAddress") || source.contains("receiver"));
+
+    // Check for flash loan callback interface
+    let has_callback = source.contains("executeOperation")
+        || source.contains("onFlashLoan")
+        || source.contains("receiveFlashLoan");
+
+    // Check for flash loan fee calculation
+    let has_fee = (source.contains("flashLoanFee") || source.contains("FLASHLOAN_PREMIUM"))
+        && (source.contains("function") || source.contains("uint"));
+
+    // Check for balance validation (flash loan must return borrowed amount + fee)
+    let has_balance_check =
+        source.contains("balanceAfter") || source.contains("require(balance");
+
+    // Must have flash loan function + at least 2 other indicators
+    let indicator_count = [has_callback, has_fee, has_balance_check]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+    has_flash_loan_function && indicator_count >= 2
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
