@@ -1,0 +1,122 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/tokens/SimpleERC20.sol
+  Found 50 issues
+Found 50 issues in 1 file:
+● missing-zero-address-check Address parameter 'to' in function 'transfer' is not checked for zero address 43:31
+
+● missing-zero-address-check Address parameter 'spender' in function 'approve' is not checked for zero address 51:30
+
+● missing-zero-address-check Address parameter 'from' in function 'transferFrom' is not checked for zero address 57:35
+
+● missing-zero-address-check Address parameter 'to' in function 'transferFrom' is not checked for zero address 57:49
+
+● missing-zero-address-check Address parameter 'to' in function 'mint' is not checked for zero address 70:27
+
+● missing-zero-address-check Address parameter 'account' in function 'addMinter' is not checked for zero address 86:32
+
+● missing-zero-address-check Address parameter 'account' in function 'removeMinter' is not checked for zero address 90:35
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 43:31
+
+● parameter-consistency Parameter 'to' is declared but never used 43:31
+
+● parameter-consistency Parameter 'spender' of type 'address' may need validation 51:30
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 51:47
+
+● parameter-consistency Parameter 'from' of type 'address' may need validation 57:35
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 57:49
+
+● parameter-consistency Parameter 'to' is declared but never used 57:49
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 70:27
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 70:39
+
+● parameter-consistency Parameter 'to' is declared but never used 70:27
+
+● parameter-consistency Parameter 'amount' is declared but never used 70:39
+
+● parameter-consistency Parameter 'account' of type 'address' may need validation 86:32
+
+● parameter-consistency Parameter 'account' of type 'address' may need validation 90:35
+
+● amm-liquidity-manipulation Function 'onlyMinter' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 32:14
+
+● amm-liquidity-manipulation Function '' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 37:5
+
+● amm-liquidity-manipulation Function 'addMinter' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 86:14
+
+● amm-liquidity-manipulation Function 'removeMinter' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 90:14
+
+● vault-share-inflation Function 'mint' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors. 70:14
+
+● mev-extractable-value Function 'approve' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 51:14
+
+● token-supply-manipulation Function 'onlyMinter' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 32:14
+
+● token-supply-manipulation Function '' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 37:5
+
+● token-supply-manipulation Function 'mint' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 70:14
+
+● token-supply-manipulation Function 'addMinter' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 86:14
+
+● token-supply-manipulation Function 'removeMinter' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 90:14
+
+● excessive-gas-usage Function 'transfer' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 43:14
+
+● excessive-gas-usage Function 'transferFrom' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 57:14
+
+● excessive-gas-usage Function 'burn' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 77:14
+
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 13:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'transfer' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 43:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'transferFrom' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 57:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'burn' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 77:0
+
+● centralization-risk Contract has centralization risk. Contract uses single owner without multi-signature protection. Single private key compromise leads to total contract control Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
+
+● shadowing-variables Function 'onlyOwner' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 27:14
+
+● mev-priority-gas-auction First-come-first-served mint - creates PGA where users bid up gas to mint first 1:1
+
+● erc20-approve-race Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114). 51:14
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● enhanced-input-validation Array access without length validation - can cause out-of-bounds access 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● enhanced-access-control Single-step ownership transfer - use 2-step transfer to prevent mistakes 1:0
+
+● pool-donation-enhanced No minimum deposit requirement - small deposits may round down to zero shares 1:1
+
+● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
+
+
+Summary: 10 critical, 16 high, 9 medium, 15 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 50
+  Time taken: 0.01s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

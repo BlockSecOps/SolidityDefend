@@ -929,6 +929,80 @@ pub fn is_flash_loan_provider(ctx: &AnalysisContext) -> bool {
     has_flash_loan_function && indicator_count >= 2
 }
 
+/// Detects governance protocols (Governor Bravo, OpenZeppelin Governor, etc.)
+///
+/// Governance protocols manage protocol upgrades and parameter changes through
+/// decentralized voting. Examples: Compound Governor Bravo, Uniswap Governor,
+/// OpenZeppelin Governor.
+///
+/// Detection requires:
+/// - Core governance functions (propose, vote, execute)
+/// - At least 3 additional indicators (proposal state, delegation, timelock, quorum)
+///
+/// This helps avoid FPs on contracts with governance-like patterns but aren't
+/// actual governance systems (e.g., lending protocols with delegate for proxies).
+pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Core governance functions - REQUIRED
+    let has_propose = lower.contains("function propose(")
+        || (lower.contains("propose(") && lower.contains("targets"))
+        || lower.contains("function propose");
+
+    let has_vote = lower.contains("function castvote")
+        || lower.contains("function vote(")
+        || lower.contains("function cast");
+
+    let has_execute = (lower.contains("function execute(") || lower.contains("function executeproposal"))
+        && (lower.contains("proposal") || lower.contains("targets"));
+
+    // Must have core governance functions
+    if !has_propose || !has_vote || !has_execute {
+        return false;
+    }
+
+    // Additional governance indicators
+    let has_proposal_state = lower.contains("proposalstate")
+        || (lower.contains("enum") && (lower.contains("pending") && lower.contains("succeeded")))
+        || lower.contains("state(uint256");
+
+    let has_delegation = lower.contains("delegate(address")
+        || lower.contains("delegatebyvote")
+        || lower.contains("delegatebysig");
+
+    let has_timelock = lower.contains("timelock")
+        || lower.contains("eta")
+        || lower.contains("queuedtransactions");
+
+    let has_quorum = lower.contains("quorum")
+        || lower.contains("quorumvotes")
+        || lower.contains("votingdelay")
+        || lower.contains("votingperiod");
+
+    let has_voting_power = lower.contains("getvotes")
+        || lower.contains("getpriorvotes")
+        || lower.contains("votingpower");
+
+    let has_proposal_struct = source.contains("struct Proposal")
+        || (source.contains("struct") && lower.contains("proposer"));
+
+    // Count additional indicators (need at least 3 for high confidence)
+    let indicator_count = [
+        has_proposal_state,
+        has_delegation,
+        has_timelock,
+        has_quorum,
+        has_voting_power,
+        has_proposal_struct,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    indicator_count >= 3
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

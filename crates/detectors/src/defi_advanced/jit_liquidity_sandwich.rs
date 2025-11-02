@@ -82,7 +82,28 @@ impl Detector for JitLiquiditySandwichDetector {
             return Ok(findings);
         }
 
+        // Skip ERC-4626 vaults - deposit/withdraw are for user shares, not liquidity provision
+        // Vaults don't have liquidity pools vulnerable to JIT attacks
+        if utils::is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
+
+        // Skip standard ERC20 tokens - mint/burn/transfer are NOT liquidity operations
+        // JIT attacks target liquidity pools, not token contracts
+        // Check for standard ERC20 pattern: balanceOf, transfer, approve but no pool reserves
+        let is_standard_token = (lower.contains("function transfer(address")
+            || lower.contains("function transferfrom(address"))
+            && lower.contains("balanceof")
+            && lower.contains("allowance")
+            && !lower.contains("getreserves")  // AMM pools have reserves
+            && !lower.contains("liquidityindex")  // Lending has liquidity index
+            && !lower.contains("converttoassets");  // Vaults have conversions
+
+        if is_standard_token {
+            return Ok(findings);
+        }
 
         // Check for liquidity removal functions without time-locks
         let has_remove_liquidity = lower.contains("removeliquidity")

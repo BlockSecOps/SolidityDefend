@@ -23,13 +23,13 @@ Found 97 issues in 1 file:
 
 ● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
 
-● unused-state-variables State variable 'currentLiquidityRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 32:0
+● unused-state-variables State variable 'variableDebtTokenAddress' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 35:0
 
-● unused-state-variables State variable 'data' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
+● unused-state-variables State variable 'currentLiquidityRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 32:0
 
 ● unused-state-variables State variable 'currentVariableBorrowRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 33:0
 
-● unused-state-variables State variable 'variableDebtTokenAddress' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 35:0
+● unused-state-variables State variable 'data' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
 
 ● unused-state-variables State variable 'variableBorrowIndex' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 31:0
 
