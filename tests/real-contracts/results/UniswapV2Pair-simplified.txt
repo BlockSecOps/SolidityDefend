@@ -1,0 +1,215 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/uniswap/UniswapV2Pair-simplified.sol
+  Found 123 issues
+Found 96 issues in 1 file:
+● parameter-consistency Parameter 'owner' in function 'balanceOf' may shadow a state variable 13:32
+
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 19:0
+
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 30:0
+
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 47:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'mint' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 53:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'burn' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 73:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'swap' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 96:0
+
+● inefficient-storage Inefficient storage pattern detected. Function '_update' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 130:0
+
+● erc20-transfer-return-bomb Token transfer lacks return data size validation - vulnerable to return bomb DOS 1:1
+
+● token-decimal-confusion Token price/exchange calculation without decimal normalization - incorrect conversions 1:1
+
+● token-decimal-confusion Multiple tokens (13) without decimal tracking - calculation errors likely 1:1
+
+● token-decimal-confusion Decimal-sensitive math operations without validation - verify decimal assumptions 1:1
+
+● mev-backrun-opportunities Rebalancing function present - creates predictable MEV opportunity for backrunners 1:1
+
+● mev-priority-gas-auction First-come-first-served mint - creates PGA where users bid up gas to mint first 1:1
+
+● amm-k-invariant-violation AMM function 'transfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage 11:14
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 28:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 29:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 30:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 36:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 130:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● logic-error-patterns Percentage calculation - verify order of operations for precision 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● enhanced-input-validation Address parameter without zero-address validation 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● hook-reentrancy-enhanced Callback function lacks sender validation - attacker can trigger malicious reentry 1:1
+
+● pool-donation-enhanced No minimum deposit requirement - small deposits may round down to zero shares 1:1
+
+● missing-access-modifiers Function 'mint' performs critical operations but lacks access control modifiers 53:14
+
+● missing-access-modifiers Function 'burn' performs critical operations but lacks access control modifiers 73:14
+
+● invalid-state-transition State variables modified after external call - potential reentrancy affecting state machine 86:9
+
+● invalid-state-transition State variables modified after external call - potential reentrancy affecting state machine 87:9
+
+● missing-zero-address-check Address parameter 'to' in function 'mint' is not checked for zero address 53:27
+
+● missing-zero-address-check Address parameter 'to' in function 'burn' is not checked for zero address 73:27
+
+● missing-zero-address-check Address parameter 'to' in function 'swap' is not checked for zero address 96:67
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 53:27
+
+● parameter-consistency Parameter 'to' is declared but never used 53:27
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 73:27
+
+● parameter-consistency Parameter 'amount0Out' of type 'uint' may need validation 96:27
+
+● parameter-consistency Parameter 'amount1Out' of type 'uint' may need validation 96:47
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 96:67
+
+● parameter-consistency Parameter ordering in function 'swap': address parameter 'to' should typically come before amount parameter 'amount1Out' 96:14
+
+● parameter-consistency Parameter 'x' is declared but never used 159:26
+
+● parameter-consistency Parameter 'y' is declared but never used 159:37
+
+● unchecked-external-call External call in function 'burn' does not check return value 73:14
+
+● vault-share-inflation Function 'mint' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors. 53:14
+
+● vault-donation-attack Function 'mint' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors. 53:14
+
+● vault-donation-attack Function 'burn' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors. 73:14
+
+● vault-donation-attack Function 'swap' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors. 96:14
+
+● price-impact-manipulation Function 'lock' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users. 38:14
+
+● price-impact-manipulation Function 'mint' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users. 53:14
+
+● price-impact-manipulation Function 'burn' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users. 73:14
+
+● price-impact-manipulation Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users. 96:14
+
+● price-impact-manipulation Function '_update' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users. 130:14
+
+● token-supply-manipulation Function 'mint' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 53:14
+
+● token-supply-manipulation Function 'burn' has token supply manipulation vulnerability. Supply-changing operation doesn't emit event, off-chain systems cannot track supply changes Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 73:14
+
+● gas-griefing Function 'burn' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 73:14
+
+● gas-griefing Function 'swap' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail. 96:14
+
+● excessive-gas-usage Function 'mint' contains excessive gas usage pattern. Multiple storage reads detected (13). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 53:14
+
+● excessive-gas-usage Function 'burn' contains excessive gas usage pattern. Multiple storage reads detected (17). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 73:14
+
+● excessive-gas-usage Function 'swap' contains excessive gas usage pattern. Multiple storage reads detected (18). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 96:14
+
+● excessive-gas-usage Function 'swap' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors. 96:14
+
+● excessive-gas-usage Function '_update' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● excessive-gas-usage Function 'sqrt' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors. 146:14
+
+● shadowing-variables Function 'lock' contains variable shadowing. Parameter 'unlocked' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 38:14
+
+● shadowing-variables Function 'mint' contains variable shadowing. Parameter 'token0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 53:14
+
+● shadowing-variables Function 'mint' contains variable shadowing. Parameter 'token1' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 53:14
+
+● shadowing-variables Function 'mint' contains variable shadowing. Local variable 'amount0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 53:14
+
+● shadowing-variables Function 'mint' contains variable shadowing. Local variable 'amount1' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 53:14
+
+● shadowing-variables Function 'burn' contains variable shadowing. Parameter 'token0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 73:14
+
+● shadowing-variables Function 'burn' contains variable shadowing. Parameter 'token1' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 73:14
+
+● shadowing-variables Function 'swap' contains variable shadowing. Local variable 'balance0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 96:14
+
+● shadowing-variables Function 'swap' contains variable shadowing. Local variable 'balance1' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 96:14
+
+● shadowing-variables Function 'swap' contains variable shadowing. Local variable 'balance0Adjusted' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 96:14
+
+● shadowing-variables Function 'swap' contains variable shadowing. Local variable 'balance1Adjusted' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 96:14
+
+● shadowing-variables Function '_update' contains variable shadowing. Parameter 'balance0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 130:14
+
+● shadowing-variables Function '_update' contains variable shadowing. Local variable 'timeElapsed' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 130:14
+
+● shadowing-variables Function 'sqrt' contains variable shadowing. Local variable 'x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 146:14
+
+● unsafe-type-casting Function 'mint' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 54:0
+
+● unsafe-type-casting Function 'mint' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 55:0
+
+● unsafe-type-casting Function 'burn' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 73:0
+
+● unsafe-type-casting Function 'burn' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 74:0
+
+● unsafe-type-casting Function 'burn' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 75:0
+
+● unsafe-type-casting Function 'swap' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 123:0
+
+● unsafe-type-casting Function 'swap' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 123:0
+
+● unsafe-type-casting Function '_update' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 136:0
+
+● unsafe-type-casting Function '_update' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 136:0
+
+● unsafe-type-casting Function '_update' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 137:0
+
+● unsafe-type-casting Function '_update' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 137:0
+
+● defi-liquidity-pool-manipulation No minimum amount protection on liquidity removal in 'burn' 73:0
+
+● defi-liquidity-pool-manipulation Missing deadline parameter (stuck transaction risk) in 'swap' 96:0
+
+● amm-k-invariant-violation AMM function 'getReserves' violates constant product invariant: Reserve updates don't verify constant product (K) invariant (x*y >= k), allowing pool imbalance and potential value extraction 47:14
+
+● amm-k-invariant-violation AMM function 'burn' violates constant product invariant: Reserve updates don't sync with actual token balances, may cause discrepancies with fee-on-transfer tokens; Reserve updates occur without reentrancy protection, enabling manipulation during callbacks 73:14
+
+● amm-k-invariant-violation AMM function 'swap' violates constant product invariant: Reserve updates don't sync with actual token balances, may cause discrepancies with fee-on-transfer tokens; Reserve updates occur without reentrancy protection, enabling manipulation during callbacks; Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed 96:14
+
+● transient-storage-reentrancy Classic reentrancy pattern with transient storage risk in 'burn' 73:0
+
+● transient-storage-reentrancy Classic reentrancy pattern with transient storage risk in 'swap' 96:0
+
+
+Summary: 13 critical, 23 high, 40 medium, 20 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 96
+  Duplicates removed: 27
+  Time taken: 0.02s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

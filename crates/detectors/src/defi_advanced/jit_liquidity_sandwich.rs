@@ -74,6 +74,14 @@ impl Detector for JitLiquiditySandwichDetector {
             return Ok(findings);
         }
 
+        // Skip lending protocols - JIT attacks target AMM pools, not lending protocols
+        // Lending protocols (Compound, Aave, MakerDAO) have deposit/withdraw for user funds,
+        // not liquidity provision. Users should be able to withdraw their deposits anytime.
+        // JIT liquidity sandwich attacks are specific to AMM fee capture, not lending.
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Check for liquidity removal functions without time-locks

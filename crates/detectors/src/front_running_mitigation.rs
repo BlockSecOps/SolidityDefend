@@ -59,6 +59,16 @@ impl Detector for FrontRunningMitigationDetector {
             return Ok(findings);
         }
 
+        // Skip lending protocols - they have audited oracle and price protection
+        // Lending protocols (Compound, Aave, MakerDAO) use robust oracle systems:
+        // - Compound: Comptroller with Chainlink price feeds
+        // - Aave: LendingPoolAddressesProvider with Chainlink oracles
+        // - MakerDAO: Medianizer with multiple oracle sources
+        // Front-running mitigation is handled at the protocol level, not function level
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(frontrun_issue) = self.check_frontrunning_risk(function, ctx) {
                 let message = format!(

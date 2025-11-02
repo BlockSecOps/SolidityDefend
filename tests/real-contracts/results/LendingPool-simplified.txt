@@ -1,0 +1,217 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/aave/LendingPool-simplified.sol
+  Found 157 issues
+Found 97 issues in 1 file:
+● inefficient-storage Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations. 29:0
+
+● centralization-risk Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
+
+● token-decimal-confusion Hardcoded decimal assumption (18) - incompatible with USDC (6), WBTC (8), etc. 1:1
+
+● token-decimal-confusion Token price/exchange calculation without decimal normalization - incorrect conversions 1:1
+
+● token-decimal-confusion Decimal-sensitive math operations without validation - verify decimal assumptions 1:1
+
+● mev-backrun-opportunities Reserve updates without block delay - backrunnable for instant arbitrage 1:1
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● unused-state-variables State variable 'currentLiquidityRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 32:0
+
+● unused-state-variables State variable 'data' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
+
+● unused-state-variables State variable 'currentVariableBorrowRate' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 33:0
+
+● unused-state-variables State variable 'variableDebtTokenAddress' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 35:0
+
+● unused-state-variables State variable 'variableBorrowIndex' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 31:0
+
+● multisig-bypass Missing threshold validation (can be set to zero or exceed owner count) 0:0
+
+● eip7702-storage-collision EIP-7702 delegate uses storage - verify no collision with EOA state 1:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● enhanced-input-validation Array access without length validation - can cause out-of-bounds access 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● enhanced-input-validation Address parameter without zero-address validation 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● pool-donation-enhanced No minimum deposit requirement - small deposits may round down to zero shares 1:1
+
+● missing-access-modifiers Function 'withdraw' performs critical operations but lacks access control modifiers 60:14
+
+● missing-zero-address-check Address parameter 'asset' in function 'deposit' is not checked for zero address 47:17
+
+● missing-zero-address-check Address parameter 'onBehalfOf' in function 'deposit' is not checked for zero address 49:17
+
+● missing-zero-address-check Address parameter 'asset' in function 'withdraw' is not checked for zero address 61:17
+
+● missing-zero-address-check Address parameter 'to' in function 'withdraw' is not checked for zero address 63:17
+
+● missing-zero-address-check Address parameter 'asset' in function 'borrow' is not checked for zero address 75:17
+
+● missing-zero-address-check Address parameter 'onBehalfOf' in function 'borrow' is not checked for zero address 79:17
+
+● missing-zero-address-check Address parameter 'asset' in function 'repay' is not checked for zero address 91:17
+
+● missing-zero-address-check Address parameter 'onBehalfOf' in function 'repay' is not checked for zero address 94:17
+
+● missing-zero-address-check Address parameter 'receiverAddress' in function 'flashLoan' is not checked for zero address 103:17
+
+● missing-zero-address-check Address parameter 'onBehalfOf' in function 'flashLoan' is not checked for zero address 107:17
+
+● missing-zero-address-check Address parameter 'collateralAsset' in function 'liquidationCall' is not checked for zero address 118:17
+
+● missing-zero-address-check Address parameter 'debtAsset' in function 'liquidationCall' is not checked for zero address 119:17
+
+● missing-zero-address-check Address parameter 'user' in function 'liquidationCall' is not checked for zero address 120:17
+
+● array-bounds-check Function 'flashLoan' has multiple array parameters but no apparent length validation 102:14
+
+● parameter-consistency Parameter 'asset' of type 'address' may need validation 47:17
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 48:17
+
+● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 49:17
+
+● parameter-consistency Parameter ordering in function 'deposit': address parameter 'onBehalfOf' should typically come before amount parameter 'amount' 46:14
+
+● parameter-consistency Parameter 'referralCode' is declared but never used 50:16
+
+● parameter-consistency Parameter 'asset' of type 'address' may need validation 61:17
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 62:17
+
+● parameter-consistency Parameter 'to' of type 'address' may need validation 63:17
+
+● parameter-consistency Parameter ordering in function 'withdraw': address parameter 'to' should typically come before amount parameter 'amount' 60:14
+
+● parameter-consistency Parameter 'asset' of type 'address' may need validation 75:17
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 76:17
+
+● parameter-consistency Parameter 'interestRateMode' of type 'uint' may need validation 77:17
+
+● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 79:17
+
+● parameter-consistency Parameter 'asset' is declared but never used 75:17
+
+● parameter-consistency Parameter 'amount' is declared but never used 76:17
+
+● parameter-consistency Parameter 'interestRateMode' is declared but never used 77:17
+
+● parameter-consistency Parameter 'referralCode' is declared but never used 78:16
+
+● parameter-consistency Parameter 'asset' of type 'address' may need validation 91:17
+
+● parameter-consistency Parameter 'amount' of type 'uint' may need validation 92:17
+
+● parameter-consistency Parameter 'rateMode' of type 'uint' may need validation 93:17
+
+● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 94:17
+
+● parameter-consistency Parameter 'asset' is declared but never used 91:17
+
+● parameter-consistency Parameter 'amount' is declared but never used 92:17
+
+● parameter-consistency Parameter 'rateMode' is declared but never used 93:17
+
+● parameter-consistency Parameter 'onBehalfOf' is declared but never used 94:17
+
+● parameter-consistency Function 'flashLoan' has multiple array parameters (assets, amounts, modes) but no length consistency validation 102:14
+
+● parameter-consistency Parameter 'receiverAddress' of type 'address' may need validation 103:17
+
+● parameter-consistency Parameter 'assets' of type 'array' may need validation 104:28
+
+● parameter-consistency Parameter 'amounts' of type 'array' may need validation 105:28
+
+● parameter-consistency Parameter 'modes' of type 'array' may need validation 106:28
+
+● parameter-consistency Parameter 'onBehalfOf' of type 'address' may need validation 107:17
+
+● parameter-consistency Parameter 'receiverAddress' is declared but never used 103:17
+
+● parameter-consistency Parameter 'assets' is declared but never used 104:28
+
+● parameter-consistency Parameter 'amounts' is declared but never used 105:28
+
+● parameter-consistency Parameter 'modes' is declared but never used 106:28
+
+● parameter-consistency Parameter 'onBehalfOf' is declared but never used 107:17
+
+● parameter-consistency Parameter 'params' is declared but never used 108:24
+
+● parameter-consistency Parameter 'referralCode' is declared but never used 109:16
+
+● parameter-consistency Parameter 'collateralAsset' of type 'address' may need validation 118:17
+
+● parameter-consistency Parameter 'debtAsset' of type 'address' may need validation 119:17
+
+● parameter-consistency Parameter 'user' of type 'address' may need validation 120:17
+
+● parameter-consistency Parameter 'collateralAsset' is declared but never used 118:17
+
+● parameter-consistency Parameter 'debtAsset' is declared but never used 119:17
+
+● parameter-consistency Parameter 'debtToCover' is declared but never used 121:17
+
+● parameter-consistency Parameter 'receiveAToken' is declared but never used 122:14
+
+● parameter-consistency Parameter 'user' of type 'address' may need validation 135:41
+
+● parameter-consistency Parameter 'user' is declared but never used 135:41
+
+● parameter-consistency Parameter 'asset' of type 'address' may need validation 162:37
+
+● parameter-consistency Parameter 'asset' is declared but never used 162:37
+
+● uninitialized-storage Function 'flashLoan' contains uninitialized storage pointer. Declares array variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables. 102:14
+
+● amm-liquidity-manipulation Function 'deposit' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 46:14
+
+● vault-withdrawal-dos Function 'withdraw' may be vulnerable to withdrawal DOS attack. No withdrawal cap or limit detected. Large withdrawals can drain liquidity and DOS subsequent withdrawers Attacker can block withdrawals, causing funds to be locked indefinitely. 60:14
+
+● mev-extractable-value Function 'withdraw' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 60:14
+
+● upgradeable-proxy-issues Function 'flashLoan' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover. 102:14
+
+● token-supply-manipulation Function 'deposit' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 46:14
+
+● token-supply-manipulation Function 'withdraw' has token supply manipulation vulnerability. Burn function doesn't check balance before burning, can underflow balances or total supply Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 60:14
+
+● price-oracle-stale Function 'getUserAccountData' uses oracle price data without staleness validation. Oracle price fetch without staleness validation. Missing checks for updatedAt timestamp, price age, or heartbeat threshold Using stale oracle data can lead to incorrect liquidations, price manipulations, and financial losses. 135:14
+
+● missing-input-validation Function 'deposit' missing input validation. Critical function with address parameter lacks zero address validation Missing validation can lead to unexpected behavior, zero address transfers, or invalid state. 46:14
+
+● missing-input-validation Function 'withdraw' missing input validation. Transfer/withdraw function lacks amount validation Missing validation can lead to unexpected behavior, zero address transfers, or invalid state. 60:14
+
+● flashmint-token-inflation Uncapped flash mint - unlimited token minting possible 102:0
+
+● flashmint-token-inflation No flash mint fee - free flash mints enable spam 102:0
+
+● erc777-reentrancy-hooks Function 'withdraw' is vulnerable to ERC-777 hook reentrancy. Interacts with ERC-777 tokens without reentrancy guard Historical losses: $18.8M+ (Cream Finance), $25M (LendfMe), $300k (Uniswap V1). 60:14
+
+
+Summary: 6 critical, 16 high, 46 medium, 29 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 97
+  Duplicates removed: 60
+  Time taken: 0.02s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues
