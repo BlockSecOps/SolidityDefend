@@ -1,0 +1,203 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/vaults/ERC4626Vault-simplified.sol
+  Found 110 issues
+Found 90 issues in 1 file:
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 20:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'withdraw' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 103:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'redeem' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 131:0
+
+● centralization-risk Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
+
+● erc20-transfer-return-bomb Token transfer lacks return data size validation - vulnerable to return bomb DOS 1:1
+
+● token-decimal-confusion Token price/exchange calculation without decimal normalization - incorrect conversions 1:1
+
+● token-decimal-confusion Multiple tokens (3) without decimal tracking - calculation errors likely 1:1
+
+● mev-priority-gas-auction First-come-first-served mint - creates PGA where users bid up gas to mint first 1:1
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● enhanced-input-validation Array access without length validation - can cause out-of-bounds access 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● enhanced-input-validation Address parameter without zero-address validation 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● pool-donation-enhanced ERC-4626 vault lacks initial share protection - vulnerable to share inflation attack 1:1
+
+● pool-donation-enhanced Share calculation uses contract balance directly - vulnerable to donation attack via direct transfer 1:1
+
+● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
+
+● pool-donation-enhanced Preview functions use manipulable balance - can be exploited for front-running attacks 1:1
+
+● invalid-state-transition State variables modified after external call - potential reentrancy affecting state machine 118:9
+
+● invalid-state-transition State variables modified after external call - potential reentrancy affecting state machine 146:9
+
+● missing-zero-address-check Address parameter 'receiver' in function 'deposit' is not checked for zero address 60:46
+
+● missing-zero-address-check Address parameter 'receiver' in function 'mint' is not checked for zero address 82:43
+
+● missing-zero-address-check Address parameter 'receiver' in function 'withdraw' is not checked for zero address 103:47
+
+● missing-zero-address-check Address parameter 'owner' in function 'withdraw' is not checked for zero address 103:65
+
+● missing-zero-address-check Address parameter 'receiver' in function 'redeem' is not checked for zero address 131:45
+
+● missing-zero-address-check Address parameter 'owner' in function 'redeem' is not checked for zero address 131:63
+
+● single-oracle-source Function 'deposit' relies on a single oracle source, creating centralization risk 60:14
+
+● single-oracle-source Function 'mint' relies on a single oracle source, creating centralization risk 82:14
+
+● single-oracle-source Function 'withdraw' relies on a single oracle source, creating centralization risk 103:14
+
+● single-oracle-source Function 'redeem' relies on a single oracle source, creating centralization risk 131:14
+
+● unchecked-external-call External call in function 'deposit' does not check return value 60:14
+
+● unchecked-external-call External call in function 'mint' does not check return value 82:14
+
+● unchecked-external-call External call in function 'withdraw' does not check return value 103:14
+
+● unchecked-external-call External call in function 'redeem' does not check return value 131:14
+
+● amm-liquidity-manipulation Function 'deposit' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 60:14
+
+● amm-liquidity-manipulation Function 'mint' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 82:14
+
+● vault-withdrawal-dos Function 'maxWithdraw' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 94:14
+
+● vault-withdrawal-dos Function 'previewWithdraw' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 98:14
+
+● vault-withdrawal-dos Function 'withdraw' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 103:14
+
+● vault-withdrawal-dos Function 'maxRedeem' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 123:14
+
+● vault-withdrawal-dos Function 'previewRedeem' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 127:14
+
+● vault-withdrawal-dos Function 'redeem' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely. 131:14
+
+● mev-extractable-value Function 'approve' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 152:14
+
+● mev-extractable-value Function 'transfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 157:14
+
+● mev-extractable-value Function 'transferFrom' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 163:14
+
+● token-supply-manipulation Function 'deposit' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 60:14
+
+● token-supply-manipulation Function 'maxMint' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 73:14
+
+● token-supply-manipulation Function 'previewMint' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 77:14
+
+● token-supply-manipulation Function 'mint' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 82:14
+
+● token-supply-manipulation Function '_mint' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 174:14
+
+● token-supply-manipulation Function '_burn' has token supply manipulation vulnerability. Supply-changing operation doesn't emit event, off-chain systems cannot track supply changes Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 179:14
+
+● gas-griefing Function 'deposit' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 60:14
+
+● gas-griefing Function 'mint' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 82:14
+
+● gas-griefing Function 'withdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 103:14
+
+● gas-griefing Function 'redeem' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 131:14
+
+● excessive-gas-usage Function 'withdraw' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 103:14
+
+● excessive-gas-usage Function 'redeem' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 131:14
+
+● shadowing-variables Function 'convertToShares' contains variable shadowing. Local variable 'supply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 42:14
+
+● shadowing-variables Function 'convertToAssets' contains variable shadowing. Local variable 'supply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 47:14
+
+● shadowing-variables Function 'previewMint' contains variable shadowing. Local variable 'supply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 77:14
+
+● shadowing-variables Function 'previewWithdraw' contains variable shadowing. Local variable 'supply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 98:14
+
+● shadowing-variables Function 'withdraw' contains variable shadowing. Local variable 'allowed' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 103:14
+
+● shadowing-variables Function 'redeem' contains variable shadowing. Local variable 'allowed' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 131:14
+
+● shadowing-variables Function 'transferFrom' contains variable shadowing. Parameter 'allowed' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 163:14
+
+● shadowing-variables Function 'transferFrom' contains variable shadowing. Local variable 'allowed' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 163:14
+
+● missing-input-validation Function 'transferFrom' missing input validation. Transfer/withdraw function lacks amount validation Missing validation can lead to unexpected behavior, zero address transfers, or invalid state. 163:14
+
+● defi-yield-farming-exploits No first depositor protection (inflation attack on vault initialization) in 'maxDeposit' 52:0
+
+● defi-yield-farming-exploits No first depositor protection (inflation attack on vault initialization) in 'previewDeposit' 56:0
+
+● defi-yield-farming-exploits No first depositor protection (inflation attack on vault initialization) in 'deposit' 60:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'maxWithdraw' 94:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'maxWithdraw' 94:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'maxWithdraw' 94:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'previewWithdraw' 98:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'previewWithdraw' 98:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'previewWithdraw' 98:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'withdraw' 103:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'withdraw' 103:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'withdraw' 103:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'maxRedeem' 123:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'maxRedeem' 123:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'maxRedeem' 123:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'previewRedeem' 127:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'previewRedeem' 127:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'previewRedeem' 127:0
+
+● defi-yield-farming-exploits No withdrawal fee accounting (fee bypass risk) in 'redeem' 131:0
+
+● defi-yield-farming-exploits No validation for zero assets on withdrawal in 'redeem' 131:0
+
+● defi-yield-farming-exploits No slippage protection on withdrawal in 'redeem' 131:0
+
+● erc20-approve-race Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114). 152:14
+
+● erc20-infinite-approval Function 'withdraw' has infinite approval risk. Requires infinite approval (type(uint256).max) This creates permanent security risk if contract is compromised. 103:14
+
+● erc20-infinite-approval Function 'redeem' has infinite approval risk. Requires infinite approval (type(uint256).max) This creates permanent security risk if contract is compromised. 131:14
+
+
+Summary: 13 critical, 26 high, 42 medium, 9 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 90
+  Duplicates removed: 20
+  Time taken: 0.03s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

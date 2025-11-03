@@ -1,0 +1,99 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/tokens/SimpleERC721.sol
+  Found 40 issues
+Found 38 issues in 1 file:
+● missing-access-modifiers Function 'safeTransferFrom' performs critical operations but lacks access control modifiers 43:14
+
+● missing-access-modifiers Function 'safeTransferFrom' performs critical operations but lacks access control modifiers 47:14
+
+● missing-access-modifiers Function 'setApprovalForAll' performs critical operations but lacks access control modifiers 63:14
+
+● missing-zero-address-check Address parameter 'operator' in function 'setApprovalForAll' is not checked for zero address 63:40
+
+● amm-liquidity-manipulation Function 'mint' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation. 70:14
+
+● vault-share-inflation Function 'mint' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors. 70:14
+
+● mev-extractable-value Function 'transferFrom' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 36:14
+
+● mev-extractable-value Function 'safeTransferFrom' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 47:14
+
+● mev-extractable-value Function 'approve' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 55:14
+
+● mev-extractable-value Function 'setApprovalForAll' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 63:14
+
+● mev-extractable-value Function 'burn' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 82:14
+
+● token-supply-manipulation Function 'mint' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 70:14
+
+● dos-unbounded-operation Function 'burn' has DOS vulnerability via unbounded operation. Deleting array or mapping without size limit, can exceed gas limit Can cause out-of-gas errors blocking contract functionality. 82:14
+
+● dos-unbounded-operation Function '_transfer' has DOS vulnerability via unbounded operation. Deleting array or mapping without size limit, can exceed gas limit Can cause out-of-gas errors blocking contract functionality. 110:14
+
+● excessive-gas-usage Function 'mint' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 70:14
+
+● excessive-gas-usage Function 'burn' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 82:14
+
+● inefficient-storage Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations. 63:0
+
+● centralization-risk Contract has centralization risk. Contract uses single owner without multi-signature protection. Single private key compromise leads to total contract control Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
+
+● shadowing-variables Function 'onlyOwner' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 26:14
+
+● shadowing-variables Function 'approve' contains variable shadowing. Local variable 'tokenOwner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 55:14
+
+● shadowing-variables Function 'burn' contains variable shadowing. Local variable 'tokenOwner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 82:14
+
+● shadowing-variables Function '_isApprovedOrOwner' contains variable shadowing. Parameter 'tokenOwner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 123:14
+
+● shadowing-variables Function '_isApprovedOrOwner' contains variable shadowing. Local variable 'tokenOwner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 123:14
+
+● shadowing-variables Function '_toString' contains variable shadowing. Local variable 'temp' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 137:14
+
+● shadowing-variables Function '_toString' contains variable shadowing. Local variable 'digits' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 137:14
+
+● unsafe-type-casting Function '_toString' contains unsafe type casting. Unsafe downcast detected without range validation. Value may exceed target type capacity Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 149:0
+
+● unsafe-type-casting Function '_toString' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 149:0
+
+● unsafe-type-casting Function '_toString' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 149:0
+
+● mev-priority-gas-auction First-come-first-served mint - creates PGA where users bid up gas to mint first 1:1
+
+● erc20-approve-race Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114). 55:14
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● private-variable-exposure Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable 132:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● logic-error-patterns Percentage calculation - verify order of operations for precision 1:0
+
+● enhanced-input-validation Array access without length validation - can cause out-of-bounds access 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● pool-donation-enhanced No minimum deposit requirement - small deposits may round down to zero shares 1:1
+
+● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
+
+
+Summary: 6 critical, 12 high, 15 medium, 5 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 38
+  Duplicates removed: 2
+  Time taken: 0.02s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues
