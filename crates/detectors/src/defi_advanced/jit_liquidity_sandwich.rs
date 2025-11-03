@@ -90,16 +90,18 @@ impl Detector for JitLiquiditySandwichDetector {
 
         let lower = ctx.source_code.to_lowercase();
 
-        // Skip standard ERC20 tokens - mint/burn/transfer are NOT liquidity operations
+        // Skip standard tokens (ERC20, ERC721, ERC1155) - mint/burn/transfer are NOT liquidity operations
         // JIT attacks target liquidity pools, not token contracts
-        // Check for standard ERC20 pattern: balanceOf, transfer, approve but no pool reserves
-        let is_standard_token = (lower.contains("function transfer(address")
-            || lower.contains("function transferfrom(address"))
-            && lower.contains("balanceof")
-            && lower.contains("allowance")
+        // Check for standard token patterns but exclude actual liquidity pools
+        let is_standard_token = (lower.contains("function transfer")
+            || lower.contains("function transferfrom")
+            || lower.contains("function safetransfer"))  // ERC721/1155
+            && (lower.contains("balanceof") || lower.contains("ownerof"))  // ERC20 or ERC721
             && !lower.contains("getreserves")  // AMM pools have reserves
             && !lower.contains("liquidityindex")  // Lending has liquidity index
-            && !lower.contains("converttoassets");  // Vaults have conversions
+            && !lower.contains("converttoassets")  // Vaults have conversions
+            && !lower.contains("addliquidity")  // Pools have liquidity functions
+            && !lower.contains("removeliquidity");
 
         if is_standard_token {
             return Ok(findings);

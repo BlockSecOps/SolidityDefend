@@ -347,6 +347,14 @@ impl Detector for LendingBorrowBypassDetector {
             return Ok(findings);
         }
 
+        // Skip ERC-4626 vaults - they are NOT lending protocols
+        // ERC-4626 vaults have deposit/withdraw/redeem but these are for user shares, not loans
+        // Users withdraw their own assets, not collateral backing a loan
+        // No health factor or collateral checks needed for vault withdrawals
+        if utils::is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
         // Skip if this is an ERC-3156 flash loan provider
         // Flash loans intentionally bypass collateral checks and have different validation logic
         let is_flash_loan_provider = utils::is_flash_loan_provider(ctx);

@@ -39,9 +39,9 @@ Found 74 issues in 1 file:
 
 ● unused-state-variables State variable 'initialExchangeRateMantissa' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 49:0
 
-● unused-state-variables State variable 'principal' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 60:0
-
 ● unused-state-variables State variable '_notEntered' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
+
+● unused-state-variables State variable 'principal' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 60:0
 
 ● multisig-bypass Missing nonce validation in signature verification (replay attack risk) 0:0
 
@@ -165,7 +165,7 @@ Analysis complete:
   Successful: 1
   Issues found: 74
   Duplicates removed: 252
-  Time taken: 0.17s
+  Time taken: 0.22s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues

@@ -1,0 +1,125 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/governance/GovernorBravo-simplified.sol
+  Found 71 issues
+Found 51 issues in 1 file:
+● inefficient-storage Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations. 32:0
+
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 166:0
+
+● flash-loan-governance-attack No minimum token holding period - flash-borrowed tokens can vote immediately 1:1
+
+● token-decimal-confusion Multiple tokens (3) without decimal tracking - calculation errors likely 1:1
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● multisig-bypass Signature count validation without duplicate signer check (threshold bypass) 0:0
+
+● eip7702-storage-collision EIP-7702 delegate uses storage - verify no collision with EOA state 1:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● enhanced-input-validation Address parameter without zero-address validation 1:0
+
+● l2-data-availability Function 'executeTransaction' processes transactions without censorship resistance. Missing timeout mechanism. Should allow force inclusion after sequencer fails to include transaction Lack of force inclusion allows sequencer to censor user transactions indefinitely. 16:14
+
+● l2-data-availability Function 'executeTransaction' processes transactions without censorship resistance. No message queue detected. Should implement L1 to L2 message queue for force inclusion Lack of force inclusion allows sequencer to censor user transactions indefinitely. 16:14
+
+● l2-data-availability Function 'executeTransaction' processes transactions without censorship resistance. No force inclusion mechanism. Users need ability to include transactions via L1 if sequencer censors Lack of force inclusion allows sequencer to censor user transactions indefinitely. 16:14
+
+● array-bounds-check Function 'propose' has multiple array parameters but no apparent length validation 82:14
+
+● parameter-consistency Function 'propose' has multiple array parameters (targets, values, signatures, calldatas) but no length consistency validation 82:14
+
+● parameter-consistency Parameter 'values' of type 'array' may need validation 84:23
+
+● parameter-consistency Parameter 'signatures' of type 'array' may need validation 85:25
+
+● parameter-consistency Parameter 'calldatas' of type 'array' may need validation 86:24
+
+● external-calls-loop Function 'queue' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution. 111:0
+
+● external-calls-loop Function 'execute' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution. 130:0
+
+● signature-replay Function 'propose' verifies signatures without replay protection. Attackers can reuse valid signatures to perform unauthorized actions. This is particularly dangerous in governance systems for vote manipulation. 82:0
+
+● timestamp-manipulation Function 'queue' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic. 111:14
+
+● block-stuffing-vulnerable Function 'queue' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations. 111:14
+
+● block-stuffing-vulnerable Function 'execute' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations. 130:14
+
+● block-stuffing-vulnerable Function 'state' is vulnerable to block stuffing attacks. Critical operation with narrow time window, block stuffing can prevent users from executing within deadline Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations. 192:14
+
+● mev-extractable-value Function 'propose' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 82:14
+
+● mev-extractable-value Function 'cancel' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 148:14
+
+● mev-extractable-value Function 'castVote' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 158:14
+
+● mev-extractable-value Function 'castVoteWithReason' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running. 162:14
+
+● gas-griefing Function 'queue' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail. 111:14
+
+● gas-griefing Function 'execute' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail. 130:14
+
+● excessive-gas-usage Function 'queue' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors. 111:14
+
+● excessive-gas-usage Function 'queue' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors. 111:14
+
+● excessive-gas-usage Function 'execute' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● excessive-gas-usage Function 'execute' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● redundant-checks Function 'propose' contains redundant checks. 4 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily. 82:14
+
+● shadowing-variables Function 'propose' contains variable shadowing. Parameter 'values' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 82:14
+
+● shadowing-variables Function 'propose' contains variable shadowing. Parameter 'signatures' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 82:14
+
+● shadowing-variables Function 'propose' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 82:14
+
+● shadowing-variables Function 'queue' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 111:14
+
+● shadowing-variables Function 'queue' contains variable shadowing. Local variable 'eta' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 111:14
+
+● shadowing-variables Function 'execute' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 130:14
+
+● shadowing-variables Function 'cancel' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 148:14
+
+● shadowing-variables Function 'castVote' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 158:14
+
+● shadowing-variables Function 'castVoteWithReason' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 162:14
+
+● shadowing-variables Function '_castVoteInternal' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 166:14
+
+● shadowing-variables Function 'state' contains variable shadowing. Parameter 'proposalCount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 192:14
+
+● shadowing-variables Function 'state' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 192:14
+
+● shadowing-variables Function 'getActions' contains variable shadowing. Parameter 'values' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 215:14
+
+● shadowing-variables Function 'getActions' contains variable shadowing. Parameter 'signatures' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 215:14
+
+● eip7702-delegate-access-control Missing access control in 'execute' - allows arbitrary execution 130:0
+
+
+Summary: 3 critical, 17 high, 23 medium, 8 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 51
+  Duplicates removed: 20
+  Time taken: 0.05s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

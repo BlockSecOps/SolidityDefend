@@ -1,0 +1,221 @@
+Loaded configuration from: .soliditydefend.yml
+╔═══════════════════════════════════════╗
+║       🧙  SOLIDITY DEFEND 🧙          ║
+║    Smart Contract Security Analyzer   ║
+║                v1.1.0                 ║
+╚═══════════════════════════════════════╝
+
+Starting analysis...
+Analyzing: tests/real-contracts/curve/Curve3Pool-simplified.sol
+  Found 122 issues
+Found 99 issues in 1 file:
+● inefficient-storage Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations. 19:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'balanceOf' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 13:0
+
+● inefficient-storage Inefficient storage pattern detected. Function '_get_D' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 50:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'add_liquidity' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 83:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'remove_liquidity' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 130:0
+
+● inefficient-storage Inefficient storage pattern detected. Function 'exchange' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 150:0
+
+● inefficient-storage Inefficient storage pattern detected. Function '_get_y' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations. 177:0
+
+● centralization-risk Contract has centralization risk. Contract uses single owner without multi-signature protection. Single private key compromise leads to total contract control Single point of failure can lead to fund loss, governance attacks, or complete system compromise. 1:0
+
+● erc20-transfer-return-bomb Token transfer lacks return data size validation - vulnerable to return bomb DOS 1:1
+
+● token-decimal-confusion Hardcoded decimal assumption (18) - incompatible with USDC (6), WBTC (8), etc. 1:1
+
+● token-decimal-confusion Token price/exchange calculation without decimal normalization - incorrect conversions 1:1
+
+● token-decimal-confusion Multiple tokens (5) without decimal tracking - calculation errors likely 1:1
+
+● amm-k-invariant-violation AMM function 'transfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage 11:14
+
+● floating-pragma Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
+
+● logic-error-patterns Potential division before multiplication - causes precision loss (OWASP 2025) 1:0
+
+● logic-error-patterns Percentage calculation - verify order of operations for precision 1:0
+
+● enhanced-input-validation Array access without length validation - can cause out-of-bounds access 1:0
+
+● enhanced-input-validation Transfer function without zero-value check - validate non-zero amounts 1:0
+
+● enhanced-input-validation Address parameter without zero-address validation 1:0
+
+● post-080-overflow Type casting to smaller uint - verify no overflow on downcast 1:0
+
+● pool-donation-enhanced No minimum deposit requirement - small deposits may round down to zero shares 1:1
+
+● pool-donation-enhanced Pool initialization lacks protection - first depositor can manipulate initial share price 1:1
+
+● invalid-state-transition State variables modified after external call - potential reentrancy affecting state machine 169:9
+
+● array-bounds-check Array access to 'amounts' may be out of bounds - index not validated 95:25
+
+● array-bounds-check Array access to 'amounts' may be out of bounds - index not validated 97:49
+
+● array-bounds-check Array access to 'amounts' may be out of bounds - index not validated 115:17
+
+● array-bounds-check Array access to 'amounts' may be out of bounds - index not validated 116:74
+
+● array-bounds-check Array access to 'balances' may be out of bounds - index not validated 117:17
+
+● array-bounds-check Array access to 'balances' may be out of bounds - index not validated 134:29
+
+● array-bounds-check Array access to 'min_amounts' may be out of bounds - index not validated 135:30
+
+● array-bounds-check Array access to '_balances' may be out of bounds - index not validated 188:22
+
+● unchecked-external-call External call in function 'exchange' does not check return value 150:14
+
+● external-calls-loop Function 'remove_liquidity' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution. 130:0
+
+● vault-fee-manipulation Function 'exchange' may be vulnerable to fee manipulation attack. Unprotected fee update without timelock. Fee changes take effect immediately, enabling front-running attacks Attacker can front-run fee changes to extract value from depositors. 150:14
+
+● token-supply-manipulation Function 'add_liquidity' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 83:14
+
+● token-supply-manipulation Function 'remove_liquidity' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation. 130:14
+
+● gas-griefing Function '_get_D' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail. 50:14
+
+● gas-griefing Function 'add_liquidity' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail. 83:14
+
+● gas-griefing Function 'remove_liquidity' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail. 130:14
+
+● gas-griefing Function 'exchange' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail. 150:14
+
+● gas-griefing Function '_get_y' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail. 177:14
+
+● excessive-gas-usage Function '_get_D' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors. 50:14
+
+● excessive-gas-usage Function '_get_D' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 50:14
+
+● excessive-gas-usage Function 'add_liquidity' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors. 83:14
+
+● excessive-gas-usage Function 'add_liquidity' contains excessive gas usage pattern. Multiple storage reads detected (21). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 83:14
+
+● excessive-gas-usage Function 'add_liquidity' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors. 83:14
+
+● excessive-gas-usage Function 'remove_liquidity' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● excessive-gas-usage Function 'remove_liquidity' contains excessive gas usage pattern. Multiple storage reads detected (8). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● excessive-gas-usage Function 'remove_liquidity' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors. 130:14
+
+● excessive-gas-usage Function 'exchange' contains excessive gas usage pattern. Multiple storage reads detected (11). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors. 150:14
+
+● excessive-gas-usage Function '_get_y' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors. 177:14
+
+● redundant-checks Function 'exchange' contains redundant checks. Redundant check: uint >= 0 is always true for unsigned integers Redundant checks waste gas and increase transaction costs unnecessarily. 150:14
+
+● redundant-checks Function 'exchange' contains redundant checks. 3 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily. 150:14
+
+● shadowing-variables Function '_get_D' contains variable shadowing. Local variable 'S' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 50:14
+
+● shadowing-variables Function '_get_D' contains variable shadowing. Local variable 'D' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 50:14
+
+● shadowing-variables Function '_get_D' contains variable shadowing. Local variable 'Ann' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 50:14
+
+● shadowing-variables Function '_get_D' contains variable shadowing. Local variable 'D_P' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 50:14
+
+● shadowing-variables Function '_get_D' contains variable shadowing. Local variable 'Dprev' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 50:14
+
+● shadowing-variables Function 'add_liquidity' contains variable shadowing. Local variable 'memory' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 83:14
+
+● shadowing-variables Function 'add_liquidity' contains variable shadowing. Local variable 'D0' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 83:14
+
+● shadowing-variables Function 'add_liquidity' contains variable shadowing. Local variable 'mint_amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 83:14
+
+● shadowing-variables Function 'remove_liquidity' contains variable shadowing. Local variable 'memory' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 130:14
+
+● shadowing-variables Function 'remove_liquidity' contains variable shadowing. Local variable 'value' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 130:14
+
+● shadowing-variables Function 'exchange' contains variable shadowing. Local variable 'memory' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 150:14
+
+● shadowing-variables Function 'exchange' contains variable shadowing. Local variable 'dy_fee' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 150:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'c' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'S_' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'Ann' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable '_x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'b' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'y' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● shadowing-variables Function '_get_y' contains variable shadowing. Local variable 'y_prev' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed. 177:14
+
+● unsafe-type-casting Function 'remove_liquidity' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 143:0
+
+● unsafe-type-casting Function 'remove_liquidity' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 143:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 157:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 157:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 164:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 164:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 164:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 165:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 165:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 167:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 167:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 168:0
+
+● unsafe-type-casting Function 'exchange' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 168:0
+
+● unsafe-type-casting Function '_get_y' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 184:0
+
+● unsafe-type-casting Function '_get_y' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 184:0
+
+● unsafe-type-casting Function '_get_y' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 186:0
+
+● unsafe-type-casting Function '_get_y' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior. 186:0
+
+● amm-k-invariant-violation AMM function 'add_liquidity' violates constant product invariant: K invariant check doesn't account for fees, may incorrectly reject valid swaps or allow invalid ones 83:14
+
+● amm-k-invariant-violation AMM function 'exchange' violates constant product invariant: Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed; K invariant check doesn't account for fees, may incorrectly reject valid swaps or allow invalid ones 150:14
+
+● l2-fee-manipulation Function 'add_liquidity' updates fees without proper protections. No access control on fee updates. Anyone can modify fees leading to manipulation Vulnerable fee updates can be front-run or manipulated to extract value. 83:14
+
+● l2-fee-manipulation Function 'add_liquidity' updates fees without proper protections. Fee updates take immediate effect. Should implement time delay to prevent front-running Vulnerable fee updates can be front-run or manipulated to extract value. 83:14
+
+● l2-fee-manipulation Function 'add_liquidity' updates fees without proper protections. No rate limiting on fee updates. Fees could be changed too frequently causing instability Vulnerable fee updates can be front-run or manipulated to extract value. 83:14
+
+● l2-fee-manipulation Function 'exchange' updates fees without proper protections. No access control on fee updates. Anyone can modify fees leading to manipulation Vulnerable fee updates can be front-run or manipulated to extract value. 150:14
+
+● l2-fee-manipulation Function 'exchange' updates fees without proper protections. Fee updates take immediate effect. Should implement time delay to prevent front-running Vulnerable fee updates can be front-run or manipulated to extract value. 150:14
+
+● l2-fee-manipulation Function 'exchange' updates fees without proper protections. No rate limiting on fee updates. Fees could be changed too frequently causing instability Vulnerable fee updates can be front-run or manipulated to extract value. 150:14
+
+● transient-storage-reentrancy Vulnerable to transient storage reentrancy in 'remove_liquidity' - transfer()/send() no longer safe with EIP-1153 130:0
+
+● transient-storage-reentrancy Vulnerable to transient storage reentrancy in 'exchange' - transfer()/send() no longer safe with EIP-1153 150:0
+
+
+Summary: 8 critical, 8 high, 62 medium, 21 low
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 99
+  Duplicates removed: 23
+  Time taken: 0.03s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

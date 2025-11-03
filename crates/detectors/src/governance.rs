@@ -53,6 +53,16 @@ impl Detector for GovernanceDetector {
             return Ok(findings);
         }
 
+        // Skip actual governance protocols - they have proper snapshot/timelock mechanisms
+        // Governor Bravo, OpenZeppelin Governor, etc. have audited implementations with:
+        // - Snapshot-based voting (getPriorVotes, getPastVotes)
+        // - Timelock for execution delays
+        // - Proposal states and voting periods
+        // This detector should focus on CUSTOM governance implementations
+        if utils::is_governance_protocol(ctx) {
+            return Ok(findings);
+        }
+
         // Run all governance vulnerability detection methods
         findings.extend(self.detect_flash_loan_governance_attacks(ctx)?);
         findings.extend(self.detect_missing_snapshot_protection(ctx)?);
@@ -265,7 +275,8 @@ impl GovernanceDetector {
     fn has_snapshot_mechanisms(&self, ctx: &AnalysisContext) -> bool {
         let snapshot_patterns = [
             "snapshot",
-            "getPastVotes",
+            "getPastVotes",  // OpenZeppelin Governor
+            "getPriorVotes",  // Compound Governor Bravo
             "balanceOfAt",
             "checkpoints",
             "timeWeighted",

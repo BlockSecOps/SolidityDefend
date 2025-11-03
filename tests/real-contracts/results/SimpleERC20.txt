@@ -82,7 +82,7 @@ Analysis complete:
   Files analyzed: 1
   Successful: 1
   Issues found: 33
-  Time taken: 0.02s
+  Time taken: 0.01s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues
