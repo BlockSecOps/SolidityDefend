@@ -8,7 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::{cross_chain_patterns, modern_eip_patterns};
-use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct AAUserOperationReplayDetector {
     base: BaseDetector,

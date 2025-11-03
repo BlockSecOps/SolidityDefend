@@ -75,9 +75,9 @@ impl Detector for AABundlerDosEnhancedDetector {
         // Pattern 1: validateUserOp with unbounded computation
         let has_validate = lower.contains("validateuserop");
         if has_validate {
-            let has_unbounded_loop = (lower.contains("while (true)")
+            let has_unbounded_loop = lower.contains("while (true)")
                 || lower.contains("while(true)")
-                || (lower.contains("for (uint256 i") && !lower.contains("i < ")));
+                || (lower.contains("for (uint256 i") && !lower.contains("i < "));
 
             if has_unbounded_loop {
                 let finding = self.base.create_finding(

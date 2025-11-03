@@ -634,6 +634,7 @@ impl ParameterConsistencyDetector {
     }
 
     /// Find parameters used in function body
+    #[allow(dead_code)]
     fn find_used_parameters(&self, block: &ast::Block<'_>) -> HashSet<String> {
         let mut used = HashSet::new();
 
@@ -645,6 +646,7 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect used identifiers from statement
+    #[allow(dead_code)]
     fn collect_used_identifiers_from_stmt(
         &self,
         stmt: &ast::Statement<'_>,
@@ -682,6 +684,7 @@ impl ParameterConsistencyDetector {
     }
 
     /// Collect used identifiers from expression
+    #[allow(dead_code)]
     fn collect_used_identifiers_from_expr(
         &self,
         expr: &ast::Expression<'_>,

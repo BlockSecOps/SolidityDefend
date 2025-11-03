@@ -148,7 +148,7 @@ impl ShadowingVariablesDetector {
 
         let mut found_type = false;
 
-        for (i, part) in parts.iter().enumerate() {
+        for (_i, part) in parts.iter().enumerate() {
             // Track if we've seen a type
             if part.starts_with("uint") || part.starts_with("int")
                 || *part == "address" || *part == "bool"

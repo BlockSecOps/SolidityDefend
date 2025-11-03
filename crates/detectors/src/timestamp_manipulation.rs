@@ -110,6 +110,50 @@ impl TimestampManipulationDetector {
             return None;
         }
 
+        // Check more specific patterns first before generic ones
+
+        // Pattern 2a: keccak256 with block variables for randomness (MOST SPECIFIC)
+        let has_keccak_block_vars = func_source.contains("keccak256")
+            && func_source.contains("abi.encodePacked")
+            && (func_source.contains("block.timestamp")
+                || func_source.contains("block.difficulty")
+                || func_source.contains("block.number")
+                || func_source.contains("block.prevrandao")
+                || func_source.contains("blockhash"));
+
+        if has_keccak_block_vars {
+            return Some(format!(
+                "Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. \
+                These values are predictable/manipulable by miners and validators, enabling attacks on randomness-dependent logic. \
+                Use Chainlink VRF or commit-reveal schemes instead"
+            ));
+        }
+
+        // Pattern 2b: Direct modulo on block variables
+        let has_block_modulo = func_source.contains("block.timestamp %")
+            || func_source.contains("block.difficulty %")
+            || func_source.contains("block.number %")
+            || func_source.contains("block.prevrandao %")
+            || (func_source.contains("blockhash") && func_source.contains('%'));
+
+        if has_block_modulo {
+            return Some(format!(
+                "Uses modulo operator on block variables for randomness or decision-making. \
+                Block variables are predictable and can be manipulated by miners, leading to biased or exploitable outcomes"
+            ));
+        }
+
+        // Pattern 2c: block.difficulty or block.prevrandao usage (weak randomness)
+        let uses_difficulty_or_prevrandao = func_source.contains("block.difficulty")
+            || func_source.contains("block.prevrandao");
+
+        if uses_difficulty_or_prevrandao && !has_keccak_block_vars {
+            return Some(format!(
+                "Uses block.difficulty or block.prevrandao which are manipulable by validators. \
+                These should never be used for randomness. Use Chainlink VRF or similar oracle-based randomness"
+            ));
+        }
+
         // Pattern 1: Timestamp used in comparison without tolerance
         let has_exact_comparison = (func_source.contains("block.timestamp ==")
             || func_source.contains("block.timestamp !=")
@@ -125,7 +169,7 @@ impl TimestampManipulationDetector {
             ));
         }
 
-        // Pattern 2: Timestamp for randomness
+        // Pattern 2: Timestamp for randomness (GENERIC - check last)
         let uses_for_randomness = (func_source.contains("random")
             || func_source.contains("Random")
             || func_source.contains("lottery")
