@@ -2,7 +2,7 @@ Loaded configuration from: .soliditydefend.yml
 ╔═══════════════════════════════════════╗
 ║       🧙  SOLIDITY DEFEND 🧙          ║
 ║    Smart Contract Security Analyzer   ║
-║                v1.1.0                 ║
+║                v1.2.0                 ║
 ╚═══════════════════════════════════════╝
 
 Starting analysis...

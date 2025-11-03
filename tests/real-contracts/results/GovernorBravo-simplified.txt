@@ -2,7 +2,7 @@ Loaded configuration from: .soliditydefend.yml
 ╔═══════════════════════════════════════╗
 ║       🧙  SOLIDITY DEFEND 🧙          ║
 ║    Smart Contract Security Analyzer   ║
-║                v1.1.0                 ║
+║                v1.2.0                 ║
 ╚═══════════════════════════════════════╝
 
 Starting analysis...
@@ -119,7 +119,7 @@ Analysis complete:
   Successful: 1
   Issues found: 51
   Duplicates removed: 20
-  Time taken: 0.05s
+  Time taken: 0.04s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues

@@ -2,7 +2,7 @@ Loaded configuration from: .soliditydefend.yml
 ╔═══════════════════════════════════════╗
 ║       🧙  SOLIDITY DEFEND 🧙          ║
 ║    Smart Contract Security Analyzer   ║
-║                v1.1.0                 ║
+║                v1.2.0                 ║
 ╚═══════════════════════════════════════╝
 
 Starting analysis...
@@ -37,9 +37,9 @@ Found 74 issues in 1 file:
 
 ● floating-pragma Floating pragma detected: pragma solidity ^0.5.12;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes. 2:0
 
-● unused-state-variables State variable 'initialExchangeRateMantissa' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 49:0
-
 ● unused-state-variables State variable '_notEntered' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 39:0
+
+● unused-state-variables State variable 'initialExchangeRateMantissa' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 49:0
 
 ● unused-state-variables State variable 'principal' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment. 60:0
 
@@ -165,7 +165,7 @@ Analysis complete:
   Successful: 1
   Issues found: 74
   Duplicates removed: 252
-  Time taken: 0.22s
+  Time taken: 0.20s
 
 Exiting with code 1 due to:
   - Found high or critical severity issues
