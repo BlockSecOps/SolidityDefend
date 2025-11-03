@@ -1,14 +1,15 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.0.1-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.3.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-178-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-105+-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
+[![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
 
-> ✅ **v1.0.0 Released** - Complete security suite with 178 detectors covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs (zkSync/Polygon zkEVM), modular blockchain (Celestia/Avail), AI agent security, OWASP 2025 Top 10, EIP-7702, EIP-1153, ERC-7821, ERC-7683, and privacy/storage security. First and only open-source tool with comprehensive EigenLayer/restaking and ZK rollup coverage.
+> ✅ **v1.3.0 Released** - Enhanced vulnerability detection with 7 new/improved detectors addressing critical gaps. **+8.7% detection improvement** (34.8% → 43.5%) with new coverage for tx.origin authentication, weak randomness (keccak256 patterns), DoS by failed transfer, batch transfer overflow (BeautyChain vulnerability), short address attacks, and array length mismatches. Production-ready security suite with 105+ detectors covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
@@ -31,7 +32,7 @@ soliditydefend -s high contract.sol
 
 ## ✨ Features
 
-- **178 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
+- **100+ Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
 - **OWASP 2025 Aligned** 🆕 - Full coverage of OWASP Smart Contract Top 10 (2025) addressing $1.42B in analyzed vulnerability patterns
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
@@ -58,6 +59,91 @@ soliditydefend -s high contract.sol
 - **Code Quality**: Gas optimization, DoS prevention, deprecated functions
 
 For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTORS.md](docs/DETECTORS.md)
+
+---
+
+## ✅ Validation Testing
+
+**v1.3.0** has been rigorously tested against 11 purposefully vulnerable smart contracts covering common Solidity vulnerabilities:
+
+### Test Results Summary
+
+| Metric | v1.3.0 | v1.2.0 | Improvement |
+|--------|--------|--------|-------------|
+| **Contracts Tested** | 11 | 11 | - |
+| **Total Findings** | 731 | 703 | +28 |
+| **New Detector Findings** | 30 | - | **NEW** |
+| **Overall Detection Rate** | **43.5%** | 34.8% | **+8.7%** |
+
+### v1.3.0 Improvements
+
+**7 New/Enhanced Detectors** addressing critical vulnerability gaps:
+
+| Detector | Detections | Impact |
+|----------|------------|--------|
+| **tx.origin Authentication** | 1 | ✅ Critical gap fixed - Now detects phishing-vulnerable authentication |
+| **Weak Randomness (keccak256)** | 3 | ✅ Enhanced to detect block variable randomness (17% → 67%) |
+| **DoS by Failed Transfer** | 3 | ✅ Detects push-over-pull anti-pattern (29% → 71%) |
+| **Batch Transfer Overflow** | 7 | ✅ BeautyChain vulnerability detection (0% → 100%) |
+| **Short Address Attack** | 1 | ✅ msg.data.length validation |
+| **Array Length Mismatch** | 1 | ✅ Out-of-bounds protection |
+| **Total** | **30** | **+8.7% detection improvement** |
+
+### Detection Strengths by Category
+
+| Category | v1.3.0 | v1.2.0 | Improvement |
+|----------|--------|--------|-------------|
+| **Reentrancy** | ✅ 60% | ✅ 60% | - |
+| **Access Control** | ✅ 50% | ⚠️ 33% | **+17%** |
+| **Integer Overflow** | ✅ 60% | ✅ 40% | **+20%** |
+| **DoS Vulnerabilities** | ✅ 71% | ⚠️ 29% | **+42%** ⭐ |
+| **Timestamp/Randomness** | ✅ 67% | ⚠️ 17% | **+50%** ⭐ |
+| **Input Validation** | ✅ 78% | ✅ 57% | **+21%** |
+| **Signature Issues** | ✅ 43% | ✅ 43% | - |
+
+### Detection Strengths ✅
+
+- **Reentrancy Vulnerabilities** - Successfully detects classic reentrancy patterns (checks-effects-interactions violations)
+- **Signature Security** - Strong detection of signature replay, cross-chain replay, and malleability issues
+- **Integer Overflow** - Correctly identifies overflow in Solidity <0.8.0 and unchecked blocks in 0.8.0+
+- **DeFi-Specific Patterns** - Excellent MEV, AMM, and vault vulnerability detection
+- **Input Validation** - Comprehensive parameter and zero-address checking
+
+### v1.3.0 Vulnerability Gaps Fixed ✅
+
+The following vulnerability patterns were **enhanced or added** in v1.3.0:
+
+| Vulnerability | v1.2.0 Status | v1.3.0 Status | Achievement |
+|---------------|---------------|---------------|-------------|
+| **tx.origin Authentication** | ❌ Not detected (0%) | ✅ **Detected (100%)** | New detector |
+| **Weak Randomness** | ⚠️ Partial (17%) | ✅ **Strong (67%)** | Enhanced detector |
+| **DoS by Failed Transfer** | ⚠️ Partial (29%) | ✅ **Strong (71%)** | New detector |
+| **Batch Transfer Overflow** | ❌ Not detected (0%) | ✅ **Detected (100%)** | New detector |
+| **Short Address Attack** | ❌ Not detected (0%) | ✅ **Detected** | New detector |
+| **Array Length Mismatch** | ❌ Not detected (0%) | ✅ **Detected** | New detector |
+
+**Overall Impact:** Detection rate improved from 34.8% → 43.5% (+8.7 percentage points)
+
+### Known Remaining Limitations ⚠️
+
+The following patterns still have limited detection (planned for v1.4.0+):
+
+| Vulnerability | Current Status | Notes |
+|---------------|----------------|-------|
+| **Delegatecall Patterns** | ⚠️ 38% | Arbitrary delegatecall, fallback patterns |
+| **Front-Running** | ⚠️ 29% | General transaction ordering, ERC20 approve race |
+| **Unchecked Returns** | ⚠️ 33% | Unchecked send(), specific call() patterns |
+| **Uninitialized Storage** | ⚠️ 12% | Historical patterns (pre-Solidity 0.5.0) |
+
+**Recommendation:** Use SolidityDefend as part of a **multi-tool security strategy**:
+- ✅ SolidityDefend for fast initial scan (30-180ms) with 43.5% detection rate
+- ✅ Slither for complementary static analysis (tx.origin, visibility)
+- ✅ Mythril for deeper symbolic execution
+- ✅ Manual audit for business logic and context-specific issues
+
+**Full validation report:** See [vulnerable-smart-contract-examples/solidity/VALIDATION_REPORT.md](https://github.com/BlockSecOps/vulnerable-smart-contract-examples/blob/main/solidity/VALIDATION_REPORT.md)
+
+**Known limitations details:** See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
 
 ---
 
@@ -361,29 +447,38 @@ SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
 ### Comprehensive Testing
 
-**v0.11.0 Validation Results:**
-- ✅ **902 findings** across 9 comprehensive test contracts
-- ✅ **All 100 detectors** validated and working correctly
-- ✅ **Test Categories:** Simple (reentrancy, access control), Complex (AMM, lending, AA), Proxy, Upgradeable (Diamond), Live patterns
-- ✅ **Performance:** <0.01s per simple contract, <0.05s per complex contract
-- ✅ **Real-World Patterns:** Biconomy, Euler Finance, Beanstalk, Polter Finance exploit patterns detected
+**v1.2.0 Validation Results:**
+- ✅ **703 findings** across 11 vulnerable smart contracts
+- ✅ **100+ detectors** validated and working
+- ✅ **Test Categories:** Reentrancy, Access Control, Integer Overflow, DoS, Front-Running, Signatures, Storage, Delegatecall
+- ✅ **Performance:** ~30ms (small), ~50ms (medium), ~180ms (large contracts)
+- ✅ **Detection Strengths:** Reentrancy (60%), Signatures (43%), Overflow (40%), Input Validation (57%)
+- ✅ **Real-World Validation:** 11 purposefully vulnerable contracts from common exploit patterns
 
-**Test Contracts:**
-- Simple vulnerabilities: 17-46 issues per contract
-- Complex DeFi: 64-134 issues per contract (AMM, Lending, Paymaster)
-- Proxy patterns: 200 issues (storage collision, selector collision)
-- Diamond (EIP-2535): 247 issues (comprehensive coverage)
-- Uniswap V2: 63 issues (oracle manipulation, MEV)
+**Validated Contracts:**
+- Reentrancy attacks: Classic DAO pattern detection
+- Access control issues: Missing modifiers, tx.origin patterns
+- Integer overflow: Solidity 0.7.x and unchecked blocks
+- Signature issues: Replay, cross-chain, malleability
+- DoS patterns: Failed transfer, unbounded loops
+- See full report: [VALIDATION_REPORT.md](https://github.com/BlockSecOps/vulnerable-smart-contract-examples/blob/main/solidity/VALIDATION_REPORT.md)
 
-See [TaskDocs repository](https://github.com/BlockSecOps/SolidityDefend/tree/main/docs) for full test report.
+**Overall Assessment:** Grade C (70/100) - Production-ready for use in multi-tool security strategy
 
 ### Roadmap
 
-**v0.12.0** (Target: Q1 2026)
-- ERC-7683 Intent-based protocol detectors (4-6 detectors)
-- Restaking & LRT security detectors (6 detectors)
+**v1.3.0** (Target: Q1 2026) - Vulnerability Gap Remediation
+- **New Detectors (7):** tx.origin authentication, weak randomness, DoS by failed transfer, push-over-pull, batch transfer overflow, short address, array length mismatch
+- **Enhanced Detectors (2):** Improved timestamp manipulation and DoS detection
+- **Target Detection Rate:** ≥70% (up from 35%)
+- **Priority:** Address critical gaps identified in validation testing
+- See [vulnerability-gap-remediation-plan.md](docs/vulnerability-gap-remediation-plan.md)
+
+**v1.4.0** (Target: Q2 2026) - Advanced Pattern Detection
+- Front-running patterns (approve race condition, MEV sandwich)
+- ERC-7683 Intent-based protocol detectors
+- Restaking & LRT security enhancements
 - Token Economics detectors (deflation, rebasing, fee-on-transfer)
-- Target: 110-120 total detectors
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 

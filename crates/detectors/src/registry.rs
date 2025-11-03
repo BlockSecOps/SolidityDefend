@@ -387,6 +387,12 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::validation::parameter_check::ParameterConsistencyDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::array_length_mismatch::ArrayLengthMismatchDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::short_address::ShortAddressDetector::new(),
+        ));
 
         // Oracle Detectors
         self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
@@ -465,6 +471,9 @@ impl DetectorRegistry {
         ));
         self.register(Arc::new(
             crate::integer_overflow::IntegerOverflowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::batch_transfer_overflow::BatchTransferOverflowDetector::new(),
         ));
         self.register(Arc::new(
             crate::uninitialized_storage::UninitializedStorageDetector::new(),
@@ -549,6 +558,9 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::gas_griefing::GasGriefingDetector::new()));
         self.register(Arc::new(
             crate::dos_unbounded_operation::DosUnboundedOperationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_failed_transfer::DosFailedTransferDetector::new(),
         ));
         self.register(Arc::new(
             crate::excessive_gas_usage::ExcessiveGasUsageDetector::new(),
