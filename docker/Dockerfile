@@ -52,4 +52,4 @@ CMD ["--help"]
 # Labels
 LABEL maintainer="SolidityDefend Team"
 LABEL description="Static analysis security testing tool for Solidity smart contracts"
-LABEL version="1.0.0"
+LABEL version="1.3.0"
