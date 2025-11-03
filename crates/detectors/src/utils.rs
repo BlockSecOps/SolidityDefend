@@ -307,9 +307,9 @@ pub fn is_uniswap_v4_pool(ctx: &AnalysisContext) -> bool {
     let source = ctx.source_code.as_str();
 
     // Check for V4 hook functions
-    let has_before_swap = source.contains("function beforeSwap(")
+    let _has_before_swap = source.contains("function beforeSwap(")
         || source.contains("beforeSwap(address,PoolKey");
-    let has_after_swap =
+    let _has_after_swap =
         source.contains("function afterSwap(") || source.contains("afterSwap(address,PoolKey");
 
     // Check for V4 hook system

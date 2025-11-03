@@ -200,7 +200,7 @@ pub fn is_protected_swap(func_source: &str) -> bool {
 }
 
 /// Check if function is an ERC4626 vault function (protected by standard design)
-pub fn is_erc4626_vault_function(func_source: &str, function_name: &str, ctx: &AnalysisContext) -> bool {
+pub fn is_erc4626_vault_function(_func_source: &str, function_name: &str, ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Check if this is an ERC4626 vault

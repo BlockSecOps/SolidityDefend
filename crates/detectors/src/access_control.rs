@@ -4,7 +4,6 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::erc_standard_compliance;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils;
 
 /// Detector for missing access control modifiers on critical functions
 pub struct MissingModifiersDetector {

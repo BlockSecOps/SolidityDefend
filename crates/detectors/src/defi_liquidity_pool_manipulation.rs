@@ -6,7 +6,6 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
-use ast::Function;
 
 pub struct LiquidityPoolManipulationDetector {
     base: BaseDetector,

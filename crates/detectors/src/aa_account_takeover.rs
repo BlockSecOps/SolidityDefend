@@ -77,7 +77,7 @@ impl Detector for AaAccountTakeoverDetector {
         let has_timelock = access_control_patterns::has_timelock_pattern(ctx);
         let has_multisig = access_control_patterns::has_multisig_pattern(ctx);
         let has_two_step_ownership = access_control_patterns::has_two_step_ownership(ctx);
-        let has_role_hierarchy = access_control_patterns::has_role_hierarchy_pattern(ctx);
+        let _has_role_hierarchy = access_control_patterns::has_role_hierarchy_pattern(ctx);
 
         // Early return if strong governance protections are present
         if has_timelock && has_multisig {

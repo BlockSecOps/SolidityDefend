@@ -92,11 +92,11 @@ impl TransientStorageComposabilityDetector {
                 (func_text.contains("require(") || func_text.contains("if ("));
 
             if has_write {
-                writers.push((function.name.name.clone(), function.name.location.start().line() as u32));
+                writers.push((function.name.name, function.name.location.start().line() as u32));
             }
 
             if has_read {
-                readers.push((function.name.name.clone(), function.name.location.start().line() as u32));
+                readers.push((function.name.name, function.name.location.start().line() as u32));
             }
         }
 

@@ -155,7 +155,7 @@ impl MultisigBypassDetector {
 
         // Pattern 6: Off-by-one threshold validation
         if source_lower.contains("threshold") {
-            let has_strict_comparison = source_lower.contains(">=")
+            let _has_strict_comparison = source_lower.contains(">=")
                 && source_lower.contains("threshold");
 
             let has_loose_comparison = source_lower.contains("> threshold")

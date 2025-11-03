@@ -157,8 +157,7 @@ impl Detector for FlashLoanReentrancyComboDetector {
                         );
 
                         findings.push(finding);
-                        found_repay_line = None;
-                        break;
+                        break; // Exit after finding to avoid duplicates
                     }
                 }
             }

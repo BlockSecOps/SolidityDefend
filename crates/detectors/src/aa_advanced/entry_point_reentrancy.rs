@@ -8,7 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::{modern_eip_patterns, reentrancy_patterns};
-use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct AAEntryPointReentrancyDetector {
     base: BaseDetector,
@@ -188,8 +188,7 @@ impl Detector for AAEntryPointReentrancyDetector {
                         );
 
                         findings.push(finding);
-                        found_external_call_line = None; // Reset to avoid duplicate findings
-                        break;
+                        break; // Exit after finding to avoid duplicates
                     }
                 }
             }
