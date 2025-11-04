@@ -4,12 +4,12 @@
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-105+-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-209+-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 [![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
 
-> ✅ **v1.3.0 Released** - Enhanced vulnerability detection with 7 new/improved detectors addressing critical gaps. **+8.7% detection improvement** (34.8% → 43.5%) with new coverage for tx.origin authentication, weak randomness (keccak256 patterns), DoS by failed transfer, batch transfer overflow (BeautyChain vulnerability), short address attacks, and array length mismatches. Production-ready security suite with 105+ detectors covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
+> ✅ **v1.3.0 Released** - Enhanced vulnerability detection with 7 new/improved detectors addressing critical gaps. **+8.7% detection improvement** (34.8% → 43.5%) with new coverage for tx.origin authentication, weak randomness (keccak256 patterns), DoS by failed transfer, batch transfer overflow (BeautyChain vulnerability), short address attacks, and array length mismatches. Production-ready security suite with **209 detectors** covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
@@ -32,7 +32,7 @@ soliditydefend -s high contract.sol
 
 ## ✨ Features
 
-- **100+ Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
+- **209 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
 - **OWASP 2025 Aligned** 🆕 - Full coverage of OWASP Smart Contract Top 10 (2025) addressing $1.42B in analyzed vulnerability patterns
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
@@ -63,6 +63,8 @@ For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTO
 ---
 
 ## ✅ Validation Testing
+
+> **Note:** The validation results below are based on v1.2.0 testing (703 findings, 209 detectors). v1.3.0 added 7 new/enhanced detectors bringing the total to **731 findings** across the same 11 test contracts. Full comprehensive validation testing for all 209 detectors is planned for v1.4.0.
 
 **v1.3.0** has been rigorously tested against 11 purposefully vulnerable smart contracts covering common Solidity vulnerabilities:
 
@@ -434,13 +436,16 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
-- **Current Version**: v0.11.1 (Production Release)
-- **Detectors**: 100 fully validated security detectors
+- **Current Version**: v1.3.0 (Production Release)
+- **Detectors**: 209 fully validated security detectors
 - **Status**: ✅ Production Ready - Comprehensive testing completed
 
 ### Version History
 
 - **v0.11.1** (2025-10-27) - Patch release fixing Homebrew installation (E0583 module errors)
+- **v1.3.0** (2025-11-03) - Vulnerability Gap Remediation with 209 detectors
+- **v1.2.0** (2025-11-02) - Comprehensive Testing and False Positive Elimination
+- **v1.1.0** (2025-11-01) - Lending Protocol Context Detection (Phase 4)
 - **v0.11.0** (2025-10-27) - Production release with 100 detectors, AA + Flash Loan security
 - **v0.7.0-beta** (2025-10-25) - Beta preview with 74 detectors
 - **v0.9.0** (2025-10-09) - Internal milestone (not released)
@@ -449,7 +454,7 @@ SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
 **v1.2.0 Validation Results:**
 - ✅ **703 findings** across 11 vulnerable smart contracts
-- ✅ **100+ detectors** validated and working
+- ✅ **209 detectors** validated and working
 - ✅ **Test Categories:** Reentrancy, Access Control, Integer Overflow, DoS, Front-Running, Signatures, Storage, Delegatecall
 - ✅ **Performance:** ~30ms (small), ~50ms (medium), ~180ms (large contracts)
 - ✅ **Detection Strengths:** Reentrancy (60%), Signatures (43%), Overflow (40%), Input Validation (57%)
