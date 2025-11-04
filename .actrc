@@ -1,0 +1,13 @@
+# Act configuration for SolidityDefend
+# Use medium-sized Ubuntu image for better compatibility
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+
+# Enable verbose logging
+--verbose
+
+# Use Docker host socket
+--container-daemon-socket /var/run/docker.sock
+
+# Set environment variables
+--env CARGO_TERM_COLOR=always
+--env RUST_BACKTRACE=1
