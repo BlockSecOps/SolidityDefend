@@ -87,7 +87,7 @@ This release focuses on filling critical gaps in vulnerability coverage, particu
 - **731 total findings** across 11 test contracts (up from 703 in v1.2.0)
 - **30 new vulnerability detections** from gap remediation
 - **Zero false positives** on production DeFi contracts
-- **All 209 detectors** tested and validated
+- **All 204 detectors** tested and validated
 
 ---
 
@@ -95,7 +95,7 @@ This release focuses on filling critical gaps in vulnerability coverage, particu
 
 - Updated README.md with v1.3.0 version badges and improvements table
 - Updated KNOWN_LIMITATIONS.md to v1.3.0, marked critical gaps as fixed
-- Updated detector count from 105+ to 209 across all documentation
+- Updated detector count from 105+ to 204 across all documentation
 
 ---
 

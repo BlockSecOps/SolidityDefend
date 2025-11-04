@@ -1,6 +1,6 @@
 # Detector Documentation
 
-Complete reference for all 209 security detectors available in SolidityDefend v1.3.0 across 39 implementation phases.
+Complete reference for all 204 security detectors available in SolidityDefend v1.3.0 across 39 implementation phases.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Complete reference for all 209 security detectors available in SolidityDefend v1
 
 ## Overview
 
-SolidityDefend v1.3.0 includes **209 security detectors** across 39 implementation phases, covering all critical vulnerability classes in modern smart contracts including Restaking/LRT security, Advanced Access Control, ERC-4337 AA Advanced, Flash Loan Enhanced, Token Standards Extended, MEV Protection Enhanced, Zero-Knowledge Proofs, Modular Blockchain, AI Agent Security, EIP-1153 Transient Storage, EIP-7702 Account Delegation, ERC-7821 Batch Executor, ERC-7683 Intent-Based, Privacy/Storage security, and OWASP 2025 Top 10 alignment.
+SolidityDefend v1.3.0 includes **204 security detectors** across 39 implementation phases, covering all critical vulnerability classes in modern smart contracts including Restaking/LRT security, Advanced Access Control, ERC-4337 AA Advanced, Flash Loan Enhanced, Token Standards Extended, MEV Protection Enhanced, Zero-Knowledge Proofs, Modular Blockchain, AI Agent Security, EIP-1153 Transient Storage, EIP-7702 Account Delegation, ERC-7821 Batch Executor, ERC-7683 Intent-Based, Privacy/Storage security, and OWASP 2025 Top 10 alignment.
 
 ### Context-Aware Analysis (v0.12+)
 
@@ -92,7 +92,7 @@ Each detector uses standardized Finding format and CWE mappings.
 | **Modular Blockchain (v1.0.0)** | **5** | **Critical** | ✅ **Phase 38** |
 | **AI Agent Security (v1.0.0)** | **4** | **High** | ✅ **Phase 39** |
 
-**Total: 209 detectors** - Production Release v1.3.0! 🎉
+**Total: 204 detectors** - Production Release v1.3.0! 🎉
 
 ### Implementation Phases
 
