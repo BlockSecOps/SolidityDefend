@@ -1,10 +1,10 @@
-# Zero Knowledge Detectors
+# Zero-Knowledge Proof Detectors
 
 **Total:** 5 detectors
 
 ---
 
-## Zk Circuit Under Constrained
+## ZK Circuit Under-Constrained
 
 **ID:** `zk-circuit-under-constrained`  
 **Severity:** Critical  
@@ -12,14 +12,12 @@
 
 ### Description
 
+Detects under-constrained ZK circuits with missing constraints
 
+### Vulnerable Patterns
 
-### Details
-
-ZK Circuit Under-Constrained Detector
-
-Detects under-constrained ZK circuits where missing constraints allow
-invalid proofs to be accepted.
+- Public inputs without range constraints
+- No input validation for proof
 
 ### Remediation
 
@@ -28,28 +26,28 @@ invalid proofs to be accepted.
 
 ### Source
 
-`crates/detectors/src/zk_proofs/circuit_constraints.rs`
+`zk_proofs/circuit_constraints.rs`
 
 ---
 
-## Zk Proof Bypass
+## ZK Proof Verification Bypass
 
 **ID:** `zk-proof-bypass`  
 **Severity:** Critical  
 **Categories:** L2, ZKRollup  
-**CWE:** CWE-345, CWE-20, CWE-20  
+**CWE:** CWE-20, CWE-345  
 
 ### Description
 
-
+Detects missing or incomplete ZK proof verification in rollup contracts, including proof replay vulnerabilities, public input manipulation, and batch submission without proper verification
 
 ### Source
 
-`crates/detectors/src/zk_proof_bypass.rs`
+`src/zk_proof_bypass.rs`
 
 ---
 
-## Zk Proof Malleability
+## ZK Proof Malleability
 
 **ID:** `zk-proof-malleability`  
 **Severity:** Critical  
@@ -57,26 +55,27 @@ invalid proofs to be accepted.
 
 ### Description
 
+Detects proof malleability attacks in ZK systems
 
+### Vulnerable Patterns
 
-### Details
-
-ZK Proof Malleability Detector
-
-Detects proof malleability attacks where proofs can be modified while
-remaining valid, allowing unauthorized operations.
+- Proof verification without uniqueness check
+- No binding to specific transaction
+- Missing signature over proof
 
 ### Remediation
 
 - Include unique identifier in proof: require(!usedProofs[proofHash], \
+- Include msg.sender in public inputs: verifyProof(proof, [msg.sender, ...otherInputs])
+- Require signature over proof hash: bytes32 proofHash = keccak256(proof); verify signature
 
 ### Source
 
-`crates/detectors/src/zk_proofs/proof_malleability.rs`
+`zk_proofs/proof_malleability.rs`
 
 ---
 
-## Zk Recursive Proof Validation
+## ZK Recursive Proof Validation
 
 **ID:** `zk-recursive-proof-validation`  
 **Severity:** High  
@@ -84,25 +83,25 @@ remaining valid, allowing unauthorized operations.
 
 ### Description
 
+Detects recursive proof validation issues
 
+### Vulnerable Patterns
 
-### Details
-
-ZK Recursive Proof Validation Detector
-
-Detects recursive proof validation issues in proof aggregation systems.
+- Batch proof verification without individual validation
+- No depth limit on recursion
 
 ### Remediation
 
 - Validate each proof individually before aggregation or use proper aggregation scheme
+- Add recursion depth limit: require(depth <= MAX_DEPTH, \
 
 ### Source
 
-`crates/detectors/src/zk_proofs/recursive_proof.rs`
+`zk_proofs/recursive_proof.rs`
 
 ---
 
-## Zk Trusted Setup Bypass
+## ZK Trusted Setup Bypass
 
 **ID:** `zk-trusted-setup-bypass`  
 **Severity:** High  
@@ -110,17 +109,21 @@ Detects recursive proof validation issues in proof aggregation systems.
 
 ### Description
 
+Detects compromised trusted setup validation
 
+### Vulnerable Patterns
 
-### Details
+- Verifier parameters hardcoded without validation
+- No ceremony validation
 
-ZK Trusted Setup Bypass Detector
+### Remediation
 
-Detects compromised or missing trusted setup validation in ZK systems.
+- Validate verifying key against known hash: require(keccak256(vk) == EXPECTED_VK_HASH)
+- Document and validate setup ceremony: // Setup hash: 0x... from ceremony with N participants
 
 ### Source
 
-`crates/detectors/src/zk_proofs/trusted_setup_bypass.rs`
+`zk_proofs/trusted_setup_bypass.rs`
 
 ---
 

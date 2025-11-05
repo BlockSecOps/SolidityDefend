@@ -1,44 +1,93 @@
-# Upgrades Detectors
+# Upgrade Security Detectors
 
-**Total:** 7 detectors
-
----
-
-## Dangerous Delegatecall
-
-**ID:** `dangerous-delegatecall`  
-**Severity:** Critical  
-**Categories:** AccessControl, Logic  
-**CWE:** CWE-829, CWE-494  
-
-### Description
-
-
-
-### Details
-
-Check if function has dangerous delegatecall
-
-### Source
-
-`crates/detectors/src/dangerous_delegatecall.rs`
+**Total:** 8 detectors
 
 ---
 
-## Diamond Delegatecall Zero
+## Diamond Delegatecall to Zero Address
 
 **ID:** `diamond-delegatecall-zero`  
 **Severity:** Critical  
 **Categories:** Diamond, Upgradeable, ExternalCalls  
-**CWE:** CWE-476, CWE-476, CWE-476, CWE-476  
+**CWE:** CWE-476  
 
 ### Description
 
+Detects unsafe delegatecall in Diamond fallback that fails to validate facet address existence before execution
 
+### Vulnerable Patterns
+
+- Missing address(0) validation
+- Missing code existence validation
 
 ### Source
 
-`crates/detectors/src/diamond_delegatecall_zero.rs`
+`src/diamond_delegatecall_zero.rs`
+
+---
+
+## Diamond Initialization Reentrancy
+
+**ID:** `diamond-init-reentrancy`  
+**Severity:** High  
+**Categories:** Diamond, Upgradeable, Reentrancy  
+**CWE:** CWE-841  
+
+### Description
+
+Detects reentrancy vulnerabilities during Diamond initialization caused by external calls in diamondCut without reentrancy guards
+
+### Vulnerable Patterns
+
+- diamondCut with delegatecall but no reentrancy guard
+- State changes after initialization delegatecall
+
+### Source
+
+`src/diamond_init_reentrancy.rs`
+
+---
+
+## Diamond Loupe Standard Violation
+
+**ID:** `diamond-loupe-violation`  
+**Severity:** Medium  
+**Categories:** Diamond, Upgradeable, BestPractices  
+**CWE:** CWE-573  
+
+### Description
+
+Detects missing or incorrect ERC-2535 Diamond Loupe functions required for introspection and facet discovery
+
+### Vulnerable Patterns
+
+- Missing IDiamondLoupe interface support
+
+### Source
+
+`src/diamond_loupe_violation.rs`
+
+---
+
+## Diamond Function Selector Collision
+
+**ID:** `diamond-selector-collision`  
+**Severity:** High  
+**Categories:** Diamond, Upgradeable  
+**CWE:** CWE-694  
+
+### Description
+
+Detects function selector collisions in Diamond facets caused by duplicate selectors across facets or missing validation during diamondCut operations
+
+### Vulnerable Patterns
+
+- Missing selector uniqueness validation
+- Missing FacetCutAction validation
+
+### Source
+
+`src/diamond_selector_collision.rs`
 
 ---
 
@@ -47,19 +96,45 @@ Check if function has dangerous delegatecall
 **ID:** `diamond-storage-collision`  
 **Severity:** Critical  
 **Categories:** Diamond, Upgradeable  
-**CWE:** CWE-1321, CWE-1321  
+**CWE:** CWE-1321  
 
 ### Description
 
+Detects storage collision risks in Diamond facets caused by direct storage variable declarations instead of using the Diamond Storage pattern for namespace isolation
 
+### Vulnerable Patterns
+
+- Direct storage variables without Diamond Storage pattern
+- Missing namespace isolation even with library pattern
 
 ### Source
 
-`crates/detectors/src/diamond_storage_collision.rs`
+`src/diamond_storage_collision.rs`
 
 ---
 
-## Storage Layout Upgrade
+## Metamorphic Contract Detection
+
+**ID:** `metamorphic-contract`  
+**Severity:** Critical  
+**Categories:** Metamorphic, Deployment, Logic  
+
+### Description
+
+Detects metamorphic contract patterns (CREATE2 + SELFDESTRUCT) that enable changing contract code at the same address
+
+### Vulnerable Patterns
+
+- Full metamorphic pattern (CREATE2 + SELFDESTRUCT in constructor)
+- Factory that deploys contracts with SELFDESTRUCT
+
+### Source
+
+`src/metamorphic_contract.rs`
+
+---
+
+## Storage Layout Upgrade Violation
 
 **ID:** `storage-layout-upgrade`  
 **Severity:** Critical  
@@ -67,18 +142,18 @@ Check if function has dangerous delegatecall
 
 ### Description
 
+Detects upgradeable contracts with storage layout violations that cause state corruption during upgrades
 
+### Vulnerable Patterns
 
-### Details
-
-Storage Layout Upgrade Violation Detection
-
-Detects upgradeable proxy patterns with storage layout violations that cause
-state corruption during upgrades.
+- Missing storage gap in base contracts
+- Storage gap that's too small
+- REMOVED - Constants don't use storage slots and are safe
+- Complex inheritance without gap
 
 ### Source
 
-`crates/detectors/src/storage_layout_upgrade.rs`
+`src/storage_layout_upgrade.rs`
 
 ---
 
@@ -91,56 +166,17 @@ state corruption during upgrades.
 
 ### Description
 
+Detects vulnerabilities in upgradeable proxy patterns including storage collisions, initialization issues, and unsafe upgrades
 
+### Vulnerable Patterns
 
-### Details
-
-Check for upgradeable proxy vulnerabilities
-
-### Remediation
-
-- Fix proxy implementation in '{}'. \
-                    Use storage gaps for future upgrades, implement initializer modifiers, \
-                    add upgrade delay with timelock, validate implementation addresses, \
-                    use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.
+- Unprotected upgrade function
+- Initialize function can be called multiple times
+- Missing storage gap for future upgrades
 
 ### Source
 
-`crates/detectors/src/upgradeable_proxy_issues.rs`
-
----
-
-## Diamond Selector Collision
-
-**ID:** `diamond-selector-collision`  
-**Severity:** High  
-**Categories:** Diamond, Upgradeable  
-**CWE:** CWE-694, CWE-694, CWE-694, CWE-694  
-
-### Description
-
-
-
-### Source
-
-`crates/detectors/src/diamond_selector_collision.rs`
-
----
-
-## Diamond Loupe Violation
-
-**ID:** `diamond-loupe-violation`  
-**Severity:** Medium  
-**Categories:** Diamond, Upgradeable, BestPractices  
-**CWE:** CWE-573, CWE-573, CWE-573, CWE-573  
-
-### Description
-
-
-
-### Source
-
-`crates/detectors/src/diamond_loupe_violation.rs`
+`src/upgradeable_proxy_issues.rs`
 
 ---
 

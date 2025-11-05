@@ -1,6 +1,6 @@
-# Cross Chain Detectors
+# Cross-Chain Security Detectors
 
-**Total:** 7 detectors
+**Total:** 11 detectors
 
 ---
 
@@ -8,43 +8,79 @@
 
 **ID:** `bridge-message-verification`  
 **Severity:** Critical  
-**Categories:** CrossChain, CrossChain  
+**Categories:** CrossChain  
 
 ### Description
 
-
-
-### Details
-
-Bridge Message Verification Detector
+Detects missing message verification in bridge contracts
 
 ### Source
 
-`crates/detectors/src/bridge_message_verification.rs`
+`src/bridge_message_verification.rs`
 
 ---
 
-## Bridge Token Mint Control
+## Bridge Token Minting Control
 
 **ID:** `bridge-token-mint-control`  
 **Severity:** Critical  
-**Categories:** CrossChain, AccessControl, CrossChain, AccessControl  
+**Categories:** CrossChain, AccessControl  
 
 ### Description
 
-
-
-### Details
-
-Bridge Token Minting Access Control Detector
+Detects unsafe token minting in bridge contracts
 
 ### Source
 
-`crates/detectors/src/bridge_token_minting.rs`
+`src/bridge_token_minting.rs`
 
 ---
 
-## Cross Chain Replay
+## Celestia Data Availability
+
+**ID:** `celestia-data-availability`  
+**Severity:** High  
+**Categories:** DataAvailability  
+
+### Description
+
+Detects data availability issues in modular blockchains
+
+### Vulnerable Patterns
+
+- No DA proof verification
+
+### Remediation
+
+- Verify DA proof: require(verifyDataRoot(dataRoot, proof), \
+
+### Source
+
+`modular_blockchain/data_availability.rs`
+
+---
+
+## Cross-Chain Message Ordering
+
+**ID:** `cross-chain-message-ordering`  
+**Severity:** High  
+**Categories:** CrossChain  
+
+### Description
+
+Detects message ordering issues across chains
+
+### Remediation
+
+- Add sequence number: mapping(bytes32 => uint256) public messageNonce
+
+### Source
+
+`modular_blockchain/message_ordering.rs`
+
+---
+
+## Cross-Chain Replay Attack
 
 **ID:** `cross-chain-replay`  
 **Severity:** Critical  
@@ -53,15 +89,61 @@ Bridge Token Minting Access Control Detector
 
 ### Description
 
-
-
-### Details
-
-Check if a function is vulnerable to cross-chain replay attacks
+Detects signature/hash generation missing chain ID, enabling replay attacks across chains
 
 ### Source
 
-`crates/detectors/src/cross_chain_replay.rs`
+`src/cross_chain_replay.rs`
+
+---
+
+## Cross-Rollup Atomicity
+
+**ID:** `cross-rollup-atomicity`  
+**Severity:** Critical  
+**Categories:** CrossChain  
+
+### Description
+
+Detects cross-rollup atomic operation issues
+
+### Remediation
+
+- Implement two-phase commit or rollback mechanism
+
+### Source
+
+`modular_blockchain/cross_rollup_atomicity.rs`
+
+---
+
+## Intent Signature Replay
+
+**ID:** `intent-signature-replay`  
+**Severity:** Critical  
+**Categories:** CrossChain, DeFi  
+
+### Description
+
+Detects missing chainId and nonce validation enabling cross-chain replay attacks in ERC-7683 intents
+
+### Remediation
+
+- Add chainId validation: require(order.originChainId == block.chainid, \
+- Add nonce validation and tracking: \
+     require(!usedNonces[order.user][order.nonce], \
+- After validating nonce, mark it as used: \
+      usedNonces[order.user][order.nonce] = true; \
+      Or increment sequential nonce: \
+      userNonces[order.user]++;
+- Include chainId in EIP-712 domain separator: \
+     DOMAIN_SEPARATOR = keccak256( \
+      abi.encode( \
+       keccak256(\
+
+### Source
+
+`erc7683/signature_replay.rs`
 
 ---
 
@@ -70,52 +152,32 @@ Check if a function is vulnerable to cross-chain replay attacks
 **ID:** `l2-bridge-message-validation`  
 **Severity:** Critical  
 **Categories:** CrossChain, L2  
-**CWE:** CWE-345, CWE-345  
+**CWE:** CWE-345  
 
 ### Description
 
-
-
-### Source
-
-`crates/detectors/src/l2_bridge_message_validation.rs`
-
----
-
-## Cross Chain Message Ordering
-
-**ID:** `cross-chain-message-ordering`  
-**Severity:** High  
-**Categories:** CrossChain  
-
-### Description
-
-
-
-### Details
-
-Cross-Chain Message Ordering Detector
+Detects missing or weak validation in L2↔L1 bridge message processing, including missing Merkle proofs, inadequate finality checks, and replay vulnerabilities
 
 ### Source
 
-`crates/detectors/src/modular_blockchain/message_ordering.rs`
+`src/l2_bridge_message_validation.rs`
 
 ---
 
-## L2 Data Availability
+## L2 Data Availability Failure
 
 **ID:** `l2-data-availability`  
 **Severity:** High  
 **Categories:** L2, DataAvailability  
-**CWE:** CWE-345, CWE-284, CWE-345  
+**CWE:** CWE-284, CWE-345  
 
 ### Description
 
-
+Detects missing data publication to L1, inadequate data availability guarantees, and lack of force inclusion mechanisms that could lead to censorship or data withholding attacks
 
 ### Source
 
-`crates/detectors/src/l2_data_availability.rs`
+`src/l2_data_availability.rs`
 
 ---
 
@@ -124,15 +186,35 @@ Cross-Chain Message Ordering Detector
 **ID:** `l2-fee-manipulation`  
 **Severity:** Medium  
 **Categories:** L2, DeFi  
-**CWE:** CWE-682, CWE-362, CWE-20, CWE-682  
+**CWE:** CWE-362, CWE-682  
 
 ### Description
 
-
+Detects vulnerabilities in L2 fee mechanisms including unbounded oracle-based fees, front-runnable fee updates, and lack of fee bounds that could lead to economic attacks or denial of service
 
 ### Source
 
-`crates/detectors/src/l2_fee_manipulation.rs`
+`src/l2_fee_manipulation.rs`
+
+---
+
+## Sovereign Rollup Validation
+
+**ID:** `sovereign-rollup-validation`  
+**Severity:** Medium  
+**Categories:** L2  
+
+### Description
+
+Detects sovereign rollup state validation issues
+
+### Remediation
+
+- Validate state transitions: require(validateStateTransition(oldState, newState))
+
+### Source
+
+`modular_blockchain/sovereign_rollup.rs`
 
 ---
 

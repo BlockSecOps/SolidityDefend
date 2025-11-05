@@ -1,73 +1,6 @@
 # Gas Optimization Detectors
 
-**Total:** 4 detectors
-
----
-
-## Dos Unbounded Operation
-
-**ID:** `dos-unbounded-operation`  
-**Severity:** High  
-**Categories:** Logic  
-**CWE:** CWE-834, CWE-400  
-
-### Description
-
-
-
-### Remediation
-
-- Fix unbounded operation in '{}'. \
-                    Add pagination for large loops, implement maximum iteration limits, \
-                    use pull pattern instead of push, add circuit breakers, batch operations.
-
-### Source
-
-`crates/detectors/src/dos_unbounded_operation.rs`
-
----
-
-## Validator Griefing
-
-**ID:** `validator-griefing`  
-**Severity:** High  
-**Categories:** Logic, MEV  
-**CWE:** CWE-405, CWE-400  
-
-### Description
-
-
-
-### Details
-
-Check for validator griefing vulnerabilities
-
-### Source
-
-`crates/detectors/src/validator_griefing.rs`
-
----
-
-## Gas Griefing
-
-**ID:** `gas-griefing`  
-**Severity:** Medium  
-**Categories:** Logic, ExternalCalls  
-**CWE:** CWE-400, CWE-405  
-
-### Description
-
-
-
-### Remediation
-
-- Mitigate gas griefing in '{}'. \
-                    Use pull pattern for transfers, limit array sizes, add gas stipends, \
-                    implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.
-
-### Source
-
-`crates/detectors/src/gas_griefing.rs`
+**Total:** 5 detectors
 
 ---
 
@@ -80,11 +13,112 @@ Check for validator griefing vulnerabilities
 
 ### Description
 
+Detects patterns causing excessive gas consumption such as storage operations in loops, redundant storage reads, and inefficient data structures
 
+### Vulnerable Patterns
+
+- Storage operations in loops
+- Redundant storage reads
+- String concatenation in loop or multiple times
+- Dynamic array length in loop condition
+- Emitting events in loops
 
 ### Source
 
-`crates/detectors/src/excessive_gas_usage.rs`
+`src/excessive_gas_usage.rs`
+
+---
+
+## Gas Griefing Attack
+
+**ID:** `gas-griefing`  
+**Severity:** Medium  
+**Categories:** Logic, ExternalCalls  
+**CWE:** CWE-400, CWE-405  
+
+### Description
+
+Detects vulnerabilities where attackers can grief users by forcing high gas consumption
+
+### Vulnerable Patterns
+
+- External call in loop without gas limit
+- Transfer without gas stipend
+- Push pattern for mass distribution
+
+### Source
+
+`src/gas_griefing.rs`
+
+---
+
+## Gas Price Manipulation
+
+**ID:** `gas-price-manipulation`  
+**Severity:** Medium  
+**Categories:** MEV, DeFi  
+**CWE:** CWE-358, CWE-693  
+
+### Description
+
+Detects MEV protection using tx.gasprice which can be bypassed through flashbots or other mechanisms
+
+### Vulnerable Patterns
+
+- Explicit vulnerability comment
+- Uses tx.gasprice in require/check
+- MEV protection based on gas price
+- MEV detection using gas price
+
+### Source
+
+`src/gas_price_manipulation.rs`
+
+---
+
+## Inefficient Storage Usage
+
+**ID:** `inefficient-storage`  
+**Severity:** Low  
+**Categories:** Logic  
+**CWE:** CWE-400  
+
+### Description
+
+Detects inefficient storage patterns including unpacked structs, redundant storage variables, and suboptimal storage layout that waste gas
+
+### Vulnerable Patterns
+
+- Unpacked structs (mixed sizes without optimization)
+- Single boolean flags as storage variables
+- Small uint types as standalone storage variables
+
+### Source
+
+`src/inefficient_storage.rs`
+
+---
+
+## Redundant Checks
+
+**ID:** `redundant-checks`  
+**Severity:** Low  
+**Categories:** Logic  
+**CWE:** CWE-400  
+
+### Description
+
+Detects redundant validation checks that unnecessarily waste gas, including duplicate require statements, unnecessary overflow checks, and redundant modifiers
+
+### Vulnerable Patterns
+
+- Duplicate require statements
+- Redundant overflow checks in Solidity >=0.8
+- Checking same condition in modifier and function
+
+### Source
+
+`src/redundant_checks.rs`
 
 ---
 
