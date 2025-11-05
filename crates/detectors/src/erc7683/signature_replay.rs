@@ -32,8 +32,7 @@ impl IntentSignatureReplayDetector {
             base: BaseDetector::new(
                 DetectorId("intent-signature-replay".to_string()),
                 "Intent Signature Replay".to_string(),
-                "Detects missing chainId and nonce validation enabling cross-chain replay attacks in ERC-7683 intents".to_string()
-                    .to_string(),
+                "Detects missing chainId and nonce validation enabling cross-chain replay attacks in ERC-7683 intents".to_string(),
                 vec![DetectorCategory::CrossChain, DetectorCategory::DeFi],
                 Severity::Critical,
             ),

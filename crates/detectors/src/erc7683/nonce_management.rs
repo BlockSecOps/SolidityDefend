@@ -32,8 +32,7 @@ impl IntentNonceManagementDetector {
             base: BaseDetector::new(
                 DetectorId("intent-nonce-management".to_string()),
                 "Intent Nonce Management".to_string(),
-                "Detects improper nonce management in ERC-7683 intents that could lead to replay attacks".to_string()
-                    .to_string(),
+                "Detects improper nonce management in ERC-7683 intents that could lead to replay attacks".to_string(),
                 vec![DetectorCategory::DeFi, DetectorCategory::CrossChain],
                 Severity::High,
             ),
