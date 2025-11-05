@@ -427,44 +427,153 @@ impl ReadOnlyReentrancyDetector {
     }
 
     fn relies_on_external_state(&self, function: &ast::Function<'_>) -> bool {
-        // Check if function reads from external contracts
+        // Check if function reads state variables
         if let Some(body) = &function.body {
-            self.check_statements_for_external_reads(&body.statements)
+            self.reads_state_variables(&body.statements)
         } else {
             false
         }
     }
 
-    fn check_statements_for_external_reads(&self, statements: &[ast::Statement<'_>]) -> bool {
+    fn reads_state_variables(&self, statements: &[ast::Statement<'_>]) -> bool {
+        // Check if the function reads any state variables
         for stmt in statements {
-            match stmt {
-                ast::Statement::Expression(expr) => {
-                    if self.is_external_read(expr) {
-                        return true;
-                    }
-                }
-                ast::Statement::Block(block) => {
-                    if self.check_statements_for_external_reads(&block.statements) {
-                        return true;
-                    }
-                }
-                _ => {}
+            if self.statement_reads_state(stmt) {
+                return true;
             }
         }
         false
     }
 
-    fn is_external_read(&self, expr: &ast::Expression<'_>) -> bool {
-        match expr {
-            ast::Expression::MemberAccess { expression, .. } => {
-                // Check if this is reading from an external contract
-                matches!(expression, ast::Expression::Identifier(_))
+    fn statement_reads_state(&self, stmt: &ast::Statement<'_>) -> bool {
+        match stmt {
+            ast::Statement::Expression(expr) => self.expression_reads_state(expr),
+            ast::Statement::Return { value, .. } => {
+                value.as_ref().map_or(false, |expr| self.expression_reads_state(expr))
             }
-            ast::Expression::FunctionCall { function, .. } => match function {
-                ast::Expression::MemberAccess { .. } => true,
-                _ => false,
-            },
+            ast::Statement::VariableDeclaration { initial_value, .. } => {
+                initial_value.as_ref().map_or(false, |expr| self.expression_reads_state(expr))
+            }
+            ast::Statement::If { then_branch, else_branch, .. } => {
+                self.statement_reads_state(then_branch)
+                    || else_branch.as_ref().map_or(false, |s| self.statement_reads_state(s))
+            }
+            ast::Statement::Block(block) => self.reads_state_variables(&block.statements),
+            ast::Statement::For { body, .. } => self.statement_reads_state(body),
+            ast::Statement::While { body, .. } => self.statement_reads_state(body),
             _ => false,
+        }
+    }
+
+    fn expression_reads_state(&self, expr: &ast::Expression<'_>) -> bool {
+        match expr {
+            // Direct identifier access (could be state variable)
+            ast::Expression::Identifier(_) => true,
+
+            // Member access (e.g., token0Balance, totalSupply)
+            ast::Expression::MemberAccess { expression, .. } => {
+                self.expression_reads_state(expression)
+            }
+
+            // Binary operations (e.g., balance1 + balance2)
+            ast::Expression::BinaryOperation { left, right, .. } => {
+                self.expression_reads_state(left) || self.expression_reads_state(right)
+            }
+
+            // Unary operations
+            ast::Expression::UnaryOperation { operand, .. } => {
+                self.expression_reads_state(operand)
+            }
+
+            // Function calls (could read state)
+            ast::Expression::FunctionCall { function, arguments, .. } => {
+                self.expression_reads_state(function)
+                    || arguments.iter().any(|arg| self.expression_reads_state(arg))
+            }
+
+            // Ternary operator
+            ast::Expression::Conditional { condition, true_expression, false_expression, .. } => {
+                self.expression_reads_state(condition)
+                    || self.expression_reads_state(true_expression)
+                    || self.expression_reads_state(false_expression)
+            }
+
+            _ => false,
+        }
+    }
+
+    fn has_external_call(&self, stmt: &ast::Statement<'_>) -> bool {
+        match stmt {
+            ast::Statement::Expression(expr) => self.expression_has_external_call(expr),
+            ast::Statement::Block(block) => {
+                block.statements.iter().any(|s| self.has_external_call(s))
+            }
+            ast::Statement::If { then_branch, else_branch, .. } => {
+                self.has_external_call(then_branch)
+                    || else_branch.as_ref().map_or(false, |s| self.has_external_call(s))
+            }
+            ast::Statement::For { body, .. } => self.has_external_call(body),
+            ast::Statement::While { body, .. } => self.has_external_call(body),
+           _ => false,
+        }
+    }
+
+    fn expression_has_external_call(&self, expr: &ast::Expression<'_>) -> bool {
+        match expr {
+            ast::Expression::FunctionCall { function, .. } => {
+                match function {
+                    // Direct member access pattern: obj.method()
+                    ast::Expression::MemberAccess { member, .. } => {
+                        matches!(member.name.as_ref(), "call" | "delegatecall" | "transfer" | "send")
+                    }
+                    // Nested function call pattern: obj.method{options}()
+                    // This handles .call{value: amount}(), .delegatecall{gas: g}(), etc.
+                    ast::Expression::FunctionCall {
+                        function: inner_function,
+                        ..
+                    } => {
+                        // Check if the inner function is a MemberAccess to call/delegatecall/transfer/send
+                        matches!(
+                            inner_function,
+                            ast::Expression::MemberAccess { member, .. }
+                            if matches!(member.name.as_ref(), "call" | "delegatecall" | "transfer" | "send")
+                        )
+                    }
+                    _ => false,
+                }
+            }
+            // Also check assignments, binary operations, etc. for nested calls
+            ast::Expression::Assignment { right, .. } => {
+                self.expression_has_external_call(right)
+            }
+            ast::Expression::BinaryOperation { left, right, .. } => {
+                self.expression_has_external_call(left) || self.expression_has_external_call(right)
+            }
+            ast::Expression::UnaryOperation { operand, .. } => {
+                self.expression_has_external_call(operand)
+            }
+            ast::Expression::MemberAccess { expression, .. } => {
+                self.expression_has_external_call(expression)
+            }
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
+                self.expression_has_external_call(condition)
+                    || self.expression_has_external_call(true_expression)
+                    || self.expression_has_external_call(false_expression)
+            }
+            _ => false,
+        }
+    }
+
+    fn function_has_external_call(&self, function: &ast::Function<'_>) -> bool {
+        if let Some(body) = &function.body {
+            body.statements.iter().any(|stmt| self.has_external_call(stmt))
+        } else {
+            false
         }
     }
 }
@@ -497,10 +606,22 @@ impl Detector for ReadOnlyReentrancyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // First, check if there are any state-changing functions that make external calls
+        let has_vulnerable_pattern = ctx.get_functions().iter().any(|f| {
+            !self.is_view_function(f) && self.function_has_external_call(f)
+        });
+
+        // If no state-changing functions make external calls, no readonly reentrancy risk
+        if !has_vulnerable_pattern {
+            return Ok(findings);
+        }
+
+        // Now check view functions that read state
         for function in ctx.get_functions() {
             if self.is_view_function(function) && self.relies_on_external_state(function) {
                 let message = format!(
-                    "View function '{}' may be vulnerable to read-only reentrancy",
+                    "View function '{}' reads state that may be inconsistent during reentrancy. \
+                     Contract has state-changing functions that make external calls before updating state.",
                     function.name.name
                 );
 
@@ -513,7 +634,8 @@ impl Detector for ReadOnlyReentrancyDetector {
                 )
                 .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
                 .with_fix_suggestion(format!(
-                    "Consider using a reentrancy guard or caching external state in function '{}'",
+                    "Add a reentrancy guard to state-changing functions or ensure view function '{}' \
+                     cannot be called during callbacks (e.g., using a reentrancy lock check in the view function)",
                     function.name.name
                 ));
 
