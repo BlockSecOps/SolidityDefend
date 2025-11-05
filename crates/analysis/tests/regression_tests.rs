@@ -129,7 +129,7 @@ impl RegressionTests {
                 "Medium".to_string(),
             ],
             expected_issue_types: vec![
-                "missing-access-control".to_string(),
+                "missing-access-modifiers".to_string(),
                 "gas-griefing".to_string(),
                 "duplicate-entries".to_string(),
                 "oracle-manipulation".to_string(),
@@ -189,7 +189,7 @@ impl RegressionTests {
             expected_issues: 4, // Access control, reentrancy, overflow, price manipulation
             expected_severities: vec!["Critical".to_string(), "High".to_string()],
             expected_issue_types: vec![
-                "missing-access-control".to_string(),
+                "missing-access-modifiers".to_string(),
                 "reentrancy".to_string(),
                 "integer-overflow".to_string(),
                 "price-manipulation".to_string(),
