@@ -1,10 +1,32 @@
-# Defi Detectors
+# DeFi Protocol Detectors
 
-**Total:** 15 detectors
+**Total:** 21 detectors
 
 ---
 
-## Amm K Invariant Violation
+## AMM Invariant Manipulation
+
+**ID:** `amm-invariant-manipulation`  
+**Severity:** High  
+**Categories:** DeFi, Logic  
+
+### Description
+
+Detects vulnerabilities in AMM invariant enforcement including K invariant violations, missing TWAP, and reserve manipulation
+
+### Remediation
+
+- Enforce K invariant (reserve0 * reserve1 >= k) after every swap to prevent reserve manipulation
+- Make reserve update functions internal/private and only callable through validated swap paths
+- Implement time-weighted average price (TWAP) using cumulative price observations to resist manipulation
+
+### Source
+
+`defi_advanced/amm_invariant_manipulation.rs`
+
+---
+
+## AMM Constant Product Violation
 
 **ID:** `amm-k-invariant-violation`  
 **Severity:** Critical  
@@ -12,27 +34,15 @@
 
 ### Description
 
-
-
-### Details
-
-
-Detects violations of the AMM invariant (x*y=k formula) including:
-- Breaking x*y=k formula
-- Missing invariant checks after swaps
-- Unsafe fee-on-transfer token handling
-- Inadequate reserve updates
-Check if function is an AMM swap function
-Check for missing K invariant validation
-Check for unsafe fee-on-transfer token handling
+Detects violations of AMM invariants (x*y=k formula), including missing k validation, unsafe fee-on-transfer token handling, and inadequate reserve updates
 
 ### Source
 
-`crates/detectors/src/amm_k_invariant_violation.rs`
+`src/amm_k_invariant_violation.rs`
 
 ---
 
-## Amm Liquidity Manipulation
+## AMM Liquidity Manipulation
 
 **ID:** `amm-liquidity-manipulation`  
 **Severity:** Critical  
@@ -41,15 +51,36 @@ Check for unsafe fee-on-transfer token handling
 
 ### Description
 
+Detects vulnerabilities in AMM pools that allow liquidity manipulation attacks, including sandwich attacks and pool draining
 
+### Vulnerable Patterns
+
+- Swap functions using spot price without TWAP
+- Price calculation based on current reserves
 
 ### Source
 
-`crates/detectors/src/amm_liquidity_manipulation.rs`
+`src/amm_liquidity_manipulation.rs`
 
 ---
 
-## Defi Liquidity Pool Manipulation
+## JIT Liquidity Attacks
+
+**ID:** `defi-jit-liquidity-attacks`  
+**Severity:** High  
+**Categories:** DeFi, MEV  
+
+### Description
+
+Detects lack of minimum liquidity lock periods and validates LP commitment to prevent sandwich attacks
+
+### Source
+
+`src/defi_jit_liquidity.rs`
+
+---
+
+## Liquidity Pool Manipulation
 
 **ID:** `defi-liquidity-pool-manipulation`  
 **Severity:** Critical  
@@ -57,19 +88,114 @@ Check for unsafe fee-on-transfer token handling
 
 ### Description
 
-
-
-### Details
-
-DeFi Liquidity Pool Manipulation Detector
+Detects missing K-value validation, price oracle manipulation, and flash loan attacks on AMM invariants
 
 ### Source
 
-`crates/detectors/src/defi_liquidity_pool_manipulation.rs`
+`src/defi_liquidity_pool_manipulation.rs`
 
 ---
 
-## Lending Borrow Bypass
+## Yield Farming Exploits
+
+**ID:** `defi-yield-farming-exploits`  
+**Severity:** High  
+**Categories:** DeFi, Logic  
+
+### Description
+
+Detects missing deposit/withdrawal fee validation, reward calculation errors, and share price manipulation
+
+### Source
+
+`src/defi_yield_farming.rs`
+
+---
+
+## Emergency Withdrawal Abuse
+
+**ID:** `emergency-withdrawal-abuse`  
+**Severity:** Medium  
+**Categories:** DeFi, AccessControl  
+**CWE:** CWE-841, CWE-863  
+
+### Description
+
+Detects emergency withdrawal functions that bypass lock periods or lose user rewards
+
+### Vulnerable Patterns
+
+- Explicit vulnerability comment about bypassing locks
+- Explicit vulnerability comment about losing rewards
+- Vulnerability comment about admin bypass
+
+### Source
+
+`src/emergency_withdrawal_abuse.rs`
+
+---
+
+## Intent Nonce Management
+
+**ID:** `intent-nonce-management`  
+**Severity:** High  
+**Categories:** DeFi, CrossChain  
+
+### Description
+
+Detects improper nonce management in ERC-7683 intents that could lead to replay attacks
+
+### Remediation
+
+- Implement nonce validation: \
+     \
+     Option 1: Bitmap-based (allows out-of-order execution) \
+     mapping(address => mapping(uint256 => bool)) public usedNonces; \
+     \
+     function openFor(...) external { \
+      require(!usedNonces[order.user][order.nonce], \
+- Validate nonce before execution: \
+     require(!usedNonces[order.user][order.nonce], \
+
+### Source
+
+`erc7683/nonce_management.rs`
+
+---
+
+## Intent Solver Manipulation
+
+**ID:** `intent-solver-manipulation`  
+**Severity:** High  
+**Categories:** DeFi, MEV  
+
+### Description
+
+Detects vulnerabilities where malicious solvers can manipulate intent execution for profit
+
+### Remediation
+
+- Implement solver whitelist: \
+     \
+     mapping(address => bool) public approvedSolvers; \
+     \
+     function approveSolver(address solver) external onlyOwner { \
+      approvedSolvers[solver] = true; \
+     } \
+     \
+     function fill(...) external { \
+      require(approvedSolvers[msg.sender], \
+- Add reentrancy protection: \
+     \
+     import \
+
+### Source
+
+`erc7683/solver_manipulation.rs`
+
+---
+
+## Lending Protocol Borrow Bypass
 
 **ID:** `lending-borrow-bypass`  
 **Severity:** Critical  
@@ -77,24 +203,11 @@ DeFi Liquidity Pool Manipulation Detector
 
 ### Description
 
-
-
-### Details
-
-
-Detects collateral and borrowing check bypasses including:
-- Missing collateral factor validation
-- Unsafe flash loan integration
-- Borrow limit bypass through reentrancy
-- Inadequate health factor checks
-Check if function is a borrow function
-Check if function is a flash loan function
-Check for missing collateral factor validation
-Check for health factor validation
+Detects collateral and borrowing check bypasses in lending protocols, including missing health factor validation, unsafe flash loan integration, and reentrancy vulnerabilities
 
 ### Source
 
-`crates/detectors/src/lending_borrow_bypass.rs`
+`src/lending_borrow_bypass.rs`
 
 ---
 
@@ -107,113 +220,110 @@ Check for health factor validation
 
 ### Description
 
+Detects unfair liquidation mechanics in lending protocols that can be exploited for profit or griefing
 
+### Vulnerable Patterns
 
-### Details
+- Spot price used for health factor calculation
+- No liquidation cooldown or front-running protection
+- Excessive liquidation bonus/incentive
 
-Check for liquidation abuse vulnerabilities
+### Source
+
+`src/lending_liquidation_abuse.rs`
+
+---
+
+## Liquidity Bootstrapping Pool Abuse
+
+**ID:** `liquidity-bootstrapping-abuse`  
+**Severity:** Medium  
+**Categories:** DeFi, Logic  
+**CWE:** CWE-682, CWE-841  
+
+### Description
+
+Detects vulnerabilities in LBP implementations where weight changes can be manipulated for unfair token distribution
+
+### Vulnerable Patterns
+
+- Weight update without rate limiting
+- No maximum weight change per update
+- Purchase function without per-address cap
+
+### Source
+
+`src/liquidity_bootstrapping_abuse.rs`
+
+---
+
+## Missing Slippage Protection
+
+**ID:** `missing-slippage-protection`  
+**Severity:** High  
+**Categories:** DeFi, MEV  
+**CWE:** CWE-20, CWE-682  
+
+### Description
+
+Detects DEX trades executed without minimum output amount protection, enabling sandwich attacks
+
+### Vulnerable Patterns
+
+- Direct zero in swap call
+
+### Source
+
+`src/slippage_protection.rs`
+
+---
+
+## Pool Donation Attack Enhanced
+
+**ID:** `pool-donation-enhanced`  
+**Severity:** High  
+**Categories:** DeFi, Logic  
+
+### Description
+
+Detects advanced pool donation attacks including ERC-4626 share inflation and first-depositor manipulation vulnerabilities
 
 ### Remediation
 
-- Fix liquidation mechanism in '{}'. \
-                    Use TWAP oracles for health factor calculations, implement liquidation cooldown periods, \
-                    add liquidation incentive caps, validate collateral prices from multiple sources, \
-                    and implement partial liquidation limits.
+- Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation
+- Track balances internally instead of using balanceOf(), or use virtual assets/shares in calculations
+- Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks
 
 ### Source
 
-`crates/detectors/src/lending_liquidation_abuse.rs`
+`defi_advanced/pool_donation_enhanced.rs`
 
 ---
 
-## Vault Share Inflation
+## Reward Calculation Manipulation
 
-**ID:** `vault-share-inflation`  
-**Severity:** Critical  
-**Categories:** DeFi, Logic  
-**CWE:** CWE-682, CWE-1339  
+**ID:** `reward-calculation-manipulation`  
+**Severity:** Medium  
+**Categories:** DeFi, Oracle  
+**CWE:** CWE-20, CWE-682  
 
 ### Description
 
+Detects reward calculations based on manipulable price sources or incentivizing price deviation
 
+### Vulnerable Patterns
 
-### Source
-
-`crates/detectors/src/vault_share_inflation.rs`
-
----
-
-## Amm Invariant Manipulation
-
-**ID:** `amm-invariant-manipulation`  
-**Severity:** High  
-**Categories:** DeFi, Logic  
-
-### Description
-
-
-
-### Details
-
-AMM Invariant Manipulation Detector
-
-Detects vulnerabilities in Automated Market Maker (AMM) invariant enforcement:
-1. Missing K invariant checks (x * y = k for constant product AMMs)
-2. Unprotected reserve updates that bypass invariant validation
-3. Price oracle manipulation via flash swaps
-4. Missing TWAP (Time-Weighted Average Price) implementation
-5. Reserve synchronization issues
-
-The constant product formula (x * y = k) is fundamental to AMM security.
-Any operation that bypasses or manipulates this invariant can lead to fund loss.
+- Explicit vulnerability comment
+- Uses current/spot price instead of TWAP
+- Incentivi
 
 ### Source
 
-`crates/detectors/src/defi_advanced/amm_invariant_manipulation.rs`
+`src/reward_calculation.rs`
 
 ---
 
-## Defi Jit Liquidity Attacks
-
-**ID:** `defi-jit-liquidity-attacks`  
-**Severity:** High  
-**Categories:** DeFi, MEV  
-
-### Description
-
-
-
-### Details
-
-DeFi Just-In-Time (JIT) Liquidity Attacks Detector
-
-### Source
-
-`crates/detectors/src/defi_jit_liquidity.rs`
-
----
-
-## Defi Yield Farming Exploits
-
-**ID:** `defi-yield-farming-exploits`  
-**Severity:** High  
-**Categories:** DeFi, Logic  
-
-### Description
-
-
-
-### Details
-
-DeFi Yield Farming Exploits Detector
-
-### Source
-
-`crates/detectors/src/defi_yield_farming.rs`
-
----
-
-## Uniswapv4 Hook Issues
+## Uniswap V4 Hook Vulnerabilities
 
 **ID:** `uniswapv4-hook-issues`  
 **Severity:** High  
@@ -221,23 +331,11 @@ DeFi Yield Farming Exploits Detector
 
 ### Description
 
-
-
-### Details
-
-
-Detects security issues in Uniswap V4 hook implementations including:
-- Unsafe hook callback implementations
-- Missing return value validation
-- Inadequate hook access control
-- Vulnerable hook fee extraction
-Check if function is a Uniswap V4 hook function
-Check for unsafe hook callback implementations
-Check for missing return value validation
+Detects security issues in Uniswap V4 hook implementations including unsafe callbacks, missing validation, access control issues, and fee extraction vulnerabilities
 
 ### Source
 
-`crates/detectors/src/uniswapv4_hook_issues.rs`
+`src/uniswapv4_hook_issues.rs`
 
 ---
 
@@ -250,49 +348,11 @@ Check for missing return value validation
 
 ### Description
 
-
-
-### Source
-
-`crates/detectors/src/vault_donation_attack.rs`
-
----
-
-## Vault Withdrawal Dos
-
-**ID:** `vault-withdrawal-dos`  
-**Severity:** High  
-**Categories:** DeFi, Logic  
-**CWE:** CWE-400, CWE-770  
-
-### Description
-
-
+Detects ERC4626 vaults vulnerable to price manipulation via direct token donations
 
 ### Source
 
-`crates/detectors/src/vault_withdrawal_dos.rs`
-
----
-
-## Liquidity Bootstrapping Abuse
-
-**ID:** `liquidity-bootstrapping-abuse`  
-**Severity:** Medium  
-**Categories:** DeFi, Logic  
-**CWE:** CWE-841, CWE-682  
-
-### Description
-
-
-
-### Details
-
-Check for LBP manipulation vulnerabilities
-
-### Source
-
-`crates/detectors/src/liquidity_bootstrapping_abuse.rs`
+`src/vault_donation_attack.rs`
 
 ---
 
@@ -305,15 +365,49 @@ Check for LBP manipulation vulnerabilities
 
 ### Description
 
-
+Detects ERC4626 vaults vulnerable to fee parameter front-running and manipulation attacks
 
 ### Source
 
-`crates/detectors/src/vault_fee_manipulation.rs`
+`src/vault_fee_manipulation.rs`
 
 ---
 
-## Yield Farming Manipulation
+## Vault Share Inflation Attack
+
+**ID:** `vault-share-inflation`  
+**Severity:** Critical  
+**Categories:** DeFi, Logic  
+**CWE:** CWE-682, CWE-1339  
+
+### Description
+
+Detects ERC4626 vault implementations vulnerable to share price manipulation by first depositor
+
+### Source
+
+`src/vault_share_inflation.rs`
+
+---
+
+## Vault Withdrawal DOS
+
+**ID:** `vault-withdrawal-dos`  
+**Severity:** High  
+**Categories:** DeFi, Logic  
+**CWE:** CWE-400, CWE-770  
+
+### Description
+
+Detects ERC4626 vaults vulnerable to withdrawal denial-of-service attacks via queue manipulation or liquidity locks
+
+### Source
+
+`src/vault_withdrawal_dos.rs`
+
+---
+
+## Yield Farming Reward Manipulation
 
 **ID:** `yield-farming-manipulation`  
 **Severity:** Medium  
@@ -321,28 +415,17 @@ Check for LBP manipulation vulnerabilities
 
 ### Description
 
-
-
-### Details
-
-Yield Farming Reward Manipulation Detector
-
-Detects vulnerabilities in yield farming reward calculations that can be exploited:
-1. TVL (Total Value Locked) manipulation to inflate rewards
-2. Reward rate gaming through flash loans or quick deposits
-3. Unprotected reward calculation that doesn't account for time-weighted positions
-4. Missing checks for minimum staking duration
-
-These vulnerabilities allow attackers to claim disproportionate rewards without
-providing long-term liquidity to the protocol.
+Detects vulnerabilities in yield farming reward calculations that allow attackers to manipulate TVL or claim disproportionate rewards
 
 ### Remediation
 
 - Implement time-weighted reward distribution based on staking duration, not just current TVL
+- Add minimum staking duration requirement before allowing reward claims
+- Initialize pool with minimum shares or dead shares to prevent first-depositor manipulation
 
 ### Source
 
-`crates/detectors/src/defi_advanced/yield_farming_manipulation.rs`
+`defi_advanced/yield_farming_manipulation.rs`
 
 ---
 

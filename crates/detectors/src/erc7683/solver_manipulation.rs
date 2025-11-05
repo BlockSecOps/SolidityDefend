@@ -31,8 +31,7 @@ impl IntentSolverManipulationDetector {
             base: BaseDetector::new(
                 DetectorId("intent-solver-manipulation".to_string()),
                 "Intent Solver Manipulation".to_string(),
-                "Detects vulnerabilities where malicious solvers can manipulate intent execution for profit".to_string()
-                    .to_string(),
+                "Detects vulnerabilities where malicious solvers can manipulate intent execution for profit".to_string(),
                 vec![DetectorCategory::DeFi, DetectorCategory::MEV],
                 Severity::High,
             ),

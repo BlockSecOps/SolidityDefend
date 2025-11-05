@@ -34,8 +34,7 @@ impl IntentSettlementValidationDetector {
             base: BaseDetector::new(
                 DetectorId("intent-settlement-validation".to_string()),
                 "Intent Settlement Validation".to_string(),
-                "Detects missing validation in ERC-7683 settlement contracts (deadlines, outputs, fill instructions)".to_string()
-                    .to_string(),
+                "Detects missing validation in ERC-7683 settlement contracts (deadlines, outputs, fill instructions)".to_string(),
                 vec![DetectorCategory::DeFi, DetectorCategory::CrossChain],
                 Severity::High,
             ),

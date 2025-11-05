@@ -1,152 +1,22 @@
 # Input Validation Detectors
 
-**Total:** 13 detectors
+**Total:** 16 detectors
 
 ---
 
-## Avs Validation Bypass
+## Array Bounds Check
 
-**ID:** `avs-validation-bypass`  
+**ID:** `array-bounds-check`  
 **Severity:** High  
-**Categories:** DeFi  
+**Categories:** Validation  
 
 ### Description
 
-
-
-### Details
-
-AVS Validation Bypass Detector
-
-Detects Actively Validated Service (AVS) registration without proper security validation,
-allowing malicious services to slash operator stakes without adequate oversight.
-
-Severity: HIGH
-Category: DeFi, Restaking
-
-Vulnerabilities Detected:
-1. No AVS security requirements (audit, validator count)
-2. No AVS collateral requirement
-3. No slashing policy limits (AVS can set 100% slashing)
-4. Operators cannot opt-out of AVS
-
-Real-World Context:
-- AVSs can slash operator stakes if they misbehave
-- Malicious/poorly-designed AVSs pose systemic risk
-- Small validator pools vulnerable to 51% attacks before joining EigenLayer
-Checks AVS registration for collateral requirement
+Detects potential array out-of-bounds access and missing length validation
 
 ### Source
 
-`crates/detectors/src/restaking/avs_validation.rs`
-
----
-
-## Enhanced Input Validation
-
-**ID:** `enhanced-input-validation`  
-**Severity:** High  
-**Categories:** Validation, BestPractices  
-
-### Description
-
-
-
-### Details
-
-Enhanced Input Validation Detector (OWASP 2025)
-
-Detects missing comprehensive bounds checking that led to $14.6M in losses.
-Array length validation, parameter bounds, zero-value checks.
-
-### Source
-
-`crates/detectors/src/owasp2025/enhanced_input_validation.rs`
-
----
-
-## Integer Overflow
-
-**ID:** `integer-overflow`  
-**Severity:** High  
-**Categories:** Logic, Validation  
-**CWE:** CWE-190, CWE-191, CWE-190, CWE-191  
-
-### Description
-
-
-
-### Source
-
-`crates/detectors/src/integer_overflow.rs`
-
----
-
-## Intent Settlement Validation
-
-**ID:** `intent-settlement-validation`  
-**Severity:** High  
-**Categories:** DeFi, CrossChain  
-
-### Description
-
-
-
-### Details
-
-Checks deadline validation in settlement functions
-
-### Source
-
-`crates/detectors/src/erc7683/settlement_validation.rs`
-
----
-
-## Missing Chainid Validation
-
-**ID:** `missing-chainid-validation`  
-**Severity:** High  
-**Categories:** CrossChain, CrossChain  
-
-### Description
-
-
-
-### Details
-
-Chain-ID Validation Detector for Bridge Contracts
-Get function source code with comments stripped to avoid false positives
-
-### Source
-
-`crates/detectors/src/bridge_chain_id_validation.rs`
-
----
-
-## Weak Signature Validation
-
-**ID:** `weak-signature-validation`  
-**Severity:** High  
-**Categories:** Auth, CrossChain  
-**CWE:** CWE-345, CWE-347  
-
-### Description
-
-
-
-### Details
-
-Check if function has weak signature validation
-
-### Remediation
-
-- Add duplicate signer check in function '{}'. \
-                    Example: Track seen signers in a mapping or check array for duplicates. \
-                    require(!seen[signer], \
-
-### Source
-
-`crates/detectors/src/weak_signature_validation.rs`
+`validation/array_bounds.rs`
 
 ---
 
@@ -159,18 +29,167 @@ Check if function has weak signature validation
 
 ### Description
 
-
-
-### Details
-
-
-Detects functions that accept multiple arrays but don't validate they have the same length.
-This can cause out-of-bounds access, incorrect calculations, or silent failures.
-Check if function has array length mismatch vulnerability
+Detects functions accepting multiple arrays without validating equal lengths
 
 ### Source
 
-`crates/detectors/src/array_length_mismatch.rs`
+`src/array_length_mismatch.rs`
+
+---
+
+## Deprecated Functions
+
+**ID:** `deprecated-functions`  
+**Severity:** Low  
+**Categories:** Validation  
+**CWE:** CWE-477  
+
+### Description
+
+Detects usage of deprecated Solidity functions and patterns that should be replaced with modern alternatives
+
+### Source
+
+`src/deprecated_functions.rs`
+
+---
+
+## Enhanced Input Validation
+
+**ID:** `enhanced-input-validation`  
+**Severity:** High  
+**Categories:** Validation, BestPractices  
+
+### Description
+
+Detects missing bounds checking and array validation ($14.6M impact)
+
+### Remediation
+
+- ❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact): \
+      function process(uint256[] calldata ids) external { \
+       for (uint256 i = 0; i < ids.length; i++) { \
+        // What if ids is empty? Or too large? \
+       } \
+      } \
+      \
+      ✅ VALIDATE ARRAY LENGTH: \
+      function process(uint256[] calldata ids) external { \
+       // Check minimum length \
+       require(ids.length > 0, \
+
+### Source
+
+`owasp2025/enhanced_input_validation.rs`
+
+---
+
+## EXTCODESIZE Bypass Detection
+
+**ID:** `extcodesize-bypass`  
+**Severity:** Medium  
+**Categories:** Validation, Logic, Deployment  
+
+### Description
+
+Detects use of EXTCODESIZE or address.code.length for EOA validation, which can be bypassed during constructor execution
+
+### Vulnerable Patterns
+
+- address.code.length checks
+- Assembly EXTCODESIZE
+- isContract() helper functions
+- EOA-only restrictions
+
+### Source
+
+`src/extcodesize_bypass.rs`
+
+---
+
+## Insufficient Randomness
+
+**ID:** `insufficient-randomness`  
+**Severity:** High  
+**Categories:** Validation  
+**CWE:** CWE-330, CWE-338  
+
+### Description
+
+Detects use of weak or manipulable randomness sources like block.timestamp or blockhash
+
+### Vulnerable Patterns
+
+- block.timestamp for randomness
+- blockhash for randomness
+- block.number for randomness
+- msg.sender or tx.origin in randomness
+
+### Source
+
+`src/insufficient_randomness.rs`
+
+---
+
+## Intent Settlement Validation
+
+**ID:** `intent-settlement-validation`  
+**Severity:** High  
+**Categories:** DeFi, CrossChain  
+
+### Description
+
+Detects missing validation in ERC-7683 settlement contracts (deadlines, outputs, fill instructions)
+
+### Remediation
+
+- Add fillDeadline validation: \
+      \
+      function fill( \
+       bytes32 orderId, \
+       bytes calldata originData, \
+       bytes calldata fillerData \
+      ) external { \
+       ResolvedCrossChainOrder memory order = abi.decode( \
+        originData, \
+        (ResolvedCrossChainOrder) \
+       ); \
+       \
+       // Validate fillDeadline \
+       require( \
+        block.timestamp <= order.fillDeadline, \
+        \
+- Add openDeadline validation: \
+      \
+      function openFor( \
+       GaslessCrossChainOrder calldata order, \
+       bytes calldata signature, \
+       bytes calldata originFillerData \
+      ) external { \
+       // Validate openDeadline \
+       require( \
+        block.timestamp <= order.openDeadline, \
+        \
+
+### Source
+
+`erc7683/settlement_validation.rs`
+
+---
+
+## Missing Chain-ID Validation
+
+**ID:** `missing-chainid-validation`  
+**Severity:** High  
+**Categories:** CrossChain  
+
+### Description
+
+Detects missing chain-ID validation in bridge message processing
+
+### Source
+
+`src/bridge_chain_id_validation.rs`
 
 ---
 
@@ -183,170 +202,153 @@ Check if function has array length mismatch vulnerability
 
 ### Description
 
+Detects functions missing critical input parameter validation like zero address checks or bounds validation
 
+### Vulnerable Patterns
 
-### Source
-
-`crates/detectors/src/missing_input_validation.rs`
-
----
-
-## Post 080 Overflow
-
-**ID:** `post-080-overflow`  
-**Severity:** Medium  
-**Categories:** Logic, BestPractices  
-
-### Description
-
-
-
-### Details
-
-Post-0.8.0 Overflow Detector (OWASP 2025)
-
-Detects unchecked block overflows and assembly arithmetic.
-Even with Solidity 0.8.0+ overflow protection, unchecked blocks bypass it.
-$223M Cetus DEX hack (May 2025) was caused by assembly overflow.
+- Function signature has address parameter but no zero check
+- Transfer/withdraw functions without amount validation
+- Array parameter without length check
 
 ### Source
 
-`crates/detectors/src/owasp2025/post_080_overflow.rs`
-
----
-
-## Sovereign Rollup Validation
-
-**ID:** `sovereign-rollup-validation`
-**Severity:** Medium
-**Categories:** L2
-
-### Description
-
-
-
-### Details
-
-Sovereign Rollup Validation Detector
-
-### Source
-
-`crates/detectors/src/modular_blockchain/sovereign_rollup.rs`
-
----
-
-## Array Bounds Check
-
-**ID:** `array-bounds-check`
-**Severity:** High
-**Categories:** Validation
-**CWE:** CWE-129, CWE-119
-
-### Description
-
-Detects potential array out-of-bounds access and missing length validation.
-
-### Details
-
-This detector identifies functions that access arrays without proper bounds checking. Array out-of-bounds vulnerabilities can lead to:
-- Contract reverts and denial of service
-- Reading incorrect data from memory/storage
-- In some edge cases, memory corruption
-
-The detector checks for:
-- Unchecked array access with dynamic indices
-- Loop bounds that may exceed array length
-- Missing length validation on array parameters
-- Off-by-one errors in array iteration
-
-### Remediation
-
-- Always validate array indices before access: `require(index < array.length, "Index out of bounds")`
-- Use `for (uint i = 0; i < array.length; i++)` for safe iteration
-- Validate array parameter lengths at function start
-- Consider using SafeMath or checked arithmetic for index calculations
-- Use array bounds checks even for arrays that "should never" be accessed out of bounds
-
-### Source
-
-`crates/detectors/src/validation/array_bounds.rs`
+`src/missing_input_validation.rs`
 
 ---
 
 ## Missing Zero Address Check
 
-**ID:** `missing-zero-address-check`
-**Severity:** Medium
-**Categories:** Validation
-**CWE:** CWE-20
+**ID:** `missing-zero-address-check`  
+**Severity:** Medium  
+**Categories:** Validation  
+**CWE:** CWE-476  
 
 ### Description
 
-Detects functions that accept address parameters without checking for address(0).
-
-### Details
-
-Functions that accept address parameters should typically validate that the address is not zero (0x0000...0000) unless intentionally burning tokens or revoking approvals.
-
-Missing zero address checks can lead to:
-- Accidental token burns
-- Loss of funds sent to address(0)
-- Assignment of roles to address(0)
-- Permanently locked contract ownership
-
-The detector identifies critical functions (ownership transfer, role assignment, fund transfers, etc.) that accept address parameters but don't validate against zero address.
-
-**Note:** Standard token functions (transfer, approve, etc.) may intentionally allow zero address for burning/revoking, and are excluded from this detector.
-
-### Remediation
-
-- Add zero address validation: `require(_address != address(0), "Invalid zero address")`
-- Use at function start for critical address parameters
-- Document when zero address is intentionally allowed
-- Consider using OpenZeppelin's Address library
+Detects functions that accept address parameters without checking for address(0)
 
 ### Source
 
-`crates/detectors/src/validation/zero_address.rs`
+`validation/zero_address.rs`
 
 ---
 
 ## Parameter Consistency Check
 
-**ID:** `parameter-consistency`
-**Severity:** Medium
-**Categories:** Validation
-**CWE:** CWE-20, CWE-129
+**ID:** `parameter-consistency`  
+**Severity:** Medium  
+**Categories:** Validation  
+**CWE:** CWE-20  
 
 ### Description
 
-Detects inconsistent parameter validation and mismatched array lengths.
-
-### Details
-
-This detector identifies functions with parameter validation issues:
-
-1. **Array Length Mismatches:** Multiple array parameters that aren't validated for equal length
-2. **Missing Parameter Validation:** Critical parameters without proper validation
-3. **Inconsistent Ordering:** Similar functions with different parameter orders
-4. **Parameter Shadowing:** Parameters that shadow state variables
-
-Common vulnerabilities include:
-- Iterating over multiple arrays of different lengths causing out-of-bounds access
-- Accepting unvalidated parameters that cause unexpected behavior
-- Parameter confusion due to inconsistent ordering
-
-### Remediation
-
-- Validate array lengths are equal: `require(array1.length == array2.length, "Length mismatch")`
-- Add parameter validation for critical values
-- Maintain consistent parameter ordering across similar functions
-- Avoid parameter names that shadow state variables
-- Document parameter validation requirements
+Detects inconsistent parameter validation and mismatched array lengths
 
 ### Source
 
-`crates/detectors/src/validation/parameter_check.rs`
+`validation/parameter_check.rs`
+
+---
+
+## Variable Shadowing
+
+**ID:** `shadowing-variables`  
+**Severity:** Medium  
+**Categories:** Validation  
+**CWE:** CWE-710  
+
+### Description
+
+Detects variable shadowing where local variables hide state variables or inherited variables causing confusion
+
+### Source
+
+`src/shadowing_variables.rs`
+
+---
+
+## Short Address Attack
+
+**ID:** `short-address-attack`  
+**Severity:** Medium  
+**Categories:** Validation, BestPractices  
+**CWE:** CWE-20, CWE-707  
+
+### Description
+
+Detects missing msg.data.length validation that enables short address attacks
+
+### Source
+
+`src/short_address.rs`
+
+---
+
+## Unchecked Math Operations
+
+**ID:** `unchecked-math`  
+**Severity:** Medium  
+**Categories:** Validation  
+**CWE:** CWE-190, CWE-682  
+
+### Description
+
+Detects arithmetic operations in unchecked blocks that can overflow or underflow without reversion
+
+### Vulnerable Patterns
+
+- Check for unchecked blocks with arithmetic
+- Pre-0.8 Solidity without SafeMath
+
+### Source
+
+`src/unchecked_math.rs`
+
+---
+
+## Unsafe Type Casting
+
+**ID:** `unsafe-type-casting`  
+**Severity:** Medium  
+**Categories:** Validation  
+**CWE:** CWE-197, CWE-704  
+
+### Description
+
+Detects unsafe type conversions that can lead to data loss, truncation, or unexpected behavior
+
+### Vulnerable Patterns
+
+- Downcasting (larger type to smaller type)
+- int to uint conversion (sign loss)
+- uint to int conversion (overflow risk)
+- address conversions without validation
+
+### Source
+
+`src/unsafe_type_casting.rs`
+
+---
+
+## Weak Signature Validation
+
+**ID:** `weak-signature-validation`  
+**Severity:** High  
+**Categories:** Auth, CrossChain  
+**CWE:** CWE-345, CWE-347  
+
+### Description
+
+Detects multi-signature validation without duplicate signer checks, enabling signature reuse
+
+### Vulnerable Patterns
+
+- Explicit vulnerability comment
+- Has signature recovery/validation in loop
+
+### Source
+
+`src/weak_signature_validation.rs`
 
 ---
 
