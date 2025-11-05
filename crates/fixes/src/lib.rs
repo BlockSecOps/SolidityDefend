@@ -399,7 +399,7 @@ impl FixGenerator for AccessControlFixGenerator {
     }
 
     fn supported_detectors(&self) -> Vec<String> {
-        vec!["missing-access-control".to_string()]
+        vec!["missing-access-modifiers".to_string()]
     }
 
     fn priority(&self) -> i32 {
