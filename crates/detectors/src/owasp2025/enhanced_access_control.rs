@@ -20,7 +20,10 @@ impl EnhancedAccessControlDetector {
                 DetectorId("enhanced-access-control".to_string()),
                 "Enhanced Access Control".to_string(),
                 "Detects role management flaws and privilege escalation ($953M impact)".to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::BestPractices],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::Critical,
             ),
         }
@@ -63,16 +66,18 @@ impl Detector for EnhancedAccessControlDetector {
         let source = &ctx.source_code;
 
         // Check for role-based access control
-        let has_roles = source.contains("role") || source.contains("Role")
-            || source.contains("AccessControl");
+        let has_roles =
+            source.contains("role") || source.contains("Role") || source.contains("AccessControl");
 
         // Check for grant/revoke functions
         let has_grant = source.contains("grant") || source.contains("Grant");
         let has_revoke = source.contains("revoke") || source.contains("Revoke");
 
         // Check for protection on grant/revoke
-        let has_admin_check = source.contains("onlyAdmin") || source.contains("onlyOwner")
-            || source.contains("hasRole") || source.contains("ADMIN");
+        let has_admin_check = source.contains("onlyAdmin")
+            || source.contains("onlyOwner")
+            || source.contains("hasRole")
+            || source.contains("ADMIN");
 
         if has_roles && (has_grant || has_revoke) && !has_admin_check {
             let finding = self.base.create_finding_with_severity(
@@ -144,15 +149,19 @@ impl Detector for EnhancedAccessControlDetector {
         let has_two_step = source.contains("pendingOwner") || source.contains("acceptOwner");
 
         if has_owner && has_transfer && !has_two_step {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Single-step ownership transfer - use 2-step transfer to prevent mistakes".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "❌ DANGEROUS - Single-step ownership transfer:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Single-step ownership transfer - use 2-step transfer to prevent mistakes"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "❌ DANGEROUS - Single-step ownership transfer:\n\
                  function transferOwnership(address newOwner) public onlyOwner {\n\
                      owner = newOwner;  // What if newOwner is wrong address?\n\
                  }\n\
@@ -189,22 +198,27 @@ impl Detector for EnhancedAccessControlDetector {
                  - New owner must prove they control the address\n\
                  - Prevents typos in addresses\n\
                  - Allows cancellation before acceptance\n\
-                 - New owner can verify contract state first".to_string()
-            );
+                 - New owner can verify contract state first"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for missing role admin
         if has_roles && !source.contains("AdminRole") && !source.contains("DEFAULT_ADMIN") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Role-based access without admin role - who can grant/revoke roles?".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Every role should have a clear admin hierarchy:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Role-based access without admin role - who can grant/revoke roles?"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Every role should have a clear admin hierarchy:\n\
                  \n\
                  ✅ DEFINE ROLE HIERARCHY:\n\
                  bytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;\n\
@@ -247,22 +261,26 @@ impl Detector for EnhancedAccessControlDetector {
                   * - PAUSER_ROLE\n\
                   *   └─ Can pause/unpause contract\n\
                   *   └─ Granted to: Emergency multi-sig\n\
-                  */".to_string()
-            );
+                  */"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for tx.origin in access control
         if source.contains("tx.origin") && (source.contains("require") || source.contains("if")) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "tx.origin used in access control - vulnerable to phishing attacks".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "❌ NEVER use tx.origin for access control:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "tx.origin used in access control - vulnerable to phishing attacks".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "❌ NEVER use tx.origin for access control:\n\
                  function withdraw() public {\n\
                      require(tx.origin == owner, \"Not owner\");\n\
                      // Vulnerable to phishing!\n\
@@ -287,8 +305,9 @@ impl Detector for EnhancedAccessControlDetector {
                  \n\
                  Valid use of tx.origin:\n\
                  - Reject contract calls: require(tx.origin == msg.sender)\n\
-                 - But NEVER for access control decisions".to_string()
-            );
+                 - But NEVER for access control decisions"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 

@@ -60,23 +60,26 @@ impl Detector for PlaintextSecretStorageDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check for string storage of sensitive data
-        let has_string_secret = source_lower.contains("string") &&
-            (source_lower.contains("password") ||
-             source_lower.contains("secret") ||
-             source_lower.contains("key"));
+        let has_string_secret = source_lower.contains("string")
+            && (source_lower.contains("password")
+                || source_lower.contains("secret")
+                || source_lower.contains("key"));
 
         let has_hash = source_lower.contains("keccak256") || source_lower.contains("sha256");
 
         if has_string_secret && !has_hash {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Plaintext secrets stored on-chain - use hashing instead".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "NEVER store plaintext secrets on-chain:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Plaintext secrets stored on-chain - use hashing instead".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "NEVER store plaintext secrets on-chain:\n\
                  \n\
                  ❌ INSECURE:\n\
                  string private password = \"mysecret\";\n\
@@ -96,8 +99,9 @@ impl Detector for PlaintextSecretStorageDetector {
                  function authenticate(bytes memory signature) public {\n\
                      address signer = ECDSA.recover(messageHash, signature);\n\
                      require(signer == authorizedSigner);\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 

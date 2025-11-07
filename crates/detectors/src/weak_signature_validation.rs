@@ -9,6 +9,12 @@ pub struct WeakSignatureValidationDetector {
     base: BaseDetector,
 }
 
+impl Default for WeakSignatureValidationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WeakSignatureValidationDetector {
     pub fn new() -> Self {
         Self {

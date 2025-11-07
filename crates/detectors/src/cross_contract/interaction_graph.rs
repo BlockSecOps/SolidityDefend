@@ -133,7 +133,7 @@ impl InteractionGraph {
         // Update adjacency list
         self.adjacency_list
             .entry(edge.from.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push(edge.to.clone());
 
         self.edges.push(edge);

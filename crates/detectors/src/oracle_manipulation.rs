@@ -10,6 +10,12 @@ pub struct OracleManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for OracleManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OracleManipulationDetector {
     pub fn new() -> Self {
         Self {

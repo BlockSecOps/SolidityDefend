@@ -12,6 +12,12 @@ pub struct DosFailedTransferDetector {
     base: BaseDetector,
 }
 
+impl Default for DosFailedTransferDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DosFailedTransferDetector {
     pub fn new() -> Self {
         Self {
@@ -30,8 +36,7 @@ impl DosFailedTransferDetector {
         // Pattern 1: transfer() or send() in a function that updates state after
         let has_transfer = function_source.contains(".transfer(")
             || function_source.contains(".send(")
-            || (function_source.contains(".call{value:")
-                && !function_source.contains("(success,"));
+            || (function_source.contains(".call{value:") && !function_source.contains("(success,"));
 
         if !has_transfer {
             return false;

@@ -8,6 +8,12 @@ pub struct BlockDependencyDetector {
     base: BaseDetector,
 }
 
+impl Default for BlockDependencyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BlockDependencyDetector {
     pub fn new() -> Self {
         Self {

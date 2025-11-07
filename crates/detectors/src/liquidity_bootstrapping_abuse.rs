@@ -9,6 +9,12 @@ pub struct LiquidityBootstrappingAbuseDetector {
     base: BaseDetector,
 }
 
+impl Default for LiquidityBootstrappingAbuseDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LiquidityBootstrappingAbuseDetector {
     pub fn new() -> Self {
         Self {
@@ -98,9 +104,7 @@ impl LiquidityBootstrappingAbuseDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -127,10 +131,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("delay");
 
         if lacks_rate_limit {
-            return Some(format!(
+            return Some(
                 "Weight updates lack time-based rate limiting, \
                 allowing rapid weight changes that can be exploited"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: No maximum weight change per update
@@ -141,10 +146,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("weightDelta");
 
         if lacks_max_change {
-            return Some(format!(
+            return Some(
                 "No maximum weight change limit per update, \
                 allowing sudden large weight shifts during LBP"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Purchase function without per-address cap
@@ -161,10 +167,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("userPurchases");
 
         if lacks_purchase_cap {
-            return Some(format!(
+            return Some(
                 "No per-address purchase cap during LBP, \
                 allowing whales to acquire disproportionate token amounts"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: No minimum LBP duration enforcement
@@ -183,10 +190,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("require(block.timestamp");
 
         if lacks_duration {
-            return Some(format!(
+            return Some(
                 "No minimum LBP duration enforcement, \
                 allowing premature termination to manipulate distribution"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Weight transitions not gradual/linear
@@ -200,10 +208,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("* (");
 
         if lacks_gradual_transition {
-            return Some(format!(
+            return Some(
                 "Weight transitions are not time-based and gradual, \
                 allowing discrete jumps that can be exploited"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: No transaction size limit during LBP
@@ -215,10 +224,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("require(amount <");
 
         if lacks_tx_limit {
-            return Some(format!(
+            return Some(
                 "No per-transaction size limit during LBP phase, \
                 allowing single large purchases to drain pool"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Owner can update weights at will
@@ -231,10 +241,11 @@ impl LiquidityBootstrappingAbuseDetector {
             && !func_source.contains("delay");
 
         if lacks_timelock {
-            return Some(format!(
+            return Some(
                 "Owner can update weights without timelock, \
                 enabling manipulation for insider advantage"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -243,7 +254,7 @@ impl LiquidityBootstrappingAbuseDetector {
                 || func_source.contains("liquidity bootstrap")
                 || func_source.contains("weight manipulation"))
         {
-            return Some(format!("LBP manipulation vulnerability marker detected"));
+            return Some("LBP manipulation vulnerability marker detected".to_string());
         }
 
         None

@@ -9,6 +9,12 @@ pub struct FloatingPragmaDetector {
     base: BaseDetector,
 }
 
+impl Default for FloatingPragmaDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FloatingPragmaDetector {
     pub fn new() -> Self {
         Self {
@@ -91,7 +97,6 @@ impl Detector for FloatingPragmaDetector {
 
                     findings.push(finding);
                 }
-
                 // Pattern 2: Range operator (>=) - floating pragma
                 else if pragma_statement.contains(">=") || pragma_statement.contains('>') {
                     let message = format!(
@@ -119,7 +124,6 @@ impl Detector for FloatingPragmaDetector {
 
                     findings.push(finding);
                 }
-
                 // Pattern 3: Multiple versions or complex ranges
                 else if pragma_statement.matches("||").count() > 0 {
                     let message = format!(
@@ -146,7 +150,6 @@ impl Detector for FloatingPragmaDetector {
 
                     findings.push(finding);
                 }
-
                 // Pattern 4: Wildcard versions
                 else if pragma_statement.contains('*') {
                     let message = format!(
@@ -189,10 +192,7 @@ impl FloatingPragmaDetector {
         // Extract version from pragma statement
         if let Some(start) = pragma_statement.find("solidity") {
             let after_solidity = &pragma_statement[start + 8..];
-            let version = after_solidity
-                .trim()
-                .trim_end_matches(';')
-                .trim();
+            let version = after_solidity.trim().trim_end_matches(';').trim();
             version.to_string()
         } else {
             String::new()

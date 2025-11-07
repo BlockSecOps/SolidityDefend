@@ -15,6 +15,12 @@ pub struct ReadOnlyReentrancyDetector {
     base: BaseDetector,
 }
 
+impl Default for ClassicReentrancyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ClassicReentrancyDetector {
     pub fn new() -> Self {
         Self {
@@ -87,7 +93,7 @@ impl ClassicReentrancyDetector {
             }
             ast::Expression::IndexAccess { base, index, .. } => {
                 // Check index access expressions for external calls
-                self.is_external_call(base) || index.map_or(false, |idx| self.is_external_call(idx))
+                self.is_external_call(base) || index.is_some_and(|idx| self.is_external_call(idx))
             }
             ast::Expression::MemberAccess { expression, .. } => {
                 // Check member access base expression for external calls
@@ -139,7 +145,7 @@ impl ClassicReentrancyDetector {
                 // Check condition expression and both branches
                 self.is_external_call(condition)
                     || self.statement_has_external_call(then_branch)
-                    || else_branch.map_or(false, |stmt| self.statement_has_external_call(stmt))
+                    || else_branch.is_some_and(|stmt| self.statement_has_external_call(stmt))
             }
             ast::Statement::While {
                 condition, body, ..
@@ -156,17 +162,17 @@ impl ClassicReentrancyDetector {
                 // Check condition, update expression, and loop body
                 condition
                     .as_ref()
-                    .map_or(false, |cond| self.is_external_call(cond))
+                    .is_some_and(|cond| self.is_external_call(cond))
                     || update
                         .as_ref()
-                        .map_or(false, |upd| self.is_external_call(upd))
+                        .is_some_and(|upd| self.is_external_call(upd))
                     || self.statement_has_external_call(body)
             }
             ast::Statement::VariableDeclaration { initial_value, .. } => {
                 // Check if variable is initialized with external call: bool result = call(...)
                 initial_value
                     .as_ref()
-                    .map_or(false, |expr| self.is_external_call(expr))
+                    .is_some_and(|expr| self.is_external_call(expr))
             }
             ast::Statement::TryStatement {
                 expression,
@@ -187,7 +193,7 @@ impl ClassicReentrancyDetector {
                 // Check if return expression contains external call: return call(...)
                 value
                     .as_ref()
-                    .map_or(false, |expr| self.is_external_call(expr))
+                    .is_some_and(|expr| self.is_external_call(expr))
             }
             ast::Statement::EmitStatement { event_call, .. } => {
                 // Check if emit contains external call: emit Event(call(...))
@@ -197,7 +203,7 @@ impl ClassicReentrancyDetector {
                 // Check if revert contains external call: revert Error(call(...))
                 error_call
                     .as_ref()
-                    .map_or(false, |expr| self.is_external_call(expr))
+                    .is_some_and(|expr| self.is_external_call(expr))
             }
             _ => false,
         }
@@ -220,7 +226,7 @@ impl ClassicReentrancyDetector {
             } => {
                 // Check both branches for state changes
                 self.statement_has_state_change(then_branch)
-                    || else_branch.map_or(false, |stmt| self.statement_has_state_change(stmt))
+                    || else_branch.is_some_and(|stmt| self.statement_has_state_change(stmt))
             }
             ast::Statement::While { body, .. } => {
                 // Check loop body for state changes
@@ -235,7 +241,7 @@ impl ClassicReentrancyDetector {
                 // but the initial value might contain state changes
                 initial_value
                     .as_ref()
-                    .map_or(false, |expr| self.expression_has_state_change(expr))
+                    .is_some_and(|expr| self.expression_has_state_change(expr))
             }
             ast::Statement::TryStatement {
                 expression,
@@ -256,7 +262,7 @@ impl ClassicReentrancyDetector {
                 // Return expressions might contain state changes: return (balance = 0, result)
                 value
                     .as_ref()
-                    .map_or(false, |expr| self.expression_has_state_change(expr))
+                    .is_some_and(|expr| self.expression_has_state_change(expr))
             }
             ast::Statement::EmitStatement { event_call, .. } => {
                 // Emit expressions might contain state changes: emit Event(balance = 0)
@@ -266,7 +272,7 @@ impl ClassicReentrancyDetector {
                 // Revert expressions might contain state changes: revert Error(balance = 0)
                 error_call
                     .as_ref()
-                    .map_or(false, |expr| self.expression_has_state_change(expr))
+                    .is_some_and(|expr| self.expression_has_state_change(expr))
             }
             _ => false,
         }
@@ -306,7 +312,7 @@ impl ClassicReentrancyDetector {
             ast::Expression::IndexAccess { base, index, .. } => {
                 // Check index access expressions
                 self.expression_has_state_change(base)
-                    || index.map_or(false, |idx| self.expression_has_state_change(idx))
+                    || index.is_some_and(|idx| self.expression_has_state_change(idx))
             }
             ast::Expression::MemberAccess { expression, .. } => {
                 // Check member access base expression
@@ -409,6 +415,12 @@ impl Detector for ClassicReentrancyDetector {
     }
 }
 
+impl Default for ReadOnlyReentrancyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ReadOnlyReentrancyDetector {
     pub fn new() -> Self {
         Self {
@@ -448,15 +460,21 @@ impl ReadOnlyReentrancyDetector {
     fn statement_reads_state(&self, stmt: &ast::Statement<'_>) -> bool {
         match stmt {
             ast::Statement::Expression(expr) => self.expression_reads_state(expr),
-            ast::Statement::Return { value, .. } => {
-                value.as_ref().map_or(false, |expr| self.expression_reads_state(expr))
-            }
-            ast::Statement::VariableDeclaration { initial_value, .. } => {
-                initial_value.as_ref().map_or(false, |expr| self.expression_reads_state(expr))
-            }
-            ast::Statement::If { then_branch, else_branch, .. } => {
+            ast::Statement::Return { value, .. } => value
+                .as_ref()
+                .is_some_and(|expr| self.expression_reads_state(expr)),
+            ast::Statement::VariableDeclaration { initial_value, .. } => initial_value
+                .as_ref()
+                .is_some_and(|expr| self.expression_reads_state(expr)),
+            ast::Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 self.statement_reads_state(then_branch)
-                    || else_branch.as_ref().map_or(false, |s| self.statement_reads_state(s))
+                    || else_branch
+                        .as_ref()
+                        .is_some_and(|s| self.statement_reads_state(s))
             }
             ast::Statement::Block(block) => self.reads_state_variables(&block.statements),
             ast::Statement::For { body, .. } => self.statement_reads_state(body),
@@ -481,18 +499,25 @@ impl ReadOnlyReentrancyDetector {
             }
 
             // Unary operations
-            ast::Expression::UnaryOperation { operand, .. } => {
-                self.expression_reads_state(operand)
-            }
+            ast::Expression::UnaryOperation { operand, .. } => self.expression_reads_state(operand),
 
             // Function calls (could read state)
-            ast::Expression::FunctionCall { function, arguments, .. } => {
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
                 self.expression_reads_state(function)
                     || arguments.iter().any(|arg| self.expression_reads_state(arg))
             }
 
             // Ternary operator
-            ast::Expression::Conditional { condition, true_expression, false_expression, .. } => {
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
                 self.expression_reads_state(condition)
                     || self.expression_reads_state(true_expression)
                     || self.expression_reads_state(false_expression)
@@ -508,13 +533,19 @@ impl ReadOnlyReentrancyDetector {
             ast::Statement::Block(block) => {
                 block.statements.iter().any(|s| self.has_external_call(s))
             }
-            ast::Statement::If { then_branch, else_branch, .. } => {
+            ast::Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
                 self.has_external_call(then_branch)
-                    || else_branch.as_ref().map_or(false, |s| self.has_external_call(s))
+                    || else_branch
+                        .as_ref()
+                        .is_some_and(|s| self.has_external_call(s))
             }
             ast::Statement::For { body, .. } => self.has_external_call(body),
             ast::Statement::While { body, .. } => self.has_external_call(body),
-           _ => false,
+            _ => false,
         }
     }
 
@@ -524,7 +555,7 @@ impl ReadOnlyReentrancyDetector {
                 match function {
                     // Direct member access pattern: obj.method()
                     ast::Expression::MemberAccess { member, .. } => {
-                        matches!(member.name.as_ref(), "call" | "delegatecall" | "transfer" | "send")
+                        matches!(member.name, "call" | "delegatecall" | "transfer" | "send")
                     }
                     // Nested function call pattern: obj.method{options}()
                     // This handles .call{value: amount}(), .delegatecall{gas: g}(), etc.
@@ -536,16 +567,14 @@ impl ReadOnlyReentrancyDetector {
                         matches!(
                             inner_function,
                             ast::Expression::MemberAccess { member, .. }
-                            if matches!(member.name.as_ref(), "call" | "delegatecall" | "transfer" | "send")
+                            if matches!(member.name, "call" | "delegatecall" | "transfer" | "send")
                         )
                     }
                     _ => false,
                 }
             }
             // Also check assignments, binary operations, etc. for nested calls
-            ast::Expression::Assignment { right, .. } => {
-                self.expression_has_external_call(right)
-            }
+            ast::Expression::Assignment { right, .. } => self.expression_has_external_call(right),
             ast::Expression::BinaryOperation { left, right, .. } => {
                 self.expression_has_external_call(left) || self.expression_has_external_call(right)
             }
@@ -571,7 +600,9 @@ impl ReadOnlyReentrancyDetector {
 
     fn function_has_external_call(&self, function: &ast::Function<'_>) -> bool {
         if let Some(body) = &function.body {
-            body.statements.iter().any(|stmt| self.has_external_call(stmt))
+            body.statements
+                .iter()
+                .any(|stmt| self.has_external_call(stmt))
         } else {
             false
         }
@@ -607,9 +638,10 @@ impl Detector for ReadOnlyReentrancyDetector {
         let mut findings = Vec::new();
 
         // First, check if there are any state-changing functions that make external calls
-        let has_vulnerable_pattern = ctx.get_functions().iter().any(|f| {
-            !self.is_view_function(f) && self.function_has_external_call(f)
-        });
+        let has_vulnerable_pattern = ctx
+            .get_functions()
+            .iter()
+            .any(|f| !self.is_view_function(f) && self.function_has_external_call(f));
 
         // If no state-changing functions make external calls, no readonly reentrancy risk
         if !has_vulnerable_pattern {

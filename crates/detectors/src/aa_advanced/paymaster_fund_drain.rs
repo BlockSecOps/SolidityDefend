@@ -130,7 +130,9 @@ impl Detector for AAPaymasterFundDrainDetector {
                 || lower.contains("balanceof(address(this))");
 
             let has_balance_require = checks_balance
-                && (lower.contains("require") || lower.contains("if (") || lower.contains("revert"));
+                && (lower.contains("require")
+                    || lower.contains("if (")
+                    || lower.contains("revert"));
 
             if !has_balance_require {
                 let finding = self.base.create_finding(

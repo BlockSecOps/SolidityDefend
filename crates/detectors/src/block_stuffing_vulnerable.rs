@@ -9,6 +9,12 @@ pub struct BlockStuffingVulnerableDetector {
     base: BaseDetector,
 }
 
+impl Default for BlockStuffingVulnerableDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BlockStuffingVulnerableDetector {
     pub fn new() -> Self {
         Self {
@@ -95,9 +101,7 @@ impl BlockStuffingVulnerableDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -116,10 +120,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("extension");
 
         if lacks_grace_period {
-            return Some(format!(
+            return Some(
                 "Single-block deadline without grace period, \
                 vulnerable to block stuffing preventing execution at exact block"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: First-come-first-served with strict ordering
@@ -133,10 +138,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("multiple");
 
         if has_strict_ordering {
-            return Some(format!(
+            return Some(
                 "First-come-first-served mechanism with strict ordering, \
                 attackers can stuff blocks to prevent others from participating"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Auction close without multi-block finalization
@@ -155,10 +161,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("extended");
 
         if single_block_close {
-            return Some(format!(
+            return Some(
                 "Auction closes in single block without multi-block finalization period, \
                 vulnerable to block stuffing to prevent last-minute bids"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Critical operation with narrow time window
@@ -179,10 +186,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("flexible");
 
         if narrow_window {
-            return Some(format!(
+            return Some(
                 "Critical operation with narrow time window, \
                 block stuffing can prevent users from executing within deadline"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Liquidation or time-sensitive financial operation
@@ -197,10 +205,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("extended");
 
         if no_protection {
-            return Some(format!(
+            return Some(
                 "Time-sensitive liquidation without protection against block stuffing, \
                 users unable to repay debt if blocks are stuffed"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Voting or governance with single-block window
@@ -214,10 +223,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("extended");
 
         if single_block_vote {
-            return Some(format!(
+            return Some(
                 "Governance voting with single-block deadline, \
                 attackers can stuff blocks to censor votes"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: First-in mechanism without queue protection
@@ -231,10 +241,11 @@ impl BlockStuffingVulnerableDetector {
             && !func_source.contains("batch");
 
         if lacks_queue {
-            return Some(format!(
+            return Some(
                 "First-in mechanism without queuing, \
                 block stuffing prevents fair participation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -243,7 +254,7 @@ impl BlockStuffingVulnerableDetector {
                 || func_source.contains("censorship")
                 || func_source.contains("ordering"))
         {
-            return Some(format!("Block stuffing vulnerability marker detected"));
+            return Some("Block stuffing vulnerability marker detected".to_string());
         }
 
         None

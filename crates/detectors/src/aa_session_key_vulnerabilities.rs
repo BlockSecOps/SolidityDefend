@@ -195,14 +195,23 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check for comprehensive session key protection (all critical features)
-        let has_expiration = source_lower.contains("expirationtime") || source_lower.contains("validuntil");
-        let has_spending_limit = source_lower.contains("spendinglimit") || source_lower.contains("maxvalue");
-        let has_target_whitelist = source_lower.contains("targetwhitelist") || source_lower.contains("allowedtargets");
-        let has_operation_limit = source_lower.contains("operationlimit") || source_lower.contains("operationcount");
+        let has_expiration =
+            source_lower.contains("expirationtime") || source_lower.contains("validuntil");
+        let has_spending_limit =
+            source_lower.contains("spendinglimit") || source_lower.contains("maxvalue");
+        let has_target_whitelist =
+            source_lower.contains("targetwhitelist") || source_lower.contains("allowedtargets");
+        let has_operation_limit =
+            source_lower.contains("operationlimit") || source_lower.contains("operationcount");
         let has_revocation = source_lower.contains("revoke") || source_lower.contains("isactive");
 
         // If contract has comprehensive session key protections, return early
-        if has_expiration && has_spending_limit && has_target_whitelist && has_operation_limit && has_revocation {
+        if has_expiration
+            && has_spending_limit
+            && has_target_whitelist
+            && has_operation_limit
+            && has_revocation
+        {
             // Comprehensive session key implementation with all security features
             return Ok(findings);
         }

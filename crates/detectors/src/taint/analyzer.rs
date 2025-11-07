@@ -91,7 +91,7 @@ impl TaintAnalyzer {
         let mut edges = Vec::new();
 
         // Add nodes for sources
-        for (location, _source) in &self.taint_sources {
+        for location in self.taint_sources.keys() {
             nodes.push(DataFlowNode {
                 id: format!(
                     "source_{}_{}_{}",
@@ -104,7 +104,7 @@ impl TaintAnalyzer {
         }
 
         // Add nodes for sinks
-        for (location, _sink) in &self.taint_sinks {
+        for location in self.taint_sinks.keys() {
             nodes.push(DataFlowNode {
                 id: format!(
                     "sink_{}_{}_{}",
@@ -117,7 +117,7 @@ impl TaintAnalyzer {
         }
 
         // Add nodes for sanitizers
-        for (location, _sanitizer) in &self.sanitizers {
+        for location in self.sanitizers.keys() {
             nodes.push(DataFlowNode {
                 id: format!(
                     "sanitizer_{}_{}_{}",

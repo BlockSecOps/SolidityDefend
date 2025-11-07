@@ -5,9 +5,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_erc7821_executor;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_erc7821_executor;
 
 pub struct ERC7821TokenApprovalDetector {
     base: BaseDetector,
@@ -19,7 +19,8 @@ impl ERC7821TokenApprovalDetector {
             base: BaseDetector::new(
                 DetectorId("erc7821-token-approval".to_string()),
                 "ERC-7821 Token Approval Security".to_string(),
-                "Detects unsafe token approval patterns in batch executors, recommends Permit2".to_string(),
+                "Detects unsafe token approval patterns in batch executors, recommends Permit2"
+                    .to_string(),
                 vec![DetectorCategory::DeFi],
                 Severity::Critical,
             ),
@@ -69,7 +70,8 @@ impl Detector for ERC7821TokenApprovalDetector {
 
         // Check for unsafe approval patterns
         let uses_approve = source_lower.contains(".approve(");
-        let uses_permit2 = source_lower.contains("permit2") || source_lower.contains("permittransfer");
+        let uses_permit2 =
+            source_lower.contains("permit2") || source_lower.contains("permittransfer");
 
         if uses_approve && !uses_permit2 {
             let finding = self.base.create_finding_with_severity(

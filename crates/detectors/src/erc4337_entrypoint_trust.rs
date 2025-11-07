@@ -9,6 +9,12 @@ pub struct Erc4337EntrypointTrustDetector {
     base: BaseDetector,
 }
 
+impl Default for Erc4337EntrypointTrustDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Erc4337EntrypointTrustDetector {
     pub fn new() -> Self {
         Self {

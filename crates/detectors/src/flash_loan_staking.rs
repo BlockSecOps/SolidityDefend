@@ -9,6 +9,12 @@ pub struct FlashLoanStakingDetector {
     base: BaseDetector,
 }
 
+impl Default for FlashLoanStakingDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FlashLoanStakingDetector {
     pub fn new() -> Self {
         Self {

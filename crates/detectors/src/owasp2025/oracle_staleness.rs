@@ -63,16 +63,21 @@ impl Detector for OracleStalenesDetector {
         let source = &ctx.source_code;
 
         // Check for Chainlink usage
-        let has_chainlink = source.contains("chainlink") || source.contains("Chainlink")
-            || source.contains("AggregatorV3") || source.contains("aggregator");
+        let has_chainlink = source.contains("chainlink")
+            || source.contains("Chainlink")
+            || source.contains("AggregatorV3")
+            || source.contains("aggregator");
 
-        let has_latest_round = source.contains("latestRoundData") || source.contains("getRoundData");
+        let has_latest_round =
+            source.contains("latestRoundData") || source.contains("getRoundData");
 
         let has_staleness_check = source.contains("updatedAt")
             && (source.contains("block.timestamp") || source.contains("timestamp"));
 
-        let has_heartbeat = source.contains("heartbeat") || source.contains("HEARTBEAT")
-            || source.contains("maxDelay") || source.contains("MAX_DELAY");
+        let has_heartbeat = source.contains("heartbeat")
+            || source.contains("HEARTBEAT")
+            || source.contains("maxDelay")
+            || source.contains("MAX_DELAY");
 
         // Chainlink without staleness check
         if has_chainlink && has_latest_round && !has_staleness_check {
@@ -125,15 +130,19 @@ impl Detector for OracleStalenesDetector {
 
         // Chainlink without heartbeat constant
         if has_chainlink && has_latest_round && !has_heartbeat {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Chainlink oracle without heartbeat configuration - define max price age".to_string(),
-                1,
-                0,
-                20,
-                Severity::Low,
-            ).with_fix_suggestion(
-                "Each Chainlink feed has a specific heartbeat interval.\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Chainlink oracle without heartbeat configuration - define max price age"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Low,
+                )
+                .with_fix_suggestion(
+                    "Each Chainlink feed has a specific heartbeat interval.\n\
                  Define these constants based on the feed:\n\
                  \n\
                  Common Chainlink heartbeats:\n\
@@ -158,8 +167,9 @@ impl Detector for OracleStalenesDetector {
                      );\n\
                  }\n\
                  \n\
-                 Check feed documentation: https://data.chain.link/".to_string()
-            );
+                 Check feed documentation: https://data.chain.link/"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 

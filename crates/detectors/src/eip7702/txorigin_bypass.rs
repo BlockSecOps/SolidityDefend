@@ -62,22 +62,26 @@ impl Detector for EIP7702TxOriginBypassDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         if source_lower.contains("tx.origin") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "tx.origin usage breaks with EIP-7702 delegation".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "EIP-7702 breaks tx.origin assumptions:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "tx.origin usage breaks with EIP-7702 delegation".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "EIP-7702 breaks tx.origin assumptions:\n\
                  \n\
                  Before: tx.origin == msg.sender for EOAs\n\
                  After EIP-7702: tx.origin != msg.sender (msg.sender is delegate)\n\
                  \n\
                  Fix: Use msg.sender instead:\n\
-                 require(msg.sender == owner, \"Not owner\");".to_string()
-            );
+                 require(msg.sender == owner, \"Not owner\");"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 

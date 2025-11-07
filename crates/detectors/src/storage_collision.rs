@@ -9,6 +9,12 @@ pub struct StorageCollisionDetector {
     base: BaseDetector,
 }
 
+impl Default for StorageCollisionDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StorageCollisionDetector {
     pub fn new() -> Self {
         Self {
@@ -113,9 +119,7 @@ impl StorageCollisionDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -144,15 +148,15 @@ impl StorageCollisionDetector {
             && (func_source.contains("storage collision") || func_source.contains("delegatecall"));
 
         if has_vulnerability_marker {
-            return Some(format!(
-                "Delegatecall with storage collision vulnerability marker detected"
-            ));
+            return Some(
+                "Delegatecall with storage collision vulnerability marker detected".to_string(),
+            );
         }
 
         if has_variable_target && !has_storage_check {
-            return Some(format!(
-                "Delegatecall to variable target without storage layout verification"
-            ));
+            return Some(
+                "Delegatecall to variable target without storage layout verification".to_string(),
+            );
         }
 
         None

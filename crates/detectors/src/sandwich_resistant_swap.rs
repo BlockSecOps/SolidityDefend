@@ -10,6 +10,12 @@ pub struct SandwichResistantSwapDetector {
     base: BaseDetector,
 }
 
+impl Default for SandwichResistantSwapDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SandwichResistantSwapDetector {
     pub fn new() -> Self {
         Self {
@@ -107,9 +113,7 @@ impl SandwichResistantSwapDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -137,10 +141,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("require(amountOut >=");
 
         if lacks_slippage {
-            return Some(format!(
+            return Some(
                 "No minimum output amount (amountOutMin) parameter for slippage protection, \
                 leaving swap vulnerable to sandwich attacks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Missing deadline parameter
@@ -150,10 +155,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("require(block.timestamp");
 
         if lacks_deadline {
-            return Some(format!(
+            return Some(
                 "No deadline parameter to prevent delayed execution, \
                 allowing validators to hold and execute swap at unfavorable prices"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Uses spot price without TWAP protection
@@ -168,10 +174,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("average");
 
         if lacks_twap {
-            return Some(format!(
+            return Some(
                 "Uses spot price for swap calculation without TWAP, \
                 making it easy for attackers to manipulate price in same block"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Public swap without commit-reveal
@@ -185,10 +192,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("secret");
 
         if lacks_commit_reveal && lacks_slippage {
-            return Some(format!(
+            return Some(
                 "Public swap without commit-reveal scheme and no slippage protection, \
                 making it trivial for MEV bots to sandwich"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: No MEV protection modifier or mechanism
@@ -199,10 +207,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("nonReentrant");
 
         if is_public && lacks_mev_protection && lacks_slippage {
-            return Some(format!(
+            return Some(
                 "No MEV protection mechanisms (private mempool, batch auction, etc.) \
                 and no slippage tolerance configured"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Allows immediate execution without time delay
@@ -215,10 +224,11 @@ impl SandwichResistantSwapDetector {
         let has_large_amounts = func_source.contains("amountIn") || func_source.contains("amount");
 
         if immediate_execution && has_large_amounts && lacks_slippage {
-            return Some(format!(
+            return Some(
                 "Allows immediate swap execution without delays or batch processing, \
                 combined with no slippage protection"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: No maximum price movement check
@@ -228,10 +238,11 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("priceImpact");
 
         if is_swap_function && lacks_max_price_movement && lacks_slippage {
-            return Some(format!(
+            return Some(
                 "No maximum price impact or slippage percentage checks, \
                 allowing unlimited price movement during swap"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -240,7 +251,7 @@ impl SandwichResistantSwapDetector {
                 || func_source.contains("MEV")
                 || func_source.contains("front-run"))
         {
-            return Some(format!("Sandwich attack vulnerability marker detected"));
+            return Some("Sandwich attack vulnerability marker detected".to_string());
         }
 
         None

@@ -9,6 +9,12 @@ pub struct CentralizationRiskDetector {
     base: BaseDetector,
 }
 
+impl Default for CentralizationRiskDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CentralizationRiskDetector {
     pub fn new() -> Self {
         Self {
@@ -127,10 +133,11 @@ impl CentralizationRiskDetector {
             || contract_source.contains("threshold");
 
         if has_owner && !has_multisig {
-            return Some(format!(
+            return Some(
                 "Contract uses single owner without multi-signature protection. \
                 Single private key compromise leads to total contract control"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Critical functions without timelock
@@ -143,10 +150,11 @@ impl CentralizationRiskDetector {
             || contract_source.contains("TimeLock");
 
         if has_critical_ops && !has_timelock && !has_multisig {
-            return Some(format!(
+            return Some(
                 "Critical operations (withdraw/pause/upgrade) lack timelock delays. \
                 Malicious owner can drain funds or brick contract instantly"
-            ));
+                    .to_string(),
+            );
         }
 
         None
@@ -157,9 +165,7 @@ impl CentralizationRiskDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let func_name = &function.name.name;

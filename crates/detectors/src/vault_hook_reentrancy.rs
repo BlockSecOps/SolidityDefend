@@ -10,6 +10,12 @@ pub struct VaultHookReentrancyDetector {
     base: BaseDetector,
 }
 
+impl Default for VaultHookReentrancyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VaultHookReentrancyDetector {
     pub fn new() -> Self {
         Self {
@@ -74,12 +80,17 @@ impl Detector for VaultHookReentrancyDetector {
 
         // Level 4: Advanced DeFi patterns (reduce confidence if present)
         let follows_cei = reentrancy_patterns::follows_cei_pattern(ctx);
-        let has_read_only_protection = reentrancy_patterns::has_read_only_reentrancy_protection(ctx);
+        let has_read_only_protection =
+            reentrancy_patterns::has_read_only_reentrancy_protection(ctx);
 
         // Calculate protection score for confidence calibration
         let mut protection_score = 0;
-        if follows_cei { protection_score += 2; } // CEI pattern is strong protection
-        if has_read_only_protection { protection_score += 1; }
+        if follows_cei {
+            protection_score += 2;
+        } // CEI pattern is strong protection
+        if has_read_only_protection {
+            protection_score += 1;
+        }
 
         for function in ctx.get_functions() {
             if let Some(reentrancy_issue) = self.check_hook_reentrancy(function, ctx) {
@@ -144,9 +155,7 @@ impl VaultHookReentrancyDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -179,10 +188,11 @@ impl VaultHookReentrancyDetector {
         let state_changes_after_transfer = self.has_state_change_after_call(&func_source);
 
         if has_token_transfer && state_changes_after_transfer && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "State changes after token transfer without reentrancy guard. \
                 ERC-777/ERC-1363 callbacks can re-enter before state updates complete"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: totalAssets() or totalSupply() read after transfer
@@ -190,10 +200,11 @@ impl VaultHookReentrancyDetector {
             && (func_source.contains("totalAssets()") || func_source.contains("totalSupply()"));
 
         if reads_accounting_after_transfer && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Accounting reads (totalAssets/totalSupply) after token transfer. \
                 Hook callbacks can manipulate state during reentrancy"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Balance updates after transfer
@@ -204,10 +215,11 @@ impl VaultHookReentrancyDetector {
                 || func_source.contains("balance -="));
 
         if updates_balance_after && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Balance updates after token transfer. \
                 Reentrancy via hooks can occur before balances are updated"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Multiple external calls in same function
@@ -215,20 +227,22 @@ impl VaultHookReentrancyDetector {
             func_source.matches(".transfer").count() + func_source.matches(".safeTransfer").count();
 
         if transfer_count > 1 && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Multiple token transfers without reentrancy protection. \
                 Each transfer is a potential reentrancy point via ERC-777/ERC-1363 hooks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Checks-effects-interactions violation
         let violates_cei = self.violates_checks_effects_interactions(&func_source);
 
         if violates_cei && has_token_transfer && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Violates checks-effects-interactions pattern. \
                 Effects occur after interactions, vulnerable to reentrancy via token hooks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: SafeERC20 not used (doesn't prevent hooks but good practice)
@@ -239,10 +253,11 @@ impl VaultHookReentrancyDetector {
             func_source.contains(".transfer(") && !func_source.contains("safeTransfer");
 
         if uses_raw_transfer && !uses_safe_erc20 && !has_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Uses raw transfer() instead of SafeERC20. \
                 No protection against malicious token implementations with callback hooks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Deposit/mint before state update
@@ -259,10 +274,11 @@ impl VaultHookReentrancyDetector {
 
             if let (Some(t_pos), Some(b_pos)) = (transfer_pos, balance_update_pos) {
                 if b_pos > t_pos && !has_reentrancy_guard {
-                    return Some(format!(
+                    return Some(
                         "Balance/shares updated after token transfer. \
                         Hook reentrancy can read stale state before updates"
-                    ));
+                            .to_string(),
+                    );
                 }
             }
         }
@@ -273,9 +289,7 @@ impl VaultHookReentrancyDetector {
                 || func_source.contains("hook")
                 || func_source.contains("callback"))
         {
-            return Some(format!(
-                "Vault hook reentrancy vulnerability marker detected"
-            ));
+            return Some("Vault hook reentrancy vulnerability marker detected".to_string());
         }
 
         None
@@ -292,11 +306,11 @@ impl VaultHookReentrancyDetector {
                 found_transfer = true;
             }
 
-            if found_transfer {
-                if line.contains(" = ") || line.contains("+=") || line.contains("-=") {
-                    // Found assignment after transfer
-                    return true;
-                }
+            if found_transfer
+                && (line.contains(" = ") || line.contains("+=") || line.contains("-="))
+            {
+                // Found assignment after transfer
+                return true;
             }
         }
 

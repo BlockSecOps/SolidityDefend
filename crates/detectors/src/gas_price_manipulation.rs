@@ -9,6 +9,12 @@ pub struct GasPriceManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for GasPriceManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GasPriceManipulationDetector {
     pub fn new() -> Self {
         Self {

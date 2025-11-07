@@ -9,6 +9,12 @@ pub struct WeakCommitRevealDetector {
     base: BaseDetector,
 }
 
+impl Default for WeakCommitRevealDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WeakCommitRevealDetector {
     pub fn new() -> Self {
         Self {

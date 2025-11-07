@@ -161,17 +161,17 @@ pub mod optimistic_challenge_bypass;
 pub mod zk_proof_bypass;
 
 // Phase 21: Diamond Proxy & Advanced Upgrades (2025)
-pub mod diamond_storage_collision;
-pub mod diamond_selector_collision;
+pub mod diamond_delegatecall_zero;
 pub mod diamond_init_reentrancy;
 pub mod diamond_loupe_violation;
-pub mod diamond_delegatecall_zero;
+pub mod diamond_selector_collision;
+pub mod diamond_storage_collision;
 
 // Phase 22: Metamorphic Contracts & CREATE2 (2025)
-pub mod metamorphic_contract;
 pub mod create2_frontrunning;
-pub mod selfdestruct_recipient;
 pub mod extcodesize_bypass;
+pub mod metamorphic_contract;
+pub mod selfdestruct_recipient;
 
 // Phase 23: v1.0 Milestone - Final Detectors (2025)
 pub mod multisig_bypass;

@@ -102,15 +102,19 @@ impl Detector for LogicErrorPatternsDetector {
         let has_balance = source.contains("balance") || source.contains("Balance");
 
         if has_reward && has_division && has_balance {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Reward distribution logic detected - verify precision and rounding".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Common reward distribution errors:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Reward distribution logic detected - verify precision and rounding"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Common reward distribution errors:\n\
                  \n\
                  1. Integer division truncation:\n\
                     ❌ reward = balance / users;  // Loses remainder\n\
@@ -127,23 +131,28 @@ impl Detector for LogicErrorPatternsDetector {
                  4. Missing remainder handling:\n\
                     uint256 perUser = total / userCount;\n\
                     uint256 remainder = total % userCount;\n\
-                    // Handle remainder explicitly!".to_string()
-            );
+                    // Handle remainder explicitly!"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for percentage calculations
         if (source.contains("percent") || source.contains("Percent") || source.contains("%"))
-            && source.contains("/") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Percentage calculation - verify order of operations for precision".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Percentage calculations require careful ordering:\n\
+            && source.contains("/")
+        {
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Percentage calculation - verify order of operations for precision".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Percentage calculations require careful ordering:\n\
                  \n\
                  ❌ WRONG (precision loss):\n\
                  uint256 fee = (amount / 10000) * feePercent;\n\
@@ -160,8 +169,9 @@ impl Detector for LogicErrorPatternsDetector {
                  fee = (1000 * 250) / 10000 = 25 ✅\n\
                  \n\
                  WRONG order:\n\
-                 fee = (1000 / 10000) * 250 = 0 * 250 = 0 ❌".to_string()
-            );
+                 fee = (1000 / 10000) * 250 = 0 * 250 = 0 ❌"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 

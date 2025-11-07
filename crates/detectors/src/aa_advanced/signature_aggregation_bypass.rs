@@ -72,13 +72,12 @@ impl Detector for AASignatureAggregationBypassDetector {
         }
 
         // Pattern 1: Batch validation without individual signature checks
-        let has_batch_validate = lower.contains("validatesignatures")
-            || lower.contains("aggregatesignatures");
+        let has_batch_validate =
+            lower.contains("validatesignatures") || lower.contains("aggregatesignatures");
 
         if has_batch_validate {
-            let has_loop = lower.contains("for (")
-                || lower.contains("for(")
-                || lower.contains("while");
+            let has_loop =
+                lower.contains("for (") || lower.contains("for(") || lower.contains("while");
 
             let has_individual_verify = lower.contains("verify")
                 && (lower.contains("signature") || lower.contains("ecrecover"));

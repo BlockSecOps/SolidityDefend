@@ -9,6 +9,12 @@ pub struct InsufficientRandomnessDetector {
     base: BaseDetector,
 }
 
+impl Default for InsufficientRandomnessDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InsufficientRandomnessDetector {
     pub fn new() -> Self {
         Self {
@@ -98,9 +104,7 @@ impl InsufficientRandomnessDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -121,10 +125,11 @@ impl InsufficientRandomnessDetector {
                 || func_source.contains("lottery")
                 || func_source.contains("keccak256"))
         {
-            return Some(format!(
+            return Some(
                 "Uses block.timestamp for randomness generation. \
                 Miners can manipulate timestamp within ~15 second range to influence outcome"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: blockhash for randomness
@@ -133,10 +138,8 @@ impl InsufficientRandomnessDetector {
                 || func_source.contains("lottery")
                 || func_source.contains("keccak256"))
         {
-            return Some(format!(
-                "Uses blockhash for randomness. \
-                Only last 256 blocks accessible, miners can influence, not available for future blocks"
-            ));
+            return Some("Uses blockhash for randomness. \
+                Only last 256 blocks accessible, miners can influence, not available for future blocks".to_string());
         }
 
         // Pattern 3: block.number for randomness
@@ -146,10 +149,11 @@ impl InsufficientRandomnessDetector {
                 || func_source.contains("%")
                 || func_source.contains("mod"))
         {
-            return Some(format!(
+            return Some(
                 "Uses block.number for randomness. \
                 Completely predictable, miners control block production timing"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: msg.sender or tx.origin in randomness
@@ -162,10 +166,11 @@ impl InsufficientRandomnessDetector {
                 && !func_source.contains("commitment");
 
             if has_only_user_data {
-                return Some(format!(
+                return Some(
                     "Uses user address in randomness without commitment scheme. \
                     Users can predict outcomes and selectively participate"
-                ));
+                        .to_string(),
+                );
             }
         }
 
@@ -173,10 +178,11 @@ impl InsufficientRandomnessDetector {
         if func_source.contains("block.difficulty")
             && (func_source.contains("random") || func_source.contains("keccak256"))
         {
-            return Some(format!(
+            return Some(
                 "Uses block.difficulty for randomness (deprecated post-merge). \
                 Now always returns 0, previously manipulable by miners"
-            ));
+                    .to_string(),
+            );
         }
 
         None

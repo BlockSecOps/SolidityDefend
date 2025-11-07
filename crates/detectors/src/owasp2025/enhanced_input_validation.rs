@@ -20,7 +20,10 @@ impl EnhancedInputValidationDetector {
                 DetectorId("enhanced-input-validation".to_string()),
                 "Enhanced Input Validation".to_string(),
                 "Detects missing bounds checking and array validation ($14.6M impact)".to_string(),
-                vec![DetectorCategory::Validation, DetectorCategory::BestPractices],
+                vec![
+                    DetectorCategory::Validation,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::High,
             ),
         }
@@ -64,19 +67,23 @@ impl Detector for EnhancedInputValidationDetector {
 
         // Check for array access without length validation
         if source.contains("[") && source.contains("]") {
-            let has_length_check = source.contains(".length")
-                && (source.contains("require") || source.contains("if"));
+            let has_length_check =
+                source.contains(".length") && (source.contains("require") || source.contains("if"));
 
             if !has_length_check {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    "Array access without length validation - can cause out-of-bounds access".to_string(),
-                    1,
-                    0,
-                    20,
-                    Severity::Medium,
-                ).with_fix_suggestion(
-                    "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\n\
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Array access without length validation - can cause out-of-bounds access"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\n\
                      function process(uint256[] calldata ids) external {\n\
                          for (uint256 i = 0; i < ids.length; i++) {\n\
                              // What if ids is empty? Or too large?\n\
@@ -112,29 +119,37 @@ impl Detector for EnhancedInputValidationDetector {
                          for (uint256 i = 0; i < recipients.length; i++) {\n\
                              // Safe parallel access\n\
                          }\n\
-                     }".to_string()
-                );
+                     }"
+                        .to_string(),
+                    );
                 findings.push(finding);
             }
         }
 
         // Check for transfer/payment functions without zero-value check
-        let has_transfer = source.contains("transfer") || source.contains("send")
+        let has_transfer = source.contains("transfer")
+            || source.contains("send")
             || source.contains("call{value:");
         let has_amount = source.contains("amount") || source.contains("value");
-        let has_zero_check = source.contains("amount > 0") || source.contains("amount != 0")
-            || source.contains("value > 0") || source.contains("value != 0");
+        let has_zero_check = source.contains("amount > 0")
+            || source.contains("amount != 0")
+            || source.contains("value > 0")
+            || source.contains("value != 0");
 
         if has_transfer && has_amount && !has_zero_check {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Transfer function without zero-value check - validate non-zero amounts".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "❌ MISSING ZERO-VALUE CHECK:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Transfer function without zero-value check - validate non-zero amounts"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "❌ MISSING ZERO-VALUE CHECK:\n\
                  function transfer(address to, uint256 amount) external {\n\
                      _transfer(msg.sender, to, amount);\n\
                      // What if amount is 0? Wastes gas, may break accounting\n\
@@ -159,26 +174,30 @@ impl Detector for EnhancedInputValidationDetector {
                      }\n\
                      \n\
                      // Proceed with deposit\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for missing address validation
         let has_address_param = source.contains("address") && source.contains("function");
-        let has_address_check = source.contains("address(0)")
-            && (source.contains("require") || source.contains("if"));
+        let has_address_check =
+            source.contains("address(0)") && (source.contains("require") || source.contains("if"));
 
         if has_address_param && !has_address_check {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Address parameter without zero-address validation".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "❌ MISSING ADDRESS VALIDATION:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Address parameter without zero-address validation".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "❌ MISSING ADDRESS VALIDATION:\n\
                  function setOwner(address newOwner) external {\n\
                      owner = newOwner;  // What if newOwner is address(0)?\n\
                  }\n\
@@ -207,28 +226,34 @@ impl Detector for EnhancedInputValidationDetector {
                      token = _token;\n\
                      oracle = _oracle;\n\
                      treasury = _treasury;\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for percentage/ratio validation
-        let has_percentage = source.contains("percent") || source.contains("ratio")
-            || source.contains("fee") || source.contains("basis");
+        let has_percentage = source.contains("percent")
+            || source.contains("ratio")
+            || source.contains("fee")
+            || source.contains("basis");
 
         if has_percentage && source.contains("function") {
             let has_bounds = source.contains("<=") || source.contains("<");
 
             if !has_bounds {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    "Percentage/fee parameter without bounds validation".to_string(),
-                    1,
-                    0,
-                    20,
-                    Severity::Medium,
-                ).with_fix_suggestion(
-                    "❌ UNBOUNDED PERCENTAGE:\n\
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Percentage/fee parameter without bounds validation".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "❌ UNBOUNDED PERCENTAGE:\n\
                      function setFee(uint256 newFee) external {\n\
                          fee = newFee;  // Could be set to 100% or higher!\n\
                      }\n\
@@ -251,8 +276,9 @@ impl Detector for EnhancedInputValidationDetector {
                          require(ratio >= MIN_RATIO, \"Ratio too low\");\n\
                          require(ratio <= MAX_RATIO, \"Ratio too high\");\n\
                          collateralRatio = ratio;\n\
-                     }".to_string()
-                );
+                     }"
+                        .to_string(),
+                    );
                 findings.push(finding);
             }
         }

@@ -15,6 +15,12 @@ pub struct UnprotectedInitializerDetector {
     base: BaseDetector,
 }
 
+impl Default for UnprotectedInitializerDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnprotectedInitializerDetector {
     pub fn new() -> Self {
         Self {
@@ -124,6 +130,12 @@ impl UnprotectedInitializerDetector {
         }
 
         false
+    }
+}
+
+impl Default for MissingModifiersDetector {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -257,8 +269,7 @@ impl MissingModifiersDetector {
                 || func_source.contains("threshold")
                 || func_source.contains("spendingLimits")
                 || func_source.contains("deposits")))
-            || (func_source.contains("isGuardian(")
-                && func_source.contains("msg.sender"));
+            || (func_source.contains("isGuardian(") && func_source.contains("msg.sender"));
 
         accesses_own_balance || checks_sender || requires_sender_balance || paymaster_sender_pattern
     }
@@ -318,7 +329,7 @@ impl Detector for MissingModifiersDetector {
             }
 
             // NEW: Skip ERC standard-compliant functions (they SHOULD be public)
-            if erc_standard_compliance::is_standard_compliant_function(&function.name.name, ctx) {
+            if erc_standard_compliance::is_standard_compliant_function(function.name.name, ctx) {
                 continue; // This is a required public function per ERC standards
             }
 
@@ -328,7 +339,7 @@ impl Detector for MissingModifiersDetector {
             }
 
             // Check if function name suggests it needs access control
-            if self.requires_access_control(&function.name.name) {
+            if self.requires_access_control(function.name.name) {
                 // Check if it has proper access control
                 if !self.has_access_control(function) {
                     let message = format!(
@@ -368,6 +379,12 @@ impl Detector for MissingModifiersDetector {
 /// Detector for unprotected initializer functions
 pub struct UnprotectedInitDetector {
     base: BaseDetector,
+}
+
+impl Default for UnprotectedInitDetector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl UnprotectedInitDetector {
@@ -476,6 +493,12 @@ impl Detector for UnprotectedInitDetector {
 /// Detector for functions using default visibility (in older Solidity versions)
 pub struct DefaultVisibilityDetector {
     base: BaseDetector,
+}
+
+impl Default for DefaultVisibilityDetector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl DefaultVisibilityDetector {

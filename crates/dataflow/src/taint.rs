@@ -550,7 +550,7 @@ impl<'a> TaintAnalysis<'a> {
         for (block_id, block_node) in self.cfg.basic_blocks() {
             let instructions = &block_node.instructions;
             if let Some(block_state) = result.get_exit_state(block_id) {
-                for (_instr_index, instruction) in instructions.iter().enumerate() {
+                for instruction in instructions.iter() {
                     if let Some(sink_name) = self.is_sink(instruction) {
                         // Check if any used variables are tainted
                         let used_vars = utils::get_instruction_uses(instruction);
@@ -562,7 +562,7 @@ impl<'a> TaintAnalysis<'a> {
                                             source: source.clone(),
                                             sink: sink_name.clone(),
                                             tainted_variable: used_var,
-                                            block_id: block_id,
+                                            block_id,
                                             severity: self.assess_severity(&sink_name, taint_info),
                                             taint_path: taint_info
                                                 .taint_path
@@ -683,7 +683,7 @@ impl<'a> TaintAnalysis<'a> {
                         ));
                     }
                 }
-                report.push_str("\n");
+                report.push('\n');
             }
         }
 
@@ -704,13 +704,12 @@ impl<'a> DataFlowAnalysis for TaintAnalysis<'a> {
 
     fn boundary_state(&self) -> Self::State {
         // Entry point may have tainted parameters
-        let state = TaintState::new();
 
         // Initialize tainted parameters based on configured sources
         // This would need access to function parameters
         // For now, return empty state
 
-        state
+        TaintState::new()
     }
 
     fn transfer_instruction(&self, state: &Self::State, instruction: &Instruction) -> Self::State {

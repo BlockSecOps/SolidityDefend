@@ -8,9 +8,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct ERC4337GasGriefingDetector {
     base: BaseDetector,
@@ -79,22 +79,44 @@ impl Detector for ERC4337GasGriefingDetector {
 
             // Check 1: Unbounded loops
             if has_unbounded_loops(function, ctx) {
-                findings.push(self.base.create_finding_with_severity(
-                    ctx,
-                    format!("'{}' - unbounded loop in validation, can grief bundler gas", function.name.name),
-                    line, 0, 20,
-                    Severity::Medium,
-                ).with_fix_suggestion("Add maximum iteration limit (e.g., <= 10)".to_string()));
+                findings.push(
+                    self.base
+                        .create_finding_with_severity(
+                            ctx,
+                            format!(
+                                "'{}' - unbounded loop in validation, can grief bundler gas",
+                                function.name.name
+                            ),
+                            line,
+                            0,
+                            20,
+                            Severity::Medium,
+                        )
+                        .with_fix_suggestion(
+                            "Add maximum iteration limit (e.g., <= 10)".to_string(),
+                        ),
+                );
             }
 
             // Check 2: Storage writes
             if has_storage_writes(function, ctx) {
-                findings.push(self.base.create_finding_with_severity(
-                    ctx,
-                    format!("'{}' - storage writes in validation, high gas, banned by ERC-4337", function.name.name),
-                    line, 0, 20,
-                    Severity::Low,
-                ).with_fix_suggestion("Avoid storage writes in validation phase".to_string()));
+                findings.push(
+                    self.base
+                        .create_finding_with_severity(
+                            ctx,
+                            format!(
+                                "'{}' - storage writes in validation, high gas, banned by ERC-4337",
+                                function.name.name
+                            ),
+                            line,
+                            0,
+                            20,
+                            Severity::Low,
+                        )
+                        .with_fix_suggestion(
+                            "Avoid storage writes in validation phase".to_string(),
+                        ),
+                );
             }
         }
 

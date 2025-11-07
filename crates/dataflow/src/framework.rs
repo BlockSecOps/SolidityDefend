@@ -248,6 +248,12 @@ pub struct DefUseChains {
     pub use_to_defs: HashMap<(ValueId, BlockId), HashSet<(ValueId, BlockId)>>,
 }
 
+impl Default for DefUseChains {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DefUseChains {
     pub fn new() -> Self {
         Self {

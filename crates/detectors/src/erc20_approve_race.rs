@@ -9,6 +9,12 @@ pub struct Erc20ApproveRaceDetector {
     base: BaseDetector,
 }
 
+impl Default for Erc20ApproveRaceDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Erc20ApproveRaceDetector {
     pub fn new() -> Self {
         Self {
@@ -91,9 +97,7 @@ impl Erc20ApproveRaceDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let name_lower = function.name.name.to_lowercase();

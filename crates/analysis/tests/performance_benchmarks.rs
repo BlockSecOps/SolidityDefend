@@ -149,7 +149,7 @@ impl PerformanceBenchmarks {
             ));
         }
 
-        contract.push_str("}");
+        contract.push('}');
         contract
     }
 
@@ -171,7 +171,7 @@ impl PerformanceBenchmarks {
             contract.push_str(&Self::generate_complex_function(i));
         }
 
-        contract.push_str("}");
+        contract.push('}');
         contract
     }
 
@@ -195,7 +195,7 @@ impl PerformanceBenchmarks {
             contract.push_str(&Self::generate_complex_function(i));
         }
 
-        contract.push_str("}");
+        contract.push('}');
         contract
     }
 
@@ -291,7 +291,7 @@ impl PerformanceBenchmarks {
         "#,
         );
 
-        contract.push_str("}");
+        contract.push('}');
         contract
     }
 
@@ -313,7 +313,7 @@ impl PerformanceBenchmarks {
         }
         contract.push_str("    }\n");
 
-        contract.push_str("}");
+        contract.push('}');
         contract
     }
 
@@ -447,6 +447,12 @@ Average Memory: {} bytes
 #[derive(Debug)]
 pub struct BenchmarkResults {
     pub results: Vec<BenchmarkResult>,
+}
+
+impl Default for BenchmarkResults {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl BenchmarkResults {

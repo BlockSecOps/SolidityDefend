@@ -56,7 +56,7 @@ impl Detector for DiamondDelegatecallZeroDetector {
         let mut findings = Vec::new();
 
         // Check if this looks like a Diamond proxy contract
-        
+
         let is_diamond_contract = self.is_diamond_contract(&ctx.source_code);
 
         if !is_diamond_contract {
@@ -67,20 +67,20 @@ impl Detector for DiamondDelegatecallZeroDetector {
         let contract = ctx.contract;
         let contract_source = self.get_contract_source(contract, ctx);
 
-            // Check for fallback function with delegatecall
-            if self.has_fallback_delegatecall(&contract_source) {
-                // Pattern 1: Missing address(0) validation
-                if !self.validates_facet_not_zero(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' fallback performs delegatecall without validating facet != address(0). \
+        // Check for fallback function with delegatecall
+        if self.has_fallback_delegatecall(&contract_source) {
+            // Pattern 1: Missing address(0) validation
+            if !self.validates_facet_not_zero(&contract_source) {
+                let message = format!(
+                    "Contract '{}' fallback performs delegatecall without validating facet != address(0). \
                         When a function selector is not registered in selectorToFacet, it returns address(0). \
                         Delegatecall to address(0) succeeds silently in assembly, returning success=true without \
                         executing any code. This creates false success responses for non-existent functions, \
                         breaking contract behavior and potentially bypassing security checks.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -100,24 +100,24 @@ impl Detector for DiamondDelegatecallZeroDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 2: Missing code existence validation
-                // Skip if zero-address validation exists (reduces risk significantly)
-                if !self.validates_facet_code_exists(&contract_source)
-                    && !self.validates_facet_not_zero(&contract_source)
-                {
-                    let message = format!(
-                        "Contract '{}' fallback delegates without verifying facet has code. \
+            // Pattern 2: Missing code existence validation
+            // Skip if zero-address validation exists (reduces risk significantly)
+            if !self.validates_facet_code_exists(&contract_source)
+                && !self.validates_facet_not_zero(&contract_source)
+            {
+                let message = format!(
+                    "Contract '{}' fallback delegates without verifying facet has code. \
                         Even if facet != address(0), the address may be an EOA or a self-destructed contract \
                         with no code. Delegatecall to addresses without code succeeds silently, returning \
                         success=true. This allows unregistered selectors to succeed unexpectedly, \
                         bypassing access controls and validation logic.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -137,23 +137,23 @@ impl Detector for DiamondDelegatecallZeroDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 3: Assembly delegatecall without validation
-                // Skip if Solidity-level validation exists before assembly block
-                if self.has_assembly_delegatecall_without_validation(&contract_source)
-                    && !self.validates_facet_not_zero(&contract_source)
-                {
-                    let message = format!(
-                        "Contract '{}' uses assembly delegatecall without proper validation. \
+            // Pattern 3: Assembly delegatecall without validation
+            // Skip if Solidity-level validation exists before assembly block
+            if self.has_assembly_delegatecall_without_validation(&contract_source)
+                && !self.validates_facet_not_zero(&contract_source)
+            {
+                let message = format!(
+                    "Contract '{}' uses assembly delegatecall without proper validation. \
                         Assembly delegatecall bypasses Solidity's address validation, making it critical \
                         to manually check facet != 0 and extcodesize > 0. Missing validation in assembly \
                         is more dangerous because there are no implicit safety checks.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -173,20 +173,20 @@ impl Detector for DiamondDelegatecallZeroDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 4: Silent failure on missing selector
-                if self.has_silent_failure_on_missing_selector(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' fallback silently succeeds when selector not found. \
+            // Pattern 4: Silent failure on missing selector
+            if self.has_silent_failure_on_missing_selector(&contract_source) {
+                let message = format!(
+                    "Contract '{}' fallback silently succeeds when selector not found. \
                         Returning success for non-existent functions violates principle of least surprise. \
                         Callers expect reverts for undefined functions, not silent success. This can cause \
                         integration bugs, incorrect state assumptions, and security vulnerabilities in dependent contracts.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -206,20 +206,20 @@ impl Detector for DiamondDelegatecallZeroDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 5: Missing return data validation
-                if self.has_unchecked_delegatecall_return(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' fallback doesn't validate delegatecall return success. \
+            // Pattern 5: Missing return data validation
+            if self.has_unchecked_delegatecall_return(&contract_source) {
+                let message = format!(
+                    "Contract '{}' fallback doesn't validate delegatecall return success. \
                         Even with proper facet validation, the delegated call can fail (revert, out of gas, etc.). \
                         If success is not checked, failures are silently ignored, returning empty data as if the call succeeded. \
                         This masks errors and causes incorrect behavior in calling contracts.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -239,45 +239,45 @@ impl Detector for DiamondDelegatecallZeroDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
             }
+        }
 
-            // Pattern 6: Missing fallback function documentation
-            if self.is_diamond_proxy(&contract_source)
-                && self.has_fallback_delegatecall(&contract_source)
-                && !self.has_fallback_documentation(&contract_source)
-            {
-                let message = format!(
-                    "Contract '{}' fallback delegatecall lacks documentation. \
+        // Pattern 6: Missing fallback function documentation
+        if self.is_diamond_proxy(&contract_source)
+            && self.has_fallback_delegatecall(&contract_source)
+            && !self.has_fallback_documentation(&contract_source)
+        {
+            let message = format!(
+                "Contract '{}' fallback delegatecall lacks documentation. \
                     Diamond fallback is security-critical as it routes all calls. Missing documentation \
                     of validation logic, security checks, and failure modes makes auditing difficult \
                     and increases risk of vulnerabilities.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        contract.name.location.start().line() as u32,
-                        contract.name.location.start().column() as u32,
-                        contract.name.name.len() as u32,
-                    )
-                    .with_cwe(476)
-                    .with_fix_suggestion(format!(
-                        "Document fallback in '{}': \
+            let finding = self
+                .base
+                .create_finding(
+                    ctx,
+                    message,
+                    contract.name.location.start().line() as u32,
+                    contract.name.location.start().column() as u32,
+                    contract.name.name.len() as u32,
+                )
+                .with_cwe(476)
+                .with_fix_suggestion(format!(
+                    "Document fallback in '{}': \
                         (1) Add NatSpec comments explaining delegatecall mechanism \
                         (2) Document validation steps: address(0) check, code existence, etc. \
                         (3) Explain failure modes and error handling \
                         (4) Note security assumptions and invariants \
                         (5) Provide examples of intended and unintended usage",
-                        contract.name.name
-                    ));
+                    contract.name.name
+                ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
         Ok(findings)
     }
@@ -334,12 +334,7 @@ impl DiamondDelegatecallZeroDetector {
 
     fn validates_facet_code_exists(&self, source: &str) -> bool {
         // Check for code existence validation
-        let validation_patterns = [
-            ".code.length",
-            "extcodesize",
-            "EXTCODESIZE",
-            "codesize",
-        ];
+        let validation_patterns = [".code.length", "extcodesize", "EXTCODESIZE", "codesize"];
 
         validation_patterns
             .iter()
@@ -353,7 +348,8 @@ impl DiamondDelegatecallZeroDetector {
         }
 
         // Check if assembly block has delegatecall
-        let has_assembly_delegatecall = source.contains("assembly") && source.contains("delegatecall");
+        let has_assembly_delegatecall =
+            source.contains("assembly") && source.contains("delegatecall");
 
         if !has_assembly_delegatecall {
             return false;
@@ -407,9 +403,9 @@ impl DiamondDelegatecallZeroDetector {
             "if (success)",
             "require(success",
             "if iszero(success)",
-            "switch result",      // Assembly switch on delegatecall result
-            "switch success",     // Assembly switch on success variable
-            "case 0",            // Assembly case for failure
+            "switch result",  // Assembly switch on delegatecall result
+            "switch success", // Assembly switch on success variable
+            "case 0",         // Assembly case for failure
         ];
 
         // Has delegatecall but no success check
@@ -443,7 +439,7 @@ impl DiamondDelegatecallZeroDetector {
                 || context.contains("// Safe")     // Security comment
                 || context.contains("// Prevent")  // Security comment
                 || context.contains("// Diamond")  // Diamond-specific comment
-                || context.contains("//")          // Any single-line comment near fallback
+                || context.contains("//") // Any single-line comment near fallback
         } else {
             false
         }
@@ -480,12 +476,16 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "diamond-delegatecall-zero");
         assert!(detector.categories().contains(&DetectorCategory::Diamond));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Upgradeable));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::ExternalCalls));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Upgradeable)
+        );
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::ExternalCalls)
+        );
     }
 
     #[test]

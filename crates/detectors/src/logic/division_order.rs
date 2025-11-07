@@ -10,6 +10,12 @@ pub struct DivisionOrderDetector {
     base: BaseDetector,
 }
 
+impl Default for DivisionOrderDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DivisionOrderDetector {
     pub fn new() -> Self {
         Self {
@@ -162,22 +168,23 @@ impl DivisionOrderDetector {
 
                 // Special case: Check for patterns like mulDiv(a/b, c, d) where first param has division
                 if let ast::Expression::Identifier(id) = function {
-                    if id.name.to_lowercase().contains("mul") && arguments.len() >= 2 {
-                        if self.contains_division(&arguments[0]) {
-                            let message =
-                                "Division in first argument of multiplication function".to_string();
-                            let finding = self
-                                .base
-                                .create_finding(
-                                    ctx,
-                                    message,
-                                    location.start().line() as u32,
-                                    location.start().column() as u32,
-                                    location.byte_length() as u32,
-                                )
-                                .with_cwe(682);
-                            findings.push(finding);
-                        }
+                    if id.name.to_lowercase().contains("mul")
+                        && arguments.len() >= 2
+                        && self.contains_division(&arguments[0])
+                    {
+                        let message =
+                            "Division in first argument of multiplication function".to_string();
+                        let finding = self
+                            .base
+                            .create_finding(
+                                ctx,
+                                message,
+                                location.start().line() as u32,
+                                location.start().column() as u32,
+                                location.byte_length() as u32,
+                            )
+                            .with_cwe(682);
+                        findings.push(finding);
                     }
                 }
             }

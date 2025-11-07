@@ -52,9 +52,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::uses_transient_storage;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::uses_transient_storage;
 
 pub struct TransientStorageReentrancyDetector {
     base: BaseDetector,
@@ -91,8 +91,10 @@ impl TransientStorageReentrancyDetector {
         let func_lower = func_text.to_lowercase();
 
         // Check for vulnerable patterns: transfer/send after transient storage modifications
-        let has_transfer_or_send = func_lower.contains(".transfer(") || func_lower.contains(".send(");
-        let has_low_gas_call = func_lower.contains(".call{gas:") || func_lower.contains(".call{value:");
+        let has_transfer_or_send =
+            func_lower.contains(".transfer(") || func_lower.contains(".send(");
+        let has_low_gas_call =
+            func_lower.contains(".call{gas:") || func_lower.contains(".call{value:");
 
         if !has_transfer_or_send && !has_low_gas_call {
             return issues;
@@ -143,7 +145,10 @@ impl TransientStorageReentrancyDetector {
 
             if balance_idx > transfer_idx {
                 issues.push((
-                    format!("Classic reentrancy pattern with transient storage risk in '{}'", function.name.name),
+                    format!(
+                        "Classic reentrancy pattern with transient storage risk in '{}'",
+                        function.name.name
+                    ),
                     Severity::Critical,
                     "State update after external call is vulnerable to reentrancy:\n\
                      \n\
@@ -157,7 +162,8 @@ impl TransientStorageReentrancyDetector {
                      2. Update balance to 0 ← do this FIRST\n\
                      3. Call transfer()\n\
                      \n\
-                     With EIP-1153, even 2300 gas is enough to modify transient state and re-enter.".to_string()
+                     With EIP-1153, even 2300 gas is enough to modify transient state and re-enter."
+                        .to_string(),
                 ));
             }
         }
@@ -204,12 +210,12 @@ impl Detector for TransientStorageReentrancyDetector {
         // (either using it directly or callable by contracts that do)
         let uses_transient = uses_transient_storage(ctx);
         let source_lower = ctx.source_code.to_lowercase();
-        let pragma_version = source_lower.contains("pragma solidity") &&
-            (source_lower.contains("0.8.24") ||
-             source_lower.contains("0.8.25") ||
-             source_lower.contains("0.8.26") ||
-             source_lower.contains("^0.8") ||
-             source_lower.contains(">=0.8"));
+        let pragma_version = source_lower.contains("pragma solidity")
+            && (source_lower.contains("0.8.24")
+                || source_lower.contains("0.8.25")
+                || source_lower.contains("0.8.26")
+                || source_lower.contains("^0.8")
+                || source_lower.contains(">=0.8"));
 
         // Only check contracts compiled with Solidity 0.8.24+ or explicitly using transient storage
         if !uses_transient && !pragma_version {

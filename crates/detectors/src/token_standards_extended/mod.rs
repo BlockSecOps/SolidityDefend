@@ -25,15 +25,15 @@
 //!    - ERC-2612 permit griefing
 //!    - Real-world: Front-running permit signatures
 
-pub mod transfer_return_bomb;
-pub mod enumeration_dos;
 pub mod batch_validation;
 pub mod decimal_confusion;
+pub mod enumeration_dos;
 pub mod permit_front_running;
+pub mod transfer_return_bomb;
 
 // Re-export detectors
-pub use transfer_return_bomb::ERC20TransferReturnBombDetector;
-pub use enumeration_dos::ERC721EnumerationDosDetector;
 pub use batch_validation::ERC1155BatchValidationDetector;
 pub use decimal_confusion::TokenDecimalConfusionDetector;
+pub use enumeration_dos::ERC721EnumerationDosDetector;
 pub use permit_front_running::TokenPermitFrontRunningDetector;
+pub use transfer_return_bomb::ERC20TransferReturnBombDetector;

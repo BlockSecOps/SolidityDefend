@@ -12,13 +12,20 @@ pub struct ArrayLengthMismatchDetector {
     base: BaseDetector,
 }
 
+impl Default for ArrayLengthMismatchDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrayLengthMismatchDetector {
     pub fn new() -> Self {
         Self {
             base: BaseDetector::new(
                 DetectorId("array-length-mismatch".to_string()),
                 "Array Length Mismatch".to_string(),
-                "Detects functions accepting multiple arrays without validating equal lengths".to_string(),
+                "Detects functions accepting multiple arrays without validating equal lengths"
+                    .to_string(),
                 vec![DetectorCategory::Validation, DetectorCategory::Logic],
                 Severity::Medium,
             ),

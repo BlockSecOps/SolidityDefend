@@ -10,6 +10,12 @@ pub struct WithdrawalDelayDetector {
     base: BaseDetector,
 }
 
+impl Default for WithdrawalDelayDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl WithdrawalDelayDetector {
     pub fn new() -> Self {
         Self {
@@ -100,9 +106,7 @@ impl WithdrawalDelayDetector {
         ctx: &AnalysisContext,
         is_vault: bool,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -128,10 +132,11 @@ impl WithdrawalDelayDetector {
             && is_withdrawal_function;
 
         if no_max_delay {
-            return Some(format!(
+            return Some(
                 "Withdrawal delay has no maximum cap, \
                 admin can set arbitrarily long delays locking funds indefinitely"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Admin can arbitrarily extend withdrawal delay
@@ -144,10 +149,11 @@ impl WithdrawalDelayDetector {
             && admin_can_modify;
 
         if modifies_delay && is_withdrawal_function {
-            return Some(format!(
+            return Some(
                 "Admin can modify withdrawal delay without limits, \
                 centralization risk enabling fund lockup"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: No emergency withdrawal mechanism
@@ -159,10 +165,11 @@ impl WithdrawalDelayDetector {
         let lacks_emergency = is_withdrawal_function && has_delay && !has_emergency;
 
         if lacks_emergency {
-            return Some(format!(
+            return Some(
                 "No emergency withdrawal option even with penalty, \
                 users cannot access funds in urgent situations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Withdrawal queue without fairness guarantees
@@ -176,10 +183,11 @@ impl WithdrawalDelayDetector {
             && !func_source.contains("order");
 
         if no_fifo_enforcement {
-            return Some(format!(
+            return Some(
                 "Withdrawal queue without FIFO enforcement, \
                 allows queue jumping or unfair withdrawal ordering"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Delay can be extended retroactively
@@ -191,10 +199,11 @@ impl WithdrawalDelayDetector {
             has_delay && is_withdrawal_function && !checks_original_delay;
 
         if no_retroactive_protection {
-            return Some(format!(
+            return Some(
                 "Withdrawal delay can be extended retroactively, \
                 users who initiated withdrawal may face unexpected delays"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Single point of failure for withdrawal processing
@@ -207,10 +216,11 @@ impl WithdrawalDelayDetector {
             && !func_source.contains("fallback");
 
         if no_backup_mechanism {
-            return Some(format!(
+            return Some(
                 "Single withdrawal processor without backup, \
                 if processor fails, all withdrawals blocked"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: No partial withdrawal capability
@@ -220,10 +230,11 @@ impl WithdrawalDelayDetector {
             && !func_source.contains("partial");
 
         if full_withdrawal_only {
-            return Some(format!(
+            return Some(
                 "Only full withdrawal allowed, no partial withdrawals, \
                 users must exit entirely even for small amounts"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Withdrawal depends on external call
@@ -237,13 +248,14 @@ impl WithdrawalDelayDetector {
             && !is_vault  // NEW: Skip if vault
             && !func_source.contains("nonReentrant")
             && func_source.contains("require")
-            && utils::has_actual_delay_mechanism(&func_source);  // NEW: Only flag if there's an actual delay
+            && utils::has_actual_delay_mechanism(&func_source); // NEW: Only flag if there's an actual delay
 
         if blocking_external_call {
-            return Some(format!(
+            return Some(
                 "Withdrawal requires successful external call, \
                 failing calls can permanently block withdrawals"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Withdrawal disabled by circuit breaker
@@ -254,10 +266,11 @@ impl WithdrawalDelayDetector {
         let no_emergency_override = has_circuit_breaker && is_withdrawal_function && !has_emergency;
 
         if no_emergency_override {
-            return Some(format!(
+            return Some(
                 "Withdrawal can be paused without emergency override, \
                 admin can indefinitely block all withdrawals"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Withdrawal window expires
@@ -271,10 +284,11 @@ impl WithdrawalDelayDetector {
             && !func_source.contains("renew");
 
         if withdrawal_expires {
-            return Some(format!(
+            return Some(
                 "Withdrawal requests expire without renewal option, \
                 users lose withdrawal opportunity and must restart process"
-            ));
+                    .to_string(),
+            );
         }
 
         None

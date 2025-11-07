@@ -115,10 +115,11 @@ pub fn has_timelock_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 4: Delay enforcement
-    if source.contains("delay") && source.contains("timestamp") {
-        if source.contains("require(") || source.contains("if (") {
-            return true;
-        }
+    if source.contains("delay")
+        && source.contains("timestamp")
+        && (source.contains("require(") || source.contains("if ("))
+    {
+        return true;
     }
 
     // Pattern 5: scheduleBatch or schedule functions (OpenZeppelin pattern)
@@ -147,17 +148,18 @@ pub fn has_multisig_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Gnosis Safe
-    if source.contains("GnosisSafe") || source.contains("Safe") {
-        if source.contains("import") || source.contains("is ") {
-            return true;
-        }
+    if (source.contains("GnosisSafe") || source.contains("Safe"))
+        && (source.contains("import") || source.contains("is "))
+    {
+        return true;
     }
 
     // Pattern 2: Threshold requirement
-    if source.contains("threshold") && (source.contains("require(") || source.contains("if (")) {
-        if source.contains("confirmations") || source.contains("signatures") {
-            return true;
-        }
+    if source.contains("threshold")
+        && (source.contains("require(") || source.contains("if ("))
+        && (source.contains("confirmations") || source.contains("signatures"))
+    {
+        return true;
     }
 
     // Pattern 3: Confirmation tracking

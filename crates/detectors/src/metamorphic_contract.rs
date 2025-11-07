@@ -37,8 +37,7 @@ impl MetamorphicContractDetector {
 
         // Early exit if no CREATE2 or SELFDESTRUCT
         let has_create2 = source_lower.contains("create2");
-        let has_selfdestruct =
-            source_lower.contains("selfdestruct")
+        let has_selfdestruct = source_lower.contains("selfdestruct")
             || source_lower.contains("suicide")
             || (source_lower.contains("function destroy") && source_lower.contains("external"))
             || (source_lower.contains("function kill") && source_lower.contains("external"))
@@ -49,7 +48,8 @@ impl MetamorphicContractDetector {
         }
 
         // Check for legitimate factory patterns (skip if present)
-        let has_salt_commitment = (source_lower.contains("salthash") || source_lower.contains("saltcommitment"))
+        let has_salt_commitment = (source_lower.contains("salthash")
+            || source_lower.contains("saltcommitment"))
             && (source_lower.contains("mapping") || source_lower.contains("timestamp"));
 
         let has_factory_pattern = source_lower.contains("factory")
@@ -63,7 +63,9 @@ impl MetamorphicContractDetector {
 
         let has_selfdestruct_timelock = source_lower.contains("selfdestruct")
             && source_lower.contains("timestamp")
-            && (source_lower.contains("delay") || source_lower.contains("days") || source_lower.contains("hours"));
+            && (source_lower.contains("delay")
+                || source_lower.contains("days")
+                || source_lower.contains("hours"));
 
         // If it's a legitimate factory with proper security, skip most checks
         let is_legitimate_factory = has_factory_pattern
@@ -189,8 +191,11 @@ impl MetamorphicContractDetector {
         // Pattern 8: No codehash validation after CREATE2
         if has_create2 {
             // Look for actual codehash validation patterns, not just comments
-            let has_codehash_validation = (source_lower.contains(".codehash") || source_lower.contains("extcodehash"))
-                && (source_lower.contains("require") || source_lower.contains("assert") || source_lower.contains("=="));
+            let has_codehash_validation = (source_lower.contains(".codehash")
+                || source_lower.contains("extcodehash"))
+                && (source_lower.contains("require")
+                    || source_lower.contains("assert")
+                    || source_lower.contains("=="));
 
             if !has_codehash_validation && has_selfdestruct {
                 findings.push((
@@ -339,9 +344,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("CRITICAL") && f.message.contains("constructor")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("CRITICAL") && f.message.contains("constructor"))
+        );
     }
 
     #[test]
@@ -365,9 +372,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("CREATE2 and SELFDESTRUCT")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("CREATE2 and SELFDESTRUCT"))
+        );
     }
 
     #[test]
@@ -395,9 +404,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("salt reuse") || f.message.contains("address reuse")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("salt reuse") || f.message.contains("address reuse"))
+        );
     }
 
     #[test]
@@ -436,9 +447,12 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("Delegatecall") || f.message.contains("code replacement")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("Delegatecall")
+                    || f.message.contains("code replacement"))
+        );
     }
 
     #[test]
@@ -479,9 +493,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("Calculates CREATE2 address")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("Calculates CREATE2 address"))
+        );
     }
 
     #[test]
@@ -510,9 +526,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("destroy function")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("destroy function"))
+        );
     }
 
     #[test]
@@ -538,9 +556,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("codehash validation")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("codehash validation"))
+        );
     }
 
     #[test]

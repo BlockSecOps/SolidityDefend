@@ -74,8 +74,7 @@ impl Detector for TokenPermitFrontRunningDetector {
         // Pattern 1: permit() followed by transferFrom without try-catch
         if lower.contains("permit(") {
             let has_transferfrom = lower.contains("transferfrom");
-            let has_error_handling = lower.contains("try")
-                || lower.contains("catch");
+            let has_error_handling = lower.contains("try") || lower.contains("catch");
 
             if has_transferfrom && !has_error_handling {
                 let finding = self.base.create_finding(
@@ -95,8 +94,8 @@ impl Detector for TokenPermitFrontRunningDetector {
 
         // Pattern 2: No allowance check before permit
         if uses_permit {
-            let checks_allowance = lower.contains("allowance(")
-                || lower.contains("currentallowance");
+            let checks_allowance =
+                lower.contains("allowance(") || lower.contains("currentallowance");
 
             if !checks_allowance {
                 let finding = self.base.create_finding(
@@ -117,11 +116,10 @@ impl Detector for TokenPermitFrontRunningDetector {
         // Pattern 3: Deadline too far in future
         if lower.contains("permit(") {
             let has_deadline_check = lower.contains("deadline")
-                && (lower.contains("block.timestamp")
-                    || lower.contains("require(deadline"));
+                && (lower.contains("block.timestamp") || lower.contains("require(deadline"));
 
-            let has_max_deadline = lower.contains("max_deadline")
-                || lower.contains("deadline_limit");
+            let has_max_deadline =
+                lower.contains("max_deadline") || lower.contains("deadline_limit");
 
             if has_deadline_check && !has_max_deadline {
                 let finding = self.base.create_finding(
@@ -141,8 +139,7 @@ impl Detector for TokenPermitFrontRunningDetector {
 
         // Pattern 4: Permit signature reuse protection missing
         if uses_permit {
-            let has_nonce_tracking = lower.contains("nonce")
-                || lower.contains("nonces(");
+            let has_nonce_tracking = lower.contains("nonce") || lower.contains("nonces(");
 
             if !has_nonce_tracking {
                 let finding = self.base.create_finding(
@@ -162,9 +159,8 @@ impl Detector for TokenPermitFrontRunningDetector {
 
         // Pattern 5: Permit used in critical path without backup
         if lower.contains("permit(") {
-            let has_alternative = lower.contains("approve")
-                || lower.contains("else")
-                || lower.contains("fallback");
+            let has_alternative =
+                lower.contains("approve") || lower.contains("else") || lower.contains("fallback");
 
             if !has_alternative {
                 let finding = self.base.create_finding(

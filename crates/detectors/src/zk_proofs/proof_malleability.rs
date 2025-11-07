@@ -119,8 +119,7 @@ impl Detector for ZKProofMalleabilityDetector {
 
         // Pattern 3: Missing signature over proof
         if lower.contains("verifyproof") {
-            let has_signature = lower.contains("signature")
-                || lower.contains("ecrecover");
+            let has_signature = lower.contains("signature") || lower.contains("ecrecover");
 
             if !has_signature {
                 let finding = self.base.create_finding(

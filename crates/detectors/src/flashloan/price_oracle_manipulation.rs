@@ -28,7 +28,8 @@ impl FlashloanPriceOracleManipulationDetector {
             base: BaseDetector::new(
                 DetectorId("flashloan-price-oracle-manipulation".to_string()),
                 "Flash Loan Price Oracle Manipulation".to_string(),
-                "Detects oracle manipulation vulnerabilities exploitable via flash loans".to_string(),
+                "Detects oracle manipulation vulnerabilities exploitable via flash loans"
+                    .to_string(),
                 vec![DetectorCategory::DeFi],
                 Severity::Critical,
             ),
@@ -37,12 +38,18 @@ impl FlashloanPriceOracleManipulationDetector {
 
     fn is_defi_protocol(&self, ctx: &AnalysisContext) -> bool {
         let code_lower = ctx.source_code.to_lowercase();
-        code_lower.contains("borrow") || code_lower.contains("lend") ||
-        code_lower.contains("collateral") || code_lower.contains("liquidate") ||
-        code_lower.contains("swap")
+        code_lower.contains("borrow")
+            || code_lower.contains("lend")
+            || code_lower.contains("collateral")
+            || code_lower.contains("liquidate")
+            || code_lower.contains("swap")
     }
 
-    fn get_function_source<'a>(&self, function: &ast::Function, ctx: &'a AnalysisContext) -> &'a str {
+    fn get_function_source<'a>(
+        &self,
+        function: &ast::Function,
+        ctx: &'a AnalysisContext,
+    ) -> &'a str {
         let source = &ctx.source_code;
         let func_start = function.location.start().offset();
         let func_end = function.location.end().offset();
@@ -59,13 +66,13 @@ impl FlashloanPriceOracleManipulationDetector {
         let func_lower = func_source.to_lowercase();
 
         // Check if uses spot price (getReserves) without TWAP protection
-        let uses_spot = func_lower.contains("getreserves") ||
-                       func_lower.contains("getamountsout") ||
-                       func_lower.contains("spotprice");
+        let uses_spot = func_lower.contains("getreserves")
+            || func_lower.contains("getamountsout")
+            || func_lower.contains("spotprice");
 
-        let uses_twap = func_lower.contains("consult") ||
-                       func_lower.contains("observe") ||
-                       func_lower.contains("twap");
+        let uses_twap = func_lower.contains("consult")
+            || func_lower.contains("observe")
+            || func_lower.contains("twap");
 
         uses_spot && !uses_twap
     }
@@ -119,9 +126,11 @@ impl Detector for FlashloanPriceOracleManipulationDetector {
         for function in ctx.get_functions() {
             let func_name = function.name.name.to_lowercase();
 
-            if func_name.contains("borrow") || func_name.contains("liquidate") ||
-               func_name.contains("swap") || func_name.contains("price") {
-
+            if func_name.contains("borrow")
+                || func_name.contains("liquidate")
+                || func_name.contains("swap")
+                || func_name.contains("price")
+            {
                 let line = function.name.location.start().line() as u32;
 
                 if self.uses_spot_price_oracle(function, ctx) {

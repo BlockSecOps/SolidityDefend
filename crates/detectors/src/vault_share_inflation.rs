@@ -10,6 +10,12 @@ pub struct VaultShareInflationDetector {
     base: BaseDetector,
 }
 
+impl Default for VaultShareInflationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VaultShareInflationDetector {
     pub fn new() -> Self {
         Self {
@@ -89,10 +95,18 @@ impl Detector for VaultShareInflationDetector {
 
         // Calculate protection score for confidence calibration
         let mut protection_score = 0;
-        if has_internal_tracking { protection_score += 2; } // Strong protection
-        if has_donation_guard { protection_score += 1; }
-        if has_strategy_isolation { protection_score += 1; }
-        if has_reward_distribution { protection_score += 1; }
+        if has_internal_tracking {
+            protection_score += 2;
+        } // Strong protection
+        if has_donation_guard {
+            protection_score += 1;
+        }
+        if has_strategy_isolation {
+            protection_score += 1;
+        }
+        if has_reward_distribution {
+            protection_score += 1;
+        }
 
         for function in ctx.get_functions() {
             if let Some(inflation_issue) = self.check_share_inflation(function, ctx) {
@@ -155,9 +169,7 @@ impl VaultShareInflationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -190,10 +202,8 @@ impl VaultShareInflationDetector {
                                     !func_source.contains("OFFSET");
 
         if vulnerable_calculation {
-            return Some(format!(
-                "Share calculation vulnerable to inflation: uses assets * totalSupply / totalAssets \
-                without virtual shares/assets offset protection"
-            ));
+            return Some("Share calculation vulnerable to inflation: uses assets * totalSupply / totalAssets \
+                without virtual shares/assets offset protection".to_string());
         }
 
         // Pattern 2: No minimum deposit requirement
@@ -204,10 +214,11 @@ impl VaultShareInflationDetector {
             && !func_source.contains("MIN_DEPOSIT");
 
         if lacks_minimum {
-            return Some(format!(
+            return Some(
                 "No minimum deposit amount enforced, allowing 1 wei deposit \
                 that can be used for share price manipulation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: totalSupply() == 0 case not handled specially
@@ -221,10 +232,11 @@ impl VaultShareInflationDetector {
             && !func_source.contains("INITIAL_");
 
         if lacks_bootstrap_protection {
-            return Some(format!(
+            return Some(
                 "Share calculation doesn't handle totalSupply == 0 case specially, \
                 vulnerable to first depositor setting arbitrary share/asset ratio"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: No dead shares minted at deployment
@@ -240,10 +252,11 @@ impl VaultShareInflationDetector {
             && !func_source.contains("deadShares");
 
         if lacks_dead_shares && is_deposit_function {
-            return Some(format!(
+            return Some(
                 "Vault doesn't mint dead shares to address(0) at initialization, \
                 leaving it vulnerable to first depositor attack"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Direct asset balance check without accounting
@@ -257,10 +270,11 @@ impl VaultShareInflationDetector {
             && !func_source.contains("internalBalance");
 
         if lacks_internal_accounting {
-            return Some(format!(
+            return Some(
                 "Uses token.balanceOf(address(this)) for share price calculation \
                 without internal accounting, vulnerable to direct token transfer manipulation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Explicit vulnerability marker
@@ -269,9 +283,7 @@ impl VaultShareInflationDetector {
                 || func_source.contains("first depositor")
                 || func_source.contains("ERC4626"))
         {
-            return Some(format!(
-                "Vault share inflation vulnerability marker detected"
-            ));
+            return Some("Vault share inflation vulnerability marker detected".to_string());
         }
 
         None

@@ -222,24 +222,32 @@ impl Detector for SocialRecoveryDetector {
         let source_lower = source.to_lowercase();
 
         // Check for comprehensive social recovery protection
-        let has_recovery_timelock = source.contains("RECOVERY_TIMELOCK") || source.contains("RECOVERY_DELAY");
-        let has_min_guardians = source.contains("MIN_GUARDIANS") || source_lower.contains("minimum") && source_lower.contains("guardian");
+        let has_recovery_timelock =
+            source.contains("RECOVERY_TIMELOCK") || source.contains("RECOVERY_DELAY");
+        let has_min_guardians = source.contains("MIN_GUARDIANS")
+            || source_lower.contains("minimum") && source_lower.contains("guardian");
         let has_threshold = source_lower.contains("threshold") && source_lower.contains(">=");
-        let has_approval_tracking = source_lower.contains("approval") || source_lower.contains("approvalcount");
+        let has_approval_tracking =
+            source_lower.contains("approval") || source_lower.contains("approvalcount");
         let has_executed_flag = source_lower.contains("executed") && source_lower.contains("bool");
 
         // If contract has comprehensive social recovery protections, return early
-        if has_recovery_timelock && has_min_guardians && has_threshold && has_approval_tracking && has_executed_flag {
+        if has_recovery_timelock
+            && has_min_guardians
+            && has_threshold
+            && has_approval_tracking
+            && has_executed_flag
+        {
             // Comprehensive social recovery with timelock + guardian threshold + replay protection
             return Ok(findings);
         }
 
         // Also check for timelock + multisig pattern (alternative protection)
-        if access_control_patterns::has_timelock_pattern(ctx) {
-            if access_control_patterns::has_multisig_pattern(ctx) {
-                // Timelock + multisig provides strong protection for account recovery
-                return Ok(findings);
-            }
+        if access_control_patterns::has_timelock_pattern(ctx)
+            && access_control_patterns::has_multisig_pattern(ctx)
+        {
+            // Timelock + multisig provides strong protection for account recovery
+            return Ok(findings);
         }
 
         for function in ctx.get_functions() {

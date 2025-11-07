@@ -24,6 +24,12 @@ pub struct LoweringContext {
     continue_labels: Vec<BlockId>,
 }
 
+impl Default for LoweringContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LoweringContext {
     pub fn new() -> Self {
         Self {

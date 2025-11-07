@@ -102,9 +102,7 @@ pub fn is_erc721_function(function_name: &str, ctx: &AnalysisContext) -> bool {
     let name_lower = function_name.to_lowercase();
 
     // Check if function name matches ERC721 standard
-    let is_standard_function = erc721_functions
-        .iter()
-        .any(|&func| name_lower == func);
+    let is_standard_function = erc721_functions.iter().any(|&func| name_lower == func);
 
     if !is_standard_function {
         return false;
@@ -138,9 +136,7 @@ pub fn is_erc1155_function(function_name: &str, ctx: &AnalysisContext) -> bool {
     let name_lower = function_name.to_lowercase();
 
     // Check if function name matches ERC1155 standard
-    let is_standard_function = erc1155_functions
-        .iter()
-        .any(|&func| name_lower == func);
+    let is_standard_function = erc1155_functions.iter().any(|&func| name_lower == func);
 
     if !is_standard_function {
         return false;

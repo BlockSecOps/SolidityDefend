@@ -519,6 +519,12 @@ pub struct RegressionTestResults {
     pub tests: HashMap<String, RegressionTestResult>,
 }
 
+impl Default for RegressionTestResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RegressionTestResults {
     pub fn new() -> Self {
         Self {
@@ -571,7 +577,7 @@ impl RegressionTestResults {
         );
 
         // Add detailed results
-        for (_name, result) in &self.tests {
+        for result in self.tests.values() {
             summary.push_str(&result.generate_report());
             summary.push('\n');
         }

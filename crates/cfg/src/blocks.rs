@@ -81,7 +81,7 @@ impl BasicBlockAnalyzer {
         leaders.insert(ir_function.entry_block);
 
         // Find targets of branches
-        for (_block_id, basic_block) in &ir_function.basic_blocks {
+        for basic_block in ir_function.basic_blocks.values() {
             for instruction in &basic_block.instructions {
                 match instruction {
                     Instruction::Branch(target) => {
@@ -536,25 +536,25 @@ pub struct BasicBlockStatistics {
 
 impl std::fmt::Display for BasicBlockStatistics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Basic Block Statistics:\n")?;
-        write!(f, "  Total blocks: {}\n", self.total_blocks)?;
-        write!(f, "  Leader blocks: {}\n", self.leader_blocks)?;
-        write!(f, "  Terminator blocks: {}\n", self.terminator_blocks)?;
-        write!(f, "  Empty blocks: {}\n", self.empty_blocks)?;
-        write!(f, "  Straight-line blocks: {}\n", self.straight_line_blocks)?;
-        write!(
+        writeln!(f, "Basic Block Statistics:")?;
+        writeln!(f, "  Total blocks: {}", self.total_blocks)?;
+        writeln!(f, "  Leader blocks: {}", self.leader_blocks)?;
+        writeln!(f, "  Terminator blocks: {}", self.terminator_blocks)?;
+        writeln!(f, "  Empty blocks: {}", self.empty_blocks)?;
+        writeln!(f, "  Straight-line blocks: {}", self.straight_line_blocks)?;
+        writeln!(
             f,
-            "  Potential loop headers: {}\n",
+            "  Potential loop headers: {}",
             self.potential_loop_headers
         )?;
-        write!(f, "  Merge points: {}\n", self.merge_points)?;
-        write!(f, "  Total instructions: {}\n", self.total_instructions)?;
-        write!(
+        writeln!(f, "  Merge points: {}", self.merge_points)?;
+        writeln!(f, "  Total instructions: {}", self.total_instructions)?;
+        writeln!(
             f,
-            "  Average instructions per block: {:.2}\n",
+            "  Average instructions per block: {:.2}",
             self.average_instructions_per_block
         )?;
-        write!(f, "  Max complexity: {}\n", self.max_complexity)?;
+        writeln!(f, "  Max complexity: {}", self.max_complexity)?;
         write!(f, "  Average complexity: {:.2}", self.average_complexity)
     }
 }
@@ -631,7 +631,7 @@ mod tests {
         assert!(leaders.contains(&ir_function.entry_block));
 
         // Should have found leaders from branch targets
-        assert!(leaders.len() >= 1);
+        assert!(!leaders.is_empty());
     }
 
     #[test]
@@ -642,7 +642,7 @@ mod tests {
         let terminators = analyzer.find_terminators(&ir_function).unwrap();
 
         // Should have found some terminators
-        assert!(terminators.len() > 0);
+        assert!(!terminators.is_empty());
     }
 
     #[test]

@@ -9,6 +9,12 @@ pub struct NonceReuseDetector {
     base: BaseDetector,
 }
 
+impl Default for NonceReuseDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NonceReuseDetector {
     pub fn new() -> Self {
         Self {
@@ -95,9 +101,7 @@ impl NonceReuseDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -118,10 +122,11 @@ impl NonceReuseDetector {
             && !func_source.contains("] =");
 
         if lacks_increment {
-            return Some(format!(
+            return Some(
                 "Nonce is checked but never incremented, \
                 allowing same nonce to be reused for replay attacks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Nonce incremented before validation
@@ -131,19 +136,21 @@ impl NonceReuseDetector {
 
         if let (Some(inc), Some(req)) = (nonce_increment_idx, require_idx) {
             if inc < req {
-                return Some(format!(
+                return Some(
                     "Nonce incremented before validation checks, \
                     allows nonce consumption even when transaction fails"
-                ));
+                        .to_string(),
+                );
             }
         }
 
         if let (Some(inc), Some(rev)) = (nonce_increment_idx, revert_idx) {
             if inc < rev {
-                return Some(format!(
+                return Some(
                     "Nonce incremented before revert conditions, \
                     nonce gets consumed even on failed transactions"
-                ));
+                        .to_string(),
+                );
             }
         }
 
@@ -159,10 +166,11 @@ impl NonceReuseDetector {
             || !func_source.contains("keccak256") && !func_source.contains("nonce");
 
         if missing_nonce_in_sig {
-            return Some(format!(
+            return Some(
                 "Signature verification without nonce in signed message, \
                 allows signature replay across different nonces"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Global nonce instead of per-user
@@ -172,10 +180,11 @@ impl NonceReuseDetector {
         let not_per_user = uses_global_nonce && !func_source.contains("mapping(address");
 
         if not_per_user {
-            return Some(format!(
+            return Some(
                 "Uses global nonce instead of per-user mapping, \
                 forces sequential execution and limits parallelization"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Nonce parameter without validation
@@ -188,10 +197,11 @@ impl NonceReuseDetector {
             && !func_source.contains("if (nonce !=");
 
         if no_validation {
-            return Some(format!(
+            return Some(
                 "Nonce parameter accepted but not validated against stored nonce, \
                 allows arbitrary nonce values"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Missing nonce cancellation mechanism
@@ -203,10 +213,11 @@ impl NonceReuseDetector {
             && !func_source.contains("revoke");
 
         if no_cancellation {
-            return Some(format!(
+            return Some(
                 "No nonce cancellation mechanism, \
                 users cannot invalidate pending transactions with old nonces"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Nonce overflow not handled
@@ -225,10 +236,11 @@ impl NonceReuseDetector {
             requires_sequential && !func_source.contains(">=") && !func_source.contains("bitmap");
 
         if no_gap_allowed {
-            return Some(format!(
+            return Some(
                 "Requires strictly sequential nonces without gaps, \
                 single failed transaction blocks all subsequent transactions"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Nonce used for randomness
@@ -238,17 +250,18 @@ impl NonceReuseDetector {
             && uses_nonce;
 
         if uses_for_randomness {
-            return Some(format!(
+            return Some(
                 "Nonce used for randomness generation, \
                 nonces are predictable and unsuitable for random number generation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Explicit vulnerability marker
         if func_source.contains("VULNERABILITY")
             && (func_source.contains("nonce") || func_source.contains("replay"))
         {
-            return Some(format!("Nonce reuse vulnerability marker detected"));
+            return Some("Nonce reuse vulnerability marker detected".to_string());
         }
 
         None

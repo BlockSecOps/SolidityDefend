@@ -21,8 +21,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::restaking::classification::*;
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use ast;
 
 pub struct AVSValidationBypassDetector {
@@ -53,9 +53,10 @@ impl AVSValidationBypassDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check AVS registration functions
-        if !func_name_lower.contains("registeravs") &&
-           !func_name_lower.contains("register") &&
-           !(func_name_lower.contains("avs") && func_name_lower.contains("create")) {
+        if !func_name_lower.contains("registeravs")
+            && !func_name_lower.contains("register")
+            && !(func_name_lower.contains("avs") && func_name_lower.contains("create"))
+        {
             return findings;
         }
 
@@ -132,8 +133,7 @@ impl AVSValidationBypassDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check AVS registration functions
-        if !func_name_lower.contains("registeravs") &&
-           !func_name_lower.contains("register") {
+        if !func_name_lower.contains("registeravs") && !func_name_lower.contains("register") {
             return findings;
         }
 
@@ -207,9 +207,10 @@ impl AVSValidationBypassDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check slashing policy functions
-        if !func_name_lower.contains("setslashing") &&
-           !func_name_lower.contains("slashingpolicy") &&
-           !func_name_lower.contains("registeravs") {
+        if !func_name_lower.contains("setslashing")
+            && !func_name_lower.contains("slashingpolicy")
+            && !func_name_lower.contains("registeravs")
+        {
             return findings;
         }
 
@@ -276,9 +277,10 @@ impl AVSValidationBypassDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check AVS delegation/assignment functions
-        if !func_name_lower.contains("delegate") &&
-           !func_name_lower.contains("assign") &&
-           !func_name_lower.contains("join") {
+        if !func_name_lower.contains("delegate")
+            && !func_name_lower.contains("assign")
+            && !func_name_lower.contains("join")
+        {
             return findings;
         }
 
@@ -341,8 +343,7 @@ impl AVSValidationBypassDetector {
         // Check if contract has AVS registration
         let has_avs_registration = ctx.get_functions().iter().any(|f| {
             let name = f.name.name.to_lowercase();
-            (name.contains("register") && name.contains("avs")) ||
-            name == "registeravs"
+            (name.contains("register") && name.contains("avs")) || name == "registeravs"
         });
 
         if !has_avs_registration {
@@ -468,7 +469,6 @@ impl Detector for AVSValidationBypassDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

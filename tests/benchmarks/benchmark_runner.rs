@@ -143,6 +143,14 @@ pub fn run_performance_benchmarks() -> Result<(), Box<dyn std::error::Error>> {
     runner.run_all_benchmarks()
 }
 
+#[allow(dead_code)]
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let runner = BenchmarkRunner::new("benchmark_results");
+    runner.run_all_benchmarks()?;
+    println!("Benchmarks completed successfully!");
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -171,12 +179,4 @@ mod tests {
         // Clean up
         fs::remove_dir_all(test_dir).unwrap();
     }
-}
-
-#[allow(dead_code)]
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let runner = BenchmarkRunner::new("benchmark_results");
-    runner.run_all_benchmarks()?;
-    println!("Benchmarks completed successfully!");
-    Ok(())
 }

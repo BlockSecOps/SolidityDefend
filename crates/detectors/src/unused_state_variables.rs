@@ -10,6 +10,12 @@ pub struct UnusedStateVariablesDetector {
     base: BaseDetector,
 }
 
+impl Default for UnusedStateVariablesDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnusedStateVariablesDetector {
     pub fn new() -> Self {
         Self {
@@ -181,39 +187,58 @@ impl UnusedStateVariablesDetector {
         }
 
         // Exclude function calls, require statements, and other non-declarations
-        if trimmed.contains('(') || trimmed.contains("require") || trimmed.contains("assert")
-            || trimmed.contains("revert") || trimmed.starts_with("emit ")
-            || trimmed.contains(".call") || trimmed.contains(".transfer")
-            || trimmed.contains(".send") || trimmed.contains(".delegatecall") {
+        if trimmed.contains('(')
+            || trimmed.contains("require")
+            || trimmed.contains("assert")
+            || trimmed.contains("revert")
+            || trimmed.starts_with("emit ")
+            || trimmed.contains(".call")
+            || trimmed.contains(".transfer")
+            || trimmed.contains(".send")
+            || trimmed.contains(".delegatecall")
+        {
             return false;
         }
 
         // Exclude control flow and other statements
-        if trimmed.starts_with("if ") || trimmed.starts_with("for ")
-            || trimmed.starts_with("while ") || trimmed.starts_with("return ")
-            || trimmed.starts_with("delete ") {
+        if trimmed.starts_with("if ")
+            || trimmed.starts_with("for ")
+            || trimmed.starts_with("while ")
+            || trimmed.starts_with("return ")
+            || trimmed.starts_with("delete ")
+        {
             return false;
         }
 
         // Exclude keywords that aren't state variables
-        if trimmed.starts_with("function ") || trimmed.starts_with("modifier ")
-            || trimmed.starts_with("constructor") || trimmed.starts_with("event ")
-            || trimmed.starts_with("error ") || trimmed.starts_with("struct ")
-            || trimmed.starts_with("enum ") || trimmed.starts_with("using ")
-            || trimmed.starts_with("import ") || trimmed.starts_with("pragma ") {
+        if trimmed.starts_with("function ")
+            || trimmed.starts_with("modifier ")
+            || trimmed.starts_with("constructor")
+            || trimmed.starts_with("event ")
+            || trimmed.starts_with("error ")
+            || trimmed.starts_with("struct ")
+            || trimmed.starts_with("enum ")
+            || trimmed.starts_with("using ")
+            || trimmed.starts_with("import ")
+            || trimmed.starts_with("pragma ")
+        {
             return false;
         }
 
         // State variables should start with a type or visibility modifier
-        let has_type_or_visibility =
-            trimmed.starts_with("uint") || trimmed.starts_with("int")
-            || trimmed.starts_with("address") || trimmed.starts_with("bool")
-            || trimmed.starts_with("bytes") || trimmed.starts_with("string")
-            || trimmed.starts_with("mapping") || trimmed.starts_with("public ")
-            || trimmed.starts_with("private ") || trimmed.starts_with("internal ")
-            || trimmed.starts_with("constant ") || trimmed.starts_with("immutable ");
 
-        has_type_or_visibility
+        trimmed.starts_with("uint")
+            || trimmed.starts_with("int")
+            || trimmed.starts_with("address")
+            || trimmed.starts_with("bool")
+            || trimmed.starts_with("bytes")
+            || trimmed.starts_with("string")
+            || trimmed.starts_with("mapping")
+            || trimmed.starts_with("public ")
+            || trimmed.starts_with("private ")
+            || trimmed.starts_with("internal ")
+            || trimmed.starts_with("constant ")
+            || trimmed.starts_with("immutable ")
     }
 
     fn parse_state_variable(&self, line: &str) -> Option<(String, String)> {
@@ -320,7 +345,11 @@ impl UnusedStateVariablesDetector {
         var_type.contains("constant") || var_type.contains("immutable")
     }
 
-    fn build_usage_map(&self, source: &str, state_variables: &HashMap<String, (u32, String)>) -> HashMap<String, usize> {
+    fn build_usage_map(
+        &self,
+        source: &str,
+        state_variables: &HashMap<String, (u32, String)>,
+    ) -> HashMap<String, usize> {
         let mut usage_map = HashMap::new();
 
         // Initialize all variables with count 1 (declaration)

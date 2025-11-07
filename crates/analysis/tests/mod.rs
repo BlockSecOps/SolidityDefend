@@ -205,7 +205,7 @@ impl TestRunner {
                 drop(ast); // Explicit drop to end arena borrowing
                 match analysis_result {
                     Ok(results) => {
-                        if results.function_analyses.len() >= 1 {
+                        if !results.function_analyses.is_empty() {
                             TestResult::passed("Multiple functions analysis working")
                         } else {
                             TestResult::failed("Expected at least one function analysis")
@@ -497,6 +497,12 @@ pub struct BasicTestResults {
     pub multiple_functions: TestResult,
 }
 
+impl Default for BasicTestResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BasicTestResults {
     pub fn new() -> Self {
         Self {
@@ -569,6 +575,12 @@ pub struct IntegrationTestResults {
     pub complex_scenarios: TestResult,
 }
 
+impl Default for IntegrationTestResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IntegrationTestResults {
     pub fn new() -> Self {
         Self {
@@ -612,6 +624,12 @@ pub struct PerformanceBenchmarkResults {
     pub performance_issues: Vec<String>,
 }
 
+impl Default for PerformanceBenchmarkResults {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceBenchmarkResults {
     pub fn new() -> Self {
         Self {
@@ -630,6 +648,12 @@ pub struct RegressionTestResults {
     pub passing_tests: usize,
     pub total_tests: usize,
     pub regressions: usize,
+}
+
+impl Default for RegressionTestResults {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl RegressionTestResults {
@@ -652,6 +676,12 @@ pub struct TestReport {
     pub performance_benchmarks: PerformanceBenchmarkResults,
     pub regression_tests: RegressionTestResults,
     pub total_duration: std::time::Duration,
+}
+
+impl Default for TestReport {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TestReport {

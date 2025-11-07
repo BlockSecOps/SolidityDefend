@@ -9,6 +9,12 @@ pub struct DangerousDelegatecallDetector {
     base: BaseDetector,
 }
 
+impl Default for DangerousDelegatecallDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DangerousDelegatecallDetector {
     pub fn new() -> Self {
         Self {
@@ -99,9 +105,7 @@ impl DangerousDelegatecallDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -115,35 +119,36 @@ impl DangerousDelegatecallDetector {
 
         // Pattern 1: Delegatecall with user-controlled target
         if self.is_user_controlled_target(&func_source, function) {
-            return Some(format!(
+            return Some(
                 "Delegatecall target is controlled by function parameters or user input, \
                 allowing arbitrary code execution"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Delegatecall without access control
         if self.lacks_access_control(&func_source, function) {
-            return Some(format!(
+            return Some(
                 "Delegatecall is performed without proper access control, \
                 potentially accessible by any caller"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Delegatecall without target validation
         if self.lacks_target_validation(&func_source) {
-            return Some(format!(
+            return Some(
                 "Delegatecall target is not validated against a whitelist \
                 of approved addresses"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Explicit vulnerability marker
         if func_source.contains("VULNERABILITY")
             && (func_source.contains("delegatecall") || func_source.contains("arbitrary code"))
         {
-            return Some(format!(
-                "Delegatecall vulnerability marker detected in function"
-            ));
+            return Some("Delegatecall vulnerability marker detected in function".to_string());
         }
 
         None

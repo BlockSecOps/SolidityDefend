@@ -338,13 +338,9 @@ pub struct ComplexityMetrics {
 
 impl std::fmt::Display for ComplexityMetrics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "  Cyclomatic Complexity: {}\n",
-            self.cyclomatic_complexity
-        )?;
-        write!(f, "  Essential Complexity: {}\n", self.essential_complexity)?;
-        write!(f, "  Max Nesting Depth: {}\n", self.max_nesting_depth)?;
+        writeln!(f, "  Cyclomatic Complexity: {}", self.cyclomatic_complexity)?;
+        writeln!(f, "  Essential Complexity: {}", self.essential_complexity)?;
+        writeln!(f, "  Max Nesting Depth: {}", self.max_nesting_depth)?;
         write!(f, "  Estimated Total Paths: {}", self.total_paths)
     }
 }
@@ -362,11 +358,11 @@ pub struct StructuralProperties {
 
 impl std::fmt::Display for StructuralProperties {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "  Reducible: {}\n", self.is_reducible)?;
-        write!(f, "  Acyclic: {}\n", self.is_acyclic)?;
-        write!(f, "  Multiple Entries: {}\n", self.has_multiple_entries)?;
-        write!(f, "  Multiple Exits: {}\n", self.has_multiple_exits)?;
-        write!(f, "  Unreachable Code: {}\n", self.has_unreachable_code)?;
+        writeln!(f, "  Reducible: {}", self.is_reducible)?;
+        writeln!(f, "  Acyclic: {}", self.is_acyclic)?;
+        writeln!(f, "  Multiple Entries: {}", self.has_multiple_entries)?;
+        writeln!(f, "  Multiple Exits: {}", self.has_multiple_exits)?;
+        writeln!(f, "  Unreachable Code: {}", self.has_unreachable_code)?;
         write!(f, "  Well-Structured: {}", self.is_well_structured)
     }
 }
@@ -383,10 +379,10 @@ pub struct OptimizationOpportunities {
 
 impl std::fmt::Display for OptimizationOpportunities {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "  Dead Code Blocks: {:?}\n", self.dead_code_blocks)?;
-        write!(f, "  Mergeable Blocks: {:?}\n", self.mergeable_blocks)?;
-        write!(f, "  Empty Blocks: {:?}\n", self.empty_blocks)?;
-        write!(f, "  Redundant Branches: {:?}\n", self.redundant_branches)?;
+        writeln!(f, "  Dead Code Blocks: {:?}", self.dead_code_blocks)?;
+        writeln!(f, "  Mergeable Blocks: {:?}", self.mergeable_blocks)?;
+        writeln!(f, "  Empty Blocks: {:?}", self.empty_blocks)?;
+        writeln!(f, "  Redundant Branches: {:?}", self.redundant_branches)?;
         write!(
             f,
             "  Loop Optimizations: {} opportunities",

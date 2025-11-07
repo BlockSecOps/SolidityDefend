@@ -11,6 +11,12 @@ pub struct StateMachineDetector {
     base: BaseDetector,
 }
 
+impl Default for StateMachineDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StateMachineDetector {
     pub fn new() -> Self {
         Self {
@@ -35,19 +41,19 @@ impl StateMachineDetector {
         if let Some(body) = &function.body {
             // Track state variables and their modifications
             let state_vars = self.identify_state_variables(ctx);
-            let state_changes = self.track_state_changes(&body, &state_vars);
+            let state_changes = self.track_state_changes(body, &state_vars);
 
             // Check for uninitialized state access
-            findings.extend(self.check_uninitialized_state_access(&body, &state_vars, ctx));
+            findings.extend(self.check_uninitialized_state_access(body, &state_vars, ctx));
 
             // Check for invalid state transitions
             findings.extend(self.check_invalid_state_transitions(&state_changes, ctx));
 
             // Check for state variables modified without proper checks
-            findings.extend(self.check_unchecked_state_modifications(&body, &state_vars, ctx));
+            findings.extend(self.check_unchecked_state_modifications(body, &state_vars, ctx));
 
             // Check for reentrancy affecting state machine
-            findings.extend(self.check_reentrancy_state_issues(&body, &state_vars, ctx));
+            findings.extend(self.check_reentrancy_state_issues(body, &state_vars, ctx));
         }
 
         findings
@@ -186,7 +192,7 @@ impl StateMachineDetector {
                     if state_vars.contains(id.name) {
                         changes
                             .entry(id.name.to_string())
-                            .or_insert_with(Vec::new)
+                            .or_default()
                             .push(id.location.clone());
                     }
                 }
@@ -541,38 +547,35 @@ impl StateMachineDetector {
         state_vars: &HashSet<String>,
         ctx: &AnalysisContext<'_>,
     ) -> Option<Finding> {
-        match stmt {
-            ast::Statement::Expression(expr) => {
-                if let ast::Expression::FunctionCall {
-                    function, location, ..
-                } = expr
-                {
-                    // Check for external calls
-                    if self.is_external_call(function) {
-                        // Check if state variables are modified after external call
-                        if self.has_state_modification_after_external_call(stmt, state_vars) {
-                            let message = "State variables modified after external call - potential reentrancy affecting state machine".to_string();
-                            let finding = self
-                                .base
-                                .create_finding_with_severity(
-                                    ctx,
-                                    message,
-                                    location.start().line() as u32,
-                                    location.start().column() as u32,
-                                    location.byte_length() as u32,
-                                    Severity::Critical, // Reentrancy is critical
-                                )
-                                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                                .with_fix_suggestion(
-                                    "Use checks-effects-interactions pattern or reentrancy guards"
-                                        .to_string(),
-                                );
-                            return Some(finding);
-                        }
+        if let ast::Statement::Expression(expr) = stmt {
+            if let ast::Expression::FunctionCall {
+                function, location, ..
+            } = expr
+            {
+                // Check for external calls
+                if self.is_external_call(function) {
+                    // Check if state variables are modified after external call
+                    if self.has_state_modification_after_external_call(stmt, state_vars) {
+                        let message = "State variables modified after external call - potential reentrancy affecting state machine".to_string();
+                        let finding = self
+                            .base
+                            .create_finding_with_severity(
+                                ctx,
+                                message,
+                                location.start().line() as u32,
+                                location.start().column() as u32,
+                                location.byte_length() as u32,
+                                Severity::Critical, // Reentrancy is critical
+                            )
+                            .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                            .with_fix_suggestion(
+                                "Use checks-effects-interactions pattern or reentrancy guards"
+                                    .to_string(),
+                            );
+                        return Some(finding);
                     }
                 }
             }
-            _ => {}
         }
         None
     }
@@ -657,28 +660,27 @@ impl AstAnalyzer for StateMachineDetector {
         let mut findings = Vec::new();
 
         // This detector primarily works at the function level, but can analyze individual statements
-        match statement {
-            ast::Statement::Expression(ast::Expression::Assignment { left, location, .. }) => {
-                if let ast::Expression::Identifier(id) = left {
-                    // Simple check for potential state variable assignment
-                    if id.name.to_lowercase().contains("state") {
-                        let message =
-                            format!("Potential state variable '{}' assignment detected", id.name);
-                        let finding = self
-                            .base
-                            .create_finding(
-                                ctx,
-                                message,
-                                location.start().line() as u32,
-                                location.start().column() as u32,
-                                location.byte_length() as u32,
-                            )
-                            .with_cwe(362);
-                        findings.push(finding);
-                    }
+        if let ast::Statement::Expression(ast::Expression::Assignment { left, location, .. }) =
+            statement
+        {
+            if let ast::Expression::Identifier(id) = left {
+                // Simple check for potential state variable assignment
+                if id.name.to_lowercase().contains("state") {
+                    let message =
+                        format!("Potential state variable '{}' assignment detected", id.name);
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            location.start().line() as u32,
+                            location.start().column() as u32,
+                            location.byte_length() as u32,
+                        )
+                        .with_cwe(362);
+                    findings.push(finding);
                 }
             }
-            _ => {}
         }
 
         Ok(findings)
@@ -692,29 +694,26 @@ impl AstAnalyzer for StateMachineDetector {
         let mut findings = Vec::new();
 
         // Check for state-related expressions
-        match expression {
-            ast::Expression::Identifier(id) => {
-                if id.name.to_lowercase().contains("state")
-                    && id.name.to_lowercase().contains("uninitialized")
-                {
-                    let message = format!(
-                        "Potential uninitialized state variable access: '{}'",
-                        id.name
-                    );
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            id.location.start().line() as u32,
-                            id.location.start().column() as u32,
-                            id.location.byte_length() as u32,
-                        )
-                        .with_cwe(908);
-                    findings.push(finding);
-                }
+        if let ast::Expression::Identifier(id) = expression {
+            if id.name.to_lowercase().contains("state")
+                && id.name.to_lowercase().contains("uninitialized")
+            {
+                let message = format!(
+                    "Potential uninitialized state variable access: '{}'",
+                    id.name
+                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        id.location.start().line() as u32,
+                        id.location.start().column() as u32,
+                        id.location.byte_length() as u32,
+                    )
+                    .with_cwe(908);
+                findings.push(finding);
             }
-            _ => {}
         }
 
         Ok(findings)

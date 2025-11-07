@@ -9,6 +9,12 @@ pub struct SignatureMalleabilityDetector {
     base: BaseDetector,
 }
 
+impl Default for SignatureMalleabilityDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SignatureMalleabilityDetector {
     pub fn new() -> Self {
         Self {
@@ -96,9 +102,7 @@ impl SignatureMalleabilityDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 

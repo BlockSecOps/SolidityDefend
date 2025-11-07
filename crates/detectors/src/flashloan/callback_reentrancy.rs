@@ -92,12 +92,20 @@ impl Detector for FlashloanCallbackReentrancyDetector {
                 let line = function.name.location.start().line() as u32;
 
                 if !self.has_reentrancy_guard(function) {
-                    findings.push(self.base.create_finding_with_severity(
-                        ctx,
-                        format!("'{}' missing reentrancy guard", function.name.name),
-                        line, 0, 20,
-                        Severity::Medium,
-                    ).with_fix_suggestion("Add nonReentrant modifier from OpenZeppelin".to_string()));
+                    findings.push(
+                        self.base
+                            .create_finding_with_severity(
+                                ctx,
+                                format!("'{}' missing reentrancy guard", function.name.name),
+                                line,
+                                0,
+                                20,
+                                Severity::Medium,
+                            )
+                            .with_fix_suggestion(
+                                "Add nonReentrant modifier from OpenZeppelin".to_string(),
+                            ),
+                    );
                 }
             }
         }

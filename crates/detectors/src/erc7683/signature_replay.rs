@@ -18,8 +18,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::erc7683::classification::*;
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use ast;
 
 pub struct IntentSignatureReplayDetector {
@@ -81,23 +81,26 @@ impl IntentSignatureReplayDetector {
 
         // Check 2: Nonce validation
         if !has_nonce_validation(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Missing nonce validation in '{}' - replay attack possible",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Add nonce validation and tracking:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Missing nonce validation in '{}' - replay attack possible",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Add nonce validation and tracking:\n\
                  require(!usedNonces[order.user][order.nonce], \"Nonce already used\");\n\
                  usedNonces[order.user][order.nonce] = true;\n\
-                 Or use Permit2 which handles nonces internally.".to_string()
-            );
+                 Or use Permit2 which handles nonces internally."
+                        .to_string(),
+                );
 
             findings.push(finding);
         } else {
@@ -170,7 +173,8 @@ impl IntentSignatureReplayDetector {
         let mut findings = Vec::new();
 
         // Check if contract has gasless functions but doesn't use Permit2
-        let has_gasless_funcs = ctx.get_functions()
+        let has_gasless_funcs = ctx
+            .get_functions()
             .iter()
             .any(|f| is_gasless_order_function(f));
 
@@ -265,7 +269,6 @@ impl Detector for IntentSignatureReplayDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

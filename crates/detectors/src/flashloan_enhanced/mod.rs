@@ -21,13 +21,13 @@
 //!    - Collateral ratio manipulation
 //!    - Real-world: Unfair liquidation triggering
 
-pub mod price_manipulation_advanced;
-pub mod governance_attack;
-pub mod reentrancy_combo;
 pub mod collateral_swap;
+pub mod governance_attack;
+pub mod price_manipulation_advanced;
+pub mod reentrancy_combo;
 
 // Re-export detectors
-pub use price_manipulation_advanced::FlashLoanPriceManipulationAdvancedDetector;
-pub use governance_attack::FlashLoanGovernanceAttackDetector;
-pub use reentrancy_combo::FlashLoanReentrancyComboDetector;
 pub use collateral_swap::FlashLoanCollateralSwapDetector;
+pub use governance_attack::FlashLoanGovernanceAttackDetector;
+pub use price_manipulation_advanced::FlashLoanPriceManipulationAdvancedDetector;
+pub use reentrancy_combo::FlashLoanReentrancyComboDetector;

@@ -36,13 +36,13 @@
 //! - **Euler Finance - $200M (2023)**: $30M DAI flash loan exploit
 //! - **Beanstalk Farms - $182M (2022)**: $1B flash loan instant governance execution
 
-pub mod price_oracle_manipulation;
-pub mod governance_attack;
-pub mod flashmint_token_inflation;
 pub mod callback_reentrancy;
+pub mod flashmint_token_inflation;
+pub mod governance_attack;
+pub mod price_oracle_manipulation;
 
 // Re-export detectors
-pub use price_oracle_manipulation::FlashloanPriceOracleManipulationDetector;
-pub use governance_attack::FlashloanGovernanceAttackDetector;
-pub use flashmint_token_inflation::FlashmintTokenInflationDetector;
 pub use callback_reentrancy::FlashloanCallbackReentrancyDetector;
+pub use flashmint_token_inflation::FlashmintTokenInflationDetector;
+pub use governance_attack::FlashloanGovernanceAttackDetector;
+pub use price_oracle_manipulation::FlashloanPriceOracleManipulationDetector;

@@ -9,6 +9,12 @@ pub struct ValidatorGriefingDetector {
     base: BaseDetector,
 }
 
+impl Default for ValidatorGriefingDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ValidatorGriefingDetector {
     pub fn new() -> Self {
         Self {
@@ -95,9 +101,7 @@ impl ValidatorGriefingDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -123,10 +127,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("bond");
 
         if no_cost_to_report {
-            return Some(format!(
+            return Some(
                 "Validator reporting or slashing has no cost to reporter, \
                 enables free griefing attacks through false accusations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: No rate limiting on validator actions
@@ -139,10 +144,11 @@ impl ValidatorGriefingDetector {
             affects_validators && !has_rate_limit && func_source.contains("external");
 
         if lacks_rate_limit {
-            return Some(format!(
+            return Some(
                 "No rate limiting on validator-affecting actions, \
                 allows spam attacks to overwhelm validators or slashing logic"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Anyone can report without stake requirement
@@ -154,10 +160,11 @@ impl ValidatorGriefingDetector {
             is_report_function && !has_stake_requirement && func_source.contains("public");
 
         if no_stake_required {
-            return Some(format!(
+            return Some(
                 "No minimum stake requirement for reporting misbehavior, \
                 attackers without skin in the game can grief validators"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Failed slashing doesn't penalize reporter
@@ -169,10 +176,11 @@ impl ValidatorGriefingDetector {
             is_report_function && !penalizes_false_reports && func_source.contains("slash");
 
         if no_reporter_penalty {
-            return Some(format!(
+            return Some(
                 "No penalty for false or failed slashing accusations, \
                 encourages frivolous reports to grief validators"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Exit queue can be flooded
@@ -186,10 +194,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("exitQueue");
 
         if no_exit_limit {
-            return Some(format!(
+            return Some(
                 "Validator exit queue has no flood protection, \
                 mass exit can delay legitimate withdrawals (griefing)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Forced participation in expensive operations
@@ -203,10 +212,11 @@ impl ValidatorGriefingDetector {
             && func_source.contains("require");
 
         if forced_participation {
-            return Some(format!(
+            return Some(
                 "Validators forced to participate in expensive operations, \
                 attacker can trigger high gas costs for all validators"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Validator registration without deposit
@@ -220,10 +230,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("stake");
 
         if no_registration_deposit {
-            return Some(format!(
+            return Some(
                 "Validator registration without deposit requirement, \
                 enables Sybil attacks to spam validator set (griefing)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Reward distribution can be blocked
@@ -237,10 +248,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("pull");
 
         if blockable_rewards {
-            return Some(format!(
+            return Some(
                 "Reward distribution uses push pattern that can be blocked, \
                 single failing validator can prevent all rewards (griefing)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Validator metadata spam
@@ -254,10 +266,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("lastUpdate");
 
         if no_update_limit {
-            return Some(format!(
+            return Some(
                 "Validator metadata updates without rate limiting, \
                 enables spam of update events causing high gas costs"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Unprotected validator ejection
@@ -271,10 +284,11 @@ impl ValidatorGriefingDetector {
             && !func_source.contains("multisig");
 
         if no_ejection_protection {
-            return Some(format!(
+            return Some(
                 "Validator ejection mechanism lacks strong access control, \
                 malicious admin can grief validators by removing them"
-            ));
+                    .to_string(),
+            );
         }
 
         None

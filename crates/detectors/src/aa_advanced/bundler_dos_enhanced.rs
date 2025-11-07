@@ -195,15 +195,13 @@ impl Detector for AABundlerDosEnhancedDetector {
 
         // Pattern 6: initCode with CREATE2 factory without gas limits
         if is_aa_contract {
-            let has_init_code = lower.contains("initcode")
-                || lower.contains("init_code");
+            let has_init_code = lower.contains("initcode") || lower.contains("init_code");
 
-            let has_create2 = lower.contains("create2")
-                || lower.contains("deploy");
+            let has_create2 = lower.contains("create2") || lower.contains("deploy");
 
             if has_init_code && has_create2 {
-                let has_init_gas_limit = lower.contains("initgaslimit")
-                    || lower.contains("verificationgaslimit");
+                let has_init_gas_limit =
+                    lower.contains("initgaslimit") || lower.contains("verificationgaslimit");
 
                 if !has_init_gas_limit {
                     let finding = self.base.create_finding(

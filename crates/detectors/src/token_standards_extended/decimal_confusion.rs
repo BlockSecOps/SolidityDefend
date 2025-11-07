@@ -63,9 +63,8 @@ impl Detector for TokenDecimalConfusionDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Check for multi-token operations
-        let has_tokens = lower.contains("ierc20")
-            || lower.contains("token")
-            || lower.contains("decimals()");
+        let has_tokens =
+            lower.contains("ierc20") || lower.contains("token") || lower.contains("decimals()");
 
         if !has_tokens {
             return Ok(findings);
@@ -77,8 +76,7 @@ impl Detector for TokenDecimalConfusionDetector {
             || lower.contains("1000000000000000000");
 
         if has_hardcoded_decimals {
-            let calls_decimals = lower.contains(".decimals()")
-                || lower.contains("decimals()");
+            let calls_decimals = lower.contains(".decimals()") || lower.contains("decimals()");
 
             if !calls_decimals {
                 let finding = self.base.create_finding(
@@ -97,9 +95,8 @@ impl Detector for TokenDecimalConfusionDetector {
         }
 
         // Pattern 2: Price calculation without decimal normalization
-        let has_price_calc = lower.contains("price")
-            || lower.contains("exchange")
-            || lower.contains("convert");
+        let has_price_calc =
+            lower.contains("price") || lower.contains("exchange") || lower.contains("convert");
 
         if has_price_calc && has_tokens {
             let normalizes_decimals = lower.contains("10**decimals")
@@ -151,12 +148,11 @@ impl Detector for TokenDecimalConfusionDetector {
 
         // Pattern 4: Decimal-sensitive operations without validation
         if has_tokens {
-            let has_sensitive_ops = lower.contains("div")
-                || lower.contains("mul")
-                || lower.contains("ratio");
+            let has_sensitive_ops =
+                lower.contains("div") || lower.contains("mul") || lower.contains("ratio");
 
-            let validates_decimals = lower.contains("require(decimals")
-                || lower.contains("assert(decimals");
+            let validates_decimals =
+                lower.contains("require(decimals") || lower.contains("assert(decimals");
 
             if has_sensitive_ops && !validates_decimals {
                 let finding = self.base.create_finding(

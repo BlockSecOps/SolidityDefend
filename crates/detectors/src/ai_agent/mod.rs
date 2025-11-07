@@ -21,13 +21,13 @@
 //!    - Resource exhaustion attacks
 //!    - Real-world: Computational DOS
 
-pub mod prompt_injection;
 pub mod decision_manipulation;
 pub mod oracle_dependency;
+pub mod prompt_injection;
 pub mod resource_exhaustion;
 
 // Re-export detectors
-pub use prompt_injection::AIAgentPromptInjectionDetector;
 pub use decision_manipulation::AIAgentDecisionManipulationDetector;
 pub use oracle_dependency::AutonomousContractOracleDependencyDetector;
+pub use prompt_injection::AIAgentPromptInjectionDetector;
 pub use resource_exhaustion::AIAgentResourceExhaustionDetector;

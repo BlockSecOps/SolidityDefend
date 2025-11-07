@@ -3,9 +3,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_erc7821_executor;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_erc7821_executor;
 
 pub struct ERC7821MsgSenderValidationDetector {
     base: BaseDetector,
@@ -66,17 +66,22 @@ impl Detector for ERC7821MsgSenderValidationDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check for settler/executor context confusion
-        if source_lower.contains("msg.sender") &&
-           (source_lower.contains("settler") || source_lower.contains("executor")) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "ERC-7821 executor may confuse msg.sender context in settler/executor pattern".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Be explicit about msg.sender context:\n\
+        if source_lower.contains("msg.sender")
+            && (source_lower.contains("settler") || source_lower.contains("executor"))
+        {
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "ERC-7821 executor may confuse msg.sender context in settler/executor pattern"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Be explicit about msg.sender context:\n\
                  \n\
                  // In batch executor:\n\
                  // msg.sender = settler contract\n\
@@ -88,8 +93,9 @@ impl Detector for ERC7821MsgSenderValidationDetector {
                      \n\
                      // Use 'user' parameter for user-specific logic\n\
                      _processForUser(user);\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 

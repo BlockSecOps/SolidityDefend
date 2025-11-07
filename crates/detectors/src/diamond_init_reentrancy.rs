@@ -56,7 +56,7 @@ impl Detector for DiamondInitReentrancyDetector {
         let mut findings = Vec::new();
 
         // Check if this looks like a Diamond proxy contract
-        
+
         let is_diamond_contract = self.is_diamond_contract(&ctx.source_code);
 
         if !is_diamond_contract {
@@ -69,19 +69,19 @@ impl Detector for DiamondInitReentrancyDetector {
 
         // Check for diamondCut function
         if self.has_diamond_cut_function(&contract_source) {
-                // Pattern 1: diamondCut with delegatecall but no reentrancy guard
-                if self.has_init_delegatecall(&contract_source)
-                    && !self.has_reentrancy_protection(&contract_source)
-                {
-                    let message = format!(
-                        "Contract '{}' performs delegatecall during diamondCut initialization without reentrancy protection. \
+            // Pattern 1: diamondCut with delegatecall but no reentrancy guard
+            if self.has_init_delegatecall(&contract_source)
+                && !self.has_reentrancy_protection(&contract_source)
+            {
+                let message = format!(
+                    "Contract '{}' performs delegatecall during diamondCut initialization without reentrancy protection. \
                         The initialization delegatecall executes arbitrary code from the init contract, which can call back \
                         into diamondCut or other functions before initialization completes. This allows attackers to \
                         manipulate state during initialization, register malicious facets, or bypass access controls.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -101,20 +101,20 @@ impl Detector for DiamondInitReentrancyDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 2: State changes after initialization delegatecall
-                if self.has_state_changes_after_init(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' modifies state after initialization delegatecall. \
+            // Pattern 2: State changes after initialization delegatecall
+            if self.has_state_changes_after_init(&contract_source) {
+                let message = format!(
+                    "Contract '{}' modifies state after initialization delegatecall. \
                         State changes after delegatecall create reentrancy window where the init contract \
                         can observe intermediate states. Attacker-controlled init contract can reenter \
                         and exploit the inconsistent state before changes complete.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -134,22 +134,22 @@ impl Detector for DiamondInitReentrancyDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 3: Missing reentrancy lock variable
-                if self.needs_reentrancy_lock(&contract_source)
-                    && !self.has_lock_variable(&contract_source)
-                {
-                    let message = format!(
-                        "Contract '{}' performs external calls during diamondCut but lacks reentrancy lock variable. \
+            // Pattern 3: Missing reentrancy lock variable
+            if self.needs_reentrancy_lock(&contract_source)
+                && !self.has_lock_variable(&contract_source)
+            {
+                let message = format!(
+                    "Contract '{}' performs external calls during diamondCut but lacks reentrancy lock variable. \
                         Without explicit lock tracking (_locked, _status, etc.), the contract cannot prevent \
                         reentrant calls during initialization. This is critical for Diamond proxies where \
                         initialization can add new facets with arbitrary code.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -169,20 +169,20 @@ impl Detector for DiamondInitReentrancyDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 4: External call during initialization without validation
-                if self.has_unvalidated_init_call(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' performs initialization delegatecall without validating init contract. \
+            // Pattern 4: External call during initialization without validation
+            if self.has_unvalidated_init_call(&contract_source) {
+                let message = format!(
+                    "Contract '{}' performs initialization delegatecall without validating init contract. \
                         Missing validation allows attacker to supply malicious init address that performs \
                         reentrancy attacks during diamondCut. The init contract has full delegatecall privileges \
                         and can execute arbitrary code in proxy context.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -202,29 +202,29 @@ impl Detector for DiamondInitReentrancyDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
             }
+        }
 
-            // Pattern 5: Missing initialization status tracking
-            // Check both contract source AND full source (for library/file-level patterns)
-            let tracks_in_contract = self.tracks_initialization_status(&contract_source);
-            let tracks_in_file = self.tracks_initialization_status(&ctx.source_code);
+        // Pattern 5: Missing initialization status tracking
+        // Check both contract source AND full source (for library/file-level patterns)
+        let tracks_in_contract = self.tracks_initialization_status(&contract_source);
+        let tracks_in_file = self.tracks_initialization_status(&ctx.source_code);
 
-            if self.is_diamond_proxy(&contract_source)
-                && self.has_initialization(&contract_source)
-                && !tracks_in_contract
-                && !tracks_in_file
-            {
-                let message = format!(
-                    "Contract '{}' supports initialization but doesn't track initialization status. \
+        if self.is_diamond_proxy(&contract_source)
+            && self.has_initialization(&contract_source)
+            && !tracks_in_contract
+            && !tracks_in_file
+        {
+            let message = format!(
+                "Contract '{}' supports initialization but doesn't track initialization status. \
                     Without 'initialized' flag, the contract can be reinitialized multiple times through \
                     reentrancy, allowing attackers to reset state, change ownership, or register malicious facets \
                     after initial setup.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
+            let finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -244,8 +244,8 @@ impl Detector for DiamondInitReentrancyDetector {
                         contract.name.name
                     ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
         Ok(findings)
     }
@@ -322,7 +322,11 @@ impl DiamondInitReentrancyDetector {
             let state_change_patterns = ["=", "++", "--", "push(", "pop()", "delete "];
 
             // Check if there are statements after delegatecall (indicated by semicolons)
-            let remaining = after_delegatecall.split(';').skip(1).collect::<Vec<_>>().join(";");
+            let remaining = after_delegatecall
+                .split(';')
+                .skip(1)
+                .collect::<Vec<_>>()
+                .join(";");
 
             state_change_patterns
                 .iter()
@@ -386,13 +390,7 @@ impl DiamondInitReentrancyDetector {
 
     fn has_initialization(&self, source: &str) -> bool {
         // Check for initialization logic
-        let init_indicators = [
-            "initialize",
-            "init",
-            "diamondCut",
-            "_init",
-            "initCalldata",
-        ];
+        let init_indicators = ["initialize", "init", "diamondCut", "_init", "initCalldata"];
 
         init_indicators
             .iter()
@@ -411,7 +409,10 @@ impl DiamondInitReentrancyDetector {
         ];
 
         // Check standalone variables
-        if status_patterns.iter().any(|pattern| source.contains(pattern)) {
+        if status_patterns
+            .iter()
+            .any(|pattern| source.contains(pattern))
+        {
             return true;
         }
 
@@ -463,12 +464,16 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "diamond-init-reentrancy");
         assert!(detector.categories().contains(&DetectorCategory::Diamond));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Upgradeable));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Reentrancy));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Upgradeable)
+        );
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Reentrancy)
+        );
     }
 
     #[test]

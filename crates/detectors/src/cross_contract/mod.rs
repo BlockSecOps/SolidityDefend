@@ -282,7 +282,7 @@ impl CrossContractUtils {
             score -= 0.1;
         }
 
-        score.max(0.0).min(1.0)
+        score.clamp(0.0, 1.0)
     }
 
     fn is_standard_interface(ctx: &AnalysisContext) -> bool {

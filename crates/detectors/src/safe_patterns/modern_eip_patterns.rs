@@ -13,10 +13,11 @@ pub fn has_safe_transient_storage_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Reentrancy guard with transient storage
-    if source.contains("tstore") && source.contains("tload") {
-        if source.contains("locked") || source.contains("guard") {
-            return true;
-        }
+    if source.contains("tstore")
+        && source.contains("tload")
+        && (source.contains("locked") || source.contains("guard"))
+    {
+        return true;
     }
 
     // Pattern 2: Transient lock pattern
@@ -25,10 +26,8 @@ pub fn has_safe_transient_storage_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 3: Assembly with proper transient usage
-    if source.contains("assembly") {
-        if source.contains("tstore(") && source.contains("tload(") {
-            return true;
-        }
+    if source.contains("assembly") && source.contains("tstore(") && source.contains("tload(") {
+        return true;
     }
 
     // Pattern 4: EIP-1153 comment or documentation
@@ -92,10 +91,10 @@ pub fn has_safe_batch_executor_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Atomic batch execution
-    if source.contains("executeBatch") {
-        if source.contains("revert") || source.contains("require(success") {
-            return true;
-        }
+    if source.contains("executeBatch")
+        && (source.contains("revert") || source.contains("require(success"))
+    {
+        return true;
     }
 
     // Pattern 2: Batch size limit
@@ -214,10 +213,8 @@ pub fn has_safe_upgrade_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: UUPS with authorization
-    if source.contains("UUPSUpgradeable") {
-        if source.contains("_authorizeUpgrade") {
-            return true;
-        }
+    if source.contains("UUPSUpgradeable") && source.contains("_authorizeUpgrade") {
+        return true;
     }
 
     // Pattern 2: Transparent proxy
@@ -261,10 +258,10 @@ pub fn has_safe_create2_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 2: Computed address verification
-    if source.contains("computeAddress") || source.contains("getAddress") {
-        if source.contains("create2") || source.contains("salt") {
-            return true;
-        }
+    if (source.contains("computeAddress") || source.contains("getAddress"))
+        && (source.contains("create2") || source.contains("salt"))
+    {
+        return true;
     }
 
     // Pattern 3: Deployment tracking
@@ -293,10 +290,8 @@ pub fn has_safe_metatx_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: User nonces
-    if source.contains("nonces") && source.contains("mapping") {
-        if source.contains("address") {
-            return true;
-        }
+    if source.contains("nonces") && source.contains("mapping") && source.contains("address") {
+        return true;
     }
 
     // Pattern 2: executeMetaTransaction or similar

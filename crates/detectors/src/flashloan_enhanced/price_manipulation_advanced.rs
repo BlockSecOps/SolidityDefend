@@ -136,7 +136,7 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
 
             let uses_spot_price = lower.contains("getreserves")
                 || lower.contains("balanceof")
-                && (lower.contains("price") || lower.contains("ratio"));
+                    && (lower.contains("price") || lower.contains("ratio"));
 
             if has_liquidation && uses_spot_price {
                 let finding = self.base.create_finding(

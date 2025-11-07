@@ -60,7 +60,7 @@ impl Detector for L2DataAvailabilityDetector {
             let func_source = self.get_function_source(function, ctx);
 
             // Check for batch submission functions
-            if self.is_batch_submission_function(&function.name.name, &func_source) {
+            if self.is_batch_submission_function(function.name.name, &func_source) {
                 let issues = self.check_data_commitment(&func_source);
 
                 for issue in issues {
@@ -95,7 +95,7 @@ impl Detector for L2DataAvailabilityDetector {
             }
 
             // Check for sequencer functions
-            if self.is_sequencer_function(&function.name.name, &func_source) {
+            if self.is_sequencer_function(function.name.name, &func_source) {
                 let issues = self.check_censorship_resistance(&func_source);
 
                 for issue in issues {
@@ -130,7 +130,7 @@ impl Detector for L2DataAvailabilityDetector {
             }
 
             // Check for data commitment functions
-            if self.is_data_commitment_function(&function.name.name, &func_source) {
+            if self.is_data_commitment_function(function.name.name, &func_source) {
                 let issues = self.check_commitment_validity(&func_source);
 
                 for issue in issues {
@@ -192,7 +192,8 @@ impl L2DataAvailabilityDetector {
         patterns
             .iter()
             .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("batch") && (source.contains("submit") || source.contains("commit")))
+            || (source.contains("batch")
+                && (source.contains("submit") || source.contains("commit")))
     }
 
     fn is_sequencer_function(&self, name: &str, source: &str) -> bool {
@@ -281,7 +282,10 @@ impl L2DataAvailabilityDetector {
         }
 
         // Pattern 2: No timeout mechanism
-        if !source.contains("timestamp") && !source.contains("deadline") && !source.contains("timeout") {
+        if !source.contains("timestamp")
+            && !source.contains("deadline")
+            && !source.contains("timeout")
+        {
             issues.push(
                 "Missing timeout mechanism. Should allow force inclusion after sequencer fails to include transaction"
                     .to_string(),
@@ -325,7 +329,10 @@ impl L2DataAvailabilityDetector {
         }
 
         // Pattern 2: No hash verification
-        if source.contains("dataHash") && !source.contains("keccak256") && !source.contains("sha256") {
+        if source.contains("dataHash")
+            && !source.contains("keccak256")
+            && !source.contains("sha256")
+        {
             issues.push(
                 "No hash computation for verification. Should recompute hash to validate commitment"
                     .to_string(),
@@ -393,7 +400,11 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "l2-data-availability");
         assert!(detector.categories().contains(&DetectorCategory::L2));
-        assert!(detector.categories().contains(&DetectorCategory::DataAvailability));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::DataAvailability)
+        );
     }
 
     #[test]

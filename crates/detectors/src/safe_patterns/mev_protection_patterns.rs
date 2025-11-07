@@ -45,8 +45,7 @@ pub fn has_deadline_protection(func_source: &str) -> bool {
 
 /// Check if function has commit-reveal protection
 pub fn has_commit_reveal_protection(func_source: &str) -> bool {
-    let has_commit = func_source.contains("commit")
-        || func_source.contains("commitment");
+    let has_commit = func_source.contains("commit") || func_source.contains("commitment");
 
     let has_reveal = func_source.contains("reveal");
 
@@ -117,14 +116,7 @@ pub fn is_user_operation(func_source: &str, function_name: &str) -> bool {
         || func_source.contains("== msg.sender");
 
     // User-facing function names
-    let user_function_names = [
-        "deposit",
-        "withdraw",
-        "claim",
-        "stake",
-        "unstake",
-        "redeem",
-    ];
+    let user_function_names = ["deposit", "withdraw", "claim", "stake", "unstake", "redeem"];
 
     let is_user_function = user_function_names
         .iter()
@@ -159,8 +151,8 @@ pub fn is_protected_liquidation(func_source: &str) -> bool {
         || func_source.contains("health")
         || func_source.contains("collateralizationRatio");
 
-    let has_liquidation_threshold = func_source.contains("liquidationThreshold")
-        || func_source.contains("threshold");
+    let has_liquidation_threshold =
+        func_source.contains("liquidationThreshold") || func_source.contains("threshold");
 
     let has_penalty_check = func_source.contains("penalty")
         || func_source.contains("liquidationPenalty")
@@ -200,13 +192,19 @@ pub fn is_protected_swap(func_source: &str) -> bool {
 }
 
 /// Check if function is an ERC4626 vault function (protected by standard design)
-pub fn is_erc4626_vault_function(_func_source: &str, function_name: &str, ctx: &AnalysisContext) -> bool {
+pub fn is_erc4626_vault_function(
+    _func_source: &str,
+    function_name: &str,
+    ctx: &AnalysisContext,
+) -> bool {
     let source = &ctx.source_code;
 
     // Check if this is an ERC4626 vault
     let is_erc4626 = source.contains("ERC4626")
         || source.contains("IERC4626")
-        || (source.contains("deposit") && source.contains("redeem") && source.contains("totalAssets"));
+        || (source.contains("deposit")
+            && source.contains("redeem")
+            && source.contains("totalAssets"));
 
     if !is_erc4626 {
         return false;
@@ -242,7 +240,7 @@ pub fn has_sufficient_mev_protection(
     }
 
     // ERC4626 vault functions are protected by standard design
-    if is_erc4626_vault_function(func_source, &function.name.name, ctx) {
+    if is_erc4626_vault_function(func_source, function.name.name, ctx) {
         return true;
     }
 
@@ -252,7 +250,7 @@ pub fn has_sufficient_mev_protection(
     }
 
     // User operations are less vulnerable (users control timing)
-    if is_user_operation(func_source, &function.name.name) {
+    if is_user_operation(func_source, function.name.name) {
         return true;
     }
 
@@ -324,7 +322,7 @@ pub fn count_mev_protections(function: &ast::Function<'_>, func_source: &str) ->
         count += 1;
     }
 
-    if is_user_operation(func_source, &function.name.name) {
+    if is_user_operation(func_source, function.name.name) {
         count += 1;
     }
 

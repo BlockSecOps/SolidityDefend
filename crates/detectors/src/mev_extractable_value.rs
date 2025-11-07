@@ -11,6 +11,12 @@ pub struct MevExtractableValueDetector {
     base: BaseDetector,
 }
 
+impl Default for MevExtractableValueDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MevExtractableValueDetector {
     pub fn new() -> Self {
         Self {
@@ -112,9 +118,7 @@ impl MevExtractableValueDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -144,13 +148,11 @@ impl MevExtractableValueDetector {
             && has_value_transfer
             && !mev_protection_patterns::has_slippage_protection(&func_source)
             && !mev_protection_patterns::has_deadline_protection(&func_source)
-            && !mev_protection_patterns::is_user_operation(&func_source, &function.name.name);
+            && !mev_protection_patterns::is_user_operation(&func_source, function.name.name);
 
         if lacks_mev_protection {
-            return Some(format!(
-                "Public function with value transfer lacks MEV protection (no slippage/deadline checks), \
-                enabling front-running and back-running attacks"
-            ));
+            return Some("Public function with value transfer lacks MEV protection (no slippage/deadline checks), \
+                enabling front-running and back-running attacks".to_string());
         }
 
         // Pattern 2: Profitable liquidation without auction mechanism
@@ -168,10 +170,11 @@ impl MevExtractableValueDetector {
             && !func_source.contains("dutch");
 
         if no_auction {
-            return Some(format!(
+            return Some(
                 "Profitable liquidation without auction mechanism, \
                 enabling MEV extraction through priority gas auctions (PGA)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Arbitrage-able price differences
@@ -186,10 +189,11 @@ impl MevExtractableValueDetector {
             && !func_source.contains("batch");
 
         if arbitrage_opportunity {
-            return Some(format!(
+            return Some(
                 "Swap function with spot pricing creates arbitrage opportunities, \
                 MEV bots can profit from price differences"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: State changes visible in mempool before execution (TIGHTENED)
@@ -206,15 +210,13 @@ impl MevExtractableValueDetector {
         let is_mev_vulnerable_state_change = is_public
             && changes_state
             && affects_global_state
-            && !mev_protection_patterns::is_user_operation(&func_source, &function.name.name)
+            && !mev_protection_patterns::is_user_operation(&func_source, function.name.name)
             && !func_source.contains("private")
             && !func_source.contains("encrypted");
 
         if is_mev_vulnerable_state_change {
-            return Some(format!(
-                "State changes to global state (totalSupply/reserves/price) visible in public mempool, \
-                allowing MEV bots to react and extract value"
-            ));
+            return Some("State changes to global state (totalSupply/reserves/price) visible in public mempool, \
+                allowing MEV bots to react and extract value".to_string());
         }
 
         // Pattern 5: Reward distribution without commit-reveal
@@ -228,10 +230,11 @@ impl MevExtractableValueDetector {
             && !func_source.contains("hash");
 
         if no_commit_reveal {
-            return Some(format!(
+            return Some(
                 "Reward distribution without commit-reveal, \
                 enables front-running of reward claims"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: First-come-first-served with high value
@@ -248,10 +251,11 @@ impl MevExtractableValueDetector {
             && !func_source.contains("lottery");
 
         if fcfs_mev {
-            return Some(format!(
+            return Some(
                 "First-come-first-served mechanism for high-value operations, \
                 creates priority gas auction (PGA) MEV"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Oracle update function without access control (TIGHTENED)
@@ -263,13 +267,12 @@ impl MevExtractableValueDetector {
             updates_oracle && (func_source.contains("price") || func_source.contains("rate"));
 
         // NEW: Check for access control
-        let lacks_access_control = !mev_protection_patterns::has_mev_limiting_access_control(function);
+        let lacks_access_control =
+            !mev_protection_patterns::has_mev_limiting_access_control(function);
 
         if affects_defi && is_public && lacks_access_control {
-            return Some(format!(
-                "Public oracle update function without access control enables MEV through oracle manipulation, \
-                can be front-run or back-run for profit"
-            ));
+            return Some("Public oracle update function without access control enables MEV through oracle manipulation, \
+                can be front-run or back-run for profit".to_string());
         }
 
         // Pattern 8: Multi-step operation without atomicity
@@ -281,10 +284,11 @@ impl MevExtractableValueDetector {
             && !func_source.contains("revert");
 
         if lacks_atomicity {
-            return Some(format!(
+            return Some(
                 "Multi-step operation without atomicity guarantees, \
                 enables MEV through transaction insertion between steps"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Explicit vulnerability marker
@@ -293,9 +297,7 @@ impl MevExtractableValueDetector {
                 || func_source.contains("front-run")
                 || func_source.contains("extractable"))
         {
-            return Some(format!(
-                "MEV extractable value vulnerability marker detected"
-            ));
+            return Some("MEV extractable value vulnerability marker detected".to_string());
         }
 
         None
@@ -303,12 +305,13 @@ impl MevExtractableValueDetector {
 
     /// Calculate confidence based on number of MEV protections
     fn calculate_confidence(&self, function: &ast::Function<'_>, func_source: &str) -> Confidence {
-        let protection_count = mev_protection_patterns::count_mev_protections(function, func_source);
+        let protection_count =
+            mev_protection_patterns::count_mev_protections(function, func_source);
 
         match protection_count {
-            0 => Confidence::High,    // No protections - high confidence in MEV risk
-            1 => Confidence::Medium,  // Some protection - medium confidence
-            _ => Confidence::Low,     // Multiple protections - low confidence (may be false positive)
+            0 => Confidence::High,   // No protections - high confidence in MEV risk
+            1 => Confidence::Medium, // Some protection - medium confidence
+            _ => Confidence::Low, // Multiple protections - low confidence (may be false positive)
         }
     }
 

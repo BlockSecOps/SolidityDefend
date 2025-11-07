@@ -424,7 +424,7 @@ impl DependencyTracker {
     fn extract_name_after_keyword(&self, line: &str, keyword: &str) -> Option<String> {
         if let Some(start) = line.find(keyword) {
             let after_keyword = &line[start + keyword.len()..];
-            let name = after_keyword.trim().split_whitespace().next()?;
+            let name = after_keyword.split_whitespace().next()?;
             // Remove any trailing characters like '{' or 'is'
             let clean_name = name
                 .split(|c: char| !c.is_alphanumeric() && c != '_')
@@ -446,7 +446,7 @@ impl DependencyTracker {
         for dep_path in dependencies {
             self.dependents
                 .entry(dep_path)
-                .or_insert_with(HashSet::new)
+                .or_default()
                 .insert(file_path.to_path_buf());
         }
     }

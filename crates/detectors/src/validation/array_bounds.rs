@@ -11,6 +11,12 @@ pub struct ArrayBoundsDetector {
     base: BaseDetector,
 }
 
+impl Default for ArrayBoundsDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ArrayBoundsDetector {
     pub fn new() -> Self {
         Self {
@@ -440,26 +446,24 @@ impl ArrayBoundsDetector {
         condition: &ast::Expression<'_>,
         array_name: &str,
     ) -> bool {
-        match condition {
-            ast::Expression::BinaryOperation {
-                operator, right, ..
-            } => {
-                if matches!(
-                    operator,
-                    ast::BinaryOperator::Less | ast::BinaryOperator::LessEqual
-                ) {
-                    // Check if right side is array.length
-                    if let ast::Expression::MemberAccess {
-                        expression, member, ..
-                    } = right
-                    {
-                        if let ast::Expression::Identifier(id) = expression {
-                            return id.name == array_name && member.name == "length";
-                        }
+        if let ast::Expression::BinaryOperation {
+            operator, right, ..
+        } = condition
+        {
+            if matches!(
+                operator,
+                ast::BinaryOperator::Less | ast::BinaryOperator::LessEqual
+            ) {
+                // Check if right side is array.length
+                if let ast::Expression::MemberAccess {
+                    expression, member, ..
+                } = right
+                {
+                    if let ast::Expression::Identifier(id) = expression {
+                        return id.name == array_name && member.name == "length";
                     }
                 }
             }
-            _ => {}
         }
         false
     }
@@ -569,27 +573,25 @@ impl ArrayBoundsDetector {
                 location,
             }) => {
                 if let (ast::Expression::Identifier(id), Some(index_expr)) = (base, index) {
-                    if arrays.contains_key(id.name) {
-                        if self.index_might_be_off_by_one(index_expr) {
-                            let message = format!(
-                                "Potential off-by-one error in array access to '{}'",
-                                id.name
+                    if arrays.contains_key(id.name) && self.index_might_be_off_by_one(index_expr) {
+                        let message = format!(
+                            "Potential off-by-one error in array access to '{}'",
+                            id.name
+                        );
+                        let finding = self
+                            .base
+                            .create_finding(
+                                ctx,
+                                message,
+                                location.start().line() as u32,
+                                location.start().column() as u32,
+                                location.byte_length() as u32,
+                            )
+                            .with_cwe(193)
+                            .with_fix_suggestion(
+                                "Verify array index calculation is correct".to_string(),
                             );
-                            let finding = self
-                                .base
-                                .create_finding(
-                                    ctx,
-                                    message,
-                                    location.start().line() as u32,
-                                    location.start().column() as u32,
-                                    location.byte_length() as u32,
-                                )
-                                .with_cwe(193)
-                                .with_fix_suggestion(
-                                    "Verify array index calculation is correct".to_string(),
-                                );
-                            findings.push(finding);
-                        }
+                        findings.push(finding);
                     }
                 }
             }
@@ -608,18 +610,16 @@ impl ArrayBoundsDetector {
         condition: &ast::Expression<'_>,
         _arrays: &HashMap<String, ArrayInfo>,
     ) -> bool {
-        match condition {
-            ast::Expression::BinaryOperation {
-                operator, right, ..
-            } => {
-                // Check for <= array.length (should usually be < array.length)
-                if matches!(operator, ast::BinaryOperator::LessEqual) {
-                    if let ast::Expression::MemberAccess { member, .. } = right {
-                        return member.name == "length";
-                    }
+        if let ast::Expression::BinaryOperation {
+            operator, right, ..
+        } = condition
+        {
+            // Check for <= array.length (should usually be < array.length)
+            if matches!(operator, ast::BinaryOperator::LessEqual) {
+                if let ast::Expression::MemberAccess { member, .. } = right {
+                    return member.name == "length";
                 }
             }
-            _ => {}
         }
         false
     }
@@ -721,30 +721,27 @@ impl AstAnalyzer for ArrayBoundsDetector {
         let mut findings = Vec::new();
 
         // Check for direct array access in statements
-        match statement {
-            ast::Statement::Expression(ast::Expression::IndexAccess {
-                base,
-                index,
-                location,
-            }) => {
-                if let (ast::Expression::Identifier(id), Some(_)) = (base, index) {
-                    // Simplified check for array access without validation context
-                    let message =
-                        format!("Array access to '{}' - ensure bounds are checked", id.name);
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            location.start().line() as u32,
-                            location.start().column() as u32,
-                            location.byte_length() as u32,
-                        )
-                        .with_cwe(125);
-                    findings.push(finding);
-                }
+        if let ast::Statement::Expression(ast::Expression::IndexAccess {
+            base,
+            index,
+            location,
+        }) = statement
+        {
+            if let (ast::Expression::Identifier(id), Some(_)) = (base, index) {
+                // Simplified check for array access without validation context
+                let message = format!("Array access to '{}' - ensure bounds are checked", id.name);
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        location.start().line() as u32,
+                        location.start().column() as u32,
+                        location.byte_length() as u32,
+                    )
+                    .with_cwe(125);
+                findings.push(finding);
             }
-            _ => {}
         }
 
         Ok(findings)
@@ -758,30 +755,28 @@ impl AstAnalyzer for ArrayBoundsDetector {
         let mut findings = Vec::new();
 
         // Analyze array access expressions
-        match expression {
-            ast::Expression::IndexAccess {
-                base,
-                index,
-                location,
-            } => {
-                if let ast::Expression::Identifier(_id) = base {
-                    if index.is_none() {
-                        let message = "Array access with empty index detected".to_string();
-                        let finding = self
-                            .base
-                            .create_finding(
-                                ctx,
-                                message,
-                                location.start().line() as u32,
-                                location.start().column() as u32,
-                                location.byte_length() as u32,
-                            )
-                            .with_cwe(125);
-                        findings.push(finding);
-                    }
+        if let ast::Expression::IndexAccess {
+            base,
+            index,
+            location,
+        } = expression
+        {
+            if let ast::Expression::Identifier(_id) = base {
+                if index.is_none() {
+                    let message = "Array access with empty index detected".to_string();
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            location.start().line() as u32,
+                            location.start().column() as u32,
+                            location.byte_length() as u32,
+                        )
+                        .with_cwe(125);
+                    findings.push(finding);
                 }
             }
-            _ => {}
         }
 
         Ok(findings)

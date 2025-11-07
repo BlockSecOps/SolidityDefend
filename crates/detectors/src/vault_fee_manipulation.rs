@@ -10,6 +10,12 @@ pub struct VaultFeeManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for VaultFeeManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VaultFeeManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -72,11 +78,21 @@ impl Detector for VaultFeeManipulationDetector {
 
         // Calculate protection score for confidence calibration
         let mut protection_score = 0;
-        if has_timelock { protection_score += 3; } // Critical for fee changes
-        if has_multisig { protection_score += 2; } // Prevents single admin abuse
-        if has_role_hierarchy { protection_score += 1; }
-        if has_pause { protection_score += 1; }
-        if has_two_step_ownership { protection_score += 1; }
+        if has_timelock {
+            protection_score += 3;
+        } // Critical for fee changes
+        if has_multisig {
+            protection_score += 2;
+        } // Prevents single admin abuse
+        if has_role_hierarchy {
+            protection_score += 1;
+        }
+        if has_pause {
+            protection_score += 1;
+        }
+        if has_two_step_ownership {
+            protection_score += 1;
+        }
 
         for function in ctx.get_functions() {
             if let Some(fee_issue) = self.check_fee_manipulation(function, ctx) {
@@ -144,9 +160,7 @@ impl VaultFeeManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -176,10 +190,11 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("effectiveTime");
 
         if updates_fee && !has_timelock {
-            return Some(format!(
+            return Some(
                 "Unprotected fee update without timelock. Fee changes take effect immediately, \
                 enabling front-running attacks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Missing fee change event emission
@@ -189,10 +204,11 @@ impl VaultFeeManipulationDetector {
                 || func_source.contains("SetFee"));
 
         if updates_fee && !has_event_emit {
-            return Some(format!(
+            return Some(
                 "Fee update without event emission. Users cannot detect fee changes \
                 before they take effect"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: No maximum fee change limit
@@ -202,10 +218,11 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("require(newFee <=");
 
         if updates_fee && !has_max_fee_check {
-            return Some(format!(
+            return Some(
                 "No maximum fee limit enforced. Admin can set arbitrarily high fees \
                 to extract all user value"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Front-runnable fee-dependent operations
@@ -223,10 +240,11 @@ impl VaultFeeManipulationDetector {
                 || func_source.contains("getFee()");
 
             if reads_current_fee {
-                return Some(format!(
+                return Some(
                     "Front-runnable fee-dependent operation. Fee can be changed in same block \
                     before user transaction executes"
-                ));
+                        .to_string(),
+                );
             }
         }
 
@@ -245,10 +263,11 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("governance");
 
         if updates_fee && has_access_control && !has_multisig {
-            return Some(format!(
+            return Some(
                 "Fee updates controlled by single admin without multi-sig. \
                 Single point of failure for fee manipulation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: No gradual fee ramping
@@ -258,10 +277,11 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("increment");
 
         if updates_fee && !has_gradual_change && !has_timelock {
-            return Some(format!(
+            return Some(
                 "Instant fee updates without gradual ramping. \
                 Large fee changes can shock users without warning"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Fee change window too short
@@ -271,10 +291,11 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("24 hours");
 
         if updates_fee && has_timelock && !has_notice_period {
-            return Some(format!(
+            return Some(
                 "Fee change timelock without explicit notice period. \
                 Users may not have sufficient time to exit"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -283,9 +304,7 @@ impl VaultFeeManipulationDetector {
                 || func_source.contains("front")
                 || func_source.contains("manipulation"))
         {
-            return Some(format!(
-                "Vault fee manipulation vulnerability marker detected"
-            ));
+            return Some("Vault fee manipulation vulnerability marker detected".to_string());
         }
 
         None

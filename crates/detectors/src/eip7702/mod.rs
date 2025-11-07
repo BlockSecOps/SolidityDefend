@@ -64,44 +64,44 @@
 //! - Nethermind: EIP-7702 Attack Surfaces
 //! - Fireblocks: Security First Approach to EIP-7702
 
-pub mod init_frontrun;
-pub mod delegate_access_control;
-pub mod storage_collision;
-pub mod txorigin_bypass;
-pub mod sweeper_detection;
 pub mod batch_phishing;
+pub mod delegate_access_control;
+pub mod init_frontrun;
+pub mod storage_collision;
+pub mod sweeper_detection;
+pub mod txorigin_bypass;
 
 // Re-export detectors
-pub use init_frontrun::EIP7702InitFrontrunDetector;
-pub use delegate_access_control::EIP7702DelegateAccessControlDetector;
-pub use storage_collision::EIP7702StorageCollisionDetector;
-pub use txorigin_bypass::EIP7702TxOriginBypassDetector;
-pub use sweeper_detection::EIP7702SweeperDetectionDetector;
 pub use batch_phishing::EIP7702BatchPhishingDetector;
+pub use delegate_access_control::EIP7702DelegateAccessControlDetector;
+pub use init_frontrun::EIP7702InitFrontrunDetector;
+pub use storage_collision::EIP7702StorageCollisionDetector;
+pub use sweeper_detection::EIP7702SweeperDetectionDetector;
+pub use txorigin_bypass::EIP7702TxOriginBypassDetector;
 
 /// Helper function to detect if contract might be EIP-7702 delegate
 pub fn is_eip7702_delegate(ctx: &crate::types::AnalysisContext) -> bool {
     let source = &ctx.source_code.to_lowercase();
 
     // Check for EIP-7702 specific patterns
-    source.contains("delegatecall") ||
-    source.contains("execute") && (source.contains("call") || source.contains("batch")) ||
-    source.contains("eip7702") ||
-    source.contains("setcode") ||
-    source.contains("authorization")
+    source.contains("delegatecall")
+        || source.contains("execute") && (source.contains("call") || source.contains("batch"))
+        || source.contains("eip7702")
+        || source.contains("setcode")
+        || source.contains("authorization")
 }
 
 /// Helper to detect sweeper patterns (drain all assets)
 pub fn has_sweeper_pattern(ctx: &crate::types::AnalysisContext) -> bool {
     let source = &ctx.source_code.to_lowercase();
 
-    let has_transfer_all = source.contains("transfer") &&
-        (source.contains("balance") || source.contains("this").to_string().contains("balance"));
+    let has_transfer_all = source.contains("transfer")
+        && (source.contains("balance") || source.contains("this").to_string().contains("balance"));
 
     let has_batch_transfer = source.contains("batch") || source.contains("multi");
 
-    let has_token_sweep = source.contains("token") &&
-        (source.contains("transfer") || source.contains("approve"));
+    let has_token_sweep =
+        source.contains("token") && (source.contains("transfer") || source.contains("approve"));
 
     has_transfer_all || (has_batch_transfer && has_token_sweep)
 }

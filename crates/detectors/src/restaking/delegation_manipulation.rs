@@ -20,9 +20,9 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::restaking::classification::*;
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::restaking::classification::*;
 use ast;
 
 pub struct RestakingDelegationManipulationDetector {
@@ -53,8 +53,7 @@ impl RestakingDelegationManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check delegation functions
-        if !func_name_lower.contains("delegate") &&
-           !func_name_lower.contains("setoperator") {
+        if !func_name_lower.contains("delegate") && !func_name_lower.contains("setoperator") {
             return findings;
         }
 
@@ -106,9 +105,8 @@ impl RestakingDelegationManipulationDetector {
         }
 
         // Check 2: Delegation cap enforcement
-        if increases_delegation_amount(function, ctx) {
-            if !has_delegation_cap(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
+        if increases_delegation_amount(function, ctx) && !has_delegation_cap(function, ctx) {
+            let finding = self.base.create_finding_with_severity(
                     ctx,
                     format!(
                         "No delegation cap check in '{}' - centralization risk",
@@ -135,8 +133,7 @@ impl RestakingDelegationManipulationDetector {
                      }".to_string()
                 );
 
-                findings.push(finding);
-            }
+            findings.push(finding);
         }
 
         findings
@@ -153,9 +150,10 @@ impl RestakingDelegationManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check allocation update functions
-        if !func_name_lower.contains("allocation") &&
-           !func_name_lower.contains("setallocation") &&
-           !func_name_lower.contains("updateallocation") {
+        if !func_name_lower.contains("allocation")
+            && !func_name_lower.contains("setallocation")
+            && !func_name_lower.contains("updateallocation")
+        {
             return findings;
         }
 
@@ -216,31 +214,34 @@ impl RestakingDelegationManipulationDetector {
         // Find delegation functions
         let has_delegation = ctx.get_functions().iter().any(|f| {
             let name = f.name.name.to_lowercase();
-            (name.contains("delegate") && !name.contains("undelegate")) ||
-            name == "delegateto" ||
-            name == "delegate_to"
+            (name.contains("delegate") && !name.contains("undelegate"))
+                || name == "delegateto"
+                || name == "delegate_to"
         });
 
         // Find undelegation functions
         let has_undelegation = ctx.get_functions().iter().any(|f| {
             let name = f.name.name.to_lowercase();
-            name.contains("undelegate") ||
-            name == "undelegatefrom" ||
-            name == "undelegate_from" ||
-            name == "revokedelegation"
+            name.contains("undelegate")
+                || name == "undelegatefrom"
+                || name == "undelegate_from"
+                || name == "revokedelegation"
         });
 
         if has_delegation && !has_undelegation {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "No undelegation mechanism - funds can be permanently locked with operator".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Implement undelegation mechanism:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "No undelegation mechanism - funds can be permanently locked with operator"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Implement undelegation mechanism:\n\
                  \n\
                  mapping(address => address) public delegations;\n\
                  mapping(address => uint256) public pendingWithdrawals;\n\
@@ -268,8 +269,9 @@ impl RestakingDelegationManipulationDetector {
                      pendingWithdrawals[msg.sender] = 0;\n\
                      \n\
                      asset.transfer(msg.sender, amount);\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -392,7 +394,6 @@ impl Detector for RestakingDelegationManipulationDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

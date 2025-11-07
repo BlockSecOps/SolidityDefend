@@ -41,7 +41,8 @@ impl ExtcodesizeBypassDetector {
             if has_eoa_validation {
                 // Check if there's any warning about constructor bypass
                 let has_bypass_protection = source_lower.contains("constructor")
-                    && (source_lower.contains("bypass") || source_lower.contains("during construction"));
+                    && (source_lower.contains("bypass")
+                        || source_lower.contains("during construction"));
 
                 if !has_bypass_protection {
                     findings.push((
@@ -104,10 +105,12 @@ impl ExtcodesizeBypassDetector {
         }
 
         // Pattern 4: EOA-only restrictions
-        if source_lower.contains("only") && (source_lower.contains("eoa") || source_lower.contains("externally owned")) {
+        if source_lower.contains("only")
+            && (source_lower.contains("eoa") || source_lower.contains("externally owned"))
+        {
             // Check if using EXTCODESIZE for enforcement
-            let uses_extcodesize = source_lower.contains(".code.length")
-                || source_lower.contains("extcodesize");
+            let uses_extcodesize =
+                source_lower.contains(".code.length") || source_lower.contains("extcodesize");
 
             if uses_extcodesize {
                 findings.push((
@@ -178,14 +181,7 @@ impl Detector for ExtcodesizeBypassDetector {
         for (message, line_offset, remediation) in issues {
             let finding = self
                 .base
-                .create_finding_with_severity(
-                    ctx,
-                    message,
-                    line_offset,
-                    0,
-                    20,
-                    Severity::Medium,
-                )
+                .create_finding_with_severity(ctx, message, line_offset, 0, 20, Severity::Medium)
                 .with_fix_suggestion(remediation)
                 .with_cwe(754); // CWE-754: Improper Check for Unusual or Exceptional Conditions
 

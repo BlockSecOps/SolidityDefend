@@ -9,6 +9,12 @@ pub struct MissingInputValidationDetector {
     base: BaseDetector,
 }
 
+impl Default for MissingInputValidationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MissingInputValidationDetector {
     pub fn new() -> Self {
         Self {
@@ -98,9 +104,7 @@ impl MissingInputValidationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let func_name = &function.name.name;

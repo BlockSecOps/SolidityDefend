@@ -18,8 +18,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::erc7683::classification::*;
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use ast;
 
 pub struct IntentNonceManagementDetector {
@@ -131,67 +131,76 @@ impl IntentNonceManagementDetector {
 
         // Check 1: Nonce is validated
         if !has_nonce_validation(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Nonce present but not validated in '{}' - replay attack possible",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Validate nonce before execution:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Nonce present but not validated in '{}' - replay attack possible",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Validate nonce before execution:\n\
                  require(!usedNonces[order.user][order.nonce], \"Nonce already used\");\n\
                  Or for sequential nonces:\n\
-                 require(order.nonce == userNonces[order.user], \"Invalid nonce\");".to_string()
-            );
+                 require(order.nonce == userNonces[order.user], \"Invalid nonce\");"
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
 
         // Check 2: Nonce is incremented/marked after validation
         if has_nonce_validation(function, ctx) && !has_nonce_update(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Nonce validated but not incremented/marked in '{}' - can be reused",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Mark nonce as used after validation:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Nonce validated but not incremented/marked in '{}' - can be reused",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Mark nonce as used after validation:\n\
                  usedNonces[order.user][order.nonce] = true;\n\
                  \n\
                  Or increment sequential nonce:\n\
                  userNonces[order.user]++;\n\
                  \n\
-                 IMPORTANT: Update nonce BEFORE external calls to prevent reentrancy issues.".to_string());
+                 IMPORTANT: Update nonce BEFORE external calls to prevent reentrancy issues."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
 
         // Check 3: Nonce from order struct (anti-pattern detection)
         if self.uses_separate_nonce_parameter(function, func_source) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Nonce passed as separate parameter in '{}' - should use order.nonce",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Use nonce from order struct:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Nonce passed as separate parameter in '{}' - should use order.nonce",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Use nonce from order struct:\n\
                  \n\
                  BAD:\n\
                  function openFor(Order order, uint256 nonce, bytes signature) {\n\
@@ -202,8 +211,9 @@ impl IntentNonceManagementDetector {
                  function openFor(Order order, bytes signature) {\n\
                      // Use order.nonce which is part of signed data\n\
                      require(!usedNonces[order.user][order.nonce], \"Used\");\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -225,8 +235,8 @@ impl IntentNonceManagementDetector {
         });
 
         // Check if nonce is accessed from order struct
-        let uses_order_nonce = func_lower.contains("order.nonce")
-            || func_lower.contains("order . nonce");
+        let uses_order_nonce =
+            func_lower.contains("order.nonce") || func_lower.contains("order . nonce");
 
         // Anti-pattern: has nonce parameter but doesn't use order.nonce
         has_nonce_param && !uses_order_nonce
@@ -243,16 +253,18 @@ impl IntentNonceManagementDetector {
 
         // Check if nonce storage is properly declared
         if !self.check_nonce_storage(ctx) && !uses_permit2(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "No nonce storage mapping declared - nonce validation impossible".to_string(),
-                1,
-                0,
-                20,
-                Severity::Critical,
-            )
-            .with_fix_suggestion(
-                "Add nonce storage mapping:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "No nonce storage mapping declared - nonce validation impossible".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Critical,
+                )
+                .with_fix_suggestion(
+                    "Add nonce storage mapping:\n\
                  \n\
                  Option 1: Bitmap-based (flexible)\n\
                  mapping(address => mapping(uint256 => bool)) public usedNonces;\n\
@@ -262,7 +274,9 @@ impl IntentNonceManagementDetector {
                  \n\
                  Option 3: Use Permit2 (recommended for gasless)\n\
                  IPermit2 public immutable PERMIT2;\n\
-                 // Permit2 handles nonce tracking internally".to_string());
+                 // Permit2 handles nonce tracking internally"
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -290,16 +304,19 @@ impl IntentNonceManagementDetector {
             && source_lower.contains("nonce");
 
         if !nonce_includes_chain && !domain_separator_includes_chain_id(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Nonce uniqueness should include chainId to prevent cross-chain collision".to_string(),
-                1,
-                0,
-                20,
-                Severity::Low,
-            )
-            .with_fix_suggestion(
-                "Ensure nonce uniqueness across chains:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Nonce uniqueness should include chainId to prevent cross-chain collision"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Low,
+                )
+                .with_fix_suggestion(
+                    "Ensure nonce uniqueness across chains:\n\
                  \n\
                  Option 1: Include chainId in signature hash (via EIP-712 domain separator)\n\
                  DOMAIN_SEPARATOR = keccak256(\n\
@@ -315,8 +332,9 @@ impl IntentNonceManagementDetector {
                  Option 2: Derive chain-specific nonce\n\
                  bytes32 uniqueNonce = keccak256(abi.encode(block.chainid, nonce));\n\
                  \n\
-                 This prevents same nonce from being valid on multiple chains.".to_string()
-            );
+                 This prevents same nonce from being valid on multiple chains."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -332,8 +350,8 @@ impl IntentNonceManagementDetector {
         let source_lower = source.to_lowercase();
 
         // Check if nonce storage is declared
-        let has_nonce_storage = source_lower.contains("usednonces")
-            || source_lower.contains("usernonces");
+        let has_nonce_storage =
+            source_lower.contains("usednonces") || source_lower.contains("usernonces");
 
         if !has_nonce_storage {
             return findings;
@@ -356,16 +374,18 @@ impl IntentNonceManagementDetector {
         });
 
         if !nonce_storage_used {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Nonce storage declared but never used - replay attacks possible".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Use the declared nonce storage in your functions:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Nonce storage declared but never used - replay attacks possible".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Use the declared nonce storage in your functions:\n\
                  \n\
                  function openFor(...) external {\n\
                      // Validate nonce\n\
@@ -377,8 +397,9 @@ impl IntentNonceManagementDetector {
                      // ... rest of logic\n\
                  }\n\
                  \n\
-                 If you declared nonce storage, make sure to actually use it!".to_string()
-            );
+                 If you declared nonce storage, make sure to actually use it!"
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -450,7 +471,6 @@ impl Detector for IntentNonceManagementDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

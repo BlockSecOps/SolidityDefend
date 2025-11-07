@@ -9,6 +9,12 @@ pub struct UninitializedStorageDetector {
     base: BaseDetector,
 }
 
+impl Default for UninitializedStorageDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UninitializedStorageDetector {
     pub fn new() -> Self {
         Self {
@@ -94,9 +100,7 @@ impl UninitializedStorageDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 

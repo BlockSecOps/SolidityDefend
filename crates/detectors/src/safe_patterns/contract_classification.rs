@@ -120,16 +120,18 @@ pub fn is_amm_contract(ctx: &AnalysisContext) -> bool {
     }
 
     // Constant product formula indicator
-    if source.contains(" * ") && (source.contains("reserve") || source.contains("balance")) {
-        if source.contains("k =") || source_lower.contains("invariant") {
-            indicator_count += 1;
-        }
+    if source.contains(" * ")
+        && (source.contains("reserve") || source.contains("balance"))
+        && (source.contains("k =") || source_lower.contains("invariant"))
+    {
+        indicator_count += 1;
     }
 
     // Contract name
     if ctx.contract.name.name.to_lowercase().contains("pair")
         || ctx.contract.name.name.to_lowercase().contains("pool")
-        || ctx.contract.name.name.to_lowercase().contains("swap") {
+        || ctx.contract.name.name.to_lowercase().contains("swap")
+    {
         indicator_count += 1;
     }
 
@@ -189,16 +191,17 @@ pub fn is_zk_rollup_contract(ctx: &AnalysisContext) -> bool {
         indicator_count += 1;
     }
 
-    if source_lower.contains("commitment") || source_lower.contains("stateroot") {
-        if source_lower.contains("proof") {
-            indicator_count += 1;
-        }
+    if (source_lower.contains("commitment") || source_lower.contains("stateroot"))
+        && source_lower.contains("proof")
+    {
+        indicator_count += 1;
     }
 
     // Contract name
     if ctx.contract.name.name.to_lowercase().contains("zk")
         || ctx.contract.name.name.to_lowercase().contains("rollup")
-        || ctx.contract.name.name.to_lowercase().contains("verifier") {
+        || ctx.contract.name.name.to_lowercase().contains("verifier")
+    {
         indicator_count += 1;
     }
 

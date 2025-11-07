@@ -9,6 +9,12 @@ pub struct CrossChainReplayDetector {
     base: BaseDetector,
 }
 
+impl Default for CrossChainReplayDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CrossChainReplayDetector {
     pub fn new() -> Self {
         Self {

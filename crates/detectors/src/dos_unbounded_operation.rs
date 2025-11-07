@@ -9,6 +9,12 @@ pub struct DosUnboundedOperationDetector {
     base: BaseDetector,
 }
 
+impl Default for DosUnboundedOperationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DosUnboundedOperationDetector {
     pub fn new() -> Self {
         Self {
@@ -96,9 +102,7 @@ impl DosUnboundedOperationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -113,18 +117,20 @@ impl DosUnboundedOperationDetector {
             && !func_source.contains("<=");
 
         if no_iteration_limit {
-            return Some(format!(
+            return Some(
                 "Loop over unbounded array without iteration limit, \
                 large arrays cause out-of-gas"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Deleting large structures
         if func_source.contains("delete") && func_source.contains("[") {
-            return Some(format!(
+            return Some(
                 "Deleting array or mapping without size limit, \
                 can exceed gas limit"
-            ));
+                    .to_string(),
+            );
         }
 
         None

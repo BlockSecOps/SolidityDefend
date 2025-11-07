@@ -10,6 +10,12 @@ pub struct ValidatorFrontRunningDetector {
     base: BaseDetector,
 }
 
+impl Default for ValidatorFrontRunningDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ValidatorFrontRunningDetector {
     pub fn new() -> Self {
         Self {
@@ -102,9 +108,7 @@ impl ValidatorFrontRunningDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -130,10 +134,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("reveal");
 
         if no_commitment {
-            return Some(format!(
+            return Some(
                 "Validator selection visible in mempool without commitment, \
                 validators can selectively include/exclude transactions"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Reward distribution without anti-frontrun protection
@@ -147,10 +152,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("encrypted");
 
         if no_protection {
-            return Some(format!(
+            return Some(
                 "Reward distribution visible in mempool, \
                 validators can front-run to claim rewards first"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Staking without validator rotation
@@ -163,10 +169,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("random");
 
         if no_rotation {
-            return Some(format!(
+            return Some(
                 "Validator assignment without rotation, \
                 same validators can repeatedly front-run same users"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Price-sensitive operations without sequencing
@@ -180,10 +187,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("auction");
 
         if no_fair_sequencing {
-            return Some(format!(
+            return Some(
                 "Price-sensitive operations without fair sequencing, \
                 validators can reorder transactions for MEV extraction"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Validator can observe withdrawal amounts
@@ -196,10 +204,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("encrypted");
 
         if withdrawal_visible {
-            return Some(format!(
+            return Some(
                 "Withdrawal amounts visible to validators before execution, \
                 enables targeted front-running of large withdrawals"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: No MEV redistribution mechanism
@@ -213,10 +222,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("burn");
 
         if no_mev_sharing {
-            return Some(format!(
+            return Some(
                 "MEV-generating operations without redistribution, \
                 validators capture full MEV without sharing with users"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Validator can see claim intentions
@@ -227,10 +237,11 @@ impl ValidatorFrontRunningDetector {
             is_claim && !func_source.contains("commit") && !func_source.contains("signature");
 
         if claim_visible {
-            return Some(format!(
+            return Some(
                 "Claim operations visible in mempool, \
                 validators can front-run to claim before users"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Continuous trading instead of batch auctions
@@ -244,10 +255,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("round");
 
         if continuous_trading {
-            return Some(format!(
+            return Some(
                 "Continuous trading model without batching, \
                 validators have information advantage for every trade"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: No transaction ordering constraints
@@ -259,10 +271,11 @@ impl ValidatorFrontRunningDetector {
             is_value_operation && !has_ordering_constraint && func_source.contains("public");
 
         if no_ordering {
-            return Some(format!(
+            return Some(
                 "No transaction ordering constraints, \
                 validators can reorder transactions arbitrarily for profit"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Validator priority in queue
@@ -273,10 +286,11 @@ impl ValidatorFrontRunningDetector {
             && !func_source.contains("fair");
 
         if validator_priority {
-            return Some(format!(
+            return Some(
                 "Validators have priority in queue, \
                 can skip ahead of user transactions for profitable operations"
-            ));
+                    .to_string(),
+            );
         }
 
         None

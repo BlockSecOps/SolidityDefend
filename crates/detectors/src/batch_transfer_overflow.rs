@@ -12,6 +12,12 @@ pub struct BatchTransferOverflowDetector {
     base: BaseDetector,
 }
 
+impl Default for BatchTransferOverflowDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl BatchTransferOverflowDetector {
     pub fn new() -> Self {
         Self {
@@ -34,9 +40,7 @@ impl BatchTransferOverflowDetector {
 
         if !is_batch_function {
             // Also check source for batch patterns
-            if !(function_source.contains("[] memory")
-                || function_source.contains("[] calldata"))
-            {
+            if !(function_source.contains("[] memory") || function_source.contains("[] calldata")) {
                 return false;
             }
         }
@@ -75,7 +79,9 @@ impl BatchTransferOverflowDetector {
         // - OR old Solidity version (< 0.8.0) without SafeMath
         (has_length_multiplication || has_count_value_mult)
             && !has_safe_math
-            && (unchecked_multiplication || likely_old_solidity || !function_source.contains("checked"))
+            && (unchecked_multiplication
+                || likely_old_solidity
+                || !function_source.contains("checked"))
     }
 }
 

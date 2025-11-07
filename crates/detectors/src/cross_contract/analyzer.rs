@@ -174,7 +174,7 @@ impl CrossContractAnalyzer {
     ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
-        for (contract_name, _contract_ctx) in &context.contracts {
+        for contract_name in context.contracts.keys() {
             let multi_contract_operations =
                 self.find_multi_contract_operations(context, contract_name);
 
@@ -209,7 +209,7 @@ impl CrossContractAnalyzer {
     ) -> Vec<CrossContractFinding> {
         let mut findings = Vec::new();
 
-        for (contract_name, _contract_ctx) in &context.contracts {
+        for contract_name in context.contracts.keys() {
             let reentrancy_paths = self.find_reentrancy_paths(context, contract_name);
 
             for path in reentrancy_paths {
@@ -375,6 +375,7 @@ impl CrossContractAnalyzer {
         paths
     }
 
+    #[allow(clippy::only_used_in_recursion)]
     fn dfs_reentrancy_search(
         &self,
         context: &CrossContractContext,

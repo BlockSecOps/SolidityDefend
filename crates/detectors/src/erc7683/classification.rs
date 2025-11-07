@@ -33,7 +33,7 @@ pub fn is_origin_settler(ctx: &AnalysisContext) -> bool {
 
     let has_open = ctx.get_functions().iter().any(|f| {
         let name_lower = f.name.name.to_lowercase();
-        name_lower == "open" && f.parameters.len() >= 1
+        name_lower == "open" && !f.parameters.is_empty()
     });
 
     let has_resolve_for = ctx.get_functions().iter().any(|f| {
@@ -112,9 +112,7 @@ pub fn is_gasless_order_function(function: &ast::Function) -> bool {
 pub fn is_fill_function(function: &ast::Function) -> bool {
     let name_lower = function.name.name.to_lowercase();
 
-    name_lower == "fill"
-        || name_lower == "fillorder"
-        || name_lower == "fill_order"
+    name_lower == "fill" || name_lower == "fillorder" || name_lower == "fill_order"
 }
 
 /// Finds settlement functions (open, openFor, fill, resolve)
@@ -182,7 +180,9 @@ pub fn has_chain_id_validation(function: &ast::Function, ctx: &AnalysisContext) 
 
     // Check for explicit chainId validation
     let has_chain_check = (func_lower.contains("chainid") || func_lower.contains("chain.id"))
-        && (func_lower.contains("==") || func_lower.contains("require") || func_lower.contains("if"));
+        && (func_lower.contains("==")
+            || func_lower.contains("require")
+            || func_lower.contains("if"));
 
     // Check for block.chainid comparison
     let has_block_chainid = func_lower.contains("block.chainid");
@@ -240,8 +240,8 @@ pub fn has_nonce_update(function: &ast::Function, ctx: &AnalysisContext) -> bool
     let has_marking = func_lower.contains("= true") && func_lower.contains("nonce");
 
     // Check for Permit2 (handles nonce internally)
-    let uses_permit2 = func_lower.contains("permit2")
-        || func_lower.contains("permitwitnesstransferfrom");
+    let uses_permit2 =
+        func_lower.contains("permit2") || func_lower.contains("permitwitnesstransferfrom");
 
     has_increment || has_marking || uses_permit2
 }
@@ -262,7 +262,9 @@ pub fn has_deadline_validation(function: &ast::Function, ctx: &AnalysisContext) 
     // Check for deadline validation
     let has_deadline = func_lower.contains("deadline") || func_lower.contains("expir");
     let has_timestamp_check = func_lower.contains("timestamp")
-        && (func_lower.contains("<=") || func_lower.contains("<") || func_lower.contains("require"));
+        && (func_lower.contains("<=")
+            || func_lower.contains("<")
+            || func_lower.contains("require"));
 
     has_deadline && has_timestamp_check
 }
@@ -309,7 +311,8 @@ pub fn has_reentrancy_protection(function: &ast::Function, ctx: &AnalysisContext
         let modifier_name = modifier.name.name.to_lowercase();
         if modifier_name.contains("nonreentrant")
             || modifier_name.contains("non_reentrant")
-            || modifier_name.contains("reentrancyguard") {
+            || modifier_name.contains("reentrancyguard")
+        {
             return true;
         }
     }
@@ -404,21 +407,19 @@ pub fn has_mev_protection(ctx: &AnalysisContext) -> bool {
     let source_lower = ctx.source_code.to_lowercase();
 
     // Check for commit-reveal scheme
-    let has_commitment = source_lower.contains("commitment")
-        || source_lower.contains("commit");
+    let has_commitment = source_lower.contains("commitment") || source_lower.contains("commit");
 
     let has_reveal = source_lower.contains("reveal");
 
     // Check for private mempool usage
-    let has_private_mempool = source_lower.contains("flashbots")
-        || source_lower.contains("privatemem pool");
+    let has_private_mempool =
+        source_lower.contains("flashbots") || source_lower.contains("privatemem pool");
 
     (has_commitment && has_reveal) || has_private_mempool
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Tests would go here
     // For now, the functions are designed to be testable with mock AnalysisContext

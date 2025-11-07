@@ -64,15 +64,18 @@ impl Detector for MissingCommitRevealDetector {
         let has_commit_reveal = source_lower.contains("commit") && source_lower.contains("reveal");
 
         if is_auction && !has_commit_reveal {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Auction/bidding without commit-reveal - bids can be front-run".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Implement commit-reveal pattern:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Auction/bidding without commit-reveal - bids can be front-run".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Implement commit-reveal pattern:\n\
                  \n\
                  mapping(address => bytes32) public commitments;\n\
                  mapping(address => uint256) public bids;\n\
@@ -95,8 +98,9 @@ impl Detector for MissingCommitRevealDetector {
                      require(msg.value == amount, \"Amount mismatch\");\n\
                      \n\
                      bids[msg.sender] = amount;\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 

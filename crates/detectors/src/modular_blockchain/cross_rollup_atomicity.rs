@@ -1,9 +1,9 @@
 //! Cross-Rollup Atomicity Detector
 
-use anyhow::Result;
-use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use anyhow::Result;
+use std::any::Any;
 
 pub struct CrossRollupAtomicityDetector {
     base: BaseDetector,
@@ -53,14 +53,15 @@ impl Detector for CrossRollupAtomicityDetector {
         let mut findings = Vec::new();
         let lower = ctx.source_code.to_lowercase();
 
-        if lower.contains("crossrollup") || lower.contains("crosschain") {
-            if !lower.contains("atomic") && !lower.contains("lock") {
-                findings.push(self.base.create_finding(
+        if (lower.contains("crossrollup") || lower.contains("crosschain"))
+            && !lower.contains("atomic")
+            && !lower.contains("lock")
+        {
+            findings.push(self.base.create_finding(
                     ctx,
                     "Cross-rollup operation lacks atomicity guarantee - partial execution possible".to_string(),
                     1, 1, ctx.source_code.len() as u32,
                 ).with_fix_suggestion("Implement two-phase commit or rollback mechanism".to_string()));
-            }
         }
         Ok(findings)
     }

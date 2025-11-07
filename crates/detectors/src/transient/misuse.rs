@@ -41,9 +41,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::has_transient_storage_declarations;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::has_transient_storage_declarations;
 
 pub struct TransientStorageMisuseDetector {
     base: BaseDetector,
@@ -78,7 +78,9 @@ impl TransientStorageMisuseDetector {
             }
 
             // Skip comments
-            if line_lower.trim_start().starts_with("//") || line_lower.trim_start().starts_with("/*") {
+            if line_lower.trim_start().starts_with("//")
+                || line_lower.trim_start().starts_with("/*")
+            {
                 continue;
             }
 
@@ -86,7 +88,10 @@ impl TransientStorageMisuseDetector {
 
             // Check for suspicious variable names suggesting persistent data
             let suspicious_keywords = [
-                ("balance", "User balances should persist across transactions"),
+                (
+                    "balance",
+                    "User balances should persist across transactions",
+                ),
                 ("allowance", "Token allowances must persist"),
                 ("owner", "Ownership data must be permanent"),
                 ("paused", "Pause state should persist"),
@@ -97,7 +102,10 @@ impl TransientStorageMisuseDetector {
                 ("stake", "Staking amounts must persist"),
                 ("reward", "Rewards should persist"),
                 ("locked", "Lock state must persist"),
-                ("nonce", "Nonces might need to persist (check if used across transactions)"),
+                (
+                    "nonce",
+                    "Nonces might need to persist (check if used across transactions)",
+                ),
             ];
 
             for (keyword, reason) in suspicious_keywords.iter() {
@@ -135,7 +143,7 @@ impl TransientStorageMisuseDetector {
                             keyword
                         )
                     ));
-                    break;  // One issue per line
+                    break; // One issue per line
                 }
             }
 
@@ -177,10 +185,19 @@ fn extract_variable_name(line: &str) -> String {
     for (i, part) in parts.iter().enumerate() {
         if *part == "transient" && i + 1 < parts.len() {
             // Get next word after "transient", strip visibility and semicolon
-            let name = parts.iter().skip(i + 1).find(|p| {
-                !p.contains("public") && !p.contains("private") && !p.contains("internal") && !p.contains("external")
-            }).unwrap_or(&"");
-            return name.trim_matches(|c: char| !c.is_alphanumeric()).to_string();
+            let name = parts
+                .iter()
+                .skip(i + 1)
+                .find(|p| {
+                    !p.contains("public")
+                        && !p.contains("private")
+                        && !p.contains("internal")
+                        && !p.contains("external")
+                })
+                .unwrap_or(&"");
+            return name
+                .trim_matches(|c: char| !c.is_alphanumeric())
+                .to_string();
         }
     }
     String::new()
@@ -190,10 +207,8 @@ fn is_read_in_view_functions(var_name: &str, source: &str) -> bool {
     // Simple heuristic: check if variable is referenced in "view" or "pure" functions
     let parts: Vec<&str> = source.split("function").collect();
     for part in parts.iter().skip(1) {
-        if part.contains("view") || part.contains("pure") {
-            if part.contains(var_name) {
-                return true;
-            }
+        if (part.contains("view") || part.contains("pure")) && part.contains(var_name) {
+            return true;
         }
     }
     false

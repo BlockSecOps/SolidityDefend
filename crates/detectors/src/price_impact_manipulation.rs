@@ -9,6 +9,12 @@ pub struct PriceImpactManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for PriceImpactManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PriceImpactManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -99,9 +105,7 @@ impl PriceImpactManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -126,10 +130,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("/ 100");
 
         if lacks_max_trade_size {
-            return Some(format!(
+            return Some(
                 "No maximum trade size limit enforced, allowing trades of any size \
                 that can cause extreme price impact and drain pool liquidity"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: No price impact calculation
@@ -142,10 +147,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("after");
 
         if lacks_impact_calculation {
-            return Some(format!(
+            return Some(
                 "No price impact calculation performed before executing trade, \
                 users cannot assess cost and attackers can manipulate prices"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Missing minimum output validation
@@ -160,10 +166,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("require(amountOut >=");
 
         if lacks_min_output {
-            return Some(format!(
+            return Some(
                 "No minimum output amount validation, users have no slippage protection \
                 and can receive much less than expected"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: No pool depth check relative to trade size
@@ -178,10 +185,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("/ reserve");
 
         if lacks_depth_check {
-            return Some(format!(
+            return Some(
                 "Trade size not validated against pool depth/reserves, \
                 allowing disproportionately large trades"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Missing deadline parameter
@@ -191,10 +199,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("expiry");
 
         if lacks_deadline {
-            return Some(format!(
+            return Some(
                 "No transaction deadline parameter, trades can be held and executed \
                 when price moves against user (transaction pinning)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Uses constant product formula without impact limits
@@ -208,10 +217,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("require(impact");
 
         if lacks_impact_limit {
-            return Some(format!(
+            return Some(
                 "Uses constant product formula (x*y=k) without maximum impact limits, \
                 allowing trades that drastically move the price"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: No multi-hop path validation
@@ -225,10 +235,11 @@ impl PriceImpactManipulationDetector {
             && !func_source.contains("validatePath");
 
         if lacks_path_validation {
-            return Some(format!(
+            return Some(
                 "Multi-hop swap path not validated for length or composition, \
                 allowing complex routes that amplify price impact"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -237,9 +248,7 @@ impl PriceImpactManipulationDetector {
                 || func_source.contains("slippage")
                 || func_source.contains("large trade"))
         {
-            return Some(format!(
-                "Price impact manipulation vulnerability marker detected"
-            ));
+            return Some("Price impact manipulation vulnerability marker detected".to_string());
         }
 
         None

@@ -9,6 +9,12 @@ pub struct LendingLiquidationAbuseDetector {
     base: BaseDetector,
 }
 
+impl Default for LendingLiquidationAbuseDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LendingLiquidationAbuseDetector {
     pub fn new() -> Self {
         Self {
@@ -96,9 +102,7 @@ impl LendingLiquidationAbuseDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -121,10 +125,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("cumulative");
 
         if uses_spot_price {
-            return Some(format!(
+            return Some(
                 "Liquidation uses spot price for health factor calculation, \
                 enabling price manipulation to trigger unfair liquidations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: No liquidation cooldown or front-running protection
@@ -134,10 +139,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("block.timestamp");
 
         if lacks_cooldown {
-            return Some(format!(
+            return Some(
                 "No liquidation cooldown period, allowing instant repeated liquidations \
                 and front-running of user's repayment transactions"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Excessive liquidation bonus/incentive
@@ -152,10 +158,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("<");
 
         if lacks_bonus_cap {
-            return Some(format!(
+            return Some(
                 "Liquidation bonus lacks maximum cap, potentially allowing \
                 liquidators to seize excessive collateral from borrowers"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Full liquidation without partial option
@@ -170,10 +177,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("maxClose");
 
         if lacks_partial_liquidation {
-            return Some(format!(
+            return Some(
                 "Only allows full liquidation without partial liquidation option, \
                 forcing unnecessary loss for borrowers barely under collateral ratio"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Health factor not properly validated
@@ -188,10 +196,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("1e18");
 
         if lacks_health_validation {
-            return Some(format!(
+            return Some(
                 "Health factor calculation lacks proper threshold validation, \
                 allowing liquidations when users are still adequately collateralized"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Missing oracle staleness check
@@ -205,10 +214,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("stale");
 
         if lacks_staleness_check {
-            return Some(format!(
+            return Some(
                 "Uses price oracle without checking for stale data, \
                 enabling liquidations based on outdated prices"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: No minimum collateral protection
@@ -222,10 +232,11 @@ impl LendingLiquidationAbuseDetector {
             && !func_source.contains("require(amount");
 
         if lacks_min_protection {
-            return Some(format!(
+            return Some(
                 "Collateral seizure lacks minimum amount protection, \
                 allowing griefing attacks through dust liquidations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
@@ -234,7 +245,7 @@ impl LendingLiquidationAbuseDetector {
                 || func_source.contains("unfair")
                 || func_source.contains("abuse"))
         {
-            return Some(format!("Liquidation abuse vulnerability marker detected"));
+            return Some("Liquidation abuse vulnerability marker detected".to_string());
         }
 
         None

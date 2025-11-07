@@ -105,9 +105,8 @@ impl Detector for YieldFarmingManipulationDetector {
         }
 
         // Check for missing minimum staking duration
-        let has_staking = lower.contains("stake")
-            || lower.contains("deposit")
-            || lower.contains("addliquidity");
+        let has_staking =
+            lower.contains("stake") || lower.contains("deposit") || lower.contains("addliquidity");
 
         if has_staking && has_reward_calculation {
             let has_min_duration = lower.contains("minstaketime")
@@ -116,16 +115,20 @@ impl Detector for YieldFarmingManipulationDetector {
                 || lower.contains("require(block.timestamp");
 
             if !has_min_duration {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "No minimum staking duration enforced - allows instant reward farming".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Add minimum staking duration requirement before allowing reward claims".to_string()
-                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        "No minimum staking duration enforced - allows instant reward farming"
+                            .to_string(),
+                        1,
+                        1,
+                        ctx.source_code.len() as u32,
+                    )
+                    .with_fix_suggestion(
+                        "Add minimum staking duration requirement before allowing reward claims"
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }

@@ -1,5 +1,4 @@
 /// Shared utility functions for context detection and pattern recognition
-
 use crate::types::AnalysisContext;
 
 /// Detects if the contract is an ERC-4626 compliant vault
@@ -15,8 +14,8 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     let has_deposit = source.contains("function deposit(");
     let has_withdraw = source.contains("function withdraw(");
     let has_redeem = source.contains("function redeem(");
-    let has_total_assets = source.contains("function totalAssets(")
-        || source.contains("function totalAssets() ");
+    let has_total_assets =
+        source.contains("function totalAssets(") || source.contains("function totalAssets() ");
 
     // Check for share token characteristics
     let has_shares = source.contains("shares") || source.contains("_shares");
@@ -120,7 +119,9 @@ pub fn has_zero_address_check(function_source: &str, param_name: &str) -> bool {
         format!("assert({} != address(0)", param_name),
     ];
 
-    patterns.iter().any(|pattern| function_source.contains(pattern))
+    patterns
+        .iter()
+        .any(|pattern| function_source.contains(pattern))
 }
 
 /// Detects if the contract implements a pull-over-push pattern
@@ -148,7 +149,9 @@ pub fn has_actual_delay_mechanism(function_source: &str) -> bool {
         "block.number +",
     ];
 
-    delay_indicators.iter().any(|indicator| function_source.contains(indicator))
+    delay_indicators
+        .iter()
+        .any(|indicator| function_source.contains(indicator))
 }
 
 /// Detects if the contract is an ERC-4337 Account Abstraction contract
@@ -167,9 +170,8 @@ pub fn is_erc4337_paymaster(ctx: &AnalysisContext) -> bool {
         || source.contains("function validateUserOp(");
 
     // Check for UserOperation type usage
-    let has_user_op = source.contains("UserOp")
-        || source.contains("userOp")
-        || source.contains("UserOperation");
+    let has_user_op =
+        source.contains("UserOp") || source.contains("userOp") || source.contains("UserOperation");
 
     // Check for ERC-4337 specific markers
     let has_erc4337_marker = source.contains("ERC4337")
@@ -283,7 +285,8 @@ pub fn is_uniswap_v3_pool(ctx: &AnalysisContext) -> bool {
     let has_positions = source.contains("position") || source.contains("Position");
 
     // Check for fee tiers (V3 specific)
-    let has_fee_tier = source.contains("fee") && (source.contains("500") || source.contains("3000") || source.contains("10000"));
+    let has_fee_tier = source.contains("fee")
+        && (source.contains("500") || source.contains("3000") || source.contains("10000"));
 
     // Must have slot0 + observe (TWAP oracle) + at least 2 other V3 indicators
     let has_v3_oracle = has_slot0 && has_observe;
@@ -307,8 +310,8 @@ pub fn is_uniswap_v4_pool(ctx: &AnalysisContext) -> bool {
     let source = ctx.source_code.as_str();
 
     // Check for V4 hook functions
-    let _has_before_swap = source.contains("function beforeSwap(")
-        || source.contains("beforeSwap(address,PoolKey");
+    let _has_before_swap =
+        source.contains("function beforeSwap(") || source.contains("beforeSwap(address,PoolKey");
     let _has_after_swap =
         source.contains("function afterSwap(") || source.contains("afterSwap(address,PoolKey");
 
@@ -364,8 +367,8 @@ pub fn is_curve_amm(ctx: &AnalysisContext) -> bool {
         || (source.contains("function exchange(") && source.contains("int128"));
 
     // Check for virtual price (key Curve concept)
-    let has_virtual_price = source.contains("function get_virtual_price(")
-        || source.contains("get_virtual_price()");
+    let has_virtual_price =
+        source.contains("function get_virtual_price(") || source.contains("get_virtual_price()");
 
     // Check for amplification coefficient (StableSwap algorithm)
     let has_amplification = source.contains("function A()")
@@ -374,9 +377,11 @@ pub fn is_curve_amm(ctx: &AnalysisContext) -> bool {
 
     // Check for Curve token arrays (coins, balances)
     let has_coins_array = source.contains("function coins(")
-        || source.contains("coins[") || source.contains("coins(uint256");
+        || source.contains("coins[")
+        || source.contains("coins(uint256");
     let has_balances_array = source.contains("function balances(")
-        || source.contains("balances[") || source.contains("balances(uint256");
+        || source.contains("balances[")
+        || source.contains("balances(uint256");
 
     // Check for Curve-specific patterns
     let has_curve_marker =
@@ -442,8 +447,9 @@ pub fn is_balancer_amm(ctx: &AnalysisContext) -> bool {
         || source.contains("IERC20[] ");
 
     // Check for Balancer-specific patterns
-    let has_balancer_math =
-        source.contains("WeightedMath") || source.contains("StableMath") || source.contains("_calcOutGivenIn");
+    let has_balancer_math = source.contains("WeightedMath")
+        || source.contains("StableMath")
+        || source.contains("_calcOutGivenIn");
 
     // Must have pool ID + at least 2 other Balancer indicators
     let indicator_count = [
@@ -525,12 +531,12 @@ pub fn is_compound_ctoken(ctx: &AnalysisContext) -> bool {
     let has_mint = source.contains("function mint(") && source.contains("mintAmount");
     let has_redeem = source.contains("function redeem(") && source.contains("redeemTokens");
     let has_borrow = source.contains("function borrow(") && source.contains("borrowAmount");
-    let has_repay_borrow = source.contains("function repayBorrow(")
-        || source.contains("function repayBorrowBehalf(");
+    let has_repay_borrow =
+        source.contains("function repayBorrow(") || source.contains("function repayBorrowBehalf(");
 
     // Check for liquidation function (Compound-specific signature)
-    let has_liquidate_borrow = source.contains("function liquidateBorrow(")
-        && source.contains("cTokenCollateral");
+    let has_liquidate_borrow =
+        source.contains("function liquidateBorrow(") && source.contains("cTokenCollateral");
 
     // Check for exchange rate (cToken to underlying conversion)
     let has_exchange_rate = source.contains("function exchangeRateCurrent(")
@@ -589,8 +595,7 @@ pub fn is_compound_comptroller(ctx: &AnalysisContext) -> bool {
     let has_enter_markets = source.contains("function enterMarkets(")
         && source.contains("cTokens")
         && source.contains("[]");
-    let has_exit_market =
-        source.contains("function exitMarket(") && source.contains("cToken");
+    let has_exit_market = source.contains("function exitMarket(") && source.contains("cToken");
 
     // Check for account liquidity calculation
     let has_account_liquidity = source.contains("function getAccountLiquidity(")
@@ -650,8 +655,7 @@ pub fn is_aave_lending_pool(ctx: &AnalysisContext) -> bool {
     let has_deposit = source.contains("function deposit(")
         && source.contains("onBehalfOf")
         && source.contains("referralCode");
-    let has_withdraw =
-        source.contains("function withdraw(") && source.contains("asset");
+    let has_withdraw = source.contains("function withdraw(") && source.contains("asset");
     let has_borrow = source.contains("function borrow(")
         && source.contains("interestRateMode")
         && source.contains("asset");
@@ -917,8 +921,7 @@ pub fn is_flash_loan_provider(ctx: &AnalysisContext) -> bool {
         && (source.contains("function") || source.contains("uint"));
 
     // Check for balance validation (flash loan must return borrowed amount + fee)
-    let has_balance_check =
-        source.contains("balanceAfter") || source.contains("require(balance");
+    let has_balance_check = source.contains("balanceAfter") || source.contains("require(balance");
 
     // Must have flash loan function + at least 2 other indicators
     let indicator_count = [has_callback, has_fee, has_balance_check]
@@ -954,7 +957,8 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
         || lower.contains("function vote(")
         || lower.contains("function cast");
 
-    let has_execute = (lower.contains("function execute(") || lower.contains("function executeproposal"))
+    let has_execute = (lower.contains("function execute(")
+        || lower.contains("function executeproposal"))
         && (lower.contains("proposal") || lower.contains("targets"));
 
     // Must have core governance functions
@@ -971,9 +975,8 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
         || lower.contains("delegatebyvote")
         || lower.contains("delegatebysig");
 
-    let has_timelock = lower.contains("timelock")
-        || lower.contains("eta")
-        || lower.contains("queuedtransactions");
+    let has_timelock =
+        lower.contains("timelock") || lower.contains("eta") || lower.contains("queuedtransactions");
 
     let has_quorum = lower.contains("quorum")
         || lower.contains("quorumvotes")
@@ -1005,7 +1008,6 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn test_erc4626_detection() {

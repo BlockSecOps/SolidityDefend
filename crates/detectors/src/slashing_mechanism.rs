@@ -9,6 +9,12 @@ pub struct SlashingMechanismDetector {
     base: BaseDetector,
 }
 
+impl Default for SlashingMechanismDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SlashingMechanismDetector {
     pub fn new() -> Self {
         Self {
@@ -95,9 +101,7 @@ impl SlashingMechanismDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -123,10 +127,11 @@ impl SlashingMechanismDetector {
             && (func_source.contains("stake") || func_source.contains("balance"));
 
         if lacks_cooldown {
-            return Some(format!(
+            return Some(
                 "No cooldown period between slashing events, \
                 allows rapid repeated slashing of same validator (griefing attack)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: No maximum slashing limit per period
@@ -140,10 +145,11 @@ impl SlashingMechanismDetector {
             && (func_source.contains("amount") || func_source.contains("stake"));
 
         if lacks_limit {
-            return Some(format!(
+            return Some(
                 "No maximum slashing amount limit per time period, \
                 validator can lose entire stake from single event"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Slashing without evidence verification
@@ -156,10 +162,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_evidence_check && func_source.contains("require");
 
         if lacks_evidence {
-            return Some(format!(
+            return Some(
                 "Slashing triggered without evidence verification, \
                 allows arbitrary slashing without proof of misbehavior"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: No dispute or appeal period
@@ -172,10 +179,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_dispute_period && func_source.contains("stake");
 
         if lacks_dispute {
-            return Some(format!(
+            return Some(
                 "Slashing executes immediately without dispute period, \
                 no mechanism for validators to challenge false accusations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Single address can trigger slashing
@@ -188,10 +196,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_multisig && func_source.contains("external");
 
         if single_caller {
-            return Some(format!(
+            return Some(
                 "Single address can trigger slashing without multi-signature, \
                 centralization risk and potential for malicious slashing"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: No double-slashing protection
@@ -203,10 +212,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_double_slash_protection && func_source.contains("mapping");
 
         if lacks_double_protection {
-            return Some(format!(
+            return Some(
                 "No protection against double-slashing for same offense, \
                 validator can be penalized multiple times for single misbehavior"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Slashing amount not proportional
@@ -219,10 +229,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_proportional_logic && func_source.contains("amount");
 
         if lacks_proportionality {
-            return Some(format!(
+            return Some(
                 "Slashing amount not proportional to offense severity, \
                 fixed penalty may be too harsh for minor violations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: No grace period for first offenses
@@ -235,10 +246,11 @@ impl SlashingMechanismDetector {
             is_slashing_function && !has_grace_period && func_source.contains("slash");
 
         if lacks_grace {
-            return Some(format!(
+            return Some(
                 "No grace period or warning system for first offenses, \
                 harsh penalties applied immediately without progressive discipline"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Slashing affects delegators unfairly
@@ -251,10 +263,11 @@ impl SlashingMechanismDetector {
             && !func_source.contains("insurance");
 
         if no_delegator_protection {
-            return Some(format!(
+            return Some(
                 "Validator slashing affects delegators without protection, \
                 delegators punished for validator misbehavior they cannot control"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Slashing burns funds instead of redistributing
@@ -266,10 +279,11 @@ impl SlashingMechanismDetector {
             && !func_source.contains("reward");
 
         if no_redistribution {
-            return Some(format!(
+            return Some(
                 "Slashed funds burned instead of redistributed to honest validators, \
                 reduces economic security and validator incentives"
-            ));
+                    .to_string(),
+            );
         }
 
         None

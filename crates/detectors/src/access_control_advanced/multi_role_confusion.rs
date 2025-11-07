@@ -19,7 +19,8 @@ impl MultiRoleConfusionDetector {
             base: BaseDetector::new(
                 DetectorId("multi-role-confusion".to_string()),
                 "Multi-Role Confusion".to_string(),
-                "Detects contradictory role requirements and inconsistent access patterns".to_string(),
+                "Detects contradictory role requirements and inconsistent access patterns"
+                    .to_string(),
                 vec![DetectorCategory::AccessControl],
                 Severity::High,
             ),
@@ -97,7 +98,8 @@ impl Detector for MultiRoleConfusionDetector {
         }
 
         // Pattern 2: Inconsistent access control on paired functions
-        let has_pause_unpause = lower.contains("function pause") && lower.contains("function unpause");
+        let has_pause_unpause =
+            lower.contains("function pause") && lower.contains("function unpause");
         let has_lock_unlock = lower.contains("function lock") && lower.contains("function unlock");
 
         if has_pause_unpause || has_lock_unlock {

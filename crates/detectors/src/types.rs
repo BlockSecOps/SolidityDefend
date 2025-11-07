@@ -566,22 +566,22 @@ impl<'arena> AnalysisContext<'arena> {
         }
     }
 
-    /// Add CFG for a function (temporarily disabled)
+    // Add CFG for a function (temporarily disabled)
     // pub fn add_cfg(&mut self, function_name: String, cfg: ControlFlowGraph) {
     //     self.cfgs.insert(function_name, cfg);
     // }
-
-    /// Set data flow analysis results (temporarily disabled)
+    //
+    // Set data flow analysis results (temporarily disabled)
     // pub fn set_dataflow(&mut self, dataflow: Box<dyn DataFlowAnalysis>) {
     //     self.dataflow = Some(dataflow);
     // }
-
-    /// Set taint analysis results (temporarily disabled)
+    //
+    // Set taint analysis results (temporarily disabled)
     // pub fn set_taint(&mut self, taint: TaintAnalysis) {
     //     self.taint = Some(taint);
     // }
-
-    /// Get the CFG for a specific function (temporarily disabled)
+    //
+    // Get the CFG for a specific function (temporarily disabled)
     // pub fn get_cfg(&self, function_name: &str) -> Option<&ControlFlowGraph> {
     //     self.cfgs.get(function_name)
     // }

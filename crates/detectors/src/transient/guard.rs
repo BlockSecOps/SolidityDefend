@@ -46,9 +46,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::has_transient_storage_declarations;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::has_transient_storage_declarations;
 
 pub struct TransientReentrancyGuardDetector {
     base: BaseDetector,
@@ -75,7 +75,8 @@ impl TransientReentrancyGuardDetector {
         let mut issues = Vec::new();
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
@@ -83,19 +84,19 @@ impl TransientReentrancyGuardDetector {
         let func_lower = func_text.to_lowercase();
 
         // Check for transient reentrancy guard usage
-        let has_transient_guard = ctx.source_code.to_lowercase().contains("transient") &&
-            (ctx.source_code.to_lowercase().contains("locked") ||
-             ctx.source_code.to_lowercase().contains("guard") ||
-             ctx.source_code.to_lowercase().contains("reentrant"));
+        let has_transient_guard = ctx.source_code.to_lowercase().contains("transient")
+            && (ctx.source_code.to_lowercase().contains("locked")
+                || ctx.source_code.to_lowercase().contains("guard")
+                || ctx.source_code.to_lowercase().contains("reentrant"));
 
         if !has_transient_guard {
             return issues;
         }
 
         // Check for low-gas external calls that could set transient state
-        let has_low_gas_call = func_lower.contains(".transfer(") ||
-            func_lower.contains(".send(") ||
-            func_lower.contains(".call{gas:");
+        let has_low_gas_call = func_lower.contains(".transfer(")
+            || func_lower.contains(".send(")
+            || func_lower.contains(".call{gas:");
 
         if has_low_gas_call {
             issues.push((
@@ -147,13 +148,13 @@ impl TransientReentrancyGuardDetector {
         }
 
         // Check for read-only reentrancy protection
-        let has_view_protection = ctx.source_code.contains("view") &&
-            ctx.source_code.to_lowercase().contains("require") &&
-            ctx.source_code.to_lowercase().contains("locked");
+        let has_view_protection = ctx.source_code.contains("view")
+            && ctx.source_code.to_lowercase().contains("require")
+            && ctx.source_code.to_lowercase().contains("locked");
 
         if has_transient_guard && !has_view_protection {
             issues.push((
-                format!("Missing read-only reentrancy protection in contract with transient guard"),
+                "Missing read-only reentrancy protection in contract with transient guard".to_string(),
                 Severity::Low,
                 "Add read-only reentrancy protection for view functions:\n\
                  \n\

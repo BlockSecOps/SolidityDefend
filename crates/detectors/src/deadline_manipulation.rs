@@ -9,6 +9,12 @@ pub struct DeadlineManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for DeadlineManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeadlineManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -97,9 +103,7 @@ impl DeadlineManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -120,10 +124,11 @@ impl DeadlineManipulationDetector {
         let lacks_validation = has_deadline_param && !has_deadline_check;
 
         if lacks_validation {
-            return Some(format!(
+            return Some(
                 "Deadline parameter exists but is not validated against current time, \
                 allowing expired transactions to execute"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Allows very distant deadlines
@@ -135,10 +140,11 @@ impl DeadlineManipulationDetector {
             has_deadline_param && !has_max_check && func_source.contains("block.timestamp");
 
         if allows_long_deadline {
-            return Some(format!(
+            return Some(
                 "No maximum deadline limit, allows setting deadlines years in future \
                 enabling validators to hold and execute at optimal times"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Swap/trade without deadline
@@ -152,10 +158,11 @@ impl DeadlineManipulationDetector {
             && (func_source.contains("amountOut") || func_source.contains("return"));
 
         if missing_deadline {
-            return Some(format!(
+            return Some(
                 "Swap function missing deadline parameter entirely, \
                 transactions can be held indefinitely (transaction pinning)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Deadline set to type(uint256).max
@@ -164,10 +171,11 @@ impl DeadlineManipulationDetector {
             || func_source.contains("2**256 - 1");
 
         if uses_max_uint && has_deadline_param {
-            return Some(format!(
+            return Some(
                 "Deadline set to maximum uint256 value, effectively disabling deadline protection \
                 and allowing indefinite transaction holding"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Minimum deadline too short
@@ -176,10 +184,11 @@ impl DeadlineManipulationDetector {
             || (func_source.contains("deadline") && func_source.contains("+ 1"));
 
         if has_short_deadline {
-            return Some(format!(
+            return Some(
                 "Deadline set too short (< 5 minutes), may cause legitimate transactions \
                 to fail due to network congestion while not preventing MEV"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Price-sensitive operation without deadline
@@ -191,10 +200,11 @@ impl DeadlineManipulationDetector {
             is_price_sensitive && !has_deadline_param && !func_source.contains("block.timestamp");
 
         if lacks_deadline_protection {
-            return Some(format!(
+            return Some(
                 "Price-sensitive operation without deadline protection, \
                 validators can delay execution until price moves unfavorably"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Liquidation without time constraints
@@ -207,10 +217,11 @@ impl DeadlineManipulationDetector {
             && !func_source.contains("timelock");
 
         if no_time_constraint {
-            return Some(format!(
+            return Some(
                 "Liquidation function without time constraints, \
                 can be held and executed when most profitable for liquidator"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: User-provided deadline not bounded
@@ -222,10 +233,11 @@ impl DeadlineManipulationDetector {
             && !func_source.contains("require(deadline - block.timestamp <=");
 
         if no_bounds {
-            return Some(format!(
+            return Some(
                 "User-provided deadline without upper bound validation, \
                 users can set excessively long deadlines defeating protection"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Explicit vulnerability marker
@@ -234,9 +246,7 @@ impl DeadlineManipulationDetector {
                 || func_source.contains("pinning")
                 || func_source.contains("holding"))
         {
-            return Some(format!(
-                "Deadline manipulation vulnerability marker detected"
-            ));
+            return Some("Deadline manipulation vulnerability marker detected".to_string());
         }
 
         None

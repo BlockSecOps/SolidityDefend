@@ -11,6 +11,12 @@ pub struct ParameterConsistencyDetector {
     base: BaseDetector,
 }
 
+impl Default for ParameterConsistencyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ParameterConsistencyDetector {
     pub fn new() -> Self {
         Self {
@@ -188,21 +194,19 @@ impl ParameterConsistencyDetector {
         expr: &ast::Expression<'_>,
         array_names: &[&String],
     ) -> bool {
-        match expr {
-            ast::Expression::FunctionCall {
-                function,
-                arguments,
-                ..
-            } => {
-                // Check for require() calls
-                if let ast::Expression::Identifier(id) = function {
-                    if id.name == "require" && !arguments.is_empty() {
-                        // Check if the condition compares array lengths
-                        return self.condition_compares_array_lengths(&arguments[0], array_names);
-                    }
+        if let ast::Expression::FunctionCall {
+            function,
+            arguments,
+            ..
+        } = expr
+        {
+            // Check for require() calls
+            if let ast::Expression::Identifier(id) = function {
+                if id.name == "require" && !arguments.is_empty() {
+                    // Check if the condition compares array lengths
+                    return self.condition_compares_array_lengths(&arguments[0], array_names);
                 }
             }
-            _ => {}
         }
         false
     }
@@ -213,42 +217,37 @@ impl ParameterConsistencyDetector {
         condition: &ast::Expression<'_>,
         array_names: &[&String],
     ) -> bool {
-        match condition {
-            ast::Expression::BinaryOperation {
-                operator,
-                left,
-                right,
-                ..
-            } => {
-                if matches!(operator, ast::BinaryOperator::Equal) {
-                    // Check if both sides are array.length references
-                    let left_array = self.get_array_length_reference(left);
-                    let right_array = self.get_array_length_reference(right);
+        if let ast::Expression::BinaryOperation {
+            operator,
+            left,
+            right,
+            ..
+        } = condition
+        {
+            if matches!(operator, ast::BinaryOperator::Equal) {
+                // Check if both sides are array.length references
+                let left_array = self.get_array_length_reference(left);
+                let right_array = self.get_array_length_reference(right);
 
-                    if let (Some(left_name), Some(right_name)) = (left_array, right_array) {
-                        return array_names.contains(&&left_name)
-                            && array_names.contains(&&right_name);
-                    }
+                if let (Some(left_name), Some(right_name)) = (left_array, right_array) {
+                    return array_names.contains(&&left_name) && array_names.contains(&&right_name);
                 }
             }
-            _ => {}
         }
         false
     }
 
     /// Get array name if expression is array.length
     fn get_array_length_reference(&self, expr: &ast::Expression<'_>) -> Option<String> {
-        match expr {
-            ast::Expression::MemberAccess {
-                expression, member, ..
-            } => {
-                if member.name == "length" {
-                    if let ast::Expression::Identifier(id) = expression {
-                        return Some(id.name.to_string());
-                    }
+        if let ast::Expression::MemberAccess {
+            expression, member, ..
+        } = expr
+        {
+            if member.name == "length" {
+                if let ast::Expression::Identifier(id) = expression {
+                    return Some(id.name.to_string());
                 }
             }
-            _ => {}
         }
         None
     }
@@ -394,13 +393,12 @@ impl ParameterConsistencyDetector {
         function: &ast::Function<'_>,
     ) -> Severity {
         // Critical parameters in critical functions
-        if matches!(param.type_info, ParameterType::Address) {
-            if param.name.to_lowercase().contains("owner")
+        if matches!(param.type_info, ParameterType::Address)
+            && (param.name.to_lowercase().contains("owner")
                 || param.name.to_lowercase().contains("admin")
-                || function.name.name.to_lowercase().contains("transfer")
-            {
-                return Severity::High;
-            }
+                || function.name.name.to_lowercase().contains("transfer"))
+        {
+            return Severity::High;
         }
 
         // Arrays are generally medium risk
@@ -489,20 +487,18 @@ impl ParameterConsistencyDetector {
         expr: &ast::Expression<'_>,
         validated: &mut HashSet<String>,
     ) {
-        match expr {
-            ast::Expression::FunctionCall {
-                function,
-                arguments,
-                ..
-            } => {
-                // Check for require() calls
-                if let ast::Expression::Identifier(id) = function {
-                    if id.name == "require" && !arguments.is_empty() {
-                        self.extract_validated_params_from_condition(&arguments[0], validated);
-                    }
+        if let ast::Expression::FunctionCall {
+            function,
+            arguments,
+            ..
+        } = expr
+        {
+            // Check for require() calls
+            if let ast::Expression::Identifier(id) = function {
+                if id.name == "require" && !arguments.is_empty() {
+                    self.extract_validated_params_from_condition(&arguments[0], validated);
                 }
             }
-            _ => {}
         }
     }
 
@@ -512,12 +508,9 @@ impl ParameterConsistencyDetector {
         condition: &ast::Expression<'_>,
         validated: &mut HashSet<String>,
     ) {
-        match condition {
-            ast::Expression::BinaryOperation { left, right, .. } => {
-                self.extract_param_names_from_expr(left, validated);
-                self.extract_param_names_from_expr(right, validated);
-            }
-            _ => {}
+        if let ast::Expression::BinaryOperation { left, right, .. } = condition {
+            self.extract_param_names_from_expr(left, validated);
+            self.extract_param_names_from_expr(right, validated);
         }
     }
 
@@ -592,8 +585,6 @@ impl ParameterConsistencyDetector {
         _function: &ast::Function<'_>,
         _ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
-        let findings = Vec::new();
-
         // DISABLED: Parameter shadowing check is overly pedantic
         // Common parameter names like "owner", "token", "balance" are legitimate
         // and don't necessarily shadow state variables. Many legitimate patterns:
@@ -606,7 +597,7 @@ impl ParameterConsistencyDetector {
         //
         // TODO: Only flag if we can prove the parameter name actually shadows a state variable
 
-        findings
+        Vec::new()
     }
 
     /// Check parameter usage patterns in function body
@@ -616,8 +607,6 @@ impl ParameterConsistencyDetector {
         _params: &[ParameterInfo],
         _ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
-        let findings = Vec::new();
-
         // DISABLED: "Unused parameter" detection is unreliable
         // The find_used_parameters() function doesn't correctly identify all usage patterns:
         // - Mapping access: balanceOf[param]
@@ -630,7 +619,7 @@ impl ParameterConsistencyDetector {
         //
         // TODO: Improve AST traversal to correctly identify all parameter usage patterns
 
-        findings
+        Vec::new()
     }
 
     /// Find parameters used in function body

@@ -95,7 +95,7 @@ pub struct ProcessingContext {
 }
 
 /// Parser state for incremental parsing
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ParserState {
     /// Current parsing context
     pub context: String,
@@ -109,19 +109,6 @@ pub struct ParserState {
     pub in_comment: bool,
     /// Multi-line comment state
     pub in_multiline_comment: bool,
-}
-
-impl Default for ParserState {
-    fn default() -> Self {
-        Self {
-            context: String::new(),
-            incomplete_tokens: Vec::new(),
-            brace_depth: 0,
-            in_string: false,
-            in_comment: false,
-            in_multiline_comment: false,
-        }
-    }
 }
 
 /// Scope information for context tracking

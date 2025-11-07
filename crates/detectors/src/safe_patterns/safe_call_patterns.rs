@@ -31,9 +31,7 @@ pub fn makes_safe_erc20_calls(func_source: &str, ctx: &AnalysisContext) -> bool 
     ];
 
     // Check if function only makes safe ERC20 calls
-    let only_safe_calls = safe_calls
-        .iter()
-        .any(|&call| func_source.contains(call));
+    let only_safe_calls = safe_calls.iter().any(|&call| func_source.contains(call));
 
     // Not safe if it has callbacks or hooks (case-insensitive check)
     let func_lower = func_source.to_lowercase();
@@ -76,9 +74,7 @@ pub fn has_reentrancy_protection(func_source: &str) -> bool {
 pub fn has_reentrancy_modifier(function: &ast::Function<'_>) -> bool {
     function.modifiers.iter().any(|m| {
         let name = m.name.name.to_lowercase();
-        name.contains("nonreentrant")
-            || name.contains("locked")
-            || name.contains("guard")
+        name.contains("nonreentrant") || name.contains("locked") || name.contains("guard")
     })
 }
 
@@ -95,13 +91,17 @@ pub fn has_access_control_modifier(function: &ast::Function<'_>) -> bool {
 
 /// Check if function has depth/recursion limits
 pub fn has_depth_limit(func_source: &str) -> bool {
-    (func_source.contains("depth") || func_source.contains("level") || func_source.contains("count"))
+    (func_source.contains("depth")
+        || func_source.contains("level")
+        || func_source.contains("count"))
         && (func_source.contains("require(") || func_source.contains("if ("))
 }
 
 /// Check if function has cycle detection (visited tracking)
 pub fn has_cycle_detection(func_source: &str) -> bool {
-    (func_source.contains("visited") || func_source.contains("checked") || func_source.contains("seen"))
+    (func_source.contains("visited")
+        || func_source.contains("checked")
+        || func_source.contains("seen"))
         && func_source.contains("[")
 }
 
@@ -158,17 +158,15 @@ pub fn has_try_catch_protection(func_source: &str) -> bool {
 pub fn is_standard_callback_pattern(func_source: &str, function_name: &str) -> bool {
     // Standard token callback patterns that are designed to be safe
     let safe_callbacks = [
-        "tokensReceived",      // ERC777
-        "tokensToSend",        // ERC777
-        "onTransferReceived",  // ERC1363
-        "onApprovalReceived",  // ERC1363
-        "onERC721Received",    // ERC721
-        "onERC1155Received",   // ERC1155
+        "tokensReceived",     // ERC777
+        "tokensToSend",       // ERC777
+        "onTransferReceived", // ERC1363
+        "onApprovalReceived", // ERC1363
+        "onERC721Received",   // ERC721
+        "onERC1155Received",  // ERC1155
     ];
 
-    let is_callback = safe_callbacks
-        .iter()
-        .any(|&callback| function_name == callback);
+    let is_callback = safe_callbacks.contains(&function_name);
 
     // If it's a standard callback, check if it's properly implemented
     if is_callback {
@@ -240,12 +238,12 @@ pub fn is_safe_from_circular_deps(
     }
 
     // Safe if standard callback with proper return
-    if is_standard_callback_pattern(func_source, &function.name.name) {
+    if is_standard_callback_pattern(func_source, function.name.name) {
         return true;
     }
 
     // Safe if getter function
-    if is_getter_function(&function.name.name, func_source) {
+    if is_getter_function(function.name.name, func_source) {
         return true;
     }
 

@@ -9,6 +9,12 @@ pub struct RedundantChecksDetector {
     base: BaseDetector,
 }
 
+impl Default for RedundantChecksDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RedundantChecksDetector {
     pub fn new() -> Self {
         Self {
@@ -99,9 +105,7 @@ impl RedundantChecksDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<Vec<String>> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let mut issues = Vec::new();
@@ -126,13 +130,12 @@ impl RedundantChecksDetector {
             || contract_source.contains("pragma solidity 0.8")
             || contract_source.contains("pragma solidity >=0.8");
 
-        if is_solidity_08_plus {
-            if func_source.contains("require(")
-                && (func_source.contains(" + ") || func_source.contains(" - "))
-                && (func_source.contains("overflow") || func_source.contains("underflow"))
-            {
-                issues.push("Manual overflow/underflow check in Solidity 0.8+. Built-in protection makes this redundant".to_string());
-            }
+        if is_solidity_08_plus
+            && func_source.contains("require(")
+            && (func_source.contains(" + ") || func_source.contains(" - "))
+            && (func_source.contains("overflow") || func_source.contains("underflow"))
+        {
+            issues.push("Manual overflow/underflow check in Solidity 0.8+. Built-in protection makes this redundant".to_string());
         }
 
         // Pattern 3: Checking same condition in modifier and function
@@ -153,15 +156,15 @@ impl RedundantChecksDetector {
         }
 
         // Pattern 4: Unnecessary zero checks for unsigned integers
-        if func_source.contains("require(") && func_source.contains(">= 0") {
-            if func_source.contains("uint")
+        if func_source.contains("require(")
+            && func_source.contains(">= 0")
+            && (func_source.contains("uint")
                 || func_source.contains("amount >= 0")
-                || func_source.contains("value >= 0")
-            {
-                issues.push(
-                    "Redundant check: uint >= 0 is always true for unsigned integers".to_string(),
-                );
-            }
+                || func_source.contains("value >= 0"))
+        {
+            issues.push(
+                "Redundant check: uint >= 0 is always true for unsigned integers".to_string(),
+            );
         }
 
         // Pattern 5: Multiple checks that could be combined

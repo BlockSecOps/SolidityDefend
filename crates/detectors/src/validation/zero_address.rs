@@ -10,6 +10,12 @@ pub struct ZeroAddressDetector {
     base: BaseDetector,
 }
 
+impl Default for ZeroAddressDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ZeroAddressDetector {
     pub fn new() -> Self {
         Self {
@@ -81,8 +87,8 @@ impl ZeroAddressDetector {
             // Report unchecked parameters
             for param in &address_params {
                 // Use both AST-based and string-based checking (fallback for AST parsing issues)
-                let is_checked = checked_params.contains(&param.name) ||
-                                crate::utils::has_zero_address_check(&function_source, &param.name);
+                let is_checked = checked_params.contains(&param.name)
+                    || crate::utils::has_zero_address_check(&function_source, &param.name);
 
                 if !is_checked {
                     let severity = self.determine_severity_for_function(function, param);
@@ -434,44 +440,42 @@ impl ZeroAddressDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        match stmt {
-            ast::Statement::Expression(ast::Expression::Assignment {
-                left,
-                right,
-                location,
-                ..
-            }) => {
-                // Check for assignments to address variables without validation
-                if let ast::Expression::Identifier(id) = left {
-                    if id.name.to_lowercase().contains("address")
-                        || id.name.to_lowercase().contains("owner")
-                        || id.name.to_lowercase().contains("recipient")
-                    {
-                        // Check if the right side could be zero
-                        if self.could_be_zero_address(right) {
-                            let message = format!(
-                                "Assignment to '{}' may result in zero address without validation",
-                                id.name
+        if let ast::Statement::Expression(ast::Expression::Assignment {
+            left,
+            right,
+            location,
+            ..
+        }) = stmt
+        {
+            // Check for assignments to address variables without validation
+            if let ast::Expression::Identifier(id) = left {
+                if id.name.to_lowercase().contains("address")
+                    || id.name.to_lowercase().contains("owner")
+                    || id.name.to_lowercase().contains("recipient")
+                {
+                    // Check if the right side could be zero
+                    if self.could_be_zero_address(right) {
+                        let message = format!(
+                            "Assignment to '{}' may result in zero address without validation",
+                            id.name
+                        );
+                        let finding = self
+                            .base
+                            .create_finding(
+                                ctx,
+                                message,
+                                location.start().line() as u32,
+                                location.start().column() as u32,
+                                location.byte_length() as u32,
+                            )
+                            .with_cwe(476)
+                            .with_fix_suggestion(
+                                "Add validation to ensure the address is not zero".to_string(),
                             );
-                            let finding = self
-                                .base
-                                .create_finding(
-                                    ctx,
-                                    message,
-                                    location.start().line() as u32,
-                                    location.start().column() as u32,
-                                    location.byte_length() as u32,
-                                )
-                                .with_cwe(476)
-                                .with_fix_suggestion(
-                                    "Add validation to ensure the address is not zero".to_string(),
-                                );
-                            findings.push(finding);
-                        }
+                        findings.push(finding);
                     }
                 }
             }
-            _ => {}
         }
 
         findings
@@ -573,33 +577,31 @@ impl AstAnalyzer for ZeroAddressDetector {
         let mut findings = Vec::new();
 
         // Check for direct zero address comparisons that might be backwards
-        match expression {
-            ast::Expression::BinaryOperation {
-                operator,
-                left,
-                right,
-                location,
-            } => {
-                if matches!(operator, ast::BinaryOperator::Equal) {
-                    // Warn about using == with address(0) instead of !=
-                    if self.is_zero_address(left) || self.is_zero_address(right) {
-                        let message = "Equality comparison with address(0) detected - consider using != for validation".to_string();
-                        let finding = self.base.create_finding(
-                            ctx,
-                            message,
-                            location.start().line() as u32,
-                            location.start().column() as u32,
-                            location.byte_length() as u32,
-                        )
-                        .with_cwe(480) // CWE-480: Use of Incorrect Operator
-                        .with_fix_suggestion(
-                            "Use != to check that address is not zero, or use == in appropriate context".to_string()
-                        );
-                        findings.push(finding);
-                    }
+        if let ast::Expression::BinaryOperation {
+            operator,
+            left,
+            right,
+            location,
+        } = expression
+        {
+            if matches!(operator, ast::BinaryOperator::Equal) {
+                // Warn about using == with address(0) instead of !=
+                if self.is_zero_address(left) || self.is_zero_address(right) {
+                    let message = "Equality comparison with address(0) detected - consider using != for validation".to_string();
+                    let finding = self.base.create_finding(
+                        ctx,
+                        message,
+                        location.start().line() as u32,
+                        location.start().column() as u32,
+                        location.byte_length() as u32,
+                    )
+                    .with_cwe(480) // CWE-480: Use of Incorrect Operator
+                    .with_fix_suggestion(
+                        "Use != to check that address is not zero, or use == in appropriate context".to_string()
+                    );
+                    findings.push(finding);
                 }
             }
-            _ => {}
         }
 
         Ok(findings)

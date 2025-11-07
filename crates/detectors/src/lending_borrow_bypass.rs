@@ -16,6 +16,12 @@ pub struct LendingBorrowBypassDetector {
     base: BaseDetector,
 }
 
+impl Default for LendingBorrowBypassDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LendingBorrowBypassDetector {
     pub fn new() -> Self {
         Self {
@@ -33,9 +39,10 @@ impl LendingBorrowBypassDetector {
     fn is_borrow_function(&self, func_name: &str, func_source: &str) -> bool {
         let borrow_keywords = ["borrow", "loan", "credit", "debt"];
 
-        borrow_keywords.iter().any(|&keyword| {
-            func_name.to_lowercase().contains(keyword)
-        }) || func_source.contains("borrowed[")
+        borrow_keywords
+            .iter()
+            .any(|&keyword| func_name.to_lowercase().contains(keyword))
+            || func_source.contains("borrowed[")
             || func_source.contains("debt")
             || func_source.contains("creditLimit")
     }
@@ -183,8 +190,7 @@ impl LendingBorrowBypassDetector {
             && func_source.contains("balance")
             && (func_source.contains(">=") || func_source.contains(">"));
 
-        let has_fee_validation = func_source.contains("fee")
-            || func_source.contains("Fee");
+        let has_fee_validation = func_source.contains("fee") || func_source.contains("Fee");
 
         if !validates_repayment {
             return Some(
@@ -250,8 +256,12 @@ impl LendingBorrowBypassDetector {
 
         // Find position of state update vs external call
         if has_external_call && updates_borrow_state {
-            let call_pos = func_source.find(".transfer").or_else(|| func_source.find(".call"));
-            let state_pos = func_source.find("borrowed").or_else(|| func_source.find("debt"));
+            let call_pos = func_source
+                .find(".transfer")
+                .or_else(|| func_source.find(".call"));
+            let state_pos = func_source
+                .find("borrowed")
+                .or_else(|| func_source.find("debt"));
 
             if let (Some(call_idx), Some(state_idx)) = (call_pos, state_pos) {
                 if call_idx < state_idx {
@@ -271,8 +281,7 @@ impl LendingBorrowBypassDetector {
     fn check_collateral_withdrawal(&self, func_source: &str, func_name: &str) -> Option<String> {
         let is_withdrawal = func_name.to_lowercase().contains("withdraw")
             || func_name.to_lowercase().contains("redeem")
-            || func_source.contains("collateral[")
-            && func_source.contains("-=");
+            || func_source.contains("collateral[") && func_source.contains("-=");
 
         if !is_withdrawal {
             return None;
@@ -493,7 +502,11 @@ mod tests {
             borrowed[msg.sender] += amount;
             token.transfer(msg.sender, amount);
         }";
-        assert!(detector.check_collateral_validation(vulnerable_code).is_some());
+        assert!(
+            detector
+                .check_collateral_validation(vulnerable_code)
+                .is_some()
+        );
 
         // Should not flag code with collateral factor
         let safe_code = "function borrow(uint256 amount) external {
@@ -513,7 +526,11 @@ mod tests {
         let vulnerable_code = "function borrow(uint256 amount) external {
             borrowed[msg.sender] += amount;
         }";
-        assert!(detector.check_health_factor(vulnerable_code, true).is_some());
+        assert!(
+            detector
+                .check_health_factor(vulnerable_code, true)
+                .is_some()
+        );
 
         // Should not flag code with health factor validation
         let safe_code = "function borrow(uint256 amount) external {
@@ -534,7 +551,11 @@ mod tests {
             IFlashBorrower(msg.sender).onFlashLoan(amount);
             require(token.balanceOf(address(this)) >= balanceBefore, \"Not repaid\");
         }";
-        assert!(detector.check_flash_loan_security(vulnerable_code, true).is_some());
+        assert!(
+            detector
+                .check_flash_loan_security(vulnerable_code, true)
+                .is_some()
+        );
 
         // Should not flag code with proper restrictions
         let safe_code = "function flashLoan(uint256 amount) external {
@@ -547,7 +568,11 @@ mod tests {
             _exitFlashLoan();
             require(token.balanceOf(address(this)) >= balanceBefore + fee, \"Not repaid\");
         }";
-        assert!(detector.check_flash_loan_security(safe_code, true).is_none());
+        assert!(
+            detector
+                .check_flash_loan_security(safe_code, true)
+                .is_none()
+        );
     }
 
     #[test]
@@ -559,7 +584,11 @@ mod tests {
             token.transfer(msg.sender, amount);
             borrowed[msg.sender] += amount;
         }";
-        assert!(detector.check_borrow_reentrancy(vulnerable_code, true).is_some());
+        assert!(
+            detector
+                .check_borrow_reentrancy(vulnerable_code, true)
+                .is_some()
+        );
 
         // Should not flag protected code
         let safe_code = "function borrow(uint256 amount) external nonReentrant {
