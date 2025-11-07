@@ -1,0 +1,1328 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-07T01:47:21.888538Z",
+  "findings": [
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'submitBatchBid' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'submitBatchBid' has multiple array parameters (itemIds, amounts) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(itemIds.length == amounts.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'itemIds' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 63,
+        "column": 48,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(itemIds.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amounts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 63,
+        "column": 76,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amounts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'placeBid' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'placeBid'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'placeBid' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 29,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'placeBid'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'submitBatchBid' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'submitBatchBid'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'placeBid' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'placeBid' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'submitBatchBid' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'submitBatchBid'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'bidOnNFT' lacks front-running protection. Bidding function 'bidOnNFT' lacks commit-reveal scheme. Attackers can see your bid and outbid you Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 52,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'bidOnNFT'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'submitBatchBid' lacks front-running protection. Bidding function 'submitBatchBid' lacks commit-reveal scheme. Attackers can see your bid and outbid you Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'submitBatchBid'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "deprecated-functions",
+      "message": "Deprecated function or pattern detected: 'selfdestruct'. selfdestruct is deprecated. Consider alternative contract upgrade patterns",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Replace deprecated 'selfdestruct'. selfdestruct is deprecated. Consider alternative contract upgrade patterns",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "time-locked-admin-bypass",
+      "message": "Emergency functions bypass timelock without multisig protection",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Require multisig approval for emergency functions that bypass timelock",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-governance-attack",
+      "message": "Emergency proposals lack timelock - can be flash-loan attacked for immediate execution",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Even emergency proposals should have minimal timelock (e.g., 1 hour) and require multisig",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-transfer-return-bomb",
+      "message": "Token transfer lacks return data size validation - vulnerable to return bomb DOS",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Check returndatasize() and reject if excessive (>64 bytes): require(returndatasize() <= 64)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatchBid' submits batches without proper ZK proof verification. No verifier contract call detected. Must call external verifier to validate ZK proof Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatchBid': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatchBid' submits batches without proper ZK proof verification. No public input parameter. ZK proofs must be verified against specific public inputs Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatchBid': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatchBid' submits batches without proper ZK proof verification. Missing proof replay protection. Store proof hash or batch ID to prevent reuse Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatchBid': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatchBid' submits batches without proper data availability guarantees. No calldata parameter detected. L2 batch data should be published as calldata to ensure L1 data availability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatchBid': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatchBid' submits batches without proper data availability guarantees. No data hash commitment to L1. Should store hash of batch data on L1 for verifiability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatchBid': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatchBid' submits batches without proper data availability guarantees. Missing event emission. Should emit event with data or data hash for off-chain availability monitoring Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatchBid': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatchBid' submits batches without proper data availability guarantees. No data availability verification. Should implement mechanism to verify data can be retrieved Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatchBid': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "create2-frontrunning",
+      "message": "CREATE2 salt uses simple counter (predictable address)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-330",
+      "fix_suggestion": {
+        "description": "Use unpredictable salt: Combine counter with blockhash or commit-reveal scheme: keccak256(abi.encodePacked(counter, blockhash(block.number - 1)))",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "create2-frontrunning",
+      "message": "Public CREATE2 deployment function without access control",
+      "severity": "critical",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-330",
+      "fix_suggestion": {
+        "description": "Add access control: function deploy() external onlyOwner or use whitelist pattern to prevent unauthorized deployments",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "selfdestruct-recipient-manipulation",
+      "message": "SELFDESTRUCT with user-controlled recipient lacks access control",
+      "severity": "critical",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Add access control modifier (e.g., onlyOwner) to prevent unauthorized destruction. Only trusted addresses should be able to trigger selfdestruct.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "selfdestruct-recipient-manipulation",
+      "message": "SELFDESTRUCT recipient is not validated (can force ether to contracts)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Validate recipient address: require(recipient != address(0) && isApproved(recipient)). Be aware that selfdestruct can force ether to contracts that don't accept it.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'submitBatchBid' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 63,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-replay-protection",
+      "message": "ERC-7821 executor missing replay protection - orders can be executed multiple times",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add nonce-based replay protection:\n\nmapping(address => uint256) public nonces;\n\nfunction executeBatch(\nuint256 nonce,\nbytes calldata signature\n) external {\nrequire(nonce == nonces[msg.sender], \"Invalid nonce\");\nnonces[msg.sender]++;\n\n// Execute batch...\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Unchecked block found - overflows/underflows won't revert (OWASP 2025)",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\nSolidity 0.8.0+ has automatic overflow/underflow checks,\nbut 'unchecked' blocks disable this protection.\n\n❌ DANGEROUS if user input involved:\nunchecked {\nbalance += amount;  // Can overflow!\ntotal = a * b;      // Can overflow!\n}\n\n✅ SAFE usage (loop counters only):\nfor (uint256 i = 0; i < items.length;) {\n// Process items[i]\n\nunchecked {\n++i;  // Safe: loop counter can't realistically overflow\n}\n}\n\n✅ SAFE usage (guaranteed no overflow):\nunchecked {\n// Safe: subtraction after comparison\nif (a >= b) {\nresult = a - b;  // No underflow possible\n}\n}\n\n❌ NEVER use unchecked for:\n- User-supplied values\n- Token amounts\n- Financial calculations\n- Multiplication of arbitrary values\n\nOnly use unchecked when:\n1. Loop counters (i++, ++i)\n2. Mathematically proven safe\n3. Gas optimization with careful review",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "jit-liquidity-sandwich",
+      "message": "Liquidity becomes active immediately - may enable JIT sandwich attacks",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Consider delaying liquidity activation to the next epoch or block to mitigate JIT attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Pool initialization lacks protection - first depositor can manipulate initial share price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12008
+      },
+      "fix_suggestion": {
+        "description": "Require minimum initial deposit, mint dead shares on initialization, or use time-delayed activation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'createAuction' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 93,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'createAuction'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'startAuction' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'startAuction'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'initiateAuction' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'initiateAuction'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unprotected-initializer",
+      "message": "Initializer function 'initiateAuction' lacks access control and can be called by anyone",
+      "severity": "high",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier to 'initiateAuction' or ensure it can only be called once during deployment",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "auction-timing-manipulation",
+      "message": "Function 'createAuction' allows auction creation with predictable timing and unrestricted access. MEV bots can monitor the mempool, front-run the auction start, and prepare optimal bids before other participants.",
+      "severity": "high",
+      "location": {
+        "line": 93,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add access control to auction start in function 'createAuction' and implement unpredictable timing using commit-reveal or VRF. Example: modifier onlyAuctioneer() or use block hash for randomized start time.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "auction-timing-manipulation",
+      "message": "Function 'startAuction' allows auction creation with predictable timing and unrestricted access. MEV bots can monitor the mempool, front-run the auction start, and prepare optimal bids before other participants.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add access control to auction start in function 'startAuction' and implement unpredictable timing using commit-reveal or VRF. Example: modifier onlyAuctioneer() or use block hash for randomized start time.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "auction-timing-manipulation",
+      "message": "Function 'initiateAuction' allows auction creation with predictable timing and unrestricted access. MEV bots can monitor the mempool, front-run the auction start, and prepare optimal bids before other participants.",
+      "severity": "high",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add access control to auction start in function 'initiateAuction' and implement unpredictable timing using commit-reveal or VRF. Example: modifier onlyAuctioneer() or use block hash for randomized start time.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "auction-timing-manipulation",
+      "message": "Function 'beginAuction' allows auction creation with predictable timing and unrestricted access. MEV bots can monitor the mempool, front-run the auction start, and prepare optimal bids before other participants.",
+      "severity": "high",
+      "location": {
+        "line": 133,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add access control to auction start in function 'beginAuction' and implement unpredictable timing using commit-reveal or VRF. Example: modifier onlyAuctioneer() or use block hash for randomized start time.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'createAuction' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 93,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'createAuction'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'startAuction' has dangerous timestamp dependency. Uses block.timestamp for randomness or lottery selection, allowing miners to manipulate outcomes by choosing favorable timestamps Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'startAuction'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'initiateAuction' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'initiateAuction'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'beginAuction' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 133,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'beginAuction'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'createAuction' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 93,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'createAuction'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'startAuction' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'startAuction'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'initiateAuction' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'initiateAuction'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'beginAuction' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 133,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'beginAuction'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'createAuction' has extractable MEV. MEV extractable value vulnerability marker detected Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 93,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'createAuction'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'startAuction' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'startAuction'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'initiateAuction' contains variable shadowing. Local variable 'id' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 123,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'initiateAuction'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitTransaction' implements proof verification with potential bypasses. No replay protection. Should track verified proofs to prevent replay attacks Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 159,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitTransaction': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitTransaction' implements proof verification with potential bypasses. Missing proof format validation. Should check proof data length and structure Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 159,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitTransaction': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitTransaction' implements proof verification with potential bypasses. No public input hash computation. Should reconstruct hash from batch data to prevent manipulation Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 159,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitTransaction': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitTransaction' implements proof verification with potential bypasses. No event emission for proof verification. Should emit event for monitoring and auditing Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 159,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitTransaction': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'updateState' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 217,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'updateState'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'currentStateRoot' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 222,
+        "column": 9,
+        "length": 31
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'currentStateRoot' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 249,
+        "column": 9,
+        "length": 27
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'stateRoot' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 278,
+        "column": 9,
+        "length": 24
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'executeStateTransition'",
+      "severity": "critical",
+      "location": {
+        "line": 276,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeStateTransition'",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' submits batches without proper ZK proof verification. No verifier contract call detected. Must call external verifier to validate ZK proof Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatch': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' submits batches without proper ZK proof verification. Verification result not enforced with require(). Proof verification can be bypassed Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatch': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' submits batches without proper ZK proof verification. No public input parameter. ZK proofs must be verified against specific public inputs Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatch': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' submits batches without proper ZK proof verification. Missing proof replay protection. Store proof hash or batch ID to prevent reuse Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'submitBatch': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' implements proof verification with potential bypasses. No replay protection. Should track verified proofs to prevent replay attacks Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitBatch': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' implements proof verification with potential bypasses. Missing proof format validation. Should check proof data length and structure Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitBatch': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' implements proof verification with potential bypasses. No public input hash computation. Should reconstruct hash from batch data to prevent manipulation Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitBatch': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'submitBatch' implements proof verification with potential bypasses. No event emission for proof verification. Should emit event for monitoring and auditing Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'submitBatch': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatch' submits batches without proper data availability guarantees. No calldata parameter detected. L2 batch data should be published as calldata to ensure L1 data availability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatch': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatch' submits batches without proper data availability guarantees. No data hash commitment to L1. Should store hash of batch data on L1 for verifiability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatch': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatch' submits batches without proper data availability guarantees. Missing event emission. Should emit event with data or data hash for off-chain availability monitoring Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatch': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'submitBatch' submits batches without proper data availability guarantees. No data availability verification. Should implement mechanism to verify data can be retrieved Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 267,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'submitBatch': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'submitBatch' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'executeStateTransition' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 276,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'bridgeAssets' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'bridgeAssets'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'bridgeAssets' implements proof verification with potential bypasses. No replay protection. Should track verified proofs to prevent replay attacks Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'bridgeAssets': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'bridgeAssets' implements proof verification with potential bypasses. Missing proof format validation. Should check proof data length and structure Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'bridgeAssets': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'bridgeAssets' implements proof verification with potential bypasses. No public input hash computation. Should reconstruct hash from batch data to prevent manipulation Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'bridgeAssets': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'bridgeAssets' implements proof verification with potential bypasses. No event emission for proof verification. Should emit event for monitoring and auditing Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'bridgeAssets': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'destroy' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 313,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'destroy'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "selfdestruct-abuse",
+      "message": "Function 'destroy' contains selfdestruct abuse vulnerability. Selfdestruct is publicly accessible without access control, allowing anyone to destroy the contract Selfdestruct permanently destroys the contract and can force-send ether to any address, bypassing fallback functions and breaking assumptions.",
+      "severity": "high",
+      "location": {
+        "line": 313,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-670",
+      "fix_suggestion": {
+        "description": "Restrict or remove selfdestruct in 'destroy'. Add access control (onlyOwner), implement time-lock, or use withdraw pattern instead of selfdestruct. Consider that contracts expecting ether may not have payable fallback.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "uninitialized-storage",
+      "message": "Function 'destroy' contains uninitialized storage pointer. Declares struct variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables.",
+      "severity": "high",
+      "location": {
+        "line": 313,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-824",
+      "fix_suggestion": {
+        "description": "Initialize storage pointers in 'destroy'. Use `memory` keyword for local variables or explicitly assign to storage. Example: `MyStruct memory data = MyStruct(...)` or ensure initialization before use.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'destroy' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 313,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'destroy'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 88,
+    "severity_counts": {
+      "critical": 33,
+      "info": 0,
+      "high": 43,
+      "medium": 9,
+      "low": 3
+    },
+    "unique_detectors": 38
+  }
+}

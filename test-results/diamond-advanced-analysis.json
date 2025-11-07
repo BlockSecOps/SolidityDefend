@@ -1,0 +1,1814 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-06T18:20:24.298408Z",
+  "findings": [
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'facet' in function 'executeOnFacet' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 37,
+        "length": 5
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(facet != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'cuts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 47,
+        "column": 35,
+        "length": 7
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < cuts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'cuts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 45,
+        "column": 45,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(cuts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'facet' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 37,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(facet != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function 'executeOnFacet' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 29,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 29,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function 'executeOnFacet' contains dangerous delegatecall pattern. Delegatecall target is controlled by function parameters or user input, allowing arbitrary code execution Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in 'executeOnFacet'. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 29,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'executeOnFacet' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'executeOnFacet'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in ''. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'executeOnFacet' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'executeOnFacet'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 45,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 45,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 19,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 103,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 203,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 277,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 29,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation contract missing recovery mechanism. No recovery mechanism found - users cannot undo delegation Without recovery, hardware wallet users lose access if delegation target is compromised or becomes incompatible.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-672",
+      "fix_suggestion": {
+        "description": "Implement delegation recovery: (1) Add removeDelegation function, (2) Allow switching delegation targets, (3) Implement emergency mode fallback, (4) Support direct EOA transactions, (5) Require hardware wallet signature for changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondDelegatecall' diamondCut lacks FacetCutAction-specific validation. The Add action must check existingFacet == address(0), Replace must check existingFacet != address(0), and Remove must verify selector exists. Without action-specific checks, invalid operations can corrupt the facet registry causing undefined behavior.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Implement action validation in 'VulnerableDiamondDelegatecall': (1) For Add: 'require(existingFacet == address(0), \"Selector exists\")' (2) For Replace: 'require(existingFacet != address(0) && existingFacet != newFacet, \"Invalid replace\")' (3) For Remove: 'require(existingFacet != address(0), \"Selector not found\")' (4) Add comprehensive validation for each FacetCutAction enum case",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondDelegatecall' updates selectorToFacet mapping without collision prevention. Direct assignment 'selectorToFacet[selector] = facet' without checking existing value creates collision risk. Multiple facets with the same selector will overwrite each other, causing loss of functionality and potential security vulnerabilities.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Secure selector mapping in 'VulnerableDiamondDelegatecall': (1) Always check 'address existingFacet = selectorToFacet[selector]' before update (2) Validate based on operation: Add requires existingFacet == 0, Replace requires existingFacet != 0 (3) Use helper functions: addSelector(), replaceSelector(), removeSelector() with built-in validation (4) Emit events for all selector changes for auditability (5) Implement selector conflict resolution strategy",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondDelegatecall' modifies state after initialization delegatecall. State changes after delegatecall create reentrancy window where the init contract can observe intermediate states. Attacker-controlled init contract can reenter and exploit the inconsistent state before changes complete.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Reorder operations in 'VulnerableDiamondDelegatecall': (1) Complete all state changes BEFORE initialization delegatecall (2) Follow Checks-Effects-Interactions: checks, state updates, external calls (3) If post-init updates needed, use reentrancy lock during the entire operation (4) Validate init contract address before delegatecall (5) Consider making initialization atomic with 'initializer' modifier",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondDelegatecall' performs external calls during diamondCut but lacks reentrancy lock variable. Without explicit lock tracking (_locked, _status, etc.), the contract cannot prevent reentrant calls during initialization. This is critical for Diamond proxies where initialization can add new facets with arbitrary code.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement reentrancy lock in 'VulnerableDiamondDelegatecall': (1) Add state variable: 'uint256 private _status = 1' (NOT_ENTERED) (2) Define constants: 'uint256 private constant _NOT_ENTERED = 1; uint256 private constant _ENTERED = 2' (3) Create nonReentrant modifier checking '_status != _ENTERED' (4) Set '_status = _ENTERED' on entry, '_NOT_ENTERED' on exit (5) Use storage position like Diamond Storage pattern to avoid slot collision",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondDelegatecall' supports initialization but doesn't track initialization status. Without 'initialized' flag, the contract can be reinitialized multiple times through reentrancy, allowing attackers to reset state, change ownership, or register malicious facets after initial setup.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement initialization tracking in 'VulnerableDiamondDelegatecall': (1) Add 'bool private _initialized' storage variable (2) Create 'initializer' modifier: 'require(!_initialized, \"Already initialized\")' (3) Set '_initialized = true' at start of initialization (4) Use OpenZeppelin's Initializable pattern for upgradeable contracts (5) Consider version tracking for multiple initialization phases",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondDelegatecall' is a Diamond proxy but missing required ERC-2535 Loupe functions: facets(), facetFunctionSelectors(address), facetAddresses(), facetAddress(bytes4). The Diamond Loupe standard defines 4 introspection functions that enable tools, users, and contracts to discover which facets and functions a Diamond implements. Without these, the Diamond becomes a black box, hindering integration, debugging, and security auditing.",
+      "severity": "medium",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Implement missing Loupe functions in 'VulnerableDiamondDelegatecall': (1) facets() returning Facet[] array with address and selectors for each facet (2) facetFunctionSelectors(address _facet) returning bytes4[] of selectors for a facet (3) facetAddresses() returning address[] of all facet addresses (4) facetAddress(bytes4 _selector) returning address of facet for a selector (5) Implement IDiamondLoupe interface and add to supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondDelegatecall' implements loupe functions but doesn't declare IDiamondLoupe interface support. The ERC-2535 standard requires supportsInterface(0x48e2b093) to return true for IDiamondLoupe. Without proper interface support, tools cannot reliably detect Diamond Loupe compliance.",
+      "severity": "medium",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Add interface support to 'VulnerableDiamondDelegatecall': (1) Import 'import \"@openzeppelin/contracts/utils/introspection/IERC165.sol\"' (2) Implement supportsInterface: 'return interfaceId == type(IDiamondLoupe).interfaceId || interfaceId == type(IERC165).interfaceId' (3) IDiamondLoupe interface ID is 0x48e2b093 (4) Ensure DiamondLoupeFacet is added during initialization (5) Test interface detection with supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondDelegatecall' fallback performs delegatecall without validating facet != address(0). When a function selector is not registered in selectorToFacet, it returns address(0). Delegatecall to address(0) succeeds silently in assembly, returning success=true without executing any code. This creates false success responses for non-existent functions, breaking contract behavior and potentially bypassing security checks.",
+      "severity": "critical",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add facet validation in 'VulnerableDiamondDelegatecall' fallback: (1) After loading facet address, add 'require(facet != address(0), \"Function does not exist\")' (2) Check BEFORE delegatecall, not after (3) Use revert with custom error for gas efficiency: 'error FunctionNotFound(bytes4 selector)' (4) Consider explicit fallback failure rather than silent success (5) Validate facet in both Solidity and assembly implementations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondDelegatecall' fallback delegates without verifying facet has code. Even if facet != address(0), the address may be an EOA or a self-destructed contract with no code. Delegatecall to addresses without code succeeds silently, returning success=true. This allows unregistered selectors to succeed unexpectedly, bypassing access controls and validation logic.",
+      "severity": "critical",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add code existence check in 'VulnerableDiamondDelegatecall': (1) Validate 'require(facet.code.length > 0, \"Facet has no code\")' (2) In assembly, use EXTCODESIZE: 'if iszero(extcodesize(facet)) { revert(0, 0) }' (3) Perform check immediately after loading facet address (4) Consider caching code validation during facet registration (5) Handle self-destructed facets gracefully",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondDelegatecall' uses assembly delegatecall without proper validation. Assembly delegatecall bypasses Solidity's address validation, making it critical to manually check facet != 0 and extcodesize > 0. Missing validation in assembly is more dangerous because there are no implicit safety checks.",
+      "severity": "critical",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 29
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add assembly validation in 'VulnerableDiamondDelegatecall': (1) After loading facet: 'if iszero(facet) { revert(0, 0) }' (2) Check code size: 'if iszero(extcodesize(facet)) { revert(0, 0) }' (3) Place checks immediately before delegatecall opcode (4) Use consistent error handling (revert with error code) (5) Document assembly validation logic clearly",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-layout-upgrade",
+      "message": "Upgradeable contract missing storage gap (future upgrade will corrupt state)",
+      "severity": "critical",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Add storage gap: uint256[50] private __gap; Reserve slots for future variables. This allows adding new state variables in future versions without corrupting storage layout.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-layout-upgrade",
+      "message": "Multiple inheritance without storage gaps (complex upgrade path)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Add gaps to all base contracts: Each inherited contract should have its own storage gap to prevent layout conflicts during upgrades. Use: uint256[50] private __gap;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-layout-upgrade",
+      "message": "Uses delete on complex types (upgrade compatibility concern)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Be aware: delete behavior on structs/mappings may have subtle implications for upgrades. Document cleanup behavior. Consider explicit field clearing for important state transitions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-layout-upgrade",
+      "message": "Initializer with state variables but no storage gap (upgrade blocker)",
+      "severity": "critical",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Critical: Adding state variables in upgraded implementation will change storage layout. Add gap: uint256[50] private __gap; Reduce gap when adding new variables.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-layout-upgrade",
+      "message": "diamond proxy without explicit slot definition (facet collision risk)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Use explicit slot: bytes32 constant STORAGE_SLOT = keccak256('myapp.storage.v1'); Access via assembly or struct with explicit slot. Prevents storage collisions between facets.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'executeOnFacet' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 110,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 158,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 210,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 211,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 214,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Type casting to smaller uint - verify no overflow on downcast",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Downcasting can silently overflow even in Solidity 0.8.0+!\n\n❌ UNSAFE DOWNCAST:\nuint256 bigValue = 1000;\nuint8 smallValue = uint8(bigValue);  // Wraps to 232! (1000 % 256)\n\n✅ SAFE DOWNCAST with validation:\nuint256 bigValue = 1000;\nrequire(bigValue <= type(uint8).max, \"Value too large\");\nuint8 smallValue = uint8(bigValue);  // Safe now\n\n✅ USE SafeCast library (OpenZeppelin):\nimport \"@openzeppelin/contracts/utils/math/SafeCast.sol\";\n\nuint256 bigValue = 1000;\nuint8 smallValue = SafeCast.toUint8(bigValue);  // Reverts if > 255\n\nType limits:\n- uint8:   0 to 255\n- uint16:  0 to 65,535\n- uint32:  0 to 4,294,967,295\n- uint64:  0 to 18,446,744,073,709,551,615\n- uint256: 0 to 2^256-1",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Pool initialization lacks protection - first depositor can manipulate initial share price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12361
+      },
+      "fix_suggestion": {
+        "description": "Require minimum initial deposit, mint dead shares on initialization, or use time-delayed activation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 92,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'cuts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 134,
+        "column": 35,
+        "length": 7
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < cuts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'cuts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 132,
+        "column": 45,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(cuts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 118,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in ''. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage array push operation inside loop. Extremely gas-intensive Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 132,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 132,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 132,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Parameter 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 118,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-storage-collision",
+      "message": "Contract 'VulnerableDiamondNoLoupe' declares storage variables directly without using Diamond Storage pattern. This creates collision risk when multiple facets share the same proxy storage. Direct storage at sequential slots (0, 1, 2...) will collide across facets, corrupting state and causing critical failures.",
+      "severity": "critical",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Implement Diamond Storage pattern for 'VulnerableDiamondNoLoupe': (1) Create a library with 'bytes32 constant STORAGE_POSITION = keccak256(\"diamond.storage.vulnerablediamondnoloupe\")' (2) Define a struct containing all storage variables, (3) Create a function returning 'Storage storage ds' using assembly to set slot to STORAGE_POSITION, (4) Access all storage through this function instead of direct variables, (5) Use unique namespace per facet to guarantee isolation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondNoLoupe' diamondCut lacks FacetCutAction-specific validation. The Add action must check existingFacet == address(0), Replace must check existingFacet != address(0), and Remove must verify selector exists. Without action-specific checks, invalid operations can corrupt the facet registry causing undefined behavior.",
+      "severity": "high",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Implement action validation in 'VulnerableDiamondNoLoupe': (1) For Add: 'require(existingFacet == address(0), \"Selector exists\")' (2) For Replace: 'require(existingFacet != address(0) && existingFacet != newFacet, \"Invalid replace\")' (3) For Remove: 'require(existingFacet != address(0), \"Selector not found\")' (4) Add comprehensive validation for each FacetCutAction enum case",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondNoLoupe' updates selectorToFacet mapping without collision prevention. Direct assignment 'selectorToFacet[selector] = facet' without checking existing value creates collision risk. Multiple facets with the same selector will overwrite each other, causing loss of functionality and potential security vulnerabilities.",
+      "severity": "high",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Secure selector mapping in 'VulnerableDiamondNoLoupe': (1) Always check 'address existingFacet = selectorToFacet[selector]' before update (2) Validate based on operation: Add requires existingFacet == 0, Replace requires existingFacet != 0 (3) Use helper functions: addSelector(), replaceSelector(), removeSelector() with built-in validation (4) Emit events for all selector changes for auditability (5) Implement selector conflict resolution strategy",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondNoLoupe' modifies state after initialization delegatecall. State changes after delegatecall create reentrancy window where the init contract can observe intermediate states. Attacker-controlled init contract can reenter and exploit the inconsistent state before changes complete.",
+      "severity": "high",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Reorder operations in 'VulnerableDiamondNoLoupe': (1) Complete all state changes BEFORE initialization delegatecall (2) Follow Checks-Effects-Interactions: checks, state updates, external calls (3) If post-init updates needed, use reentrancy lock during the entire operation (4) Validate init contract address before delegatecall (5) Consider making initialization atomic with 'initializer' modifier",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondNoLoupe' performs external calls during diamondCut but lacks reentrancy lock variable. Without explicit lock tracking (_locked, _status, etc.), the contract cannot prevent reentrant calls during initialization. This is critical for Diamond proxies where initialization can add new facets with arbitrary code.",
+      "severity": "high",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement reentrancy lock in 'VulnerableDiamondNoLoupe': (1) Add state variable: 'uint256 private _status = 1' (NOT_ENTERED) (2) Define constants: 'uint256 private constant _NOT_ENTERED = 1; uint256 private constant _ENTERED = 2' (3) Create nonReentrant modifier checking '_status != _ENTERED' (4) Set '_status = _ENTERED' on entry, '_NOT_ENTERED' on exit (5) Use storage position like Diamond Storage pattern to avoid slot collision",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondNoLoupe' supports initialization but doesn't track initialization status. Without 'initialized' flag, the contract can be reinitialized multiple times through reentrancy, allowing attackers to reset state, change ownership, or register malicious facets after initial setup.",
+      "severity": "high",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement initialization tracking in 'VulnerableDiamondNoLoupe': (1) Add 'bool private _initialized' storage variable (2) Create 'initializer' modifier: 'require(!_initialized, \"Already initialized\")' (3) Set '_initialized = true' at start of initialization (4) Use OpenZeppelin's Initializable pattern for upgradeable contracts (5) Consider version tracking for multiple initialization phases",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondNoLoupe' is a Diamond proxy but missing required ERC-2535 Loupe functions: facets(), facetFunctionSelectors(address), facetAddresses(), facetAddress(bytes4). The Diamond Loupe standard defines 4 introspection functions that enable tools, users, and contracts to discover which facets and functions a Diamond implements. Without these, the Diamond becomes a black box, hindering integration, debugging, and security auditing.",
+      "severity": "medium",
+      "location": {
+        "line": 102,
+        "column": 10,
+        "length": 24
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Implement missing Loupe functions in 'VulnerableDiamondNoLoupe': (1) facets() returning Facet[] array with address and selectors for each facet (2) facetFunctionSelectors(address _facet) returning bytes4[] of selectors for a facet (3) facetAddresses() returning address[] of all facet addresses (4) facetAddress(bytes4 _selector) returning address of facet for a selector (5) Implement IDiamondLoupe interface and add to supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 161,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "uninitialized-storage",
+      "message": "Function 'facets' contains uninitialized storage pointer. Declares array variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables.",
+      "severity": "high",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-824",
+      "fix_suggestion": {
+        "description": "Initialize storage pointers in 'facets'. Use `memory` keyword for local variables or explicitly assign to storage. Example: `MyStruct memory data = MyStruct(...)` or ensure initialization before use.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "uninitialized-storage",
+      "message": "Function 'facetFunctionSelectors' contains uninitialized storage pointer. Declares array variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables.",
+      "severity": "high",
+      "location": {
+        "line": 167,
+        "column": 14,
+        "length": 22
+      },
+      "cwe": "CWE-824",
+      "fix_suggestion": {
+        "description": "Initialize storage pointers in 'facetFunctionSelectors'. Use `memory` keyword for local variables or explicitly assign to storage. Example: `MyStruct memory data = MyStruct(...)` or ensure initialization before use.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in ''. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'facetFunctionSelectors' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 167,
+        "column": 14,
+        "length": 22
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'facetFunctionSelectors'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Parameter 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 184,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondIncompleteLoupe' implements loupe functions but doesn't declare IDiamondLoupe interface support. The ERC-2535 standard requires supportsInterface(0x48e2b093) to return true for IDiamondLoupe. Without proper interface support, tools cannot reliably detect Diamond Loupe compliance.",
+      "severity": "medium",
+      "location": {
+        "line": 156,
+        "column": 10,
+        "length": 32
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Add interface support to 'VulnerableDiamondIncompleteLoupe': (1) Import 'import \"@openzeppelin/contracts/utils/introspection/IERC165.sol\"' (2) Implement supportsInterface: 'return interfaceId == type(IDiamondLoupe).interfaceId || interfaceId == type(IERC165).interfaceId' (3) IDiamondLoupe interface ID is 0x48e2b093 (4) Ensure DiamondLoupeFacet is added during initialization (5) Test interface detection with supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'cuts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 218,
+        "column": 35,
+        "length": 7
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < cuts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'cuts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 216,
+        "column": 45,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(cuts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 216,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in ''. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'diamondCut' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 216,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'diamondCut'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage array push operation inside loop. Extremely gas-intensive Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 216,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 216,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage deletion inside loop. Each delete costs significant gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 216,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 216,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Parameter 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 254,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' diamondCut lacks FacetCutAction-specific validation. The Add action must check existingFacet == address(0), Replace must check existingFacet != address(0), and Remove must verify selector exists. Without action-specific checks, invalid operations can corrupt the facet registry causing undefined behavior.",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Implement action validation in 'VulnerableDiamondStaleLoupe': (1) For Add: 'require(existingFacet == address(0), \"Selector exists\")' (2) For Replace: 'require(existingFacet != address(0) && existingFacet != newFacet, \"Invalid replace\")' (3) For Remove: 'require(existingFacet != address(0), \"Selector not found\")' (4) Add comprehensive validation for each FacetCutAction enum case",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' updates selectorToFacet mapping without collision prevention. Direct assignment 'selectorToFacet[selector] = facet' without checking existing value creates collision risk. Multiple facets with the same selector will overwrite each other, causing loss of functionality and potential security vulnerabilities.",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Secure selector mapping in 'VulnerableDiamondStaleLoupe': (1) Always check 'address existingFacet = selectorToFacet[selector]' before update (2) Validate based on operation: Add requires existingFacet == 0, Replace requires existingFacet != 0 (3) Use helper functions: addSelector(), replaceSelector(), removeSelector() with built-in validation (4) Emit events for all selector changes for auditability (5) Implement selector conflict resolution strategy",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' performs external calls during diamondCut but lacks reentrancy lock variable. Without explicit lock tracking (_locked, _status, etc.), the contract cannot prevent reentrant calls during initialization. This is critical for Diamond proxies where initialization can add new facets with arbitrary code.",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement reentrancy lock in 'VulnerableDiamondStaleLoupe': (1) Add state variable: 'uint256 private _status = 1' (NOT_ENTERED) (2) Define constants: 'uint256 private constant _NOT_ENTERED = 1; uint256 private constant _ENTERED = 2' (3) Create nonReentrant modifier checking '_status != _ENTERED' (4) Set '_status = _ENTERED' on entry, '_NOT_ENTERED' on exit (5) Use storage position like Diamond Storage pattern to avoid slot collision",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' supports initialization but doesn't track initialization status. Without 'initialized' flag, the contract can be reinitialized multiple times through reentrancy, allowing attackers to reset state, change ownership, or register malicious facets after initial setup.",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement initialization tracking in 'VulnerableDiamondStaleLoupe': (1) Add 'bool private _initialized' storage variable (2) Create 'initializer' modifier: 'require(!_initialized, \"Already initialized\")' (3) Set '_initialized = true' at start of initialization (4) Use OpenZeppelin's Initializable pattern for upgradeable contracts (5) Consider version tracking for multiple initialization phases",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' implements loupe functions but doesn't declare IDiamondLoupe interface support. The ERC-2535 standard requires supportsInterface(0x48e2b093) to return true for IDiamondLoupe. Without proper interface support, tools cannot reliably detect Diamond Loupe compliance.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Add interface support to 'VulnerableDiamondStaleLoupe': (1) Import 'import \"@openzeppelin/contracts/utils/introspection/IERC165.sol\"' (2) Implement supportsInterface: 'return interfaceId == type(IDiamondLoupe).interfaceId || interfaceId == type(IERC165).interfaceId' (3) IDiamondLoupe interface ID is 0x48e2b093 (4) Ensure DiamondLoupeFacet is added during initialization (5) Test interface detection with supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondStaleLoupe' fallback delegatecall lacks documentation. Diamond fallback is security-critical as it routes all calls. Missing documentation of validation logic, security checks, and failure modes makes auditing difficult and increases risk of vulnerabilities.",
+      "severity": "critical",
+      "location": {
+        "line": 202,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Document fallback in 'VulnerableDiamondStaleLoupe': (1) Add NatSpec comments explaining delegatecall mechanism (2) Document validation steps: address(0) check, code existence, etc. (3) Explain failure modes and error handling (4) Note security assumptions and invariants (5) Provide examples of intended and unintended usage",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'cuts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 306,
+        "column": 35,
+        "length": 7
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < cuts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'cuts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 304,
+        "column": 45,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(cuts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 289,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgradeable contract missing storage gap, future upgrades may cause storage collision Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 289,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 289,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in ''. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'diamondCut' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 304,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'diamondCut'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 304,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'diamondCut' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 304,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'diamondCut'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'facet' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 289,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondCombined' diamondCut lacks FacetCutAction-specific validation. The Add action must check existingFacet == address(0), Replace must check existingFacet != address(0), and Remove must verify selector exists. Without action-specific checks, invalid operations can corrupt the facet registry causing undefined behavior.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Implement action validation in 'VulnerableDiamondCombined': (1) For Add: 'require(existingFacet == address(0), \"Selector exists\")' (2) For Replace: 'require(existingFacet != address(0) && existingFacet != newFacet, \"Invalid replace\")' (3) For Remove: 'require(existingFacet != address(0), \"Selector not found\")' (4) Add comprehensive validation for each FacetCutAction enum case",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-selector-collision",
+      "message": "Contract 'VulnerableDiamondCombined' updates selectorToFacet mapping without collision prevention. Direct assignment 'selectorToFacet[selector] = facet' without checking existing value creates collision risk. Multiple facets with the same selector will overwrite each other, causing loss of functionality and potential security vulnerabilities.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-694",
+      "fix_suggestion": {
+        "description": "Secure selector mapping in 'VulnerableDiamondCombined': (1) Always check 'address existingFacet = selectorToFacet[selector]' before update (2) Validate based on operation: Add requires existingFacet == 0, Replace requires existingFacet != 0 (3) Use helper functions: addSelector(), replaceSelector(), removeSelector() with built-in validation (4) Emit events for all selector changes for auditability (5) Implement selector conflict resolution strategy",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondCombined' performs delegatecall during diamondCut initialization without reentrancy protection. The initialization delegatecall executes arbitrary code from the init contract, which can call back into diamondCut or other functions before initialization completes. This allows attackers to manipulate state during initialization, register malicious facets, or bypass access controls.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Add reentrancy protection to 'VulnerableDiamondCombined': (1) Add 'modifier nonReentrant' using OpenZeppelin's ReentrancyGuard or custom implementation (2) Apply nonReentrant to diamondCut function (3) Use '_locked' state variable: set to true before delegatecall, false after (4) Check '!_locked' at function entry with 'require(!_locked, \"Reentrant call\")' (5) Consider using Checks-Effects-Interactions pattern - update state before delegatecall",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondCombined' modifies state after initialization delegatecall. State changes after delegatecall create reentrancy window where the init contract can observe intermediate states. Attacker-controlled init contract can reenter and exploit the inconsistent state before changes complete.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Reorder operations in 'VulnerableDiamondCombined': (1) Complete all state changes BEFORE initialization delegatecall (2) Follow Checks-Effects-Interactions: checks, state updates, external calls (3) If post-init updates needed, use reentrancy lock during the entire operation (4) Validate init contract address before delegatecall (5) Consider making initialization atomic with 'initializer' modifier",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondCombined' performs external calls during diamondCut but lacks reentrancy lock variable. Without explicit lock tracking (_locked, _status, etc.), the contract cannot prevent reentrant calls during initialization. This is critical for Diamond proxies where initialization can add new facets with arbitrary code.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement reentrancy lock in 'VulnerableDiamondCombined': (1) Add state variable: 'uint256 private _status = 1' (NOT_ENTERED) (2) Define constants: 'uint256 private constant _NOT_ENTERED = 1; uint256 private constant _ENTERED = 2' (3) Create nonReentrant modifier checking '_status != _ENTERED' (4) Set '_status = _ENTERED' on entry, '_NOT_ENTERED' on exit (5) Use storage position like Diamond Storage pattern to avoid slot collision",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondCombined' performs initialization delegatecall without validating init contract. Missing validation allows attacker to supply malicious init address that performs reentrancy attacks during diamondCut. The init contract has full delegatecall privileges and can execute arbitrary code in proxy context.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Validate init contract in 'VulnerableDiamondCombined': (1) Check 'require(_init != address(0), \"Invalid init\")' if initialization expected (2) Validate init contract code exists: 'require(_init.code.length > 0, \"Init not contract\")' (3) Consider whitelisting approved init contracts (4) Use 'if (_init == address(0) && _calldata.length > 0) revert' for consistency (5) Emit event with init address for monitoring",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-init-reentrancy",
+      "message": "Contract 'VulnerableDiamondCombined' supports initialization but doesn't track initialization status. Without 'initialized' flag, the contract can be reinitialized multiple times through reentrancy, allowing attackers to reset state, change ownership, or register malicious facets after initial setup.",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Implement initialization tracking in 'VulnerableDiamondCombined': (1) Add 'bool private _initialized' storage variable (2) Create 'initializer' modifier: 'require(!_initialized, \"Already initialized\")' (3) Set '_initialized = true' at start of initialization (4) Use OpenZeppelin's Initializable pattern for upgradeable contracts (5) Consider version tracking for multiple initialization phases",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-loupe-violation",
+      "message": "Contract 'VulnerableDiamondCombined' is a Diamond proxy but missing required ERC-2535 Loupe functions: facets(), facetFunctionSelectors(address), facetAddresses(), facetAddress(bytes4). The Diamond Loupe standard defines 4 introspection functions that enable tools, users, and contracts to discover which facets and functions a Diamond implements. Without these, the Diamond becomes a black box, hindering integration, debugging, and security auditing.",
+      "severity": "medium",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-573",
+      "fix_suggestion": {
+        "description": "Implement missing Loupe functions in 'VulnerableDiamondCombined': (1) facets() returning Facet[] array with address and selectors for each facet (2) facetFunctionSelectors(address _facet) returning bytes4[] of selectors for a facet (3) facetAddresses() returning address[] of all facet addresses (4) facetAddress(bytes4 _selector) returning address of facet for a selector (5) Implement IDiamondLoupe interface and add to supportsInterface",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondCombined' fallback performs delegatecall without validating facet != address(0). When a function selector is not registered in selectorToFacet, it returns address(0). Delegatecall to address(0) succeeds silently in assembly, returning success=true without executing any code. This creates false success responses for non-existent functions, breaking contract behavior and potentially bypassing security checks.",
+      "severity": "critical",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add facet validation in 'VulnerableDiamondCombined' fallback: (1) After loading facet address, add 'require(facet != address(0), \"Function does not exist\")' (2) Check BEFORE delegatecall, not after (3) Use revert with custom error for gas efficiency: 'error FunctionNotFound(bytes4 selector)' (4) Consider explicit fallback failure rather than silent success (5) Validate facet in both Solidity and assembly implementations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondCombined' fallback delegates without verifying facet has code. Even if facet != address(0), the address may be an EOA or a self-destructed contract with no code. Delegatecall to addresses without code succeeds silently, returning success=true. This allows unregistered selectors to succeed unexpectedly, bypassing access controls and validation logic.",
+      "severity": "critical",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add code existence check in 'VulnerableDiamondCombined': (1) Validate 'require(facet.code.length > 0, \"Facet has no code\")' (2) In assembly, use EXTCODESIZE: 'if iszero(extcodesize(facet)) { revert(0, 0) }' (3) Perform check immediately after loading facet address (4) Consider caching code validation during facet registration (5) Handle self-destructed facets gracefully",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-delegatecall-zero",
+      "message": "Contract 'VulnerableDiamondCombined' uses assembly delegatecall without proper validation. Assembly delegatecall bypasses Solidity's address validation, making it critical to manually check facet != 0 and extcodesize > 0. Missing validation in assembly is more dangerous because there are no implicit safety checks.",
+      "severity": "critical",
+      "location": {
+        "line": 276,
+        "column": 10,
+        "length": 25
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add assembly validation in 'VulnerableDiamondCombined': (1) After loading facet: 'if iszero(facet) { revert(0, 0) }' (2) Check code size: 'if iszero(extcodesize(facet)) { revert(0, 0) }' (3) Place checks immediately before delegatecall opcode (4) Use consistent error handling (revert with error code) (5) Document assembly validation logic clearly",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 120,
+    "severity_counts": {
+      "critical": 27,
+      "low": 18,
+      "medium": 24,
+      "high": 51,
+      "info": 0
+    },
+    "unique_detectors": 28
+  }
+}

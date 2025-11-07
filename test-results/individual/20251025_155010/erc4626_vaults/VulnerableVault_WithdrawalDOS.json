@@ -1,0 +1,1395 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/erc4626_vaults/VulnerableVault_WithdrawalDOS.sol
+  Found 91 issues
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-25T21:50:13.192946Z",
+  "findings": [
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 18,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transferFrom' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 19,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transferFrom'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'deposit' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 40,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'withdraw' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 111,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'balanceOf' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 17,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'balanceOf': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'transfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 18,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'transfer': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'requestWithdrawal' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'requestWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'processWithdrawals' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'processWithdrawals'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'withdraw' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'withdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "classic-reentrancy",
+      "message": "Function 'requestWithdrawal' may be vulnerable to reentrancy attacks due to state changes after external calls",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Apply checks-effects-interactions pattern or use a reentrancy guard in function 'requestWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_asset' in function '' is not checked for zero address",
+      "severity": "low",
+      "location": {
+        "line": 36,
+        "column": 25,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_asset != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'withdrawalQueue' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 83,
+        "column": 28,
+        "length": 18
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < withdrawalQueue.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_asset' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 36,
+        "column": 25,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_asset != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "single-oracle-source",
+      "message": "Function 'requestWithdrawal' relies on a single oracle source, creating centralization risk",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Use multiple oracle sources and implement price aggregation in function 'requestWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'requestWithdrawal' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'requestWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'processWithdrawals' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 0,
+        "length": 18
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'deposit' is vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares), (2) Implement virtual shares/assets (ERC4626 with offset), (3) Enforce minimum first deposit amount, (4) Use higher precision decimals (1e18 instead of 1e6).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'deposit' is vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible, (4) Require minimum initial deposits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'processWithdrawals' is vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'processWithdrawals' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible, (4) Require minimum initial deposits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'withdraw' is vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible, (4) Require minimum initial deposits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'requestWithdrawal' is vulnerable to withdrawal DOS attack. No withdrawal cap or limit detected. Large withdrawals can drain liquidity and DOS subsequent withdrawers Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'requestWithdrawal' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction, (2) Add circuit breakers for emergency withdrawals, (3) Avoid unbounded loops in withdrawal queue processing, (4) Implement partial withdrawal support, (5) Use pull-over-push pattern for failed withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'processWithdrawals' is vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'processWithdrawals' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction, (2) Add circuit breakers for emergency withdrawals, (3) Avoid unbounded loops in withdrawal queue processing, (4) Implement partial withdrawal support, (5) Use pull-over-push pattern for failed withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'withdraw' is vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction, (2) Add circuit breakers for emergency withdrawals, (3) Avoid unbounded loops in withdrawal queue processing, (4) Implement partial withdrawal support, (5) Use pull-over-push pattern for failed withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'deposit' is vulnerable to hook reentrancy attack. Balance updates after token transfer. Reentrancy via hooks can occur before balances are updated ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin, (2) Follow checks-effects-interactions pattern, (3) Update state before external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363), (5) Use reentrancy guard on all vault entry points.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'processWithdrawals' is vulnerable to hook reentrancy attack. Balance updates after token transfer. Reentrancy via hooks can occur before balances are updated ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'processWithdrawals' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin, (2) Follow checks-effects-interactions pattern, (3) Update state before external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363), (5) Use reentrancy guard on all vault entry points.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'withdraw' is vulnerable to hook reentrancy attack. Balance updates after token transfer. Reentrancy via hooks can occur before balances are updated ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin, (2) Follow checks-effects-interactions pattern, (3) Update state before external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363), (5) Use reentrancy guard on all vault entry points.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'requestWithdrawal' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'requestWithdrawal'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'processWithdrawals' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'processWithdrawals'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'deposit' has extractable MEV. Public function with value transfer lacks MEV protection, enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'deposit'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'requestWithdrawal' has extractable MEV. Public function with value transfer lacks MEV protection, enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'requestWithdrawal'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'processWithdrawals' has extractable MEV. Public function with value transfer lacks MEV protection, enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'processWithdrawals'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'withdraw' has extractable MEV. Public function with value transfer lacks MEV protection, enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'withdraw'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'requestWithdrawal' has withdrawal delay vulnerability. Withdrawal queue without FIFO enforcement, allows queue jumping or unfair withdrawal ordering Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'requestWithdrawal'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'processWithdrawals' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'processWithdrawals'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'withdraw' has withdrawal delay vulnerability. Withdrawal requires successful external call, failing calls can permanently block withdrawals Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'withdraw'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'requestWithdrawal' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'requestWithdrawal'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'processWithdrawals' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'processWithdrawals'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'deposit' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'deposit'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'processWithdrawals' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'processWithdrawals'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'withdraw' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'withdraw'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'deposit' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'deposit'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'requestWithdrawal' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'requestWithdrawal'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'processWithdrawals' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'processWithdrawals'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'withdraw' has circular dependency vulnerability. Reads external contract state during state changes, creates interdependency that can deadlock Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'withdraw'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'deposit' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'deposit'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'requestWithdrawal' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'requestWithdrawal'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'processWithdrawals' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'processWithdrawals'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'withdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'withdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'processWithdrawals' has DOS vulnerability via unbounded operation. Deleting array or mapping without size limit, can exceed gas limit Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'processWithdrawals'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'deposit' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'deposit'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'processWithdrawals' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'processWithdrawals'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'processWithdrawals' contains excessive gas usage pattern. Storage deletion inside loop. Each delete costs significant gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'processWithdrawals'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'processWithdrawals' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'processWithdrawals'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'processWithdrawals' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'processWithdrawals'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'processWithdrawals' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'processWithdrawals'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'withdraw' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'withdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'deposit' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 40,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'withdraw' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 111,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Parameter 'assets' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Parameter 'assets' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Local variable 'assets))' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'requestWithdrawal' contains variable shadowing. Parameter 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'requestWithdrawal'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'processWithdrawals' contains variable shadowing. Local variable 'user' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'processWithdrawals'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'processWithdrawals' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'processWithdrawals'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'processWithdrawals' contains variable shadowing. Local variable 'assets' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'processWithdrawals'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'withdraw' contains variable shadowing. Local variable 'assets' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'withdraw'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'processWithdrawals' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 86,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'processWithdrawals'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'withdraw' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'withdraw'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No zero-share validation (rounding error exploitation) in 'deposit'",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate shares: require(shares > 0, \"Shares must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'requestWithdrawal'",
+      "severity": "medium",
+      "location": {
+        "line": 59,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'requestWithdrawal'",
+      "severity": "medium",
+      "location": {
+        "line": 59,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'processWithdrawals'",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'processWithdrawals'",
+      "severity": "medium",
+      "location": {
+        "line": 79,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'withdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'withdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'deposit' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 40,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'deposit': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'processWithdrawals' violates constant product invariant: Reserve updates don't sync with actual token balances, may cause discrepancies with fee-on-transfer tokens",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'processWithdrawals': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'withdraw' violates constant product invariant: Reserve updates don't sync with actual token balances, may cause discrepancies with fee-on-transfer tokens",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'withdraw': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'requestWithdrawal' finalizes withdrawals without proper checks. No finality check before withdrawal. Should verify L2 state is finalized Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'requestWithdrawal': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'requestWithdrawal' finalizes withdrawals without proper checks. Missing withdrawal proof validation. Should verify withdrawal was initiated on L2 Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'requestWithdrawal': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'requestWithdrawal' finalizes withdrawals without proper checks. Missing replay protection. Withdrawals could be claimed multiple times Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 59,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'requestWithdrawal': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processWithdrawals' finalizes withdrawals without proper checks. No finality check before withdrawal. Should verify L2 state is finalized Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'processWithdrawals': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processWithdrawals' finalizes withdrawals without proper checks. Missing withdrawal proof validation. Should verify withdrawal was initiated on L2 Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'processWithdrawals': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processWithdrawals' finalizes withdrawals without proper checks. Missing replay protection. Withdrawals could be claimed multiple times Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 79,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'processWithdrawals': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'withdraw' finalizes withdrawals without proper checks. No finality check before withdrawal. Should verify L2 state is finalized Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'withdraw': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'withdraw' finalizes withdrawals without proper checks. Missing withdrawal proof validation. Should verify withdrawal was initiated on L2 Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'withdraw': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'withdraw' finalizes withdrawals without proper checks. Missing replay protection. Withdrawals could be claimed multiple times Missing validation can allow premature or unauthorized withdrawals.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add finality checks to 'withdraw': (1) Verify sufficient block confirmations, (2) Check withdrawal was properly initiated on L2, (3) Validate proof of L2 state, (4) Prevent replay with nonce tracking.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.0.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.0.0"
+  },
+  "statistics": {
+    "total_findings": 91,
+    "severity_counts": {
+      "high": 32,
+      "critical": 23,
+      "low": 15,
+      "info": 0,
+      "medium": 21
+    },
+    "unique_detectors": 29
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 91
+  Time taken: 0.01s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

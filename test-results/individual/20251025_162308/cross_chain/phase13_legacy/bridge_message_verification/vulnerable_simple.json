@@ -1,0 +1,288 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/vulnerable_simple.sol
+  Found 17 issues
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-25T22:23:12.040821Z",
+  "findings": [
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'messageHash' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 17,
+        "length": 11
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'messageHash' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'message' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 36,
+        "column": 45,
+        "length": 7
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'message' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function '_executeMessage' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 36,
+        "column": 0,
+        "length": 15
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'receiveMessage' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'receiveMessage'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'receiveMessage' contains variable shadowing. Local variable 'success,)' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'receiveMessage'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'processMessage'",
+      "severity": "critical",
+      "location": {
+        "line": 13,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'receiveMessage'",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'processMessage'",
+      "severity": "high",
+      "location": {
+        "line": 13,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'receiveMessage'",
+      "severity": "high",
+      "location": {
+        "line": 24,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'success,)' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'success,)'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processMessage' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 13,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 13,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processMessage' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 13,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'receiveMessage' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'receiveMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'receiveMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'receiveMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'receiveMessage' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'receiveMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.0.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.0.0"
+  },
+  "statistics": {
+    "total_findings": 17,
+    "severity_counts": {
+      "critical": 8,
+      "low": 2,
+      "info": 0,
+      "medium": 4,
+      "high": 3
+    },
+    "unique_detectors": 9
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 17
+  Time taken: 0.00s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

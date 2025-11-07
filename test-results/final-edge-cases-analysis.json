@@ -1,0 +1,2373 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-07T02:43:38.122191Z",
+  "findings": [
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'submitFraudProof' has dangerous timestamp dependency. Critical operations (transfer/mint/burn/withdraw) controlled by timestamp, enabling miners to manipulate timing for advantage Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'submitFraudProof'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'submitFraudProof' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 29,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'submitFraudProof'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 19,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 114,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 151,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 193,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 229,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 341,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Small uint type as standalone storage variable. Use uint256 or pack with other variables Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 606,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lrt-share-inflation",
+      "message": "No tracked assets variable - should track deposits explicitly instead of using balanceOf",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add tracked assets storage:\n\n// Track total assets explicitly (don't rely on balanceOf)\nuint256 private _totalTrackedAssets;\n\nfunction deposit(uint256 assets) external {\n// ... deposit logic\n_totalTrackedAssets += assets;\n}\n\nfunction withdraw(uint256 shares) external {\nuint256 assets = convertToAssets(shares);\n_totalTrackedAssets -= assets;\n// ... withdrawal logic\n}\n\nfunction totalAssets() public view returns (uint256) {\nreturn _totalTrackedAssets;  // Use tracked, not balanceOf\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lrt-share-inflation",
+      "message": "No minimum deposit amount - allows dust deposits that can be exploited",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Define minimum deposit amount:\n\nuint256 public constant MIN_DEPOSIT = 1e15;  // 0.001 ETH\n\nfunction deposit(uint256 assets) external returns (uint256 shares) {\nrequire(assets >= MIN_DEPOSIT, \"Deposit amount too small\");\n\n// ... rest of deposit logic\n}\n\nThis prevents attackers from depositing tiny amounts (1 wei) for inflation attacks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-governance-attack",
+      "message": "No voting delay - proposals can be created and voted on in same transaction via flash loan",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Add minimum voting delay (e.g., 1 day) between proposal creation and voting period start",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-governance-attack",
+      "message": "Emergency proposals lack timelock - can be flash-loan attacked for immediate execution",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Even emergency proposals should have minimal timelock (e.g., 1 hour) and require multisig",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-permit-front-running",
+      "message": "permit() without error handling - front-runner can grief by using permit first, causing revert",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Use try-catch: try token.permit(...) {} catch {} or check allowance before permit",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-permit-front-running",
+      "message": "No allowance check before permit - can revert if allowance already set, causing DOS",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Check allowance first: if (token.allowance(owner, spender) < amount) token.permit(...)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-permit-front-running",
+      "message": "Permit deadline not bounded - signatures valid indefinitely create security risk",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Enforce maximum deadline: require(deadline <= block.timestamp + MAX_DEADLINE, \"Deadline too far\")",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-sandwich-vulnerable-swaps",
+      "message": "Swap function lacks slippage parameter - users cannot protect against MEV",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Add slippage protection parameter: function swap(..., uint256 minAmountOut)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-sandwich-vulnerable-swaps",
+      "message": "Large swaps without MEV protection (Flashbots/private mempool) - high sandwich risk",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Use Flashbots/MEV-Share for large swaps or implement private transaction submission",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-sandwich-vulnerable-swaps",
+      "message": "Swap deadline set to max - transaction can be held and executed at worst price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Use short deadline: uint256 deadline = block.timestamp + 300; // 5 minutes",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Static fees on AMM - no protection against toxic flow from informed traders",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Implement dynamic fees that increase with volatility or trade size to discourage toxic flow",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "No trade size limits - large informed trades can extract maximum value from LPs",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Add maximum trade size as percentage of reserves: require(amountIn < reserves * maxBps / 10000)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'destChainId' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 232,
+        "column": 0,
+        "length": 11
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'destChainId'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'nonce' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 117,
+        "column": 0,
+        "length": 5
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'nonce'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'user' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 230,
+        "column": 0,
+        "length": 4
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'user'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'quorum' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 153,
+        "column": 0,
+        "length": 6
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'quorum'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'verifyFraudProof' implements proof verification with potential bypasses. Missing proof format validation. Should check proof data length and structure Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'verifyFraudProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'verifyFraudProof' implements proof verification with potential bypasses. No public input hash computation. Should reconstruct hash from batch data to prevent manipulation Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'verifyFraudProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'verifyFraudProof' implements proof verification with potential bypasses. No event emission for proof verification. Should emit event for monitoring and auditing Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'verifyFraudProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "create2-frontrunning",
+      "message": "CREATE2 salt uses simple counter (predictable address)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-330",
+      "fix_suggestion": {
+        "description": "Use unpredictable salt: Combine counter with blockhash or commit-reveal scheme: keccak256(abi.encodePacked(counter, blockhash(block.number - 1)))",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "permit-signature-exploit",
+      "message": "Permit with deadline parameter but no validation (expired signatures accepted)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Validate deadline: require(block.timestamp <= deadline, \"Permit expired\"); Prevents use of expired permit signatures.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "permit-signature-exploit",
+      "message": "Permit without domain separator (cross-contract signature reuse)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Implement EIP-712 domain separator: bytes32 DOMAIN_SEPARATOR = keccak256(abi.encode(EIP712_DOMAIN_TYPEHASH, keccak256(bytes(name)), keccak256(bytes(version)), block.chainid, address(this)));",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "permit-signature-exploit",
+      "message": "Permit without signature format validation (v value should be 27 or 28)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Validate signature format: require(v == 27 || v == 28, \"Invalid v value\"); Ensures signature format compliance.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "permit-signature-exploit",
+      "message": "Permit followed by external call (reentrancy risk)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Reentrancy risk: Permit updates approval state, then makes external call. Use Checks-Effects-Interactions pattern or reentrancy guard. Consider if external call is necessary in permit().",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-sweeper-detection",
+      "message": "MALICIOUS SWEEPER DETECTED (score: 4/10) - Batch token operations, Approve + transferFrom pattern (token drainage)",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: This appears to be a malicious sweeper contract!\n\nRisk indicators detected:\n1. Batch token operations\n2. Approve + transferFrom pattern (token drainage)\n\nSweeper contracts are responsible for 97% of malicious EIP-7702 delegations\nin 2025, causing $12M+ in losses.\n\nTypical sweeper behavior:\n1. Accepts EIP-7702 delegation\n2. Immediately drains all ETH via address(this).balance\n3. Batch transfers all ERC-20 tokens\n4. Transfers all NFTs\n5. No legitimate business logic\n\nLegitimate delegates should:\n- Have clear access control (require msg.sender == owner)\n- NOT drain all funds automatically\n- Have specific, documented functionality\n- Include safety mechanisms and time-locks\n\n⚠️  If this is a legitimate contract, add documentation and access controls.\n⚠️  If this is for security research, clearly mark it as such.\n\nReal-World Impact:\n- August 2025: $1.54M single transaction\n- 15,000+ wallets drained\n- 90% malicious delegation rate",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "intent-nonce-management",
+      "message": "No nonce storage mapping declared - nonce validation impossible",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add nonce storage mapping:\n\nOption 1: Bitmap-based (flexible)\nmapping(address => mapping(uint256 => bool)) public usedNonces;\n\nOption 2: Sequential counter\nmapping(address => uint256) public userNonces;\n\nOption 3: Use Permit2 (recommended for gasless)\nIPermit2 public immutable PERMIT2;\n// Permit2 handles nonce tracking internally",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Reward distribution logic detected - verify precision and rounding",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Common reward distribution errors:\n\n1. Integer division truncation:\n❌ reward = balance / users;  // Loses remainder\n✅ reward = balance * 1e18 / users / 1e18;\n\n2. Accumulating rounding errors:\n❌ Track individual rewards that sum != total\n✅ Use lastUser = total - sum(others)\n\n3. Division before multiplication:\n❌ (balance / total) * multiplier\n✅ (balance * multiplier) / total\n\n4. Missing remainder handling:\nuint256 perUser = total / userCount;\nuint256 remainder = total % userCount;\n// Handle remainder explicitly!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "oracle-time-window-attack",
+      "message": "Oracle price usage without time-weighted average - consider TWAP",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Single-block price oracles are manipulable:\n\n❌ Vulnerable patterns:\n- Using spot price from DEX\n- Single block price snapshot\n- No time-weighting\n- No price deviation checks\n\n✅ Recommended solutions:\n\n1. Use Uniswap V3 TWAP (30+ minute window)\n2. Use Chainlink Price Feeds (aggregated off-chain)\n3. Combine multiple oracle sources\n4. Implement price deviation bounds:\nrequire(abs(newPrice - lastPrice) < maxDelta);\n5. Use time-weighted moving average:\npriceSum += currentPrice;\npriceCount++;\navgPrice = priceSum / priceCount;\n\nMinimum TWAP window: 30 minutes (longer is better)\nMaximum price deviation: 2-5% from last update",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Unchecked block found - overflows/underflows won't revert (OWASP 2025)",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\nSolidity 0.8.0+ has automatic overflow/underflow checks,\nbut 'unchecked' blocks disable this protection.\n\n❌ DANGEROUS if user input involved:\nunchecked {\nbalance += amount;  // Can overflow!\ntotal = a * b;      // Can overflow!\n}\n\n✅ SAFE usage (loop counters only):\nfor (uint256 i = 0; i < items.length;) {\n// Process items[i]\n\nunchecked {\n++i;  // Safe: loop counter can't realistically overflow\n}\n}\n\n✅ SAFE usage (guaranteed no overflow):\nunchecked {\n// Safe: subtraction after comparison\nif (a >= b) {\nresult = a - b;  // No underflow possible\n}\n}\n\n❌ NEVER use unchecked for:\n- User-supplied values\n- Token amounts\n- Financial calculations\n- Multiplication of arbitrary values\n\nOnly use unchecked when:\n1. Loop counters (i++, ++i)\n2. Mathematically proven safe\n3. Gas optimization with careful review",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: Assembly has NO overflow protection!\n\nReal incident: Cetus DEX - $223M loss (May 2025)\nCause: Assembly arithmetic overflow\n\n❌ VULNERABLE (Cetus-style vulnerability):\nassembly {\nlet result := add(a, b)  // NO OVERFLOW CHECK!\nlet product := mul(x, y) // NO OVERFLOW CHECK!\nmstore(0x00, result)\n}\n\n✅ SOLUTION 1 - Add manual checks:\nassembly {\nlet result := add(a, b)\n// Manual overflow check\nif lt(result, a) {\nrevert(0, 0)  // Overflow detected\n}\n}\n\n✅ SOLUTION 2 - Use Solidity instead:\n// Let Solidity handle overflow checks\nuint256 result = a + b;  // Automatic overflow check\n\n✅ SOLUTION 3 - SafeMath for assembly:\nfunction safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {\nuint256 c;\nassembly {\nc := add(a, b)\n}\nrequire(c >= a, \"Overflow\");  // Check outside assembly\nreturn c;\n}\n\nAssembly arithmetic operations with NO checks:\n- add(a, b)     → wraps on overflow\n- sub(a, b)     → wraps on underflow\n- mul(a, b)     → wraps on overflow\n- div(a, b)     → returns 0 if b is 0 (no revert!)\n\n⚠️ Only use assembly arithmetic when absolutely necessary\nand with manual overflow checks!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Type casting to smaller uint - verify no overflow on downcast",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Downcasting can silently overflow even in Solidity 0.8.0+!\n\n❌ UNSAFE DOWNCAST:\nuint256 bigValue = 1000;\nuint8 smallValue = uint8(bigValue);  // Wraps to 232! (1000 % 256)\n\n✅ SAFE DOWNCAST with validation:\nuint256 bigValue = 1000;\nrequire(bigValue <= type(uint8).max, \"Value too large\");\nuint8 smallValue = uint8(bigValue);  // Safe now\n\n✅ USE SafeCast library (OpenZeppelin):\nimport \"@openzeppelin/contracts/utils/math/SafeCast.sol\";\n\nuint256 bigValue = 1000;\nuint8 smallValue = SafeCast.toUint8(bigValue);  // Reverts if > 255\n\nType limits:\n- uint8:   0 to 255\n- uint16:  0 to 65,535\n- uint32:  0 to 4,294,967,295\n- uint64:  0 to 18,446,744,073,709,551,615\n- uint256: 0 to 2^256-1",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "jit-liquidity-sandwich",
+      "message": "Liquidity becomes active immediately - may enable JIT sandwich attacks",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Consider delaying liquidity activation to the next epoch or block to mitigate JIT attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hook-reentrancy-enhanced",
+      "message": "Callback function lacks sender validation - attacker can trigger malicious reentry",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Validate callback sender (e.g., require(msg.sender == pool)) to prevent unauthorized reentry",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "ERC-4626 vault lacks initial share protection - vulnerable to share inflation attack",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Share calculation uses contract balance directly - vulnerable to donation attack via direct transfer",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Track balances internally instead of using balanceOf(), or use virtual assets/shares in calculations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "No minimum deposit requirement - small deposits may round down to zero shares",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Pool initialization lacks protection - first depositor can manipulate initial share price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Require minimum initial deposit, mint dead shares on initialization, or use time-delayed activation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-invariant-manipulation",
+      "message": "Price oracle uses spot price without TWAP - vulnerable to flash loan price manipulation",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 20459
+      },
+      "fix_suggestion": {
+        "description": "Implement time-weighted average price (TWAP) using cumulative price observations to resist manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'initiateCrossRollupTransfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'initiateCrossRollupTransfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'completeCrossRollupTransfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 98,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'completeCrossRollupTransfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unprotected-initializer",
+      "message": "Initializer function 'initiateCrossRollupTransfer' lacks access control and can be called by anyone",
+      "severity": "high",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier to 'initiateCrossRollupTransfer' or ensure it can only be called once during deployment",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'destChain' in function 'initiateCrossRollupTransfer' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 79,
+        "column": 17,
+        "length": 9
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(destChain != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'initiateCrossRollupTransfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'initiateCrossRollupTransfer'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'completeCrossRollupTransfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 98,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'completeCrossRollupTransfer'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'initiateCrossRollupTransfer' contains variable shadowing. Parameter 'destChain' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'initiateCrossRollupTransfer'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'initiateCrossRollupTransfer' contains variable shadowing. Parameter 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'initiateCrossRollupTransfer'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'initiateCrossRollupTransfer' contains variable shadowing. Local variable 'destChain' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'initiateCrossRollupTransfer'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'initiateCrossRollupTransfer' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'initiateCrossRollupTransfer'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-input-validation",
+      "message": "Function 'initiateCrossRollupTransfer' missing input validation. Critical function with address parameter lacks zero address validation Missing validation can lead to unexpected behavior, zero address transfers, or invalid state.",
+      "severity": "medium",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add input validation to 'initiateCrossRollupTransfer'. Implement: (1) Zero address checks for address parameters, (2) Bounds validation for numeric inputs, (3) Array length validation, (4) require() statements at function start, (5) OpenZeppelin Address library for address validation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'initiateCrossRollupTransfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 78,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'initiateCrossRollupTransfer': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'completeCrossRollupTransfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 98,
+        "column": 14,
+        "length": 27
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'completeCrossRollupTransfer': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'processL2Message' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'processL2Message'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'processL2Message'",
+      "severity": "critical",
+      "location": {
+        "line": 124,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'processL2Message'",
+      "severity": "high",
+      "location": {
+        "line": 124,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processL2Message' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processL2Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processL2Message' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processL2Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'processL2Message' relays cross-layer messages without proper validation. Signature present but no verification detected. Should validate message authenticity This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'processL2Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "liquidity-bootstrapping-abuse",
+      "message": "Function 'submitTaskResult' has liquidity bootstrapping pool manipulation risk. No per-transaction size limit during LBP phase, allowing single large purchases to drain pool LBP weight manipulation can cause unfair token distribution, enable whale advantage, or allow price manipulation during sale.",
+      "severity": "medium",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Secure LBP implementation in 'submitTaskResult'. Add: (1) Gradual weight transition with block-based limits, (2) Maximum purchase caps per address, (3) Cooldown between weight updates, (4) Minimum duration enforcement, (5) Purchase limits per transaction.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "slashing-mechanism",
+      "message": "Function 'submitTaskResult' has slashing mechanism vulnerability. No cooldown period between slashing events, allows rapid repeated slashing of same validator (griefing attack) Improper slashing logic can lead to validator griefing, unfair penalties, or loss of staked funds.",
+      "severity": "high",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Fix slashing mechanism in 'submitTaskResult'. Implement cooldown periods between slashings, add maximum slashing limits per period, require evidence verification with dispute periods, implement progressive penalties, add multi-signature requirements for large slashings, and protect against double-slashing.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-griefing",
+      "message": "Function 'submitTaskResult' has validator griefing vulnerability. Validator reporting or slashing has no cost to reporter, enables free griefing attacks through false accusations Attackers can harm validators without economic benefit, leading to validator exits and network destabilization.",
+      "severity": "high",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-405",
+      "fix_suggestion": {
+        "description": "Mitigate validator griefing in 'submitTaskResult'. Implement griefing-cost mechanisms (deposit requirements), add rate limiting per address, require minimum stake for reporting, implement reputation systems, add penalties for false accusations, and create validator insurance pools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'submitTaskResult' has validator front-running vulnerability. Validator assignment without rotation, same validators can repeatedly front-run same users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'submitTaskResult'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'submitTaskResult' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'submitTaskResult'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'submitTaskResult' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 161,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'submitTaskResult'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function 'executeMessage' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 203,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'executeMessage' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 203,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'executeMessage'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'executeMessage'",
+      "severity": "critical",
+      "location": {
+        "line": 203,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeMessage'",
+      "severity": "high",
+      "location": {
+        "line": 203,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeMessage' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 203,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 203,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'executeMessage' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 203,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'fulfillCrossChainIntent' has extractable MEV. Reward distribution without commit-reveal, enables front-running of reward claims Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 240,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'fulfillCrossChainIntent'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'fulfillCrossChainIntent' has validator front-running vulnerability. Claim operations visible in mempool, validators can front-run to claim before users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 240,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'fulfillCrossChainIntent'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'fulfillCrossChainIntent' contains variable shadowing. Parameter 'sourceChainId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 240,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'fulfillCrossChainIntent'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'fulfillCrossChainIntent' contains variable shadowing. Local variable 'sourceChainId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 240,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'fulfillCrossChainIntent'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'depositForLRT' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 272,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'depositForLRT' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares - Uniswap V2 pattern), (2) Implement virtual shares/assets (OpenZeppelin ERC4626 with decimalsOffset), (3) Enforce minimum first deposit amount (>= 1e6 recommended), (4) Use higher precision decimals (1e18 instead of 1e6), (5) Track assets internally instead of using balanceOf, (6) Consider EigenLayer delegation pattern for restaking vaults.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'depositForLRT' has validator front-running vulnerability. Reward distribution visible in mempool, validators can front-run to claim rewards first Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 272,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'depositForLRT'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'depositForLRT' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 272,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'depositForLRT'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'depositForLRT' contains variable shadowing. Parameter 'totalShares' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 272,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'depositForLRT'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'depositForLRT' contains variable shadowing. Local variable 'sharesToMint' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 272,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'depositForLRT'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lrt-share-inflation",
+      "message": "No minimum shares check in 'depositForLRT' - can mint 0 shares (rounding attack)",
+      "severity": "high",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate minimum shares minted:\n\nfunction deposit(uint256 assets) external returns (uint256 shares) {\nshares = convertToShares(assets);\n\n// Prevent zero shares (rounding attack)\nrequire(shares > 0, \"Zero shares - deposit amount too small\");\n\n_mint(msg.sender, shares);\n_totalTrackedAssets += assets;\n}\n\nThis prevents victim from depositing assets but receiving 0 shares.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lrt-share-inflation",
+      "message": "No donation detection in 'depositForLRT' - attacker can inflate share price via direct transfer",
+      "severity": "high",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Detect donations via balance before/after comparison:\n\nfunction deposit(uint256 assets) external returns (uint256 shares) {\n// Capture balance before transfer\nuint256 balanceBefore = asset.balanceOf(address(this));\n\nasset.transferFrom(msg.sender, address(this), assets);\n\n// Verify actual deposit amount (detect donations)\nuint256 balanceAfter = asset.balanceOf(address(this));\nuint256 actualDeposit = balanceAfter - balanceBefore;\n\nrequire(\nactualDeposit == assets,\n\"Donation detected - unexpected balance increase\"\n);\n\n// Calculate shares based on tracked assets, not balanceOf\nshares = (assets * totalSupply()) / _totalTrackedAssets;\n_mint(msg.sender, shares);\n\n_totalTrackedAssets += actualDeposit;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No liquidity reserve in 'depositForLRT' - 100% restaking prevents normal withdrawals",
+      "severity": "medium",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Maintain liquidity reserve for withdrawals:\n\nuint256 public constant LIQUIDITY_RESERVE_PERCENTAGE = 10;  // 10% liquid\nuint256 public totalAvailableLiquidity;\n\nfunction deposit(uint256 assets) external {\nasset.transferFrom(msg.sender, address(this), assets);\n\n// Keep 10% liquid for immediate withdrawals\nuint256 toLiquidity = (assets * LIQUIDITY_RESERVE_PERCENTAGE) / 100;\nuint256 toRestake = assets - toLiquidity;\n\ntotalAvailableLiquidity += toLiquidity;\n\n// Restake 90% to EigenLayer\neigenlayer.deposit(toRestake);\n\n_mint(msg.sender, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\n\nrequire(\ntotalAvailableLiquidity >= request.assets,\n\"Insufficient liquidity - please try later\"\n);\n\ntotalAvailableLiquidity -= request.assets;\nasset.transfer(msg.sender, request.assets);\n}\n\nThis prevents Renzo-style incidents where withdrawals are impossible.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No first depositor protection (inflation attack on vault initialization) in 'depositForLRT'",
+      "severity": "critical",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock initial shares: if (totalSupply() == 0) { _mint(address(0), INITIAL_SHARES); }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Share calculation doesn't use totalSupply and totalAssets in 'depositForLRT'",
+      "severity": "high",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate shares: shares = (amount * totalSupply()) / totalAssets();",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No zero-share validation (rounding error exploitation) in 'depositForLRT'",
+      "severity": "high",
+      "location": {
+        "line": 272,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate shares: require(shares > 0, \"Shares must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'mintBridgedTokens' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 309,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'mintBridgedTokens'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'mintBridgedTokens' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 310,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-replay",
+      "message": "Function 'mintBridgedTokens' verifies signatures without replay protection. Attackers can reuse valid signatures to perform unauthorized actions. This is particularly dangerous in governance systems for vote manipulation.",
+      "severity": "high",
+      "location": {
+        "line": 309,
+        "column": 0,
+        "length": 17
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Implement a nonce system to prevent signature replay attacks. Include a unique nonce in the signed message and track used nonces.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-liquidity-manipulation",
+      "message": "Function 'mintBridgedTokens' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation.",
+      "severity": "critical",
+      "location": {
+        "line": 309,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'mintBridgedTokens' from liquidity manipulation. Implement minimum liquidity locks, use TWAP oracles instead of spot prices, add reentrancy guards, validate reserves before and after trades, and implement trade size limits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'mintBridgedTokens' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 309,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'mintBridgedTokens'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'mintBridgedTokens' contains variable shadowing. Parameter 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 309,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'mintBridgedTokens'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'mintBridgedTokens' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 309,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'mintBridgedTokens'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-token-mint-control",
+      "message": "Unrestricted token minting in 'mintBridgedTokens'",
+      "severity": "critical",
+      "location": {
+        "line": 309,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add access control: modifier onlyBridge { require(msg.sender == bridge); _; }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lrt-share-inflation",
+      "message": "No minimum shares check in 'mintBridgedTokens' - can mint 0 shares (rounding attack)",
+      "severity": "high",
+      "location": {
+        "line": 309,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate minimum shares minted:\n\nfunction deposit(uint256 assets) external returns (uint256 shares) {\nshares = convertToShares(assets);\n\n// Prevent zero shares (rounding attack)\nrequire(shares > 0, \"Zero shares - deposit amount too small\");\n\n_mint(msg.sender, shares);\n_totalTrackedAssets += assets;\n}\n\nThis prevents victim from depositing assets but receiving 0 shares.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No liquidity reserve in 'mintBridgedTokens' - 100% restaking prevents normal withdrawals",
+      "severity": "medium",
+      "location": {
+        "line": 309,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Maintain liquidity reserve for withdrawals:\n\nuint256 public constant LIQUIDITY_RESERVE_PERCENTAGE = 10;  // 10% liquid\nuint256 public totalAvailableLiquidity;\n\nfunction deposit(uint256 assets) external {\nasset.transferFrom(msg.sender, address(this), assets);\n\n// Keep 10% liquid for immediate withdrawals\nuint256 toLiquidity = (assets * LIQUIDITY_RESERVE_PERCENTAGE) / 100;\nuint256 toRestake = assets - toLiquidity;\n\ntotalAvailableLiquidity += toLiquidity;\n\n// Restake 90% to EigenLayer\neigenlayer.deposit(toRestake);\n\n_mint(msg.sender, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\n\nrequire(\ntotalAvailableLiquidity >= request.assets,\n\"Insufficient liquidity - please try later\"\n);\n\ntotalAvailableLiquidity -= request.assets;\nasset.transfer(msg.sender, request.assets);\n}\n\nThis prevents Renzo-style incidents where withdrawals are impossible.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No ratio validation for liquidity provision in 'mintBridgedTokens'",
+      "severity": "medium",
+      "location": {
+        "line": 309,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate ratio: require(amount0 * reserve1 == amount1 * reserve0, \"Invalid ratio\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "intent-signature-replay",
+      "message": "Consider using Permit2 for gasless orders - provides transparent nonce management",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Integrate Permit2 for nonce management:\nIPermit2 public immutable PERMIT2;\n\nPERMIT2.permitWitnessTransferFrom(\npermit,\ntransferDetails,\norder.user,\norderHash,\nWITNESS_TYPE_STRING,\nsignature\n);\n\nPermit2 handles signature validation and nonce tracking automatically.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'stateRoot' may be accessed before initialization",
+      "severity": "high",
+      "location": {
+        "line": 398,
+        "column": 23,
+        "length": 9
+      },
+      "cwe": "CWE-908",
+      "fix_suggestion": {
+        "description": "Ensure state variable is properly initialized before use",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'stateRoot' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 403,
+        "column": 9,
+        "length": 19
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-griefing",
+      "message": "Function 'applyStateTransition' has validator griefing vulnerability. No rate limiting on validator-affecting actions, allows spam attacks to overwhelm validators or slashing logic Attackers can harm validators without economic benefit, leading to validator exits and network destabilization.",
+      "severity": "high",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-405",
+      "fix_suggestion": {
+        "description": "Mitigate validator griefing in 'applyStateTransition'. Implement griefing-cost mechanisms (deposit requirements), add rate limiting per address, require minimum stake for reporting, implement reputation systems, add penalties for false accusations, and create validator insurance pools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'applyStateTransition' contains variable shadowing. Parameter 'newRoot' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'applyStateTransition'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'applyStateTransition' contains variable shadowing. Parameter 'transitionProof' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'applyStateTransition'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'applyStateTransition' commits state without proper fraud proof mechanism. Missing challenge event emission. Should emit event to notify validators of new state commitment Missing fraud proof validation allows invalid state transitions to be finalized.",
+      "severity": "critical",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add fraud proof support to 'applyStateTransition': (1) Implement challenge() function to dispute state roots, (2) Store state root with timestamp for challenge tracking, (3) Add bond requirement for challengers, (4) Implement interactive proving game or fault proof verification, (5) Add slashing mechanism for invalid challenges.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'applyStateTransition' commits state without proper fraud proof mechanism. State root stored without timestamp metadata. Need timestamp to enforce challenge period Missing fraud proof validation allows invalid state transitions to be finalized.",
+      "severity": "critical",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add fraud proof support to 'applyStateTransition': (1) Implement challenge() function to dispute state roots, (2) Store state root with timestamp for challenge tracking, (3) Add bond requirement for challengers, (4) Implement interactive proving game or fault proof verification, (5) Add slashing mechanism for invalid challenges.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'applyStateTransition' commits state without proper fraud proof mechanism. No challenge window mechanism detected. Must allow fraud proofs during challenge period Missing fraud proof validation allows invalid state transitions to be finalized.",
+      "severity": "critical",
+      "location": {
+        "line": 388,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add fraud proof support to 'applyStateTransition': (1) Implement challenge() function to dispute state roots, (2) Store state root with timestamp for challenge tracking, (3) Add bond requirement for challengers, (4) Implement interactive proving game or fault proof verification, (5) Add slashing mechanism for invalid challenges.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'deployMetamorphic' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 421,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'deployMetamorphic'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "sandwich-resistant-swap",
+      "message": "Function 'deployMetamorphic' lacks sandwich attack protection. No minimum output amount (amountOutMin) parameter for slippage protection, leaving swap vulnerable to sandwich attacks MEV bots can front-run user swaps, manipulate price, then back-run to profit from the price difference at user's expense.",
+      "severity": "high",
+      "location": {
+        "line": 421,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add sandwich attack protection to 'deployMetamorphic'. Implement: (1) Slippage tolerance with amountOutMin parameter, (2) Commit-reveal scheme for swap parameters, (3) Private mempool submission, (4) MEV-resistant AMM curve, (5) Batch auctions instead of continuous trading.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'deployMetamorphic' has validator front-running vulnerability. MEV-generating operations without redistribution, validators capture full MEV without sharing with users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 421,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'deployMetamorphic'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'predictAddress' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 443,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'predictAddress'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'predictAddress' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 443,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'predictAddress'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateReward' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 465,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateReward'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No proportional reward distribution in 'calculateReward' - can favor certain stakers unfairly",
+      "severity": "high",
+      "location": {
+        "line": 465,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement pro-rata reward distribution (Synthetix StakingRewards pattern):\n\nuint256 public rewardPerTokenStored;\nmapping(address => uint256) public userRewardPerTokenPaid;\nmapping(address => uint256) public rewards;\n\nfunction rewardPerToken() public view returns (uint256) {\nif (totalStaked == 0) {\nreturn rewardPerTokenStored;\n}\nreturn rewardPerTokenStored +\n((totalRewardsTracked * 1e18) / totalStaked);\n}\n\nfunction earned(address user) public view returns (uint256) {\nreturn (stakes[user] *\n(rewardPerToken() - userRewardPerTokenPaid[user])) / 1e18\n+ rewards[user];\n}\n\nfunction claimRewards() external {\nupdateReward(msg.sender);\nuint256 reward = rewards[msg.sender];\nrequire(reward > 0, \"No rewards\");\nrewards[msg.sender] = 0;\nrewardToken.transfer(msg.sender, reward);\n}\n\nThis ensures fair, proportional rewards based on stake amount.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Reward calculation doesn't account for totalSupply in 'calculateReward'",
+      "severity": "high",
+      "location": {
+        "line": 465,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Missing reward debt tracking (double-claim risk) in 'calculateReward'",
+      "severity": "critical",
+      "location": {
+        "line": 465,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'safeBatchTransferFrom' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'safeBatchTransferFrom'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'from' in function 'safeBatchTransferFrom' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 488,
+        "column": 17,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(from != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'safeBatchTransferFrom' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 489,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'safeBatchTransferFrom' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'safeBatchTransferFrom' has multiple array parameters (ids, amounts) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(ids.length == amounts.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'safeBatchTransferFrom' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'safeBatchTransferFrom'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'safeBatchTransferFrom' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'safeBatchTransferFrom'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'safeBatchTransferFrom' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 487,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'safeBatchTransferFrom'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'safeBatchTransferFrom' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 487,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'removeToken' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'removeToken'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'allTokens' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 521,
+        "column": 31,
+        "length": 25
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < allTokens.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'allTokens' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 522,
+        "column": 9,
+        "length": 21
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < allTokens.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "single-oracle-source",
+      "message": "Function 'removeToken' relies on a single oracle source, creating centralization risk",
+      "severity": "high",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Use multiple oracle sources and implement price aggregation in function 'removeToken'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'removeToken' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'removeToken'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'removeToken' has DOS vulnerability via unbounded operation. Deleting array or mapping without size limit, can exceed gas limit Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'removeToken'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'removeToken' contains variable shadowing. Local variable 'lastTokenIndex' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'removeToken'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'removeToken' contains variable shadowing. Local variable 'tokenIndex' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'removeToken'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'removeToken' contains variable shadowing. Local variable 'lastTokenId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 514,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'removeToken'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'transfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 539,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'transfer'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'transfer' has circular dependency vulnerability. Callback pattern without reentrancy guard, enables circular call chains and reentrancy attacks Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 539,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'transfer'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'transfer' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 539,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'transfer'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'approve' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 563,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'approve'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'approve' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 563,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'approve'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-approve-race",
+      "message": "Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114).",
+      "severity": "medium",
+      "location": {
+        "line": 563,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Fix 'approve' race condition. Solutions: (1) Require current allowance == 0 before changes, (2) Use increaseAllowance/decreaseAllowance pattern, (3) Add expectedCurrentValue parameter",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-infinite-approval",
+      "message": "Function 'approve' has infinite approval risk. Checks for infinite approval, encouraging unlimited approvals This creates permanent security risk if contract is compromised.",
+      "severity": "low",
+      "location": {
+        "line": 563,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Mitigate infinite approval risks in 'approve'. Solutions: (1) Implement EIP-2612 permit() with deadline, (2) Add approval cap limits, (3) Provide documentation warnings, (4) Implement approval revocation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'owner' in function 'permit' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 582,
+        "column": 17,
+        "length": 5
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(owner != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'spender' in function 'permit' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 583,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(spender != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "deadline-manipulation",
+      "message": "Function 'permit' has deadline manipulation risk. Deadline parameter exists but is not validated against current time, allowing expired transactions to execute Validators can hold transactions and execute them at times that benefit MEV extraction or harm users.",
+      "severity": "medium",
+      "location": {
+        "line": 581,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Improve deadline handling in 'permit'. Use reasonable default deadlines (e.g., block.timestamp + 15 minutes), validate deadline parameters, add minimum deadline checks, or implement deadline extensions for failed transactions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'permit' has nonce management vulnerability. No nonce cancellation mechanism, users cannot invalidate pending transactions with old nonces Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 581,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'permit'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 160,
+    "severity_counts": {
+      "critical": 32,
+      "medium": 46,
+      "high": 60,
+      "info": 0,
+      "low": 22
+    },
+    "unique_detectors": 70
+  }
+}

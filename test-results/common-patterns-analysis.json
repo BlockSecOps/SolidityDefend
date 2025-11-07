@@ -1,0 +1,3157 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-06T17:46:45.790010Z",
+  "findings": [
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'target' in function 'execute' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 17,
+        "column": 30,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(target != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'target' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 17,
+        "column": 30,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(target != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 17,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function 'execute' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 17,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in 'execute'. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function 'executeToImplementation' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in 'executeToImplementation'. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function 'execute' contains dangerous delegatecall pattern. Delegatecall target is controlled by function parameters or user input, allowing arbitrary code execution Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 17,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in 'execute'. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function 'executeToImplementation' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in 'executeToImplementation'. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'executeToImplementation' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'executeToImplementation'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'execute' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 17,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'execute'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'executeToImplementation' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 24,
+        "column": 14,
+        "length": 23
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'executeToImplementation'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 247,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'emergencyWithdraw' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 255,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'pause' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 262,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'withdrawAll' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 335,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Contract uses single owner without multi-signature protection. Single private key compromise leads to total contract control Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation target not validated for interface compatibility. Missing interface validation can cause hardware wallet to delegate to incompatible code, bricking the account.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Validate delegation target: (1) Check supportsInterface for EIP-165, (2) Verify required functions exist, (3) Test delegation in simulation first, (4) Implement delegation preview/confirmation, (5) Maintain whitelist of verified delegation targets.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "time-locked-admin-bypass",
+      "message": "Timelock implementation incomplete - missing queue/schedule or execute functions",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Implement complete timelock flow: propose→queue→wait(delay)→execute",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "time-locked-admin-bypass",
+      "message": "Emergency functions bypass timelock without multisig protection",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Require multisig approval for emergency functions that bypass timelock",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "guardian-role-centralization",
+      "message": "Guardian role lacks explicit revocation mechanism - may be irremovable if compromised",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Implement guardian revocation function callable by DAO/owner for emergency scenarios",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-transfer-return-bomb",
+      "message": "Token transfer lacks return data size validation - vulnerable to return bomb DOS",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Check returndatasize() and reject if excessive (>64 bytes): require(returndatasize() <= 64)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Token price/exchange calculation without decimal normalization - incorrect conversions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Normalize decimals: amount * 10**token1.decimals() / 10**token2.decimals()",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-priority-gas-auction",
+      "message": "Public arbitrage function - creates PGA as bots compete for profit",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 12853
+      },
+      "fix_suggestion": {
+        "description": "Capture MEV for protocol via auction mechanism or restrict to specific keepers",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "multisig-bypass",
+      "message": "Missing signature malleability protection (duplicate signature acceptance)",
+      "severity": "high",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-347",
+      "fix_suggestion": {
+        "description": "Check s-value: require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, \"Invalid s-value\"); This prevents signature malleability.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "multisig-bypass",
+      "message": "Signatures without expiration/deadline (indefinite validity risk)",
+      "severity": "medium",
+      "location": {
+        "line": 0,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-347",
+      "fix_suggestion": {
+        "description": "Add expiration: Include deadline in signature data; require(block.timestamp <= deadline, \"Signature expired\"); Prevents execution of stale signatures.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'execute' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 17,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'executeToImplementation' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-txorigin-bypass",
+      "message": "tx.origin usage breaks with EIP-7702 delegation",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-7702 breaks tx.origin assumptions:\n\nBefore: tx.origin == msg.sender for EOAs\nAfter EIP-7702: tx.origin != msg.sender (msg.sender is delegate)\n\nFix: Use msg.sender instead:\nrequire(msg.sender == owner, \"Not owner\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-sweeper-detection",
+      "message": "MALICIOUS SWEEPER DETECTED (score: 5/10) - Transfers entire contract balance, Batch token operations",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: This appears to be a malicious sweeper contract!\n\nRisk indicators detected:\n1. Transfers entire contract balance\n2. Batch token operations\n\nSweeper contracts are responsible for 97% of malicious EIP-7702 delegations\nin 2025, causing $12M+ in losses.\n\nTypical sweeper behavior:\n1. Accepts EIP-7702 delegation\n2. Immediately drains all ETH via address(this).balance\n3. Batch transfers all ERC-20 tokens\n4. Transfers all NFTs\n5. No legitimate business logic\n\nLegitimate delegates should:\n- Have clear access control (require msg.sender == owner)\n- NOT drain all funds automatically\n- Have specific, documented functionality\n- Include safety mechanisms and time-locks\n\n⚠️  If this is a legitimate contract, add documentation and access controls.\n⚠️  If this is for security research, clearly mark it as such.\n\nReal-World Impact:\n- August 2025: $1.54M single transaction\n- 15,000+ wallets drained\n- 90% malicious delegation rate",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'execute' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 17,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'executeToImplementation' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 24,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Reward distribution logic detected - verify precision and rounding",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Common reward distribution errors:\n\n1. Integer division truncation:\n❌ reward = balance / users;  // Loses remainder\n✅ reward = balance * 1e18 / users / 1e18;\n\n2. Accumulating rounding errors:\n❌ Track individual rewards that sum != total\n✅ Use lastUser = total - sum(others)\n\n3. Division before multiplication:\n❌ (balance / total) * multiplier\n✅ (balance * multiplier) / total\n\n4. Missing remainder handling:\nuint256 perUser = total / userCount;\nuint256 remainder = total % userCount;\n// Handle remainder explicitly!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Percentage calculation - verify order of operations for precision",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Percentage calculations require careful ordering:\n\n❌ WRONG (precision loss):\nuint256 fee = (amount / 10000) * feePercent;\n\n✅ CORRECT:\nuint256 fee = (amount * feePercent) / 10000;\n\n✅ BEST (with basis points):\nuint256 constant BASIS_POINTS = 10000;\nuint256 fee = (amount * feeBasisPoints) / BASIS_POINTS;\n\nExample: 250 basis points = 2.5%\namount = 1000, feeBasisPoints = 250\nfee = (1000 * 250) / 10000 = 25 ✅\n\nWRONG order:\nfee = (1000 / 10000) * 250 = 0 * 250 = 0 ❌",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "oracle-time-window-attack",
+      "message": "Oracle price usage without time-weighted average - consider TWAP",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Single-block price oracles are manipulable:\n\n❌ Vulnerable patterns:\n- Using spot price from DEX\n- Single block price snapshot\n- No time-weighting\n- No price deviation checks\n\n✅ Recommended solutions:\n\n1. Use Uniswap V3 TWAP (30+ minute window)\n2. Use Chainlink Price Feeds (aggregated off-chain)\n3. Combine multiple oracle sources\n4. Implement price deviation bounds:\nrequire(abs(newPrice - lastPrice) < maxDelta);\n5. Use time-weighted moving average:\npriceSum += currentPrice;\npriceCount++;\navgPrice = priceSum / priceCount;\n\nMinimum TWAP window: 30 minutes (longer is better)\nMaximum price deviation: 2-5% from last update",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Unchecked block found - overflows/underflows won't revert (OWASP 2025)",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\nSolidity 0.8.0+ has automatic overflow/underflow checks,\nbut 'unchecked' blocks disable this protection.\n\n❌ DANGEROUS if user input involved:\nunchecked {\nbalance += amount;  // Can overflow!\ntotal = a * b;      // Can overflow!\n}\n\n✅ SAFE usage (loop counters only):\nfor (uint256 i = 0; i < items.length;) {\n// Process items[i]\n\nunchecked {\n++i;  // Safe: loop counter can't realistically overflow\n}\n}\n\n✅ SAFE usage (guaranteed no overflow):\nunchecked {\n// Safe: subtraction after comparison\nif (a >= b) {\nresult = a - b;  // No underflow possible\n}\n}\n\n❌ NEVER use unchecked for:\n- User-supplied values\n- Token amounts\n- Financial calculations\n- Multiplication of arbitrary values\n\nOnly use unchecked when:\n1. Loop counters (i++, ++i)\n2. Mathematically proven safe\n3. Gas optimization with careful review",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: Assembly has NO overflow protection!\n\nReal incident: Cetus DEX - $223M loss (May 2025)\nCause: Assembly arithmetic overflow\n\n❌ VULNERABLE (Cetus-style vulnerability):\nassembly {\nlet result := add(a, b)  // NO OVERFLOW CHECK!\nlet product := mul(x, y) // NO OVERFLOW CHECK!\nmstore(0x00, result)\n}\n\n✅ SOLUTION 1 - Add manual checks:\nassembly {\nlet result := add(a, b)\n// Manual overflow check\nif lt(result, a) {\nrevert(0, 0)  // Overflow detected\n}\n}\n\n✅ SOLUTION 2 - Use Solidity instead:\n// Let Solidity handle overflow checks\nuint256 result = a + b;  // Automatic overflow check\n\n✅ SOLUTION 3 - SafeMath for assembly:\nfunction safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {\nuint256 c;\nassembly {\nc := add(a, b)\n}\nrequire(c >= a, \"Overflow\");  // Check outside assembly\nreturn c;\n}\n\nAssembly arithmetic operations with NO checks:\n- add(a, b)     → wraps on overflow\n- sub(a, b)     → wraps on underflow\n- mul(a, b)     → wraps on overflow\n- div(a, b)     → returns 0 if b is 0 (no revert!)\n\n⚠️ Only use assembly arithmetic when absolutely necessary\nand with manual overflow checks!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Type casting to smaller uint - verify no overflow on downcast",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Downcasting can silently overflow even in Solidity 0.8.0+!\n\n❌ UNSAFE DOWNCAST:\nuint256 bigValue = 1000;\nuint8 smallValue = uint8(bigValue);  // Wraps to 232! (1000 % 256)\n\n✅ SAFE DOWNCAST with validation:\nuint256 bigValue = 1000;\nrequire(bigValue <= type(uint8).max, \"Value too large\");\nuint8 smallValue = uint8(bigValue);  // Safe now\n\n✅ USE SafeCast library (OpenZeppelin):\nimport \"@openzeppelin/contracts/utils/math/SafeCast.sol\";\n\nuint256 bigValue = 1000;\nuint8 smallValue = SafeCast.toUint8(bigValue);  // Reverts if > 255\n\nType limits:\n- uint8:   0 to 255\n- uint16:  0 to 65,535\n- uint32:  0 to 4,294,967,295\n- uint64:  0 to 18,446,744,073,709,551,615\n- uint256: 0 to 2^256-1",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-access-control",
+      "message": "tx.origin used in access control - vulnerable to phishing attacks",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ NEVER use tx.origin for access control:\nfunction withdraw() public {\nrequire(tx.origin == owner, \"Not owner\");\n// Vulnerable to phishing!\n}\n\nAttack scenario:\n1. Attacker deploys malicious contract\n2. Owner calls attacker contract\n3. Attacker contract calls victim.withdraw()\n4. tx.origin is still owner, check passes!\n5. Funds drained\n\n✅ ALWAYS use msg.sender:\nfunction withdraw() public {\nrequire(msg.sender == owner, \"Not owner\");\n// Safe: msg.sender is immediate caller\n}\n\nThe difference:\n- msg.sender: Immediate caller (can be contract)\n- tx.origin: Original EOA that started the transaction\n\nValid use of tx.origin:\n- Reject contract calls: require(tx.origin == msg.sender)\n- But NEVER for access control decisions",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'batchTransfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'batchTransfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 44,
+        "column": 9,
+        "length": 36
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'amounts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 51,
+        "column": 45,
+        "length": 10
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < amounts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'batchTransfer' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchTransfer' has multiple array parameters (recipients, amounts) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(recipients.length == amounts.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchTransfer' has related array parameters 'recipients' and 'amounts' that should be validated for equal length",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(recipients.length == amounts.length, \"Related arrays must have equal length\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'recipients' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 47,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(recipients.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amounts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 78,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amounts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'withdraw' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'withdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'batchTransfer' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 13
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'withdraw' may be vulnerable to withdrawal DOS attack. No withdrawal cap or limit detected. Large withdrawals can drain liquidity and DOS subsequent withdrawers Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'withdraw' may be vulnerable to hook reentrancy attack. Uses raw transfer() instead of SafeERC20. No protection against malicious token implementations with callback hooks ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'batchTransfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'batchTransfer'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'withdraw' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'withdraw'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'withdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'withdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'batchTransfer' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'batchTransfer'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'batchTransfer' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'batchTransfer'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'batchTransfer' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'batchTransfer' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'withdraw' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'withdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'batchTransfer' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'batchTransfer'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'withdraw' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'withdraw'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-input-validation",
+      "message": "Function 'withdraw' missing input validation. Transfer/withdraw function lacks amount validation Missing validation can lead to unexpected behavior, zero address transfers, or invalid state.",
+      "severity": "medium",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add input validation to 'withdraw'. Implement: (1) Zero address checks for address parameters, (2) Bounds validation for numeric inputs, (3) Array length validation, (4) require() statements at function start, (5) OpenZeppelin Address library for address validation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Asset calculation missing totalSupply/totalAssets in 'withdraw'",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate assets: assets = (shares * totalAssets()) / totalSupply();",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-borrow-bypass",
+      "message": "Lending protocol function 'withdraw' has borrow bypass vulnerabilities: Collateral withdrawal doesn't validate health factor after removal, may allow withdrawal that causes undercollateralization",
+      "severity": "critical",
+      "location": {
+        "line": 39,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure lending function 'withdraw': Calculate and validate health factor before borrow, enforce collateral factor (LTV) limits, add reentrancy guards, implement same-block borrow restrictions for flash loans, update state before external calls (checks-effects-interactions pattern)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'withdraw' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 39,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'batchTransfer' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-batch-phishing",
+      "message": "Unprotected batch execution in 'batchTransfer' - phishing risk",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Batch functions without authorization enable phishing:\n\nAttack pattern:\n1. Phishing site prompts EIP-7702 delegation\n2. Malicious batch function executes multiple calls\n3. Drains ETH, all ERC-20s, all NFTs in single transaction\n4. User sees only one transaction signature\n\nFix: Add proper authorization:\nfunction batchExecute(Call[] calldata calls) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < calls.length; i++) {\n(bool success,) = calls[i].target.call(calls[i].data);\nrequire(success, \"Call failed\");\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'batchTransfer' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 61,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'distributeRewards' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'distributeRewards'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'batchTransferTokens' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'batchTransferTokens'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'recipients' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 80,
+        "column": 28,
+        "length": 13
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < recipients.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'recipients' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 77,
+        "column": 67,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(recipients.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'distributeRewards' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 17
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'batchTransferTokens' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 77,
+        "column": 0,
+        "length": 19
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'distributeRewards' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'distributeRewards'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'batchTransferTokens' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'batchTransferTokens'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'distributeRewards' has validator front-running vulnerability. Reward distribution visible in mempool, validators can front-run to claim rewards first Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'distributeRewards'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'distributeRewards' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'distributeRewards'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'batchTransferTokens' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'batchTransferTokens'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'distributeRewards' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'distributeRewards'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'batchTransferTokens' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'batchTransferTokens'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'distributeRewards' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'distributeRewards' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'batchTransferTokens' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'batchTransferTokens' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'distributeRewards' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 69,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'distributeRewards'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'batchTransferTokens' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 77,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'batchTransferTokens'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Reward calculation doesn't account for totalSupply in 'distributeRewards'",
+      "severity": "high",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Missing reward debt tracking (double-claim risk) in 'distributeRewards'",
+      "severity": "critical",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-storage-collision",
+      "message": "Contract 'VulnerableExternalCallsLoop' declares storage variables directly without using Diamond Storage pattern. This creates collision risk when multiple facets share the same proxy storage. Direct storage at sequential slots (0, 1, 2...) will collide across facets, corrupting state and causing critical failures.",
+      "severity": "critical",
+      "location": {
+        "line": 64,
+        "column": 10,
+        "length": 27
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Implement Diamond Storage pattern for 'VulnerableExternalCallsLoop': (1) Create a library with 'bytes32 constant STORAGE_POSITION = keccak256(\"diamond.storage.vulnerableexternalcallsloop\")' (2) Define a struct containing all storage variables, (3) Create a function returning 'Storage storage ds' using assembly to set slot to STORAGE_POSITION, (4) Access all storage through this function instead of direct variables, (5) Use unique namespace per facet to guarantee isolation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'distributeRewards' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'batchTransferTokens' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 77,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-batch-phishing",
+      "message": "Unprotected batch execution in 'batchTransferTokens' - phishing risk",
+      "severity": "high",
+      "location": {
+        "line": 77,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Batch functions without authorization enable phishing:\n\nAttack pattern:\n1. Phishing site prompts EIP-7702 delegation\n2. Malicious batch function executes multiple calls\n3. Drains ETH, all ERC-20s, all NFTs in single transaction\n4. User sees only one transaction signature\n\nFix: Add proper authorization:\nfunction batchExecute(Call[] calldata calls) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < calls.length; i++) {\n(bool success,) = calls[i].target.call(calls[i].data);\nrequire(success, \"Call failed\");\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'batchTransferTokens' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 77,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'updateBalances' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'updateBalances'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'amounts' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 98,
+        "column": 44,
+        "length": 10
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < amounts.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'batchProcess' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'isActive' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 110,
+        "column": 17,
+        "length": 11
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < isActive.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'updateBalances' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchProcess' has multiple array parameters (addresses, amounts) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(addresses.length == amounts.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchProcess' has related array parameters 'addresses' and 'amounts' that should be validated for equal length",
+      "severity": "medium",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(addresses.length == amounts.length, \"Related arrays must have equal length\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'addresses' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 92,
+        "column": 28,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(addresses.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amounts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 93,
+        "column": 28,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amounts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'updateBalances' has multiple array parameters (users, newBalances, isActive) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(users.length == newBalances.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'updateBalances' has related array parameters 'users' and 'newBalances' that should be validated for equal length",
+      "severity": "medium",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(users.length == newBalances.length, \"Related arrays must have equal length\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'users' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 104,
+        "column": 28,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(users.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'newBalances' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 105,
+        "column": 28,
+        "length": 11
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(newBalances.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'isActive' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 106,
+        "column": 25,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(isActive.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-length-mismatch",
+      "message": "Function 'updateBalances' accepts multiple arrays but doesn't validate they have equal lengths. This can cause out-of-bounds access if one array is shorter, leading to reverts, incorrect data processing, or exploitable behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add array length validation to 'updateBalances'. At function start, add: require(array1.length == array2.length, \"Array length mismatch\"); For multiple arrays: require(arr1.length == arr2.length && arr2.length == arr3.length, \"Length mismatch\"); This prevents out-of-bounds access and ensures consistent data processing.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'batchProcess' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 12
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'batchProcess' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'batchProcess'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'batchProcess' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'batchProcess'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'updateBalances' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'updateBalances'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'batchProcess' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'batchProcess' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'batchProcess' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 91,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'batchProcess'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'updateBalances' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'updateBalances'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Reward update doesn't handle zero totalSupply (division by zero) in 'updateBalances'",
+      "severity": "high",
+      "location": {
+        "line": 103,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Handle zero: if (totalSupply() > 0) { rewardPerToken = ...; }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'batchProcess' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-batch-phishing",
+      "message": "Unprotected batch execution in 'batchProcess' - phishing risk",
+      "severity": "high",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Batch functions without authorization enable phishing:\n\nAttack pattern:\n1. Phishing site prompts EIP-7702 delegation\n2. Malicious batch function executes multiple calls\n3. Drains ETH, all ERC-20s, all NFTs in single transaction\n4. User sees only one transaction signature\n\nFix: Add proper authorization:\nfunction batchExecute(Call[] calldata calls) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < calls.length; i++) {\n(bool success,) = calls[i].target.call(calls[i].data);\nrequire(success, \"Call failed\");\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'batchProcess' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 125,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateReward' contains variable shadowing. Parameter 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 125,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateReward'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Reward calculation doesn't account for totalSupply in 'calculateReward'",
+      "severity": "high",
+      "location": {
+        "line": 125,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Missing reward debt tracking (double-claim risk) in 'calculateReward'",
+      "severity": "critical",
+      "location": {
+        "line": 125,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 144,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'getRandomNumber' has dangerous timestamp dependency. Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. These values are predictable/manipulable by miners and validators, enabling attacks on randomness-dependent logic. Use Chainlink VRF or commit-reveal schemes instead Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 144,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'getRandomNumber'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'drawWinner' has dangerous timestamp dependency. Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. These values are predictable/manipulable by miners and validators, enabling attacks on randomness-dependent logic. Use Chainlink VRF or commit-reveal schemes instead Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'drawWinner'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'getRandomNumber' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 144,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'getRandomNumber'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'drawWinner' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'drawWinner'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'drawWinner' contains variable shadowing. Local variable 'winnerIndex' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'drawWinner'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'getRandomNumber' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 145,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'getRandomNumber'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'getRandomNumber' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 145,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'getRandomNumber'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'drawWinner' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 157,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'drawWinner'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'drawWinner' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 157,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'drawWinner'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 190,
+        "column": 9,
+        "length": 28
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'executeWithSignature' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 176,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'to' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 176,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(to != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 177,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'executeWithSignature' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'executeWithSignature'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 175,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-replay",
+      "message": "Function 'recoverSigner' verifies signatures without replay protection. Attackers can reuse valid signatures to perform unauthorized actions. This is particularly dangerous in governance systems for vote manipulation.",
+      "severity": "high",
+      "location": {
+        "line": 193,
+        "column": 0,
+        "length": 13
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Implement a nonce system to prevent signature replay attacks. Include a unique nonce in the signed message and track used nonces.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "cross-chain-replay",
+      "message": "Function 'executeWithSignature' generates hash/signature without chain ID protection. This allows the same signature to be replayed on different chains, potentially draining funds on all supported chains.",
+      "severity": "critical",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Include 'block.chainid' in the hash calculation for function 'executeWithSignature'. Example: keccak256(abi.encodePacked(..., block.chainid))",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-malleability",
+      "message": "Function 'recoverSigner' uses ECDSA signature verification without malleability protection. Uses ecrecover without checking 's' value against secp256k1 curve order ECDSA signatures have two valid forms (s and -s mod n). Without checking that s is in the lower half range, attackers can create alternate valid signatures for replay attacks.",
+      "severity": "high",
+      "location": {
+        "line": 193,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-347",
+      "fix_suggestion": {
+        "description": "Add signature malleability check in 'recoverSigner'. Use OpenZeppelin's ECDSA library or add: `require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, \"Invalid signature 's' value\");` This ensures s is in the lower half of the curve order.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'executeWithSignature' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'executeWithSignature'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'executeWithSignature' has nonce management vulnerability. Uses global nonce instead of per-user mapping, forces sequential execution and limits parallelization Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'executeWithSignature'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'executeWithSignature' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'executeWithSignature'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeWithSignature' contains variable shadowing. Parameter 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeWithSignature'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeWithSignature' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 175,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeWithSignature'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'recoverSigner' contains variable shadowing. Local variable 'v' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 193,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'recoverSigner'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'executeWithSignature' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 175,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'approve' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 235,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'approve'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'spender' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 235,
+        "column": 30,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(spender != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 235,
+        "column": 47,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 217,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'revealSecret' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 217,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'revealSecret'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'approve' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 235,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'approve'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'buyItem' lacks front-running protection. Trading function 'buyItem' missing slippage protection (minAmountOut). Vulnerable to sandwich attacks Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 226,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'buyItem'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'buyItem' contains variable shadowing. Parameter 'itemPrice' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 226,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'buyItem'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-approve-race",
+      "message": "Function 'approve' has approve race condition vulnerability. Standard ERC-20 approve without race condition protection Vulnerable to front-running attack (SWC-114).",
+      "severity": "medium",
+      "location": {
+        "line": 235,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Fix 'approve' race condition. Solutions: (1) Require current allowance == 0 before changes, (2) Use increaseAllowance/decreaseAllowance pattern, (3) Add expectedCurrentValue parameter",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 258,
+        "column": 9,
+        "length": 46
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'paused' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 264,
+        "column": 9,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'user' in function 'emergencyBurn' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 269,
+        "column": 36,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(user != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'user' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 269,
+        "column": 36,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(user != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'emergencyWithdraw' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'emergencyWithdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 250,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'emergencyWithdraw' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'emergencyWithdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'emergencyWithdraw' may be vulnerable to hook reentrancy attack. Uses raw transfer() instead of SafeERC20. No protection against malicious token implementations with callback hooks ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'emergencyWithdraw' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'pause' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 262,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'pause'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'emergencyBurn' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 269,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'emergencyBurn'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'emergencyWithdraw' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'emergencyWithdraw'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'emergencyBurn' has token supply manipulation vulnerability. Supply-changing operation doesn't emit event, off-chain systems cannot track supply changes Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 269,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'emergencyBurn'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'emergencyWithdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'emergencyWithdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'pause' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 262,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'pause'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'emergencyWithdraw' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'emergencyWithdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'pause' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 262,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'pause'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'emergencyBurn' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 269,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'emergencyBurn'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'pause' has centralization risk. Critical 'pause' function restricted to single owner without multi-sig or timelock. Single point of failure for critical operation Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 262,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'pause'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'emergencyBurn' has centralization risk. Emergency function 'emergencyBurn' lacks multi-party approval. Can be abused by single compromised key Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 269,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'emergencyBurn'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'emergencyWithdraw' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 255,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'emergencyWithdraw'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'pause' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 262,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'pause'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'emergencyBurn' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 269,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'emergencyBurn'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Asset calculation missing totalSupply/totalAssets in 'emergencyWithdraw'",
+      "severity": "high",
+      "location": {
+        "line": 255,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate assets: assets = (shares * totalAssets()) / totalSupply();",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Classic reentrancy pattern with transient storage risk in 'emergencyWithdraw'",
+      "severity": "critical",
+      "location": {
+        "line": 255,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "State update after external call is vulnerable to reentrancy:\n\nCurrent pattern (VULNERABLE):\n1. Read balance\n2. Call transfer() ← attacker can reenter here with transient storage!\n3. Update balance to 0\n\nSecure pattern:\n1. Read balance\n2. Update balance to 0 ← do this FIRST\n3. Call transfer()\n\nWith EIP-1153, even 2300 gas is enough to modify transient state and re-enter.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-price-manipulation",
+      "message": "Function 'executeIfHighGas' uses tx.gasprice for MEV protection which can be bypassed. Flashbots and private mempools allow MEV bots to execute transactions with any gas price without going through the public mempool.",
+      "severity": "medium",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Replace gas price checks in function 'executeIfHighGas' with robust MEV protection. Example: Use commit-reveal schemes with sufficient delays, implement order batching, or use decentralized sequencers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeIfHighGas' contains variable shadowing. Parameter 'MIN_GAS_PRICE' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeIfHighGas'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc7821-batch-authorization",
+      "message": "Missing authorization in batch executor 'executeIfHighGas' - anyone can execute arbitrary calls",
+      "severity": "critical",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add authorization check:\n\naddress public owner;\n\nfunction executeBatch(\naddress[] calldata targets,\nbytes[] calldata datas\n) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < targets.length; i++) {\n(bool success,) = targets[i].call(datas[i]);\nrequire(success);\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'criticalAction' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 316,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'criticalAction'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'isActionAllowed' uses weak randomness source. Uses block.number for randomness. Completely predictable, miners control block production timing Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 307,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'isActionAllowed'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'criticalAction' contains variable shadowing. Parameter 'COOLDOWN' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 316,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'criticalAction'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'withdrawAll' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'withdrawAll'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 338,
+        "column": 9,
+        "length": 46
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'withdrawAll' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'withdrawAll'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "tx-origin-authentication",
+      "message": "Function 'withdrawAll' uses tx.origin for authentication/authorization. This is vulnerable to phishing attacks where a malicious contract can call this function while tx.origin remains the victim's address. Use msg.sender instead for access control.",
+      "severity": "critical",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Replace 'tx.origin' with 'msg.sender' in function 'withdrawAll'. If you need to track the original sender across multiple calls, pass the address as a function parameter or use a trusted registry.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "tx-origin-authentication",
+      "message": "Function 'onlyOwner' uses tx.origin for authentication/authorization. This is vulnerable to phishing attacks where a malicious contract can call this function while tx.origin remains the victim's address. Use msg.sender instead for access control.",
+      "severity": "critical",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Replace 'tx.origin' with 'msg.sender' in function 'onlyOwner'. If you need to track the original sender across multiple calls, pass the address as a function parameter or use a trusted registry.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 330,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'withdrawAll' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'withdrawAll' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'withdrawAll' may be vulnerable to hook reentrancy attack. Uses raw transfer() instead of SafeERC20. No protection against malicious token implementations with callback hooks ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'withdrawAll' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'withdrawAll' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'withdrawAll'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'withdrawAll' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'withdrawAll'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'withdrawAll' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'withdrawAll'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'withdrawAll' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 335,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'withdrawAll'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'onlyOwner' contains variable shadowing. Parameter 'owner' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'onlyOwner'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Asset calculation missing totalSupply/totalAssets in 'withdrawAll'",
+      "severity": "high",
+      "location": {
+        "line": 335,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate assets: assets = (shares * totalAssets()) / totalSupply();",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-storage-collision",
+      "message": "Contract 'VulnerableTxOrigin' declares storage variables directly without using Diamond Storage pattern. This creates collision risk when multiple facets share the same proxy storage. Direct storage at sequential slots (0, 1, 2...) will collide across facets, corrupting state and causing critical failures.",
+      "severity": "critical",
+      "location": {
+        "line": 327,
+        "column": 10,
+        "length": 18
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Implement Diamond Storage pattern for 'VulnerableTxOrigin': (1) Create a library with 'bytes32 constant STORAGE_POSITION = keccak256(\"diamond.storage.vulnerabletxorigin\")' (2) Define a struct containing all storage variables, (3) Create a function returning 'Storage storage ds' using assembly to set slot to STORAGE_POSITION, (4) Access all storage through this function instead of direct variables, (5) Use unique namespace per facet to guarantee isolation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Classic reentrancy pattern with transient storage risk in 'withdrawAll'",
+      "severity": "critical",
+      "location": {
+        "line": 335,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "State update after external call is vulnerable to reentrancy:\n\nCurrent pattern (VULNERABLE):\n1. Read balance\n2. Call transfer() ← attacker can reenter here with transient storage!\n3. Update balance to 0\n\nSecure pattern:\n1. Read balance\n2. Update balance to 0 ← do this FIRST\n3. Call transfer()\n\nWith EIP-1153, even 2300 gas is enough to modify transient state and re-enter.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 212,
+    "severity_counts": {
+      "high": 86,
+      "medium": 61,
+      "critical": 43,
+      "info": 0,
+      "low": 22
+    },
+    "unique_detectors": 61
+  }
+}

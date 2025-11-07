@@ -1,0 +1,2674 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/complex_scenarios/2025_vulnerabilities/mev/MEVProtectedDEX.sol
+  Found 176 issues
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-25T21:50:11.968327Z",
+  "findings": [
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 8,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transferFrom' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 9,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transferFrom'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'transfer' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 8,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'transfer': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenB).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 386,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenB).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(tokenA' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 144,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(tokenA'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenA).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 385,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenA).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(shares' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 397,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(shares'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'address[]' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 75,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'address[]'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'address[]' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 75,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'address[]'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(tokenA' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 144,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(tokenA'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenB).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 386,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenB).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenA).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 385,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenA).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(shares' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 397,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(shares'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'startBatchAuction' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'startBatchAuction'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'addLiquidity' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'addLiquidity'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "classic-reentrancy",
+      "message": "Function 'createPool' may be vulnerable to reentrancy attacks due to state changes after external calls",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Apply checks-effects-interactions pattern or use a reentrancy guard in function 'createPool'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "classic-reentrancy",
+      "message": "Function '_executeOrder' may be vulnerable to reentrancy attacks due to state changes after external calls",
+      "severity": "high",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Apply checks-effects-interactions pattern or use a reentrancy guard in function '_executeOrder'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "classic-reentrancy",
+      "message": "Function 'getOraclePrice' may be vulnerable to reentrancy attacks due to state changes after external calls",
+      "severity": "high",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Apply checks-effects-interactions pattern or use a reentrancy guard in function 'getOraclePrice'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "classic-reentrancy",
+      "message": "Function 'addLiquidity' may be vulnerable to reentrancy attacks due to state changes after external calls",
+      "severity": "high",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Apply checks-effects-interactions pattern or use a reentrancy guard in function 'addLiquidity'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 300,
+        "column": 9,
+        "length": 54
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'token' in function 'oracleValid' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 124,
+        "column": 34,
+        "length": 5
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(token != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenA' in function 'createPool' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 138,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenA != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenB' in function 'createPool' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 139,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenB != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'oracleA' in function 'createPool' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 140,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(oracleA != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'oracleB' in function 'createPool' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 141,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(oracleB != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenIn' in function 'revealOrder' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 200,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenIn != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenOut' in function 'revealOrder' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 201,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenOut != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'token' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 124,
+        "column": 34,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(token != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'token' in function 'oracleValid' may shadow a state variable",
+      "severity": "medium",
+      "location": {
+        "line": 124,
+        "column": 34,
+        "length": 5
+      },
+      "cwe": "CWE-1177",
+      "fix_suggestion": {
+        "description": "Consider renaming parameter 'token' to avoid shadowing",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'oracleA' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 140,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(oracleA != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'oracleB' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 141,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(oracleB != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenIn' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 200,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenIn != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenOut' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 201,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenOut != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountIn' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountIn > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'minAmountOut' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 203,
+        "column": 17,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(minAmountOut > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenIn' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 312,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenIn != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenOut' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 313,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenOut != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountIn' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 314,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountIn > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenA' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 342,
+        "column": 37,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenA != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenB' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 342,
+        "column": 53,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenB != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenA' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 359,
+        "column": 38,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenA != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenB' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 359,
+        "column": 54,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenB != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountA' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 380,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountA > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountB' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 381,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountB > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_maxGasPrice' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 423,
+        "column": 17,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add appropriate range validation for _maxGasPrice",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenA' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 434,
+        "column": 32,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenA != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenB' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 434,
+        "column": 48,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenB != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenA' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 434,
+        "column": 32,
+        "length": 6
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'tokenA' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenB' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 434,
+        "column": 48,
+        "length": 6
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'tokenB' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'a' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 455,
+        "column": 26,
+        "length": 1
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'a' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'b' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 455,
+        "column": 37,
+        "length": 1
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'b' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'a' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 459,
+        "column": 26,
+        "length": 1
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'a' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'b' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 459,
+        "column": 37,
+        "length": 1
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'b' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "single-oracle-source",
+      "message": "Function 'createPool' relies on a single oracle source, creating centralization risk",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Use multiple oracle sources and implement price aggregation in function 'createPool'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'createPool' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'createPool'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function '_executeOrder' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function '_executeOrder'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "auction-timing-manipulation",
+      "message": "Function 'startBatchAuction' allows auction creation with predictable timing and unrestricted access. MEV bots can monitor the mempool, front-run the auction start, and prepare optimal bids before other participants.",
+      "severity": "high",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add access control to auction start in function 'startBatchAuction' and implement unpredictable timing using commit-reveal or VRF. Example: modifier onlyAuctioneer() or use block hash for randomized start time.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "weak-commit-reveal",
+      "message": "Function 'commitOrder' implements commit-reveal scheme with insufficient delay (too short and predictable). MEV bots can monitor commitments and time their reveals to front-run legitimate users.",
+      "severity": "medium",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Increase commit-reveal delay in function 'commitOrder' to at least 5 minutes and add randomization. Example: Use VRF for unpredictable reveal windows or implement variable delays based on block hash.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "weak-commit-reveal",
+      "message": "Function 'revealOrder' implements commit-reveal scheme with insufficient delay (too short and predictable). MEV bots can monitor commitments and time their reveals to front-run legitimate users.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Increase commit-reveal delay in function 'revealOrder' to at least 5 minutes and add randomization. Example: Use VRF for unpredictable reveal windows or implement variable delays based on block hash.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "emergency-function-abuse",
+      "message": "Function 'emergencyPause' is an emergency function without time-lock or multi-signature protection. A single admin can execute emergency actions immediately, enabling potential abuse or rug pulls.",
+      "severity": "medium",
+      "location": {
+        "line": 412,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add time-lock and multi-sig protection to emergency function 'emergencyPause'. Example: Require time-lock delay (e.g., 24-48 hours) and multi-signature approval before emergency actions can be executed.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-price-manipulation",
+      "message": "Function 'withinGasLimit' uses tx.gasprice for MEV protection which can be bypassed. Flashbots and private mempools allow MEV bots to execute transactions with any gas price without going through the public mempool.",
+      "severity": "medium",
+      "location": {
+        "line": 118,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Replace gas price checks in function 'withinGasLimit' with robust MEV protection. Example: Use commit-reveal schemes with sufficient delays, implement order batching, or use decentralized sequencers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-price-manipulation",
+      "message": "Function '_executeOrder' uses tx.gasprice for MEV protection which can be bypassed. Flashbots and private mempools allow MEV bots to execute transactions with any gas price without going through the public mempool.",
+      "severity": "medium",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-693",
+      "fix_suggestion": {
+        "description": "Replace gas price checks in function '_executeOrder' with robust MEV protection. Example: Use commit-reveal schemes with sufficient delays, implement order batching, or use decentralized sequencers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-liquidity-manipulation",
+      "message": "Function 'calculateAmountOut' is vulnerable to AMM liquidity manipulation. Price calculation uses current reserves without slippage protection, deadline checks, or minimum output validation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation.",
+      "severity": "critical",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'calculateAmountOut' from liquidity manipulation. Implement minimum liquidity locks, use TWAP oracles instead of spot prices, add reentrancy guards, validate reserves before and after trades, and implement trade size limits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-liquidity-manipulation",
+      "message": "Function 'getCurrentPrice' is vulnerable to AMM liquidity manipulation. Price calculation uses current reserves without slippage protection, deadline checks, or minimum output validation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation.",
+      "severity": "critical",
+      "location": {
+        "line": 359,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'getCurrentPrice' from liquidity manipulation. Implement minimum liquidity locks, use TWAP oracles instead of spot prices, add reentrancy guards, validate reserves before and after trades, and implement trade size limits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-liquidity-manipulation",
+      "message": "Function 'addLiquidity' is vulnerable to AMM liquidity manipulation. Liquidity operations lack minimum liquidity lock or time-based restrictions, enabling flash loan pool manipulation Liquidity manipulation can drain pools, enable sandwich attacks, or allow attackers to profit from price manipulation.",
+      "severity": "critical",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'addLiquidity' from liquidity manipulation. Implement minimum liquidity locks, use TWAP oracles instead of spot prices, add reentrancy guards, validate reserves before and after trades, and implement trade size limits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-fee-manipulation",
+      "message": "Function 'calculateAmountOut' is vulnerable to fee manipulation attack. Unprotected fee update without timelock. Fee changes take effect immediately, enabling front-running attacks Attacker can front-run fee changes to extract value from depositors.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect 'calculateAmountOut' from fee manipulation. Solutions: (1) Implement timelock delay on fee updates (24-48 hours), (2) Emit events before fee changes take effect, (3) Add maximum fee change limits per update, (4) Require multi-sig approval for fee changes, (5) Use gradual fee ramping instead of instant updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "sandwich-resistant-swap",
+      "message": "Function 'getCurrentPrice' lacks sandwich attack protection. No minimum output amount (amountOutMin) parameter for slippage protection, leaving swap vulnerable to sandwich attacks MEV bots can front-run user swaps, manipulate price, then back-run to profit from the price difference at user's expense.",
+      "severity": "high",
+      "location": {
+        "line": 359,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add sandwich attack protection to 'getCurrentPrice'. Implement: (1) Slippage tolerance with amountOutMin parameter, (2) Commit-reveal scheme for swap parameters, (3) Private mempool submission, (4) MEV-resistant AMM curve, (5) Batch auctions instead of continuous trading.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'oracleValid' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'oracleValid'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'createPool' has dangerous timestamp dependency. Timestamp manipulation vulnerability marker detected Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'createPool'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'commitOrder' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'commitOrder'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'revealOrder' has dangerous timestamp dependency. Timestamp manipulation vulnerability marker detected Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'revealOrder'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'startBatchAuction' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'startBatchAuction'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function '_executeOrder' has dangerous timestamp dependency. Timestamp manipulation vulnerability marker detected Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in '_executeOrder'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'revealOrder' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'revealOrder'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'startBatchAuction' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'startBatchAuction'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function '_executeOrder' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in '_executeOrder'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'createPool' has extractable MEV. State changes visible in public mempool before execution, allowing MEV bots to react and extract value Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'createPool'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'commitOrder' has extractable MEV. MEV extractable value vulnerability marker detected Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'commitOrder'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'revealOrder' has extractable MEV. State changes visible in public mempool before execution, allowing MEV bots to react and extract value Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'revealOrder'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'startBatchAuction' has extractable MEV. MEV extractable value vulnerability marker detected Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'startBatchAuction'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function '_executeOrder' has extractable MEV. MEV extractable value vulnerability marker detected Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in '_executeOrder'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'calculateAmountOut' has extractable MEV. State changes visible in public mempool before execution, allowing MEV bots to react and extract value Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'calculateAmountOut'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'getOraclePrice' has extractable MEV. State changes visible in public mempool before execution, allowing MEV bots to react and extract value Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'getOraclePrice'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'getCurrentPrice' has extractable MEV. State changes visible in public mempool before execution, allowing MEV bots to react and extract value Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 359,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'getCurrentPrice'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'addLiquidity' has extractable MEV. Public function with value transfer lacks MEV protection, enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'addLiquidity'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'revealOrder' has nonce management vulnerability. Uses global nonce instead of per-user mapping, forces sequential execution and limits parallelization Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'revealOrder'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'addLiquidity' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'addLiquidity'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'validPool' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 113,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'validPool'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'withinGasLimit' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 118,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'withinGasLimit'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'oracleValid' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'oracleValid'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'createPool' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'createPool'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'commitOrder' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'commitOrder'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'revealOrder' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'revealOrder'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'startBatchAuction' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'startBatchAuction'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function '_executeOrder' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in '_executeOrder'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'calculateAmountOut' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'calculateAmountOut'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'getOraclePrice' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'getOraclePrice'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'getCurrentPrice' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 359,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'getCurrentPrice'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'addLiquidity' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'addLiquidity'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'getPoolId' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 434,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'getPoolId'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function '_executeOrder' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in '_executeOrder'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'addLiquidity' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'addLiquidity'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'sqrt' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'sqrt'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 69,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "redundant-checks",
+      "message": "Function 'revealOrder' contains redundant checks. 3 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily.",
+      "severity": "low",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Remove redundant checks in 'revealOrder'. Consider: (1) Eliminate duplicate require() statements, (2) Combine multiple checks into single require(), (3) Remove overflow checks in Solidity >=0.8, (4) Avoid checking same condition in modifier and function, (5) Use custom errors instead of require with strings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-oracle-stale",
+      "message": "Function 'getOraclePrice' uses oracle price data without staleness validation. Oracle price fetch without staleness validation. Missing checks for updatedAt timestamp, price age, or heartbeat threshold Using stale oracle data can lead to incorrect liquidations, price manipulations, and financial losses.",
+      "severity": "critical",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Add staleness checks in 'getOraclePrice'. Implement: (1) Check oracle updatedAt timestamp, (2) Verify data freshness with block.timestamp comparison, (3) Add HEARTBEAT_THRESHOLD constant (e.g., 3600 seconds), (4) Revert if price is too old, (5) Consider Chainlink's latestRoundData() with timestamp validation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'createPool' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'createPool'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'revealOrder' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'revealOrder'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'withinGasLimit' contains variable shadowing. Parameter 'maxGasPrice' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 118,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'withinGasLimit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'oracleValid' contains variable shadowing. Parameter 'oracleValidityPeriod' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 124,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'oracleValid'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'createPool' contains variable shadowing. Parameter 'tokenA' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'createPool'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'createPool' contains variable shadowing. Parameter 'tokenB' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'createPool'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'createPool' contains variable shadowing. Local variable 'tokenA,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'createPool'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'createPool' contains variable shadowing. Local variable '&&' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 137,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'createPool'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'commitOrder' contains variable shadowing. Local variable 'revealDeadline' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'commitOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Parameter 'tokenIn' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Parameter 'tokenOut' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Local variable 'nonce' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Local variable 'oraclePrice' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Local variable 'currentPrice' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'revealOrder' contains variable shadowing. Local variable 'priceDeviation' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 198,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'revealOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'startBatchAuction' contains variable shadowing. Local variable 'endTime' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 253,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'startBatchAuction'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_executeOrder' contains variable shadowing. Local variable 'amountOut' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_executeOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_executeOrder' contains variable shadowing. Local variable 'order.amountIn)' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_executeOrder'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Parameter 'tokenIn' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Parameter 'tokenOut' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'amountIn' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'reserveIn' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'reserveOut' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'amountInWithFee' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'numerator' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'calculateAmountOut' contains variable shadowing. Local variable 'denominator' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'calculateAmountOut'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getOraclePrice' contains variable shadowing. Local variable '\"No' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getOraclePrice'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getOraclePrice' contains variable shadowing. Local variable '\"No' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getOraclePrice'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getOraclePrice' contains variable shadowing. Local variable '*' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 342,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getOraclePrice'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getCurrentPrice' contains variable shadowing. Parameter 'tokenA,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 359,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getCurrentPrice'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'addLiquidity' contains variable shadowing. Local variable 'amountA)' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'addLiquidity'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'addLiquidity' contains variable shadowing. Local variable 'amountB)' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'addLiquidity'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getPoolId' contains variable shadowing. Parameter 'tokenA,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 434,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getPoolId'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getPoolId' contains variable shadowing. Parameter 'token0,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 434,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getPoolId'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getPoolId' contains variable shadowing. Local variable 'token0,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 434,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getPoolId'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'sqrt' contains variable shadowing. Local variable 'x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'sqrt'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'getOraclePrice' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 352,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'getOraclePrice'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'getOraclePrice' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 352,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'getOraclePrice'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No ratio validation for liquidity provision in 'addLiquidity'",
+      "severity": "medium",
+      "location": {
+        "line": 378,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate ratio: require(amount0 * reserve1 == amount1 * reserve0, \"Invalid ratio\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No cooldown period between add and remove liquidity in 'addLiquidity'",
+      "severity": "medium",
+      "location": {
+        "line": 378,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cooldown: require(block.timestamp >= lastDeposit[msg.sender] + COOLDOWN_PERIOD, \"Cooldown active\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No entry fee to discourage JIT liquidity provision in 'addLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 378,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Consider entry fee: Apply small fee on liquidity provision to make JIT attacks unprofitable",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'commitOrder' violates constant product invariant: K invariant check doesn't account for fees, may incorrectly reject valid swaps or allow invalid ones",
+      "severity": "critical",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'commitOrder': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function '_executeOrder' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 273,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function '_executeOrder': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'calculateAmountOut' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV; K invariant check doesn't account for fees, may incorrectly reject valid swaps or allow invalid ones; AMM K invariant vulnerability marker detected",
+      "severity": "critical",
+      "location": {
+        "line": 311,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'calculateAmountOut': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'addLiquidity' violates constant product invariant: Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage",
+      "severity": "critical",
+      "location": {
+        "line": 378,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'addLiquidity': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenA).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 385,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenA).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'address[]' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 75,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'address[]'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(tokenA' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 144,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(tokenA'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'require(shares' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 397,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'require(shares'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'IERC20(pool.tokenB).transferFrom(msg.sender,' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 386,
+        "column": 0,
+        "length": 44
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'IERC20(pool.tokenB).transferFrom(msg.sender,'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'updateMEVParameters' submits batches without proper ZK proof verification. No verifier contract call detected. Must call external verifier to validate ZK proof Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'updateMEVParameters': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'updateMEVParameters' submits batches without proper ZK proof verification. No public input parameter. ZK proofs must be verified against specific public inputs Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'updateMEVParameters': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'updateMEVParameters' submits batches without proper ZK proof verification. Missing proof replay protection. Store proof hash or batch ID to prevent reuse Missing verification allows invalid state transitions to be accepted.",
+      "severity": "critical",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add ZK proof verification to 'updateMEVParameters': (1) Call verifier contract with proof and public inputs, (2) Require verification returns true before accepting batch, (3) Validate all public inputs match batch data, (4) Verify proof corresponds to correct circuit/proving system, (5) Check verifier contract is immutable and trusted.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'updateMEVParameters' submits batches without proper data availability guarantees. No calldata parameter detected. L2 batch data should be published as calldata to ensure L1 data availability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'updateMEVParameters': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'updateMEVParameters' submits batches without proper data availability guarantees. No data hash commitment to L1. Should store hash of batch data on L1 for verifiability Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'updateMEVParameters': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'updateMEVParameters' submits batches without proper data availability guarantees. Missing event emission. Should emit event with data or data hash for off-chain availability monitoring Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'updateMEVParameters': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-data-availability",
+      "message": "Function 'updateMEVParameters' submits batches without proper data availability guarantees. No data availability verification. Should implement mechanism to verify data can be retrieved Missing data publication can lead to data withholding attacks and prevent users from reconstructing state.",
+      "severity": "high",
+      "location": {
+        "line": 420,
+        "column": 14,
+        "length": 19
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add data availability to 'updateMEVParameters': (1) Publish transaction data as calldata to L1, (2) Store data commitment hash (keccak256 of batch data) in L1 state, (3) Emit event with data or data hash for availability, (4) Implement data availability challenge mechanism, (5) Use blob transactions (EIP-4844) for cost-efficient DA.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'commitOrder' updates fees without proper protections. No access control on fee updates. Anyone can modify fees leading to manipulation Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'commitOrder': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'commitOrder' updates fees without proper protections. No rate limiting on fee updates. Fees could be changed too frequently causing instability Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'commitOrder': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.0.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.0.0"
+  },
+  "statistics": {
+    "total_findings": 176,
+    "severity_counts": {
+      "low": 49,
+      "medium": 60,
+      "critical": 18,
+      "info": 0,
+      "high": 49
+    },
+    "unique_detectors": 36
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 176
+  Time taken: 0.11s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

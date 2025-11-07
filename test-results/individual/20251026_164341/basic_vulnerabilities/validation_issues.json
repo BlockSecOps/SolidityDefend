@@ -1,0 +1,352 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/basic_vulnerabilities/validation_issues.sol
+  Found 21 issues
+{
+  "version": "0.8.0",
+  "timestamp": "2025-10-26T22:43:42.720542Z",
+  "findings": [
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'setToken' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 10,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'setToken'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'updateValue' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 15,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'updateValue'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 25,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_token' in function 'setToken' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 10,
+        "column": 31,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_token != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_to' in function 'transfer' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 25,
+        "column": 31,
+        "length": 3
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_contract' in function 'callExternalContract' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 32,
+        "column": 43,
+        "length": 9
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_contract != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'values' may be out of bounds - index not validated",
+      "severity": "high",
+      "location": {
+        "line": 16,
+        "column": 9,
+        "length": 14
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < values.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_token' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 10,
+        "column": 31,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_token != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_value' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 15,
+        "column": 50,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add appropriate range validation for _value",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 20,
+        "column": 38,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_rate' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 20,
+        "column": 55,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add appropriate range validation for _rate",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_amount' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 20,
+        "column": 38,
+        "length": 7
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter '_amount' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_rate' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 20,
+        "column": 55,
+        "length": 5
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter '_rate' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 25,
+        "column": 44,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_amount' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 44,
+        "length": 7
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter '_amount' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_data' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 68,
+        "length": 5
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter '_data' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_contract' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 32,
+        "column": 43,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_contract != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'callExternalContract' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 32,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'callExternalContract'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'transfer' contains variable shadowing. Local variable '\"Invalid' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'transfer'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'callExternalContract' contains variable shadowing. Local variable 'success,' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 32,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'callExternalContract'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "0.8.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "0.8.0"
+  },
+  "statistics": {
+    "total_findings": 21,
+    "severity_counts": {
+      "info": 0,
+      "medium": 8,
+      "high": 3,
+      "critical": 3,
+      "low": 7
+    },
+    "unique_detectors": 7
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 21
+  Time taken: 0.00s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

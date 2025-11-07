@@ -1,0 +1,200 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/test_merkle.sol
+  Found 11 issues
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-25T22:23:11.850121Z",
+  "findings": [
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'proof' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 8,
+        "column": 28,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(proof.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function 'executeWithProof' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 5,
+        "column": 0,
+        "length": 16
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function '_execute' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 18,
+        "column": 0,
+        "length": 8
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "uninitialized-storage",
+      "message": "Function 'executeWithProof' contains uninitialized storage pointer. Declares array variable without memory/storage keyword or initialization Uninitialized local struct/array variables default to storage and point to slot 0, potentially corrupting critical state variables.",
+      "severity": "high",
+      "location": {
+        "line": 5,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-824",
+      "fix_suggestion": {
+        "description": "Initialize storage pointers in 'executeWithProof'. Use `memory` keyword for local variables or explicitly assign to storage. Example: `MyStruct memory data = MyStruct(...)` or ensure initialization before use.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing replay protection in 'executeWithProof'",
+      "severity": "critical",
+      "location": {
+        "line": 5,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add: require(!processedMessages[msgHash]); processedMessages[msgHash] = true;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeWithProof'",
+      "severity": "high",
+      "location": {
+        "line": 5,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'executeWithProof' implements proof verification with potential bypasses. No replay protection. Should track verified proofs to prevent replay attacks Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 5,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'executeWithProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'executeWithProof' implements proof verification with potential bypasses. Missing proof format validation. Should check proof data length and structure Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 5,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'executeWithProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'executeWithProof' implements proof verification with potential bypasses. No public input hash computation. Should reconstruct hash from batch data to prevent manipulation Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 5,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'executeWithProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "zk-proof-bypass",
+      "message": "Function 'executeWithProof' implements proof verification with potential bypasses. No event emission for proof verification. Should emit event for monitoring and auditing Weak verification undermines the security guarantees of the ZK rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 5,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen verification in 'executeWithProof': (1) Implement replay protection using proof hash or batch ID, (2) Validate all public inputs are correctly formatted, (3) Check proof size and format match expected parameters, (4) Ensure verifier contract call cannot be skipped, (5) Add event emission for proof verification.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.0.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.0.0"
+  },
+  "statistics": {
+    "total_findings": 11,
+    "severity_counts": {
+      "low": 1,
+      "high": 2,
+      "critical": 5,
+      "info": 0,
+      "medium": 3
+    },
+    "unique_detectors": 7
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 11
+  Time taken: 0.00s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

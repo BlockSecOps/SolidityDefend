@@ -1,0 +1,3113 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-06T22:12:46.314423Z",
+  "findings": [
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'flashSwap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 40,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountBOut' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 25,
+        "column": 46,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountBOut > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountAOut' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 38,
+        "column": 17,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountAOut > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountBOut' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 39,
+        "column": 17,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountBOut > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'to' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 40,
+        "column": 17,
+        "length": 2
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(to != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter ordering in function 'flashSwap': address parameter 'to' should typically come before amount parameter 'amountBOut'",
+      "severity": "medium",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-1188",
+      "fix_suggestion": {
+        "description": "Consider reordering parameters: address before amount",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountA' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 35,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountA > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountB' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 52,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountB > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No transaction deadline parameter, trades can be held and executed when price moves against user (transaction pinning) Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 25,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'flashSwap' vulnerable to price impact manipulation. Trade size not validated against pool depth/reserves, allowing disproportionately large trades Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'flashSwap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'addLiquidity' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 64,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'addLiquidity'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'removeLiquidity' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'removeLiquidity'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'flashSwap' contains excessive gas usage pattern. Multiple storage reads detected (7). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'flashSwap'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'flashSwap' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'flashSwap'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'addLiquidity' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'addLiquidity'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'removeLiquidity' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'removeLiquidity'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'sqrt' contains excessive gas usage pattern. Storage write operation inside loop. Consider using memory array Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 107,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'sqrt'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'flashSwap' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'addLiquidity' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'removeLiquidity' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'swap' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'sync' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 172,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'skim' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 185,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'swapWithFee' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'swap' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'swap' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'calcOutGivenIn' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 343,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'flashSwap' contains variable shadowing. Local variable 'balanceA_before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'flashSwap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'flashSwap' contains variable shadowing. Local variable 'balanceB_before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'flashSwap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'removeLiquidity' contains variable shadowing. Parameter 'liquidity' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'removeLiquidity'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'sqrt' contains variable shadowing. Local variable 'x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 107,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'sqrt'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-price-manipulation-advanced",
+      "message": "Price data sourced from 3 protocols - cross-protocol manipulation risk",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Implement circuit breaker for abnormal price deviations across protocols (e.g., >10% difference)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Hardcoded decimal assumption (18) - incompatible with USDC (6), WBTC (8), etc.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Call token.decimals() and normalize: uint256 decimals = token.decimals(); amount * 10**decimals",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Token price/exchange calculation without decimal normalization - incorrect conversions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Normalize decimals: amount * 10**token1.decimals() / 10**token2.decimals()",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-backrun-opportunities",
+      "message": "Reserve updates without block delay - backrunnable for instant arbitrage",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Add delay or use commit-reveal: lastUpdate = block.number; require(block.number > lastUpdate)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-backrun-opportunities",
+      "message": "Rebalancing function present - creates predictable MEV opportunity for backrunners",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Use batch auctions or time-weighted execution to reduce MEV extraction",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-priority-gas-auction",
+      "message": "First-come-first-served mint - creates PGA where users bid up gas to mint first",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Use commit-reveal, whitelist, or fair launch mechanism instead of FCFS",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'flashSwap'",
+      "severity": "critical",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'flashSwap'",
+      "severity": "medium",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No minimum amount protection on liquidity removal in 'removeLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add minimums: require(amount0 >= amount0Min && amount1 >= amount1Min, \"Insufficient output\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swap'",
+      "severity": "low",
+      "location": {
+        "line": 25,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'flashSwap'",
+      "severity": "medium",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'flashSwap'",
+      "severity": "high",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'flashSwap'",
+      "severity": "high",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'flashSwap'",
+      "severity": "low",
+      "location": {
+        "line": 37,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No liquidity lock time tracking (JIT attack risk) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track lock time: mapping(address => uint256) public liquidityLockTime; liquidityLockTime[msg.sender] = block.timestamp;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No minimum lock period enforced (instant liquidity removal) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum: uint256 constant MIN_LOCK_PERIOD = 1 hours; // or appropriate duration",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No cooldown period between add and remove liquidity in 'addLiquidity'",
+      "severity": "medium",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cooldown: require(block.timestamp >= lastDeposit[msg.sender] + COOLDOWN_PERIOD, \"Cooldown active\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No entry fee to discourage JIT liquidity provision in 'addLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Consider entry fee: Apply small fee on liquidity provision to make JIT attacks unprofitable",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'addLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No lock time validation on liquidity removal in 'removeLiquidity'",
+      "severity": "critical",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Enforce lock: require(block.timestamp >= liquidityLockTime[msg.sender] + MIN_LOCK_PERIOD, \"Locked\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No early exit fee (JIT attacks profitable) in 'removeLiquidity'",
+      "severity": "medium",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add exit fee: if (block.timestamp < lockTime + EXTENDED_PERIOD) { applyEarlyExitFee(); }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No protection against same-block deposit and withdrawal in 'removeLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Block same-block: require(depositBlock[msg.sender] < block.number, \"Same block\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'removeLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'removeLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'sqrt'",
+      "severity": "high",
+      "location": {
+        "line": 107,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'sqrt'",
+      "severity": "low",
+      "location": {
+        "line": 107,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'min'",
+      "severity": "high",
+      "location": {
+        "line": 120,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'min'",
+      "severity": "low",
+      "location": {
+        "line": 120,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swap' violates constant product invariant: Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed",
+      "severity": "critical",
+      "location": {
+        "line": 25,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'flashSwap' violates constant product invariant: Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed",
+      "severity": "critical",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'flashSwap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-borrow-bypass",
+      "message": "Lending protocol function 'flashSwap' has borrow bypass vulnerabilities: Flash loan lacks same-block borrow restriction, may be exploited to bypass health factor checks",
+      "severity": "critical",
+      "location": {
+        "line": 37,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure lending function 'flashSwap': Calculate and validate health factor before borrow, enforce collateral factor (LTV) limits, add reentrancy guards, implement same-block borrow restrictions for flash loans, update state before external calls (checks-effects-interactions pattern)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Percentage calculation - verify order of operations for precision",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Percentage calculations require careful ordering:\n\n❌ WRONG (precision loss):\nuint256 fee = (amount / 10000) * feePercent;\n\n✅ CORRECT:\nuint256 fee = (amount * feePercent) / 10000;\n\n✅ BEST (with basis points):\nuint256 constant BASIS_POINTS = 10000;\nuint256 fee = (amount * feeBasisPoints) / BASIS_POINTS;\n\nExample: 250 basis points = 2.5%\namount = 1000, feeBasisPoints = 250\nfee = (1000 * 250) / 10000 = 25 ✅\n\nWRONG order:\nfee = (1000 / 10000) * 250 = 0 * 250 = 0 ❌",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Type casting to smaller uint - verify no overflow on downcast",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Downcasting can silently overflow even in Solidity 0.8.0+!\n\n❌ UNSAFE DOWNCAST:\nuint256 bigValue = 1000;\nuint8 smallValue = uint8(bigValue);  // Wraps to 232! (1000 % 256)\n\n✅ SAFE DOWNCAST with validation:\nuint256 bigValue = 1000;\nrequire(bigValue <= type(uint8).max, \"Value too large\");\nuint8 smallValue = uint8(bigValue);  // Safe now\n\n✅ USE SafeCast library (OpenZeppelin):\nimport \"@openzeppelin/contracts/utils/math/SafeCast.sol\";\n\nuint256 bigValue = 1000;\nuint8 smallValue = SafeCast.toUint8(bigValue);  // Reverts if > 255\n\nType limits:\n- uint8:   0 to 255\n- uint16:  0 to 65,535\n- uint32:  0 to 4,294,967,295\n- uint64:  0 to 18,446,744,073,709,551,615\n- uint256: 0 to 2^256-1",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hook-reentrancy-enhanced",
+      "message": "Callback function lacks sender validation - attacker can trigger malicious reentry",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Validate callback sender (e.g., require(msg.sender == pool)) to prevent unauthorized reentry",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "No minimum deposit requirement - small deposits may round down to zero shares",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 14558
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'flashSwapCallback'",
+      "severity": "critical",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'flashSwapCallback'",
+      "severity": "medium",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'flashSwapCallback'",
+      "severity": "medium",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'flashSwapCallback'",
+      "severity": "high",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'flashSwapCallback'",
+      "severity": "high",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'flashSwapCallback'",
+      "severity": "low",
+      "location": {
+        "line": 126,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'flashSwapCallback' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV",
+      "severity": "critical",
+      "location": {
+        "line": 126,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'flashSwapCallback': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-borrow-bypass",
+      "message": "Lending protocol function 'flashSwapCallback' has borrow bypass vulnerabilities: Flash loan lacks same-block borrow restriction, may be exploited to bypass health factor checks",
+      "severity": "critical",
+      "location": {
+        "line": 126,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure lending function 'flashSwapCallback': Calculate and validate health factor before borrow, enforce collateral factor (LTV) limits, add reentrancy guards, implement same-block borrow restrictions for flash loans, update state before external calls (checks-effects-interactions pattern)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'swap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 142,
+        "column": 67,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'to' in function 'skim' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 185,
+        "column": 27,
+        "length": 2
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(to != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount0Out' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 27,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount0Out > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount1Out' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 47,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount1Out > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'to' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 67,
+        "length": 2
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(to != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter ordering in function 'swap': address parameter 'to' should typically come before amount parameter 'amount1Out'",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-1188",
+      "fix_suggestion": {
+        "description": "Consider reordering parameters: address before amount",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'to' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 185,
+        "column": 27,
+        "length": 2
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(to != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount0In' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 34,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount0In > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount1Out' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 53,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount1Out > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-fee-manipulation",
+      "message": "Function 'swapWithFee' may be vulnerable to fee manipulation attack. Vault fee manipulation vulnerability marker detected Attacker can front-run fee changes to extract value from depositors.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect 'swapWithFee' from fee manipulation. Solutions: (1) Implement timelock delay on fee updates (24-48 hours minimum), (2) Emit events before fee changes take effect with advance notice, (3) Add maximum fee change limits per update (e.g., max 2% fee), (4) Require multi-sig approval for fee changes (Gnosis Safe pattern), (5) Use gradual fee ramping instead of instant updates (Curve style), (6) Implement MEV protection patterns for fee-dependent operations, (7) Consider OpenZeppelin TimelockController for governance.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swapWithFee' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swapWithFee'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'swap' contains excessive gas usage pattern. Multiple storage reads detected (18). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'swap'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'sync' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'sync'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'skim' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 185,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'skim'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'swapWithFee' contains excessive gas usage pattern. Multiple storage reads detected (12). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'swapWithFee'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'balance0Before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'balance1Before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'balance1After' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swapWithFee' contains variable shadowing. Local variable 'balance0Before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swapWithFee'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swapWithFee' contains variable shadowing. Local variable 'balance1Before' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swapWithFee'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swapWithFee' contains variable shadowing. Local variable 'balance1Adjusted' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swapWithFee'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swapWithFee'",
+      "severity": "critical",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swapWithFee'",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swap'",
+      "severity": "low",
+      "location": {
+        "line": 142,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'sync'",
+      "severity": "high",
+      "location": {
+        "line": 172,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'sync'",
+      "severity": "low",
+      "location": {
+        "line": 172,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'skim'",
+      "severity": "high",
+      "location": {
+        "line": 185,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'skim'",
+      "severity": "low",
+      "location": {
+        "line": 185,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swapWithFee'",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swapWithFee'",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swapWithFee'",
+      "severity": "high",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swapWithFee'",
+      "severity": "low",
+      "location": {
+        "line": 202,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'getBalance0'",
+      "severity": "high",
+      "location": {
+        "line": 219,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'getBalance0'",
+      "severity": "low",
+      "location": {
+        "line": 219,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'getBalance1'",
+      "severity": "high",
+      "location": {
+        "line": 223,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'getBalance1'",
+      "severity": "low",
+      "location": {
+        "line": 223,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swap' violates constant product invariant: Reserve updates don't update timestamp, affecting TWAP oracle accuracy; Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed",
+      "severity": "critical",
+      "location": {
+        "line": 142,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'sync' violates constant product invariant: Reserve updates don't verify constant product (K) invariant (x*y >= k), allowing pool imbalance and potential value extraction; Token transfers don't account for fee-on-transfer tokens, incorrect reserve calculations may result in pool drainage; Reserve updates don't update timestamp, affecting TWAP oracle accuracy",
+      "severity": "critical",
+      "location": {
+        "line": 172,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'sync': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'skim' violates constant product invariant: Reserve updates don't verify constant product (K) invariant (x*y >= k), allowing pool imbalance and potential value extraction",
+      "severity": "critical",
+      "location": {
+        "line": 185,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'skim': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swapWithFee' violates constant product invariant: Swap lacks deadline parameter, transactions may execute at unfavorable prices if delayed; AMM K invariant vulnerability marker detected",
+      "severity": "critical",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swapWithFee': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'getBalance0' violates constant product invariant: Reserve updates don't verify constant product (K) invariant (x*y >= k), allowing pool imbalance and potential value extraction",
+      "severity": "critical",
+      "location": {
+        "line": 219,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'getBalance0': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'getBalance1' violates constant product invariant: Reserve updates don't verify constant product (K) invariant (x*y >= k), allowing pool imbalance and potential value extraction",
+      "severity": "critical",
+      "location": {
+        "line": 223,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'getBalance1': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'swapWithFee' updates fees without proper protections. No access control on fee updates. Anyone can modify fees leading to manipulation Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'swapWithFee': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'swapWithFee' updates fees without proper protections. Fee updates take immediate effect. Should implement time delay to prevent front-running Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'swapWithFee': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'swapWithFee' updates fees without proper protections. No event emission for fee updates. Users cannot track fee changes or prepare for them Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'swapWithFee': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-fee-manipulation",
+      "message": "Function 'swapWithFee' updates fees without proper protections. No rate limiting on fee updates. Fees could be changed too frequently causing instability Vulnerable fee updates can be front-run or manipulated to extract value.",
+      "severity": "medium",
+      "location": {
+        "line": 202,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Protect fee updates in 'swapWithFee': (1) Implement time-delayed fee changes with announcement period, (2) Add governance or multi-sig control for fee updates, (3) Limit rate of fee changes (e.g., max 10% per day), (4) Emit events before fee changes take effect, (5) Consider using commit-reveal scheme for fee updates.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'addLiquidity' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 260,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'addLiquidity'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'balances' may be out of bounds - index not validated",
+      "severity": "medium",
+      "location": {
+        "line": 246,
+        "column": 21,
+        "length": 11
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < balances.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'balances' may be out of bounds - index not validated",
+      "severity": "medium",
+      "location": {
+        "line": 250,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < balances.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'balances' may be out of bounds - index not validated",
+      "severity": "medium",
+      "location": {
+        "line": 252,
+        "column": 9,
+        "length": 11
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < balances.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Array access to 'balances' may be out of bounds - index not validated",
+      "severity": "medium",
+      "location": {
+        "line": 253,
+        "column": 9,
+        "length": 11
+      },
+      "cwe": "CWE-125",
+      "fix_suggestion": {
+        "description": "Add bounds check: require(index < balances.length, \"Index out of bounds\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amounts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 260,
+        "column": 45,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amounts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 242,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'swap' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 242,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'swap'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'addLiquidity' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 260,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'addLiquidity'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'swap' contains excessive gas usage pattern. Multiple storage reads detected (8). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 242,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'swap'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'getD' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 276,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'getD'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'getY' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 282,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'getY'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 242,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getD' contains variable shadowing. Local variable 'sum' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 276,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getD'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getY' contains variable shadowing. Parameter 'x' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 282,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getY'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swap'",
+      "severity": "low",
+      "location": {
+        "line": 242,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No liquidity lock time tracking (JIT attack risk) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track lock time: mapping(address => uint256) public liquidityLockTime; liquidityLockTime[msg.sender] = block.timestamp;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No minimum lock period enforced (instant liquidity removal) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum: uint256 constant MIN_LOCK_PERIOD = 1 hours; // or appropriate duration",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No cooldown period between add and remove liquidity in 'addLiquidity'",
+      "severity": "medium",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cooldown: require(block.timestamp >= lastDeposit[msg.sender] + COOLDOWN_PERIOD, \"Cooldown active\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No entry fee to discourage JIT liquidity provision in 'addLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Consider entry fee: Apply small fee on liquidity provision to make JIT attacks unprofitable",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'addLiquidity'",
+      "severity": "high",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'addLiquidity'",
+      "severity": "low",
+      "location": {
+        "line": 260,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'getD'",
+      "severity": "high",
+      "location": {
+        "line": 276,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'getD'",
+      "severity": "low",
+      "location": {
+        "line": 276,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'getY'",
+      "severity": "high",
+      "location": {
+        "line": 282,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'getY'",
+      "severity": "low",
+      "location": {
+        "line": 282,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swap' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV",
+      "severity": "critical",
+      "location": {
+        "line": 242,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenIn' in function 'swap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 308,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenIn != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenOut' in function 'swap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 309,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenOut != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenIn' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 308,
+        "column": 17,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenIn != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenOut' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 309,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenOut != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountIn' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 310,
+        "column": 17,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountIn > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 307,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "liquidity-bootstrapping-abuse",
+      "message": "Function 'swap' has liquidity bootstrapping pool manipulation risk. No per-transaction size limit during LBP phase, allowing single large purchases to drain pool LBP weight manipulation can cause unfair token distribution, enable whale advantage, or allow price manipulation during sale.",
+      "severity": "medium",
+      "location": {
+        "line": 307,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Secure LBP implementation in 'swap'. Add: (1) Gradual weight transition with block-based limits, (2) Maximum purchase caps per address, (3) Cooldown between weight updates, (4) Minimum duration enforcement, (5) Purchase limits per transaction.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "liquidity-bootstrapping-abuse",
+      "message": "Function 'joinPool' has liquidity bootstrapping pool manipulation risk. No per-transaction size limit during LBP phase, allowing single large purchases to drain pool LBP weight manipulation can cause unfair token distribution, enable whale advantage, or allow price manipulation during sale.",
+      "severity": "medium",
+      "location": {
+        "line": 332,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Secure LBP implementation in 'joinPool'. Add: (1) Gradual weight transition with block-based limits, (2) Maximum purchase caps per address, (3) Cooldown between weight updates, (4) Minimum duration enforcement, (5) Purchase limits per transaction.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "liquidity-bootstrapping-abuse",
+      "message": "Function 'calcOutGivenIn' has liquidity bootstrapping pool manipulation risk. No per-transaction size limit during LBP phase, allowing single large purchases to drain pool LBP weight manipulation can cause unfair token distribution, enable whale advantage, or allow price manipulation during sale.",
+      "severity": "medium",
+      "location": {
+        "line": 343,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Secure LBP implementation in 'calcOutGivenIn'. Add: (1) Gradual weight transition with block-based limits, (2) Maximum purchase caps per address, (3) Cooldown between weight updates, (4) Minimum duration enforcement, (5) Purchase limits per transaction.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'swap' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 307,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'swap'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'joinPool' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 332,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'joinPool'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'calcOutGivenIn' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 343,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'calcOutGivenIn'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swap'",
+      "severity": "low",
+      "location": {
+        "line": 307,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'joinPool'",
+      "severity": "high",
+      "location": {
+        "line": 332,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'joinPool'",
+      "severity": "low",
+      "location": {
+        "line": 332,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'calcOutGivenIn'",
+      "severity": "high",
+      "location": {
+        "line": 343,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'calcOutGivenIn'",
+      "severity": "low",
+      "location": {
+        "line": 343,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swap' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV",
+      "severity": "critical",
+      "location": {
+        "line": 307,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'calcOutGivenIn' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV",
+      "severity": "critical",
+      "location": {
+        "line": 343,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'calcOutGivenIn': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'mint' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 393,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'mint'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountSpecified' of type 'int' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 376,
+        "column": 43,
+        "length": 15
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountSpecified > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 396,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'mint' has token supply manipulation vulnerability. Mint function lacks maximum supply cap, enables unlimited token minting and hyperinflation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 393,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'mint'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'mint' uses weak randomness source. Uses user address in randomness without commitment scheme. Users can predict outcomes and selectively participate Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 393,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'mint'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "Missing deadline parameter (stuck transaction risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add deadline: require(block.timestamp <= deadline, \"Transaction expired\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Swap doesn't validate liquidity age (JIT sandwich risk) in 'swap'",
+      "severity": "medium",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate age: Consider requiring minimum liquidity age or use TWAP prices",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No TWAP pricing (vulnerable to JIT manipulation) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use TWAP: Implement time-weighted average price over multiple blocks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'swap'",
+      "severity": "high",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'swap'",
+      "severity": "low",
+      "location": {
+        "line": 376,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No liquidity lock time tracking (JIT attack risk) in 'mint'",
+      "severity": "high",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track lock time: mapping(address => uint256) public liquidityLockTime; liquidityLockTime[msg.sender] = block.timestamp;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No minimum lock period enforced (instant liquidity removal) in 'mint'",
+      "severity": "high",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum: uint256 constant MIN_LOCK_PERIOD = 1 hours; // or appropriate duration",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No cooldown period between add and remove liquidity in 'mint'",
+      "severity": "medium",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cooldown: require(block.timestamp >= lastDeposit[msg.sender] + COOLDOWN_PERIOD, \"Cooldown active\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No entry fee to discourage JIT liquidity provision in 'mint'",
+      "severity": "low",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Consider entry fee: Apply small fee on liquidity provision to make JIT attacks unprofitable",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "Concentrated liquidity without position lock (JIT range orders) in 'mint'",
+      "severity": "high",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock positions: Require minimum time before concentrated positions can be removed",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-jit-liquidity-attacks",
+      "message": "No fee incentive for long-term liquidity providers in 'mint'",
+      "severity": "low",
+      "location": {
+        "line": 393,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Dynamic fees: Reduce fees for LPs who lock liquidity for longer periods",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-k-invariant-violation",
+      "message": "AMM function 'swap' violates constant product invariant: Swap lacks slippage protection (minAmountOut parameter), users vulnerable to sandwich attacks and MEV",
+      "severity": "critical",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure AMM function 'swap': Validate K invariant (reserve0 * reserve1 >= kBefore), handle fee-on-transfer tokens by measuring actual balances, update reserves atomically with reentrancy protection, add slippage protection and deadline checks",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 213,
+    "severity_counts": {
+      "critical": 30,
+      "high": 58,
+      "info": 0,
+      "medium": 56,
+      "low": 69
+    },
+    "unique_detectors": 29
+  }
+}

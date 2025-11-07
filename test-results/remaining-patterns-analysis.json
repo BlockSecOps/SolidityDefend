@@ -1,0 +1,3625 @@
+{
+  "version": "1.3.0",
+  "timestamp": "2025-11-07T02:17:04.944861Z",
+  "findings": [
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'finalizeWithdrawal' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'finalizeWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'quickWithdraw' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'quickWithdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 39,
+        "column": 9,
+        "length": 52
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 64,
+        "column": 9,
+        "length": 52
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'finalizeWithdrawal' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'finalizeWithdrawal'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'quickWithdraw' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'quickWithdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'finalizeWithdrawal' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'finalizeWithdrawal' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'quickWithdraw' may be vulnerable to withdrawal DOS attack. No withdrawal cap or limit detected. Large withdrawals can drain liquidity and DOS subsequent withdrawers Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'quickWithdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'submitFraudProof' has dangerous timestamp dependency. Critical operations (transfer/mint/burn/withdraw) controlled by timestamp, enabling miners to manipulate timing for advantage Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 46,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'submitFraudProof'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'submitFraudProof' is vulnerable to block stuffing attacks. Critical operation with narrow time window, block stuffing can prevent users from executing within deadline Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 46,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'submitFraudProof'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'quickWithdraw' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'quickWithdraw'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "deadline-manipulation",
+      "message": "Function 'submitFraudProof' has deadline manipulation risk. No maximum deadline limit, allows setting deadlines years in future enabling validators to hold and execute at optimal times Validators can hold transactions and execute them at times that benefit MEV extraction or harm users.",
+      "severity": "medium",
+      "location": {
+        "line": 46,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Improve deadline handling in 'submitFraudProof'. Use reasonable default deadlines (e.g., block.timestamp + 15 minutes), validate deadline parameters, add minimum deadline checks, or implement deadline extensions for failed transactions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'finalizeWithdrawal' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'finalizeWithdrawal'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'submitFraudProof' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 46,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'submitFraudProof'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'quickWithdraw' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'quickWithdraw'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'finalizeWithdrawal' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'finalizeWithdrawal'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'quickWithdraw' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'quickWithdraw'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'finalizeWithdrawal' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'finalizeWithdrawal'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'quickWithdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'quickWithdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 19,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 254,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "deprecated-functions",
+      "message": "Deprecated function or pattern detected: 'block.difficulty'. block.difficulty deprecated post-merge. Use block.prevrandao instead",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-477",
+      "fix_suggestion": {
+        "description": "Replace deprecated 'block.difficulty'. block.difficulty deprecated post-merge. Use block.prevrandao instead",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No withdrawal delay in 'finalizeWithdrawal' - bypasses EigenLayer 7-day delay requirement",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement 7-day withdrawal delay (EigenLayer requirement):\n\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\nstruct WithdrawalRequest {\nuint256 shares;\nuint256 assets;\nuint256 requestTime;\nbool completed;\n}\n\nmapping(address => WithdrawalRequest) public withdrawalRequests;\n\nfunction requestWithdrawal(uint256 shares) external {\nrequire(shares > 0, \"Zero shares\");\nrequire(balanceOf(msg.sender) >= shares, \"Insufficient balance\");\nrequire(withdrawalRequests[msg.sender].shares == 0, \"Pending withdrawal\");\n\nuint256 assets = convertToAssets(shares);\n\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: assets,\nrequestTime: block.timestamp,\ncompleted: false\n});\n\n// Burn shares immediately to prevent double-withdrawal\n_burn(msg.sender, shares);\n\nemit WithdrawalRequested(msg.sender, shares, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(request.shares > 0, \"No pending withdrawal\");\nrequire(!request.completed, \"Already completed\");\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay period not elapsed (7 days required)\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n\nemit WithdrawalCompleted(msg.sender, request.assets);\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No withdrawal delay in 'quickWithdraw' - bypasses EigenLayer 7-day delay requirement",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement 7-day withdrawal delay (EigenLayer requirement):\n\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\nstruct WithdrawalRequest {\nuint256 shares;\nuint256 assets;\nuint256 requestTime;\nbool completed;\n}\n\nmapping(address => WithdrawalRequest) public withdrawalRequests;\n\nfunction requestWithdrawal(uint256 shares) external {\nrequire(shares > 0, \"Zero shares\");\nrequire(balanceOf(msg.sender) >= shares, \"Insufficient balance\");\nrequire(withdrawalRequests[msg.sender].shares == 0, \"Pending withdrawal\");\n\nuint256 assets = convertToAssets(shares);\n\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: assets,\nrequestTime: block.timestamp,\ncompleted: false\n});\n\n// Burn shares immediately to prevent double-withdrawal\n_burn(msg.sender, shares);\n\nemit WithdrawalRequested(msg.sender, shares, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(request.shares > 0, \"No pending withdrawal\");\nrequire(!request.completed, \"Already completed\");\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay period not elapsed (7 days required)\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n\nemit WithdrawalCompleted(msg.sender, request.assets);\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "Single-step withdrawal detected - should implement two-step (request + complete) for delay enforcement",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement two-step withdrawal pattern:\n\n// Step 1: Request withdrawal (immediate)\nfunction requestWithdrawal(uint256 shares) external {\n// Burn shares, record request\n_burn(msg.sender, shares);\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: convertToAssets(shares),\nrequestTime: block.timestamp,\ncompleted: false\n});\n}\n\n// Step 2: Complete withdrawal (after 7 days)\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay not elapsed\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n}\n\nThis ensures EigenLayer's 7-day delay is enforced.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No WITHDRAWAL_DELAY constant defined - should match EigenLayer's 7-day requirement",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Define withdrawal delay constant:\n\n// EigenLayer requirement: 7 days\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\n// Or make it governance-controlled (cannot be <7 days)\nuint256 public withdrawalDelay = 7 days;\n\nfunction setWithdrawalDelay(uint256 newDelay) external onlyGovernance {\nrequire(newDelay >= 7 days, \"Cannot be less than EigenLayer minimum\");\nwithdrawalDelay = newDelay;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No early withdrawal penalty in 'finalizeWithdrawal' - vulnerable to farming (quick deposit/withdraw)",
+      "severity": "low",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement early withdrawal penalty:\n\nuint256 public constant MIN_STAKE_DURATION = 30 days;\n\nstruct StakeInfo {\nuint256 amount;\nuint256 depositTime;\n}\n\nmapping(address => StakeInfo) public stakes;\n\nfunction withdraw(uint256 amount) external {\nupdateReward(msg.sender);\n\nStakeInfo storage stake = stakes[msg.sender];\nuint256 timeStaked = block.timestamp - stake.depositTime;\n\n// Penalty for early withdrawal (< 30 days)\nif (timeStaked < MIN_STAKE_DURATION) {\nuint256 rewardAmount = rewards[msg.sender];\nuint256 penalty = (rewardAmount * 50) / 100;  // 50% penalty\nrewards[msg.sender] -= penalty;\n\n// Redistribute penalty to long-term stakers\ntotalRewardsTracked += penalty;\n\nemit EarlyWithdrawalPenalty(msg.sender, penalty);\n}\n\nstake.amount -= amount;\ntotalStaked -= amount;\nasset.transfer(msg.sender, amount);\n}\n\nThis prevents farming via quick deposits/withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No early withdrawal penalty in 'quickWithdraw' - vulnerable to farming (quick deposit/withdraw)",
+      "severity": "low",
+      "location": {
+        "line": 58,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement early withdrawal penalty:\n\nuint256 public constant MIN_STAKE_DURATION = 30 days;\n\nstruct StakeInfo {\nuint256 amount;\nuint256 depositTime;\n}\n\nmapping(address => StakeInfo) public stakes;\n\nfunction withdraw(uint256 amount) external {\nupdateReward(msg.sender);\n\nStakeInfo storage stake = stakes[msg.sender];\nuint256 timeStaked = block.timestamp - stake.depositTime;\n\n// Penalty for early withdrawal (< 30 days)\nif (timeStaked < MIN_STAKE_DURATION) {\nuint256 rewardAmount = rewards[msg.sender];\nuint256 penalty = (rewardAmount * 50) / 100;  // 50% penalty\nrewards[msg.sender] -= penalty;\n\n// Redistribute penalty to long-term stakers\ntotalRewardsTracked += penalty;\n\nemit EarlyWithdrawalPenalty(msg.sender, penalty);\n}\n\nstake.amount -= amount;\ntotalStaked -= amount;\nasset.transfer(msg.sender, amount);\n}\n\nThis prevents farming via quick deposits/withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "role-hierarchy-bypass",
+      "message": "grantRole function lacks DEFAULT_ADMIN_ROLE check - lower privilege roles may grant roles",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Add onlyRole(DEFAULT_ADMIN_ROLE) modifier to grantRole function or use OpenZeppelin's AccessControl directly",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "role-hierarchy-bypass",
+      "message": "Multiple roles defined without explicit role admin hierarchy - may lead to privilege confusion",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Use _setRoleAdmin to establish clear role hierarchy where admin roles control lower privilege roles",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "role-hierarchy-bypass",
+      "message": "Critical functions may be accessible by non-admin roles - verify role hierarchy is correctly enforced",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Ensure critical functions like upgradeTo, pause, withdraw use DEFAULT_ADMIN_ROLE or highest privilege role",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "time-locked-admin-bypass",
+      "message": "Timelock implementation incomplete - missing queue/schedule or execute functions",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Implement complete timelock flow: propose→queue→wait(delay)→execute",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "guardian-role-centralization",
+      "message": "Guardian role lacks explicit revocation mechanism - may be irremovable if compromised",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Implement guardian revocation function callable by DAO/owner for emergency scenarios",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-collateral-swap",
+      "message": "Liquidation based on single-block health check - flash loan can temporarily drop health factor",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Require health factor violation to persist for multiple blocks before allowing liquidation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-collateral-swap",
+      "message": "Multiple collateral types without isolation - cross-collateral flash loan manipulation",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Implement isolation mode or borrow caps per collateral type to limit cross-contamination",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-transfer-return-bomb",
+      "message": "Token transfer lacks return data size validation - vulnerable to return bomb DOS",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Check returndatasize() and reject if excessive (>64 bytes): require(returndatasize() <= 64)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-transfer-return-bomb",
+      "message": "Low-level call to token without gas limit - return bomb can exhaust all gas",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Specify gas limit for calls: token.call{gas: 100000}(abi.encodeWithSelector(...))",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Hardcoded decimal assumption (18) - incompatible with USDC (6), WBTC (8), etc.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Call token.decimals() and normalize: uint256 decimals = token.decimals(); amount * 10**decimals",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Token price/exchange calculation without decimal normalization - incorrect conversions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Normalize decimals: amount * 10**token1.decimals() / 10**token2.decimals()",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-sandwich-vulnerable-swaps",
+      "message": "Swap function lacks slippage parameter - users cannot protect against MEV",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Add slippage protection parameter: function swap(..., uint256 minAmountOut)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-backrun-opportunities",
+      "message": "Liquidation without delay - MEV bots can frontrun health factor checks and backrun liquidations",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Add grace period before liquidation to reduce MEV opportunity",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-priority-gas-auction",
+      "message": "Liquidation rewards go to caller - creates PGA where bots compete with gas price",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Use Dutch auction for liquidation bonus or distribute rewards over time",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Static fees on AMM - no protection against toxic flow from informed traders",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Implement dynamic fees that increase with volatility or trade size to discourage toxic flow",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "No trade size limits - large informed trades can extract maximum value from LPs",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Add maximum trade size as percentage of reserves: require(amountIn < reserves * maxBps / 10000)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Instant arbitrage possible - informed traders can extract value with zero risk",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Add block delay or use time-weighted pricing to reduce instant arbitrage opportunities",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'finalizeWithdrawal'",
+      "severity": "medium",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'quickWithdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 58,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-borrow-bypass",
+      "message": "Lending protocol function 'quickWithdraw' has borrow bypass vulnerabilities: Collateral withdrawal doesn't validate health factor after removal, may allow withdrawal that causes undercollateralization",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure lending function 'quickWithdraw': Calculate and validate health factor before borrow, enforce collateral factor (LTV) limits, add reentrancy guards, implement same-block borrow restrictions for flash loans, update state before external calls (checks-effects-interactions pattern)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'heartbeat' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 79,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'heartbeat'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'finalizeWithdrawal' finalizes withdrawals without proper challenge period validation. Missing withdrawal initialization tracking. Must store when withdrawal was initiated to calculate elapsed time This allows attackers to bypass the fraud proof window and withdraw invalid state transitions.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add challenge period validation to 'finalizeWithdrawal': (1) Define minimum challenge period constant (typically 7 days = 604800 seconds), (2) Store withdrawal initiation timestamp, (3) Require block.timestamp >= withdrawalTimestamp + CHALLENGE_PERIOD, (4) Implement fraud proof submission mechanism during challenge window, (5) Add event emission for monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'finalizeWithdrawal' handles challenges without proper validation. No bond requirement for challenges. Challengers should post bond to prevent spam Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'finalizeWithdrawal': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'finalizeWithdrawal' handles challenges without proper validation. Missing challenge outcome logic. Should delete invalid state root and slash or refund based on result Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'finalizeWithdrawal': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' finalizes withdrawals without proper challenge period validation. No timestamp validation detected. Must check withdrawal was initiated at least 7 days ago This allows attackers to bypass the fraud proof window and withdraw invalid state transitions.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add challenge period validation to 'quickWithdraw': (1) Define minimum challenge period constant (typically 7 days = 604800 seconds), (2) Store withdrawal initiation timestamp, (3) Require block.timestamp >= withdrawalTimestamp + CHALLENGE_PERIOD, (4) Implement fraud proof submission mechanism during challenge window, (5) Add event emission for monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' finalizes withdrawals without proper challenge period validation. Missing challenge period constant. Should define CHALLENGE_PERIOD = 7 days (604800 seconds) This allows attackers to bypass the fraud proof window and withdraw invalid state transitions.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add challenge period validation to 'quickWithdraw': (1) Define minimum challenge period constant (typically 7 days = 604800 seconds), (2) Store withdrawal initiation timestamp, (3) Require block.timestamp >= withdrawalTimestamp + CHALLENGE_PERIOD, (4) Implement fraud proof submission mechanism during challenge window, (5) Add event emission for monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' finalizes withdrawals without proper challenge period validation. Missing withdrawal initialization tracking. Must store when withdrawal was initiated to calculate elapsed time This allows attackers to bypass the fraud proof window and withdraw invalid state transitions.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add challenge period validation to 'quickWithdraw': (1) Define minimum challenge period constant (typically 7 days = 604800 seconds), (2) Store withdrawal initiation timestamp, (3) Require block.timestamp >= withdrawalTimestamp + CHALLENGE_PERIOD, (4) Implement fraud proof submission mechanism during challenge window, (5) Add event emission for monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' handles challenges without proper validation. No bond requirement for challenges. Challengers should post bond to prevent spam Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'quickWithdraw': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' handles challenges without proper validation. Missing fraud proof validation. Must verify challenger's proof of invalid state transition Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'quickWithdraw': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' handles challenges without proper validation. Missing challenge outcome logic. Should delete invalid state root and slash or refund based on result Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'quickWithdraw': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "optimistic-challenge-bypass",
+      "message": "Function 'quickWithdraw' handles challenges without proper validation. No time window validation. Must verify challenge is submitted within valid period Weak challenge validation undermines the security of the optimistic rollup.",
+      "severity": "critical",
+      "location": {
+        "line": 58,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Strengthen challenge validation in 'quickWithdraw': (1) Validate challenge is within challenge period window, (2) Require sufficient bond from challenger, (3) Verify challenger provides valid fraud proof data, (4) Implement timeout for challenge resolution, (5) Handle challenge outcome (delete invalid state or slash challenger).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Transient reentrancy guard with low-gas call in 'finalizeWithdrawal' - attacker can set transient state",
+      "severity": "medium",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 allows attackers to set transient state even in low-gas contexts:\n\n❌ Problem:\n1. Traditional guard blocks classic reentrancy\n2. But attacker can use TSTORE (100 gas) in receive() fallback\n3. Can coordinate multi-step attacks or signal to other contracts\n\nFix 1: Use checks-effects-interactions pattern ALWAYS\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Add read-only reentrancy protection for view functions\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0, \"Reentrant\");\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Also protect view functions\nfunction getBalance(address user) public view returns (uint256) {\nrequire(locked == 0, \"No read during state change\");\nreturn balances[user];\n}\n\nFix 3: Use OpenZeppelin ReentrancyGuard v5.0+\n// Uses transient storage automatically in Solidity 0.8.24+\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\ncontract Secure is ReentrancyGuard {\nfunction withdraw() public nonReentrant {\n// Protected against both classic and transient reentrancy\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 46,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Transient reentrancy guard with low-gas call in 'quickWithdraw' - attacker can set transient state",
+      "severity": "medium",
+      "location": {
+        "line": 58,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 allows attackers to set transient state even in low-gas contexts:\n\n❌ Problem:\n1. Traditional guard blocks classic reentrancy\n2. But attacker can use TSTORE (100 gas) in receive() fallback\n3. Can coordinate multi-step attacks or signal to other contracts\n\nFix 1: Use checks-effects-interactions pattern ALWAYS\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Add read-only reentrancy protection for view functions\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0, \"Reentrant\");\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Also protect view functions\nfunction getBalance(address user) public view returns (uint256) {\nrequire(locked == 0, \"No read during state change\");\nreturn balances[user];\n}\n\nFix 3: Use OpenZeppelin ReentrancyGuard v5.0+\n// Uses transient storage automatically in Solidity 0.8.24+\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\ncontract Secure is ReentrancyGuard {\nfunction withdraw() public nonReentrant {\n// Protected against both classic and transient reentrancy\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 58,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-sweeper-detection",
+      "message": "MALICIOUS SWEEPER DETECTED (score: 5/10) - Transfers entire contract balance, Batch token operations",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: This appears to be a malicious sweeper contract!\n\nRisk indicators detected:\n1. Transfers entire contract balance\n2. Batch token operations\n\nSweeper contracts are responsible for 97% of malicious EIP-7702 delegations\nin 2025, causing $12M+ in losses.\n\nTypical sweeper behavior:\n1. Accepts EIP-7702 delegation\n2. Immediately drains all ETH via address(this).balance\n3. Batch transfers all ERC-20 tokens\n4. Transfers all NFTs\n5. No legitimate business logic\n\nLegitimate delegates should:\n- Have clear access control (require msg.sender == owner)\n- NOT drain all funds automatically\n- Have specific, documented functionality\n- Include safety mechanisms and time-locks\n\n⚠️  If this is a legitimate contract, add documentation and access controls.\n⚠️  If this is for security research, clearly mark it as such.\n\nReal-World Impact:\n- August 2025: $1.54M single transaction\n- 15,000+ wallets drained\n- 90% malicious delegation rate",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 470,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 471,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'secret' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 543,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 544,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 546,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Reward distribution logic detected - verify precision and rounding",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Common reward distribution errors:\n\n1. Integer division truncation:\n❌ reward = balance / users;  // Loses remainder\n✅ reward = balance * 1e18 / users / 1e18;\n\n2. Accumulating rounding errors:\n❌ Track individual rewards that sum != total\n✅ Use lastUser = total - sum(others)\n\n3. Division before multiplication:\n❌ (balance / total) * multiplier\n✅ (balance * multiplier) / total\n\n4. Missing remainder handling:\nuint256 perUser = total / userCount;\nuint256 remainder = total % userCount;\n// Handle remainder explicitly!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Unchecked block found - overflows/underflows won't revert (OWASP 2025)",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\nSolidity 0.8.0+ has automatic overflow/underflow checks,\nbut 'unchecked' blocks disable this protection.\n\n❌ DANGEROUS if user input involved:\nunchecked {\nbalance += amount;  // Can overflow!\ntotal = a * b;      // Can overflow!\n}\n\n✅ SAFE usage (loop counters only):\nfor (uint256 i = 0; i < items.length;) {\n// Process items[i]\n\nunchecked {\n++i;  // Safe: loop counter can't realistically overflow\n}\n}\n\n✅ SAFE usage (guaranteed no overflow):\nunchecked {\n// Safe: subtraction after comparison\nif (a >= b) {\nresult = a - b;  // No underflow possible\n}\n}\n\n❌ NEVER use unchecked for:\n- User-supplied values\n- Token amounts\n- Financial calculations\n- Multiplication of arbitrary values\n\nOnly use unchecked when:\n1. Loop counters (i++, ++i)\n2. Mathematically proven safe\n3. Gas optimization with careful review",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-access-control",
+      "message": "Role-based access without admin role - who can grant/revoke roles?",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Every role should have a clear admin hierarchy:\n\n✅ DEFINE ROLE HIERARCHY:\nbytes32 public constant DEFAULT_ADMIN_ROLE = 0x00;\nbytes32 public constant MINTER_ROLE = keccak256(\"MINTER_ROLE\");\nbytes32 public constant PAUSER_ROLE = keccak256(\"PAUSER_ROLE\");\nbytes32 public constant UPGRADER_ROLE = keccak256(\"UPGRADER_ROLE\");\n\nmapping(bytes32 => bytes32) private roleAdmin;\n\nconstructor() {\n// Set up role hierarchy\n_setRoleAdmin(MINTER_ROLE, DEFAULT_ADMIN_ROLE);\n_setRoleAdmin(PAUSER_ROLE, DEFAULT_ADMIN_ROLE);\n_setRoleAdmin(UPGRADER_ROLE, DEFAULT_ADMIN_ROLE);\n\n// Grant admin to deployer\n_grantRole(DEFAULT_ADMIN_ROLE, msg.sender);\n}\n\nfunction grantRole(bytes32 role, address account) public {\n// Only role admin can grant this role\nrequire(\nhasRole(roleAdmin[role], msg.sender),\n\"Not role admin\"\n);\n_grantRole(role, account);\n}\n\n✅ BEST PRACTICE - Document role hierarchy:\n/**\n* Role Hierarchy:\n* - DEFAULT_ADMIN_ROLE (0x00)\n*   └─ Can grant/revoke all roles\n*   └─ Should be multi-sig or governance\n* \n* - MINTER_ROLE\n*   └─ Can mint tokens\n*   └─ Granted to: Staking contract, Rewards contract\n* \n* - PAUSER_ROLE\n*   └─ Can pause/unpause contract\n*   └─ Granted to: Emergency multi-sig\n*/",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "jit-liquidity-sandwich",
+      "message": "Liquidity becomes active immediately - may enable JIT sandwich attacks",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Consider delaying liquidity activation to the next epoch or block to mitigate JIT attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "yield-farming-manipulation",
+      "message": "Share-based reward calculation without inflation protection - first depositor can manipulate reward rate",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Initialize pool with minimum shares or dead shares to prevent first-depositor manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "ERC-4626 vault lacks initial share protection - vulnerable to share inflation attack",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Share calculation uses contract balance directly - vulnerable to donation attack via direct transfer",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Track balances internally instead of using balanceOf(), or use virtual assets/shares in calculations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "No minimum deposit requirement - small deposits may round down to zero shares",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "amm-invariant-manipulation",
+      "message": "Price oracle uses spot price without TWAP - vulnerable to flash loan price manipulation",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 22004
+      },
+      "fix_suggestion": {
+        "description": "Implement time-weighted average price (TWAP) using cumulative price observations to resist manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenIn' in function 'swap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 27,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenIn != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'tokenOut' in function 'swap' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 44,
+        "length": 8
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(tokenOut != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'user' in function 'liquidate' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 32,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(user != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'collateral' in function 'liquidate' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 46,
+        "length": 10
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(collateral != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'debt' in function 'liquidate' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 66,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(debt != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenIn' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 97,
+        "column": 27,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenIn != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'tokenOut' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 97,
+        "column": 44,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(tokenOut != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountIn' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 97,
+        "column": 62,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountIn > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'user' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 115,
+        "column": 32,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(user != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'collateral' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 115,
+        "column": 46,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(collateral != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'debt' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 115,
+        "column": 66,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(debt != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-liquidation-abuse",
+      "message": "Function 'liquidate' has liquidation abuse vulnerability. No liquidation cooldown period, allowing instant repeated liquidations and front-running of user's repayment transactions Unfair liquidation mechanics can be exploited to profit from borrowers or manipulated to prevent legitimate liquidations.",
+      "severity": "critical",
+      "location": {
+        "line": 115,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix liquidation mechanism in 'liquidate'. Use TWAP oracles for health factor calculations, implement liquidation cooldown periods, add liquidation incentive caps, validate collateral prices from multiple sources, and implement partial liquidation limits.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "sandwich-resistant-swap",
+      "message": "Function 'swap' lacks sandwich attack protection. No minimum output amount (amountOutMin) parameter for slippage protection, leaving swap vulnerable to sandwich attacks MEV bots can front-run user swaps, manipulate price, then back-run to profit from the price difference at user's expense.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add sandwich attack protection to 'swap'. Implement: (1) Slippage tolerance with amountOutMin parameter, (2) Commit-reveal scheme for swap parameters, (3) Private mempool submission, (4) MEV-resistant AMM curve, (5) Batch auctions instead of continuous trading.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'getPrice' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 85,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'getPrice'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'swap' has extractable MEV. Swap function with spot pricing creates arbitrage opportunities, MEV bots can profit from price differences Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'swap'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'swap' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'swap'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'swap' lacks front-running protection. Trading function 'swap' missing slippage protection (minAmountOut). Vulnerable to sandwich attacks Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'swap'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'liquidate' lacks front-running protection. Price-dependent function 'liquidate' vulnerable to front-running. No TWAP, oracle, or minimum amount protection Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 115,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'liquidate'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'priceIn' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'swap' contains variable shadowing. Local variable 'priceOut' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 97,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'swap'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'liquidate' contains variable shadowing. Local variable 'collateralValue' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'liquidate'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'liquidate' contains variable shadowing. Local variable 'debtValue' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 115,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'liquidate'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 97,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "lending-borrow-bypass",
+      "message": "Lending protocol function 'liquidate' has borrow bypass vulnerabilities: Borrow function lacks collateral factor (LTV) validation, may allow over-borrowing beyond collateral value; Borrow function doesn't calculate health factor, may allow undercollateralized positions",
+      "severity": "critical",
+      "location": {
+        "line": 115,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Secure lending function 'liquidate': Calculate and validate health factor before borrow, enforce collateral factor (LTV) limits, add reentrancy guards, implement same-block borrow restrictions for flash loans, update state before external calls (checks-effects-interactions pattern)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 85,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 97,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 115,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "readonly-reentrancy",
+      "message": "View function 'getShareValue' reads state that may be inconsistent during reentrancy. Contract has state-changing functions that make external calls before updating state.",
+      "severity": "medium",
+      "location": {
+        "line": 144,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Add a reentrancy guard to state-changing functions or ensure view function 'getShareValue' cannot be called during callbacks (e.g., using a reentrancy lock check in the view function)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'withdraw' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'getShareValue' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 144,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'getShareValue'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'withdraw' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'withdraw'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'withdraw' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 156,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'withdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No withdrawal delay in 'withdraw' - bypasses EigenLayer 7-day delay requirement",
+      "severity": "critical",
+      "location": {
+        "line": 156,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement 7-day withdrawal delay (EigenLayer requirement):\n\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\nstruct WithdrawalRequest {\nuint256 shares;\nuint256 assets;\nuint256 requestTime;\nbool completed;\n}\n\nmapping(address => WithdrawalRequest) public withdrawalRequests;\n\nfunction requestWithdrawal(uint256 shares) external {\nrequire(shares > 0, \"Zero shares\");\nrequire(balanceOf(msg.sender) >= shares, \"Insufficient balance\");\nrequire(withdrawalRequests[msg.sender].shares == 0, \"Pending withdrawal\");\n\nuint256 assets = convertToAssets(shares);\n\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: assets,\nrequestTime: block.timestamp,\ncompleted: false\n});\n\n// Burn shares immediately to prevent double-withdrawal\n_burn(msg.sender, shares);\n\nemit WithdrawalRequested(msg.sender, shares, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(request.shares > 0, \"No pending withdrawal\");\nrequire(!request.completed, \"Already completed\");\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay period not elapsed (7 days required)\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n\nemit WithdrawalCompleted(msg.sender, request.assets);\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No early withdrawal penalty in 'withdraw' - vulnerable to farming (quick deposit/withdraw)",
+      "severity": "low",
+      "location": {
+        "line": 156,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement early withdrawal penalty:\n\nuint256 public constant MIN_STAKE_DURATION = 30 days;\n\nstruct StakeInfo {\nuint256 amount;\nuint256 depositTime;\n}\n\nmapping(address => StakeInfo) public stakes;\n\nfunction withdraw(uint256 amount) external {\nupdateReward(msg.sender);\n\nStakeInfo storage stake = stakes[msg.sender];\nuint256 timeStaked = block.timestamp - stake.depositTime;\n\n// Penalty for early withdrawal (< 30 days)\nif (timeStaked < MIN_STAKE_DURATION) {\nuint256 rewardAmount = rewards[msg.sender];\nuint256 penalty = (rewardAmount * 50) / 100;  // 50% penalty\nrewards[msg.sender] -= penalty;\n\n// Redistribute penalty to long-term stakers\ntotalRewardsTracked += penalty;\n\nemit EarlyWithdrawalPenalty(msg.sender, penalty);\n}\n\nstake.amount -= amount;\ntotalStaked -= amount;\nasset.transfer(msg.sender, amount);\n}\n\nThis prevents farming via quick deposits/withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'withdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 156,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 144,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 156,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'value' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 232,
+        "column": 43,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add appropriate range validation for value",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'processWithTransient' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 182,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'processWithTransient'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'guardedOperation' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 199,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'guardedOperation'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'processWithTransient' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 182,
+        "column": 14,
+        "length": 20
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'processWithTransient'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'guardedOperation' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 199,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'guardedOperation'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-state-leak",
+      "message": "No transient storage cleanup in 'processWithTransient' - can poison multicall transactions",
+      "severity": "medium",
+      "location": {
+        "line": 182,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add explicit cleanup to prevent state pollution:\n\nBad pattern (state leak):\nfunction process() public {\ntransientState = msg.value;\n// ... logic\n// ❌ NO cleanup - pollutes transaction\n}\n\nGood pattern (explicit cleanup):\nfunction process() public {\ntransientState = msg.value;\n// ... logic\n\n// ✅ Explicit cleanup\ndelete transientState;\n}\n\nOr use try-finally pattern:\nfunction process() public {\ntransientState = msg.value;\ntry this._internalLogic() {\n// success\n} catch {\n// handle error\n}\n// ✅ Always cleanup\ndelete transientState;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-state-leak",
+      "message": "No transient storage cleanup in 'guardedOperation' - can poison multicall transactions",
+      "severity": "medium",
+      "location": {
+        "line": 199,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add explicit cleanup to prevent state pollution:\n\nBad pattern (state leak):\nfunction process() public {\ntransientState = msg.value;\n// ... logic\n// ❌ NO cleanup - pollutes transaction\n}\n\nGood pattern (explicit cleanup):\nfunction process() public {\ntransientState = msg.value;\n// ... logic\n\n// ✅ Explicit cleanup\ndelete transientState;\n}\n\nOr use try-finally pattern:\nfunction process() public {\ntransientState = msg.value;\ntry this._internalLogic() {\n// success\n} catch {\n// handle error\n}\n// ✅ Always cleanup\ndelete transientState;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 182,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 199,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 217,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 232,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 267,
+        "column": 9,
+        "length": 31
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'paused' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 280,
+        "column": 9,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variables modified after external call - potential reentrancy affecting state machine",
+      "severity": "critical",
+      "location": {
+        "line": 299,
+        "column": 9,
+        "length": 31
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Use checks-effects-interactions pattern or reentrancy guards",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'token' in function 'emergencyWithdraw' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 258,
+        "column": 40,
+        "length": 5
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(token != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'user' in function 'emergencyUserWithdraw' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 288,
+        "column": 44,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(user != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'token' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 258,
+        "column": 40,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(token != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 258,
+        "column": 55,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'user' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 288,
+        "column": 44,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(user != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'emergencyWithdraw' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 258,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'emergencyWithdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unchecked-external-call",
+      "message": "External call in function 'emergencyUserWithdraw' does not check return value",
+      "severity": "medium",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-252",
+      "fix_suggestion": {
+        "description": "Check the return value of external calls in function 'emergencyUserWithdraw'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'emergencyWithdraw' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 258,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'emergencyWithdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'emergencyUserWithdraw' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'emergencyUserWithdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'emergencyPause' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 274,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'emergencyPause'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'emergencyWithdraw' has withdrawal delay vulnerability. Withdrawal delay has no maximum cap, admin can set arbitrarily long delays locking funds indefinitely Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 258,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'emergencyWithdraw'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'emergencyWithdraw' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 258,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'emergencyWithdraw'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'emergencyUserWithdraw' has validator front-running vulnerability. Price-sensitive operations without fair sequencing, validators can reorder transactions for MEV extraction Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'emergencyUserWithdraw'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'emergencyWithdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 258,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'emergencyWithdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'emergencyUserWithdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'emergencyUserWithdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'emergencyUserWithdraw' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'emergencyUserWithdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'emergencyUserWithdraw' has centralization risk. Emergency function 'emergencyUserWithdraw' lacks multi-party approval. Can be abused by single compromised key Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'emergencyUserWithdraw'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'emergencyUserWithdraw' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 288,
+        "column": 14,
+        "length": 21
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'emergencyUserWithdraw'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No withdrawal delay in 'emergencyWithdraw' - bypasses EigenLayer 7-day delay requirement",
+      "severity": "critical",
+      "location": {
+        "line": 258,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement 7-day withdrawal delay (EigenLayer requirement):\n\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\nstruct WithdrawalRequest {\nuint256 shares;\nuint256 assets;\nuint256 requestTime;\nbool completed;\n}\n\nmapping(address => WithdrawalRequest) public withdrawalRequests;\n\nfunction requestWithdrawal(uint256 shares) external {\nrequire(shares > 0, \"Zero shares\");\nrequire(balanceOf(msg.sender) >= shares, \"Insufficient balance\");\nrequire(withdrawalRequests[msg.sender].shares == 0, \"Pending withdrawal\");\n\nuint256 assets = convertToAssets(shares);\n\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: assets,\nrequestTime: block.timestamp,\ncompleted: false\n});\n\n// Burn shares immediately to prevent double-withdrawal\n_burn(msg.sender, shares);\n\nemit WithdrawalRequested(msg.sender, shares, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(request.shares > 0, \"No pending withdrawal\");\nrequire(!request.completed, \"Already completed\");\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay period not elapsed (7 days required)\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n\nemit WithdrawalCompleted(msg.sender, request.assets);\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No withdrawal delay in 'emergencyUserWithdraw' - bypasses EigenLayer 7-day delay requirement",
+      "severity": "critical",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement 7-day withdrawal delay (EigenLayer requirement):\n\nuint256 public constant WITHDRAWAL_DELAY = 7 days;\n\nstruct WithdrawalRequest {\nuint256 shares;\nuint256 assets;\nuint256 requestTime;\nbool completed;\n}\n\nmapping(address => WithdrawalRequest) public withdrawalRequests;\n\nfunction requestWithdrawal(uint256 shares) external {\nrequire(shares > 0, \"Zero shares\");\nrequire(balanceOf(msg.sender) >= shares, \"Insufficient balance\");\nrequire(withdrawalRequests[msg.sender].shares == 0, \"Pending withdrawal\");\n\nuint256 assets = convertToAssets(shares);\n\nwithdrawalRequests[msg.sender] = WithdrawalRequest({\nshares: shares,\nassets: assets,\nrequestTime: block.timestamp,\ncompleted: false\n});\n\n// Burn shares immediately to prevent double-withdrawal\n_burn(msg.sender, shares);\n\nemit WithdrawalRequested(msg.sender, shares, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\nrequire(request.shares > 0, \"No pending withdrawal\");\nrequire(!request.completed, \"Already completed\");\nrequire(\nblock.timestamp >= request.requestTime + WITHDRAWAL_DELAY,\n\"Delay period not elapsed (7 days required)\"\n);\n\nrequest.completed = true;\nasset.transfer(msg.sender, request.assets);\n\nemit WithdrawalCompleted(msg.sender, request.assets);\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No early withdrawal penalty in 'emergencyWithdraw' - vulnerable to farming (quick deposit/withdraw)",
+      "severity": "low",
+      "location": {
+        "line": 258,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement early withdrawal penalty:\n\nuint256 public constant MIN_STAKE_DURATION = 30 days;\n\nstruct StakeInfo {\nuint256 amount;\nuint256 depositTime;\n}\n\nmapping(address => StakeInfo) public stakes;\n\nfunction withdraw(uint256 amount) external {\nupdateReward(msg.sender);\n\nStakeInfo storage stake = stakes[msg.sender];\nuint256 timeStaked = block.timestamp - stake.depositTime;\n\n// Penalty for early withdrawal (< 30 days)\nif (timeStaked < MIN_STAKE_DURATION) {\nuint256 rewardAmount = rewards[msg.sender];\nuint256 penalty = (rewardAmount * 50) / 100;  // 50% penalty\nrewards[msg.sender] -= penalty;\n\n// Redistribute penalty to long-term stakers\ntotalRewardsTracked += penalty;\n\nemit EarlyWithdrawalPenalty(msg.sender, penalty);\n}\n\nstake.amount -= amount;\ntotalStaked -= amount;\nasset.transfer(msg.sender, amount);\n}\n\nThis prevents farming via quick deposits/withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No early withdrawal penalty in 'emergencyUserWithdraw' - vulnerable to farming (quick deposit/withdraw)",
+      "severity": "low",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement early withdrawal penalty:\n\nuint256 public constant MIN_STAKE_DURATION = 30 days;\n\nstruct StakeInfo {\nuint256 amount;\nuint256 depositTime;\n}\n\nmapping(address => StakeInfo) public stakes;\n\nfunction withdraw(uint256 amount) external {\nupdateReward(msg.sender);\n\nStakeInfo storage stake = stakes[msg.sender];\nuint256 timeStaked = block.timestamp - stake.depositTime;\n\n// Penalty for early withdrawal (< 30 days)\nif (timeStaked < MIN_STAKE_DURATION) {\nuint256 rewardAmount = rewards[msg.sender];\nuint256 penalty = (rewardAmount * 50) / 100;  // 50% penalty\nrewards[msg.sender] -= penalty;\n\n// Redistribute penalty to long-term stakers\ntotalRewardsTracked += penalty;\n\nemit EarlyWithdrawalPenalty(msg.sender, penalty);\n}\n\nstake.amount -= amount;\ntotalStaked -= amount;\nasset.transfer(msg.sender, amount);\n}\n\nThis prevents farming via quick deposits/withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'emergencyWithdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 258,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'emergencyUserWithdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'emergencyUserWithdraw' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Transient reentrancy guard with low-gas call in 'emergencyWithdraw' - attacker can set transient state",
+      "severity": "medium",
+      "location": {
+        "line": 258,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 allows attackers to set transient state even in low-gas contexts:\n\n❌ Problem:\n1. Traditional guard blocks classic reentrancy\n2. But attacker can use TSTORE (100 gas) in receive() fallback\n3. Can coordinate multi-step attacks or signal to other contracts\n\nFix 1: Use checks-effects-interactions pattern ALWAYS\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Add read-only reentrancy protection for view functions\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0, \"Reentrant\");\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Also protect view functions\nfunction getBalance(address user) public view returns (uint256) {\nrequire(locked == 0, \"No read during state change\");\nreturn balances[user];\n}\n\nFix 3: Use OpenZeppelin ReentrancyGuard v5.0+\n// Uses transient storage automatically in Solidity 0.8.24+\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\ncontract Secure is ReentrancyGuard {\nfunction withdraw() public nonReentrant {\n// Protected against both classic and transient reentrancy\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 258,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 274,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Transient reentrancy guard with low-gas call in 'emergencyUserWithdraw' - attacker can set transient state",
+      "severity": "medium",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 allows attackers to set transient state even in low-gas contexts:\n\n❌ Problem:\n1. Traditional guard blocks classic reentrancy\n2. But attacker can use TSTORE (100 gas) in receive() fallback\n3. Can coordinate multi-step attacks or signal to other contracts\n\nFix 1: Use checks-effects-interactions pattern ALWAYS\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Add read-only reentrancy protection for view functions\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0, \"Reentrant\");\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Also protect view functions\nfunction getBalance(address user) public view returns (uint256) {\nrequire(locked == 0, \"No read during state change\");\nreturn balances[user];\n}\n\nFix 3: Use OpenZeppelin ReentrancyGuard v5.0+\n// Uses transient storage automatically in Solidity 0.8.24+\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\ncontract Secure is ReentrancyGuard {\nfunction withdraw() public nonReentrant {\n// Protected against both classic and transient reentrancy\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 288,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 315,
+        "column": 30,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'deposit' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 315,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'deposit'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Parameter 'totalShares' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 315,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Local variable 'sharesToMint' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 315,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'deposit' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 326,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'deposit'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-withdrawal-delays",
+      "message": "No liquidity reserve in 'deposit' - 100% restaking prevents normal withdrawals",
+      "severity": "medium",
+      "location": {
+        "line": 315,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Maintain liquidity reserve for withdrawals:\n\nuint256 public constant LIQUIDITY_RESERVE_PERCENTAGE = 10;  // 10% liquid\nuint256 public totalAvailableLiquidity;\n\nfunction deposit(uint256 assets) external {\nasset.transferFrom(msg.sender, address(this), assets);\n\n// Keep 10% liquid for immediate withdrawals\nuint256 toLiquidity = (assets * LIQUIDITY_RESERVE_PERCENTAGE) / 100;\nuint256 toRestake = assets - toLiquidity;\n\ntotalAvailableLiquidity += toLiquidity;\n\n// Restake 90% to EigenLayer\neigenlayer.deposit(toRestake);\n\n_mint(msg.sender, assets);\n}\n\nfunction completeWithdrawal() external {\nWithdrawalRequest storage request = withdrawalRequests[msg.sender];\n\nrequire(\ntotalAvailableLiquidity >= request.assets,\n\"Insufficient liquidity - please try later\"\n);\n\ntotalAvailableLiquidity -= request.assets;\nasset.transfer(msg.sender, request.assets);\n}\n\nThis prevents Renzo-style incidents where withdrawals are impossible.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No first depositor protection (inflation attack on vault initialization) in 'deposit'",
+      "severity": "critical",
+      "location": {
+        "line": 315,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Lock initial shares: if (totalSupply() == 0) { _mint(address(0), INITIAL_SHARES); }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Share calculation doesn't use totalSupply and totalAssets in 'deposit'",
+      "severity": "high",
+      "location": {
+        "line": 315,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate shares: shares = (amount * totalSupply()) / totalAssets();",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 315,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'bidAmount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 351,
+        "column": 32,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(bidAmount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'commitBid' is vulnerable to block stuffing attacks. Auction closes in single block without multi-block finalization period, vulnerable to block stuffing to prevent last-minute bids Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 351,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'commitBid'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'commitBid' has nonce management vulnerability. Nonce used for randomness generation, nonces are predictable and unsuitable for random number generation Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 351,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'commitBid'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'commitBid' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 351,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'commitBid'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 351,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 365,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'grantRole' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 391,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'grantRole'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'account' in function 'grantRole' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 391,
+        "column": 46,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(account != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'user' in function 'promoteUser' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 418,
+        "column": 34,
+        "length": 4
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(user != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'account' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 391,
+        "column": 46,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(account != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'user' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 418,
+        "column": 34,
+        "length": 4
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(user != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'grantRole' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 391,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'grantRole'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'criticalOperation' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 405,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'criticalOperation'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'promoteUser' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 418,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'promoteUser'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 391,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 405,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 418,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-griefing",
+      "message": "Function 'submitTaskResult' has validator griefing vulnerability. No rate limiting on validator-affecting actions, allows spam attacks to overwhelm validators or slashing logic Attackers can harm validators without economic benefit, leading to validator exits and network destabilization.",
+      "severity": "high",
+      "location": {
+        "line": 441,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-405",
+      "fix_suggestion": {
+        "description": "Mitigate validator griefing in 'submitTaskResult'. Implement griefing-cost mechanisms (deposit requirements), add rate limiting per address, require minimum stake for reporting, implement reputation systems, add penalties for false accusations, and create validator insurance pools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'submitTaskResult' has validator front-running vulnerability. Validator assignment without rotation, same validators can repeatedly front-run same users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 441,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'submitTaskResult'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 441,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'generateRandomSlot' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 477,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'generateRandomSlot'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'generateRandomSlot' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 477,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'generateRandomSlot'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'generateRandomSlot' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 477,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'generateRandomSlot'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 474,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'transfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 489,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'transfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'to' of type 'address' may need validation",
+      "severity": "high",
+      "location": {
+        "line": 489,
+        "column": 31,
+        "length": 2
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(to != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 489,
+        "column": 43,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 489,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'validator' in function 'slash' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 506,
+        "column": 28,
+        "length": 9
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(validator != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'validator' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 506,
+        "column": 28,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(validator != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amount' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 506,
+        "column": 47,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amount > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "slashing-mechanism",
+      "message": "Function 'slash' has slashing mechanism vulnerability. No cooldown period between slashing events, allows rapid repeated slashing of same validator (griefing attack) Improper slashing logic can lead to validator griefing, unfair penalties, or loss of staked funds.",
+      "severity": "high",
+      "location": {
+        "line": 506,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Fix slashing mechanism in 'slash'. Implement cooldown periods between slashings, add maximum slashing limits per period, require evidence verification with dispute periods, implement progressive penalties, add multi-signature requirements for large slashings, and protect against double-slashing.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-griefing",
+      "message": "Function 'slash' has validator griefing vulnerability. Validator reporting or slashing has no cost to reporter, enables free griefing attacks through false accusations Attackers can harm validators without economic benefit, leading to validator exits and network destabilization.",
+      "severity": "high",
+      "location": {
+        "line": 506,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-405",
+      "fix_suggestion": {
+        "description": "Mitigate validator griefing in 'slash'. Implement griefing-cost mechanisms (deposit requirements), add rate limiting per address, require minimum stake for reporting, implement reputation systems, add penalties for false accusations, and create validator insurance pools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'slash' has validator front-running vulnerability. Validator assignment without rotation, same validators can repeatedly front-run same users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 506,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'slash'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-slashing-conditions",
+      "message": "No evidence parameter in slashing function 'slash' - slashing can occur without proof",
+      "severity": "high",
+      "location": {
+        "line": 506,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add evidence parameter to slashing function:\n\nfunction requestSlashing(\naddress operator,\nuint256 amount,\nbytes calldata evidence  // Add evidence\n) external onlyAVS returns (bytes32 requestId) {\nrequire(evidence.length > 0, \"Evidence required\");\n\n// Validate evidence format\n// Store for governance review\n\nrequestId = keccak256(abi.encode(msg.sender, operator, amount, block.timestamp));\nslashingRequests[requestId] = SlashingRequest({\noperator: operator,\namount: amount,\nevidence: evidence,\ntimestamp: block.timestamp\n});\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-slashing-conditions",
+      "message": "No appeal period for slashing in 'slash' - instant slashing without recourse",
+      "severity": "high",
+      "location": {
+        "line": 506,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement two-step slashing with delay:\n\nuint256 public constant SLASHING_DELAY = 7 days;\n\nstruct SlashingRequest {\naddress operator;\nuint256 amount;\nbytes evidence;\nuint256 timestamp;\nbool executed;\n}\n\nmapping(bytes32 => SlashingRequest) public slashingRequests;\n\nfunction requestSlashing(\naddress operator,\nuint256 amount,\nbytes calldata evidence\n) external onlyAVS returns (bytes32 requestId) {\nrequestId = keccak256(abi.encode(msg.sender, operator, amount, block.timestamp));\nslashingRequests[requestId] = SlashingRequest({\noperator: operator,\namount: amount,\nevidence: evidence,\ntimestamp: block.timestamp,\nexecuted: false\n});\n}\n\nfunction executeSlashing(bytes32 requestId) external {\nSlashingRequest storage request = slashingRequests[requestId];\nrequire(!request.executed, \"Already executed\");\nrequire(\nblock.timestamp >= request.timestamp + SLASHING_DELAY,\n\"Delay period not elapsed - operator can still appeal\"\n);\n\nstakes[request.operator] -= request.amount;\nrequest.executed = true;\n}\n\nfunction appealSlashing(bytes32 requestId, bytes calldata defense) external {\nSlashingRequest storage request = slashingRequests[requestId];\nrequire(msg.sender == request.operator, \"Not operator\");\nrequire(!request.executed, \"Already executed\");\nrequire(\nblock.timestamp < request.timestamp + SLASHING_DELAY,\n\"Appeal period expired\"\n);\n\nemit SlashingAppealed(requestId, defense);\n// Governance reviews appeal\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-slashing-conditions",
+      "message": "Compound slashing possible in 'slash' - multiple AVSs can slash same stake (operator can lose >100%)",
+      "severity": "critical",
+      "location": {
+        "line": 506,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Prevent compound slashing:\n\nmapping(address => uint256) public totalSlashed;\n\nfunction executeSlashing(bytes32 requestId) external {\nSlashingRequest storage request = slashingRequests[requestId];\n\nuint256 operatorStake = stakes[request.operator];\n\n// Prevent compound slashing\nrequire(\ntotalSlashed[request.operator] + request.amount <= operatorStake,\n\"Compound slashing prevented - would exceed total stake\"\n);\n\nstakes[request.operator] -= request.amount;\ntotalSlashed[request.operator] += request.amount;\nrequest.executed = true;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-slashing-conditions",
+      "message": "No MAX_SLASH_PERCENTAGE constant defined - should limit maximum slashing per incident",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Define maximum slashing percentage:\n\n// Limit slashing to 10% per incident (industry standard)\nuint256 public constant MAX_SLASH_PERCENTAGE = 10;\n\n// Or make it governance-controlled\nuint256 public maxSlashPercentage = 10;\n\nfunction setMaxSlashPercentage(uint256 newMax) external onlyGovernance {\nrequire(newMax <= 20, \"Cannot exceed 20%\");\nmaxSlashPercentage = newMax;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 506,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'calculateReward' has validator front-running vulnerability. Reward distribution visible in mempool, validators can front-run to claim rewards first Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 526,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'calculateReward'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "restaking-rewards-manipulation",
+      "message": "No proportional reward distribution in 'calculateReward' - can favor certain stakers unfairly",
+      "severity": "high",
+      "location": {
+        "line": 526,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Implement pro-rata reward distribution (Synthetix StakingRewards pattern):\n\nuint256 public rewardPerTokenStored;\nmapping(address => uint256) public userRewardPerTokenPaid;\nmapping(address => uint256) public rewards;\n\nfunction rewardPerToken() public view returns (uint256) {\nif (totalStaked == 0) {\nreturn rewardPerTokenStored;\n}\nreturn rewardPerTokenStored +\n((totalRewardsTracked * 1e18) / totalStaked);\n}\n\nfunction earned(address user) public view returns (uint256) {\nreturn (stakes[user] *\n(rewardPerToken() - userRewardPerTokenPaid[user])) / 1e18\n+ rewards[user];\n}\n\nfunction claimRewards() external {\nupdateReward(msg.sender);\nuint256 reward = rewards[msg.sender];\nrequire(reward > 0, \"No rewards\");\nrewards[msg.sender] = 0;\nrewardToken.transfer(msg.sender, reward);\n}\n\nThis ensures fair, proportional rewards based on stake amount.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Reward calculation doesn't account for totalSupply in 'calculateReward'",
+      "severity": "high",
+      "location": {
+        "line": 526,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "Missing reward debt tracking (double-claim risk) in 'calculateReward'",
+      "severity": "critical",
+      "location": {
+        "line": 526,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 526,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 550,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountIn' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 560,
+        "column": 27,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountIn > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amountOutMin' of type 'uint' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 560,
+        "column": 45,
+        "length": 12
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amountOutMin > 0, \"Amount must be positive\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-impact-manipulation",
+      "message": "Function 'swap' vulnerable to price impact manipulation. No maximum trade size limit enforced, allowing trades of any size that can cause extreme price impact and drain pool liquidity Large trades without size limits or impact checks can drain liquidity, manipulate prices, and cause excessive slippage for other users.",
+      "severity": "high",
+      "location": {
+        "line": 560,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add price impact protection to 'swap'. Implement maximum trade size limits (e.g., max 10% of pool), calculate and validate price impact percentage, enforce minimum output amounts with slippage tolerance, or split large trades across multiple blocks.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'swap' has dangerous timestamp dependency. Uses timestamp-based deadline without block.number as fallback, vulnerable to timestamp manipulation for deadline extensions Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 560,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'swap'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "deadline-manipulation",
+      "message": "Function 'swap' has deadline manipulation risk. No maximum deadline limit, allows setting deadlines years in future enabling validators to hold and execute at optimal times Validators can hold transactions and execute them at times that benefit MEV extraction or harm users.",
+      "severity": "medium",
+      "location": {
+        "line": 560,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Improve deadline handling in 'swap'. Use reasonable default deadlines (e.g., block.timestamp + 15 minutes), validate deadline parameters, add minimum deadline checks, or implement deadline extensions for failed transactions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "validator-front-running",
+      "message": "Function 'swap' has validator front-running vulnerability. MEV-generating operations without redistribution, validators capture full MEV without sharing with users Validators can observe pending transactions and extract value by front-running users.",
+      "severity": "high",
+      "location": {
+        "line": 560,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate validator front-running in 'swap'. Implement commit-reveal schemes, use threshold encryption, add validator rotation, implement fair sequencing service integration, use batch auctions instead of continuous, and add MEV redistribution mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "front-running-mitigation",
+      "message": "Function 'swap' lacks front-running protection. Trading function 'swap' missing slippage protection (minAmountOut). Vulnerable to sandwich attacks Front-runners can extract MEV by observing mempool and inserting their transactions before yours.",
+      "severity": "high",
+      "location": {
+        "line": 560,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add front-running protection to 'swap'. Implement: (1) Commit-reveal scheme with time delay, (2) Deadline parameter for transaction validity, (3) Minimum output amount (slippage protection), (4) Batch auctions or frequent batch auctions (FBA), (5) Private mempool (Flashbots Protect), (6) Time-weighted average pricing (TWAP).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No reentrancy protection (flash loan attack risk) in 'swap'",
+      "severity": "critical",
+      "location": {
+        "line": 560,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add reentrancy guard: modifier nonReentrant or use ReentrancyGuard from OpenZeppelin",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 560,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 578,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 588,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'random' has dangerous timestamp dependency. Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. These values are predictable/manipulable by miners and validators, enabling attacks on randomness-dependent logic. Use Chainlink VRF or commit-reveal schemes instead Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 602,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'random'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "insufficient-randomness",
+      "message": "Function 'random' uses weak randomness source. Uses block.timestamp for randomness generation. Miners can manipulate timestamp within ~15 second range to influence outcome Predictable randomness enables attackers to manipulate outcomes in lotteries, games, or selection processes.",
+      "severity": "high",
+      "location": {
+        "line": 602,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-338",
+      "fix_suggestion": {
+        "description": "Use secure randomness in 'random'. Implement: (1) Chainlink VRF for verifiable randomness, (2) Commit-reveal scheme with multi-block delay, (3) External oracle for random number generation, (4) Avoid block.timestamp, blockhash, or block.number, (5) Use Randao for Ethereum 2.0.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'random' contains unsafe type casting. int to uint conversion without sign check. Negative values will wrap to large positive Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 605,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'random'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'random' contains unsafe type casting. uint to int conversion without overflow check. Large values may become negative Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 605,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'random'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 602,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'batchTransfer' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'batchTransfer'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'batchTransfer' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchTransfer' has multiple array parameters (recipients, amounts) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(recipients.length == amounts.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'batchTransfer' has related array parameters 'recipients' and 'amounts' that should be validated for equal length",
+      "severity": "medium",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(recipients.length == amounts.length, \"Related arrays must have equal length\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'recipients' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 619,
+        "column": 47,
+        "length": 10
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(recipients.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'amounts' of type 'array' may need validation",
+      "severity": "medium",
+      "location": {
+        "line": 619,
+        "column": 78,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(amounts.length > 0, \"Array cannot be empty\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'batchTransfer' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'batchTransfer'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'batchTransfer' has gas griefing vulnerability. Push pattern for mass distribution, single failing recipient can grief entire distribution Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'batchTransfer'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-unbounded-operation",
+      "message": "Function 'batchTransfer' has DOS vulnerability via unbounded operation. Loop over unbounded array without iteration limit, large arrays cause out-of-gas Can cause out-of-gas errors blocking contract functionality.",
+      "severity": "high",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Fix unbounded operation in 'batchTransfer'. Add pagination for large loops, implement maximum iteration limits, use pull pattern instead of push, add circuit breakers, batch operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'batchTransfer' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 619,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'batchTransfer'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-reentrancy-guard",
+      "message": "Missing read-only reentrancy protection in contract with transient guard",
+      "severity": "low",
+      "location": {
+        "line": 619,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add read-only reentrancy protection for view functions:\n\nWithout EIP-1153, view functions couldn't be exploited during external calls.\nWith EIP-1153, attackers can set transient state to manipulate view function results.\n\nAdd protection:\nuint256 transient private locked;\n\nmodifier nonReentrant() {\nrequire(locked == 0);\nlocked = 1;\n_;\nlocked = 0;\n}\n\n// ✅ Protect view functions too\nfunction getAccountData(address user) public view returns (uint256, uint256) {\nrequire(locked == 0, \"Cannot read during external call\");\nreturn (balances[user], debt[user]);\n}\n\nThis prevents attackers from calling view functions during external calls\nto get inconsistent state readings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-batch-phishing",
+      "message": "Unprotected batch execution in 'batchTransfer' - phishing risk",
+      "severity": "high",
+      "location": {
+        "line": 619,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Batch functions without authorization enable phishing:\n\nAttack pattern:\n1. Phishing site prompts EIP-7702 delegation\n2. Malicious batch function executes multiple calls\n3. Drains ETH, all ERC-20s, all NFTs in single transaction\n4. User sees only one transaction signature\n\nFix: Add proper authorization:\nfunction batchExecute(Call[] calldata calls) external {\nrequire(msg.sender == owner, \"Not authorized\");\n\nfor (uint i = 0; i < calls.length; i++) {\n(bool success,) = calls[i].target.call(calls[i].data);\nrequire(success, \"Call failed\");\n}\n}",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.0"
+  },
+  "statistics": {
+    "total_findings": 247,
+    "severity_counts": {
+      "info": 0,
+      "medium": 64,
+      "critical": 38,
+      "low": 65,
+      "high": 80
+    },
+    "unique_detectors": 64
+  }
+}

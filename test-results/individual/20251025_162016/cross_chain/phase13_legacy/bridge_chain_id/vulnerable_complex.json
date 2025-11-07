@@ -1,0 +1,394 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/vulnerable_complex.sol
+  Found 24 issues
+{
+  "version": "1.0.0",
+  "timestamp": "2025-10-25T22:20:19.100044Z",
+  "findings": [
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'relayer' in function 'authorizeRelayer' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 92,
+        "column": 39,
+        "length": 7
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(relayer != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'relayer' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 92,
+        "column": 39,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(relayer != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'hash' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 97,
+        "column": 39,
+        "length": 4
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'hash' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'signature' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 97,
+        "column": 60,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'signature' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'message' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 102,
+        "column": 45,
+        "length": 7
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'message' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function 'executeMessage' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 34,
+        "column": 0,
+        "length": 14
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-replay",
+      "message": "Function '_verifySignature' verifies signatures without replay protection. Attackers can reuse valid signatures to perform unauthorized actions. This is particularly dangerous in governance systems for vote manipulation.",
+      "severity": "high",
+      "location": {
+        "line": 97,
+        "column": 0,
+        "length": 16
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Implement a nonce system to prevent signature replay attacks. Include a unique nonce in the signed message and track used nonces.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'executeMessage' has nonce management vulnerability. Uses global nonce instead of per-user mapping, forces sequential execution and limits parallelization Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 34,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'executeMessage'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'onlyAuthorized' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 17,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'onlyAuthorized'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'onlyAdmin' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 22,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'onlyAdmin'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'executeMessage' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 34,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'executeMessage'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'receiveMessage' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 65,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'receiveMessage'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "redundant-checks",
+      "message": "Function 'executeMessage' contains redundant checks. 3 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily.",
+      "severity": "low",
+      "location": {
+        "line": 34,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Remove redundant checks in 'executeMessage'. Consider: (1) Eliminate duplicate require() statements, (2) Combine multiple checks into single require(), (3) Remove overflow checks in Solidity >=0.8, (4) Avoid checking same condition in modifier and function, (5) Use custom errors instead of require with strings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "redundant-checks",
+      "message": "Function 'receiveMessage' contains redundant checks. 3 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily.",
+      "severity": "low",
+      "location": {
+        "line": 65,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Remove redundant checks in 'receiveMessage'. Consider: (1) Eliminate duplicate require() statements, (2) Combine multiple checks into single require(), (3) Remove overflow checks in Solidity >=0.8, (4) Avoid checking same condition in modifier and function, (5) Use custom errors instead of require with strings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'onlyAdmin' contains variable shadowing. Parameter 'admin' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 22,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'onlyAdmin'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeMessage' contains variable shadowing. Local variable 'success,)' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 34,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeMessage'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'authorizeRelayer'",
+      "severity": "critical",
+      "location": {
+        "line": 92,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeMessage'",
+      "severity": "high",
+      "location": {
+        "line": 34,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'receiveMessage'",
+      "severity": "medium",
+      "location": {
+        "line": 65,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add runtime validation: require(message.destinationChainId == block.chainid);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unused-state-variables",
+      "message": "State variable 'success,)' is declared but never used. Unused state variables waste storage slots and increase deployment gas costs. Each unused storage slot costs gas during deployment.",
+      "severity": "low",
+      "location": {
+        "line": 57,
+        "column": 0,
+        "length": 9
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused state variable 'success,)'. If this variable is intended for future use, consider adding a TODO comment. If it needs to maintain storage layout for upgradeable contracts, add a comment explaining this.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 34,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'receiveMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 65,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'receiveMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'receiveMessage' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 65,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'receiveMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.0.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.0.0"
+  },
+  "statistics": {
+    "total_findings": 24,
+    "severity_counts": {
+      "medium": 9,
+      "high": 6,
+      "low": 5,
+      "critical": 4,
+      "info": 0
+    },
+    "unique_detectors": 13
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 24
+  Time taken: 0.01s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues

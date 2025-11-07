@@ -1,0 +1,26 @@
+SolidityDefend Detector Validation Report
+==========================================
+Timestamp: Sat Oct 25 15:50:13 MDT 2025
+Version: 
+
+Test Results:
+  Total Tests:    41
+  Passed:         0
+  Failed:         41
+  Warnings:       0
+  Pass Rate:      0%
+
+Detector Status:
+  Registered:     100/100
+
+Test Coverage:
+  Total Contracts:      
+  Vulnerable Contracts: 
+  Clean Contracts:      
+  Other Contracts:      
+
+Result Files:
+  Full Log:       /Users/pwner/Git/ABS/SolidityDefend/test-results/validation_20251025_155010.log
+  Summary:        /Users/pwner/Git/ABS/SolidityDefend/test-results/summary_20251025_155010.txt
+  JSON Results:   /Users/pwner/Git/ABS/SolidityDefend/test-results/results_20251025_155010.json
+

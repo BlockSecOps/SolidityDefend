@@ -36,7 +36,6 @@ releases/
 
 # Test outputs
 test-outputs/
-test-results/
 temp/
 
 # Security

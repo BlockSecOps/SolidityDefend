@@ -1,0 +1,618 @@
+Loaded configuration from: .soliditydefend.yml
+Starting analysis...
+Analyzing: /Users/pwner/Git/ABS/SolidityDefend/tests/contracts/erc4626_vaults/SecureVault_InternalAccounting.sol
+  Found 39 issues
+{
+  "version": "0.8.0",
+  "timestamp": "2025-10-26T22:43:45.314849Z",
+  "findings": [
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'deposit' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'redeem' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_asset' in function '' is not checked for zero address",
+      "severity": "low",
+      "location": {
+        "line": 33,
+        "column": 25,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_asset != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'receiver' in function 'deposit' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 41,
+        "column": 46,
+        "length": 8
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(receiver != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'receiver' in function 'redeem' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 45,
+        "length": 8
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(receiver != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'owner' in function 'redeem' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 67,
+        "column": 63,
+        "length": 5
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(owner != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_asset' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 33,
+        "column": 25,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_asset != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'receiver' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 46,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(receiver != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'receiver' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 41,
+        "column": 46,
+        "length": 8
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'receiver' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'receiver' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 45,
+        "length": 8
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(receiver != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'owner' of type 'address' may need validation",
+      "severity": "high",
+      "location": {
+        "line": 67,
+        "column": 63,
+        "length": 5
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(owner != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'owner' in function 'redeem' may shadow a state variable",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 63,
+        "length": 5
+      },
+      "cwe": "CWE-1177",
+      "fix_suggestion": {
+        "description": "Consider renaming parameter 'owner' to avoid shadowing",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'assets' is declared but never used",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 37,
+        "length": 6
+      },
+      "cwe": "CWE-563",
+      "fix_suggestion": {
+        "description": "Remove unused parameter 'assets' or use it in the function",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'deposit' is vulnerable to vault share inflation attack. Share calculation vulnerable to inflation: uses assets * totalSupply / totalAssets without virtual shares/assets offset protection First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares), (2) Implement virtual shares/assets (ERC4626 with offset), (3) Enforce minimum first deposit amount, (4) Use higher precision decimals (1e18 instead of 1e6).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'previewDeposit' is vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'previewDeposit' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares), (2) Implement virtual shares/assets (ERC4626 with offset), (3) Enforce minimum first deposit amount, (4) Use higher precision decimals (1e18 instead of 1e6).",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'redeem' is vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'redeem' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction, (2) Add circuit breakers for emergency withdrawals, (3) Avoid unbounded loops in withdrawal queue processing, (4) Implement partial withdrawal support, (5) Use pull-over-push pattern for failed withdrawals.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "withdrawal-delay",
+      "message": "Function 'redeem' has withdrawal delay vulnerability. Withdrawal requires successful external call, failing calls can permanently block withdrawals Improper withdrawal mechanisms can lock user funds indefinitely or enable denial of service.",
+      "severity": "high",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Fix withdrawal mechanism in 'redeem'. Implement maximum withdrawal delay caps, add emergency withdrawal options with penalties, prevent admin from extending delays arbitrarily, implement fair queue systems, add partial withdrawal capabilities, and document clear withdrawal timelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'deposit' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'deposit'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'redeem' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'redeem'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'previewDeposit' has token supply manipulation vulnerability. Function directly modifies totalSupply variable, bypasses mint/burn controls for supply manipulation Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'previewDeposit'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'deposit' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'deposit'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'redeem' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'redeem'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'deposit' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'deposit'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'redeem' contains excessive gas usage pattern. Multiple storage reads detected (9). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'redeem'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'donations' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'donations'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'deposit' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'redeem' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Parameter 'totalSupply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'deposit' contains variable shadowing. Local variable 'assets),' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 41,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'deposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'totalAssets' contains variable shadowing. Parameter 'totalDeposited' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 87,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'totalAssets'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'donations' contains variable shadowing. Local variable 'balance' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 103,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'donations'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'previewDeposit' contains variable shadowing. Parameter 'totalSupply' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 111,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'previewDeposit'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unsafe-type-casting",
+      "message": "Function 'donations' contains unsafe type casting. address type casting without validation. May result in zero address Unsafe type conversions can lead to data loss, value truncation, or unexpected behavior.",
+      "severity": "medium",
+      "location": {
+        "line": 103,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-704",
+      "fix_suggestion": {
+        "description": "Add safe type casting in 'donations'. Implement: (1) Validate value ranges before casting, (2) Use require() to check bounds, (3) Use SafeCast library from OpenZeppelin, (4) Avoid downcasting without validation, (5) Check for sign preservation in int/uint conversions.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No deposit cap (unlimited exposure risk) in 'deposit'",
+      "severity": "low",
+      "location": {
+        "line": 41,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cap: require(totalAssets() + amount <= depositCap, \"Cap exceeded\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No withdrawal fee accounting (fee bypass risk) in 'redeem'",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'redeem'",
+      "severity": "medium",
+      "location": {
+        "line": 67,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No deposit cap (unlimited exposure risk) in 'previewDeposit'",
+      "severity": "low",
+      "location": {
+        "line": 111,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cap: require(totalAssets() + amount <= depositCap, \"Cap exceeded\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "0.8.0",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "0.8.0"
+  },
+  "statistics": {
+    "total_findings": 39,
+    "severity_counts": {
+      "critical": 5,
+      "high": 5,
+      "info": 0,
+      "medium": 14,
+      "low": 15
+    },
+    "unique_detectors": 13
+  }
+}
+
+Analysis complete:
+  Files analyzed: 1
+  Successful: 1
+  Issues found: 39
+  Time taken: 0.01s
+
+Exiting with code 1 due to:
+  - Found high or critical severity issues
