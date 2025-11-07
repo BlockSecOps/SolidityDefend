@@ -7,9 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.3.1] - 2025-11-06
+
 ### Changed
 
-#### **Code Quality Improvements** - 2025-11-06
+#### **Code Quality Improvements**
 
 - Fixed 500+ clippy warnings across entire codebase
   - Replaced `.min().max()` with `.clamp()` for better readability
