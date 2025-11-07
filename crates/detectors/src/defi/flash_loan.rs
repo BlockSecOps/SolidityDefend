@@ -193,9 +193,10 @@ impl FlashLoanDetector {
 
         // Check if contract allows arbitrary external calls during flash loans
         for func in &ctx.contract.functions {
-            if self.is_flash_loan_callback(func.name.as_str()) {
-                if self.allows_arbitrary_calls(ctx, func) {
-                    let finding = Finding::new(
+            if self.is_flash_loan_callback(func.name.as_str())
+                && self.allows_arbitrary_calls(ctx, func)
+            {
+                let finding = Finding::new(
                         DetectorId::new(self.name()),
                         Severity::Medium,
                         Confidence::Medium,
@@ -212,18 +213,17 @@ impl FlashLoanDetector {
                         ),
                     ).with_cwe(470);
 
-                    results.push(
-                        DetectorResult::new(finding)
-                            .with_gas_impact(
-                                "Variable - Depends on external call complexity".to_string(),
-                            )
-                            .with_suggested_fix(
-                                "Restrict external calls to whitelisted contracts or implement \
+                results.push(
+                    DetectorResult::new(finding)
+                        .with_gas_impact(
+                            "Variable - Depends on external call complexity".to_string(),
+                        )
+                        .with_suggested_fix(
+                            "Restrict external calls to whitelisted contracts or implement \
                             strict validation of call targets and data"
-                                    .to_string(),
-                            ),
-                    );
-                }
+                                .to_string(),
+                        ),
+                );
             }
         }
 

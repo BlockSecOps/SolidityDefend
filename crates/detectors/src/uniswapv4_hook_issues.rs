@@ -15,6 +15,12 @@ pub struct UniswapV4HookIssuesDetector {
     base: BaseDetector,
 }
 
+impl Default for UniswapV4HookIssuesDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UniswapV4HookIssuesDetector {
     pub fn new() -> Self {
         Self {
@@ -44,7 +50,7 @@ impl UniswapV4HookIssuesDetector {
             "afterInitialize",
         ];
 
-        hook_functions.iter().any(|&hook| func_name == hook)
+        hook_functions.contains(&func_name)
             || func_source.contains("IHooks")
             || func_source.contains("BaseHook")
             || func_source.contains("PoolKey")
@@ -65,10 +71,10 @@ impl UniswapV4HookIssuesDetector {
             && !func_source.contains("ReentrancyGuard");
 
         // Check for state changes after external calls
-        let has_state_change_after_call = has_external_call &&
-            (func_source.contains("balance") ||
-             func_source.contains("=") ||
-             func_source.contains("storage"));
+        let has_state_change_after_call = has_external_call
+            && (func_source.contains("balance")
+                || func_source.contains("=")
+                || func_source.contains("storage"));
 
         if has_external_call && lacks_reentrancy_guard {
             return Some(
@@ -91,8 +97,8 @@ impl UniswapV4HookIssuesDetector {
 
     /// Check for missing return value validation
     fn check_return_value_validation(&self, func_source: &str) -> Option<String> {
-        let is_hook_function = func_source.contains("returns (bytes4)")
-            || func_source.contains("return");
+        let is_hook_function =
+            func_source.contains("returns (bytes4)") || func_source.contains("return");
 
         if !is_hook_function {
             return None;
@@ -135,8 +141,8 @@ impl UniswapV4HookIssuesDetector {
     /// Check for inadequate hook access control
     fn check_access_control(&self, func_source: &str, func_name: &str) -> Option<String> {
         // Hook functions should have proper access control
-        let is_public_or_external = func_source.contains("public")
-            || func_source.contains("external");
+        let is_public_or_external =
+            func_source.contains("public") || func_source.contains("external");
 
         if !is_public_or_external {
             return None;
@@ -150,8 +156,8 @@ impl UniswapV4HookIssuesDetector {
             || func_source.contains("modifier");
 
         // Hook callback functions should validate caller
-        let is_callback_function = func_name.starts_with("before")
-            || func_name.starts_with("after");
+        let is_callback_function =
+            func_name.starts_with("before") || func_name.starts_with("after");
 
         if is_callback_function && !has_access_control {
             return Some(
@@ -400,7 +406,11 @@ mod tests {
         let vulnerable_code = "function afterSwap() external returns (bytes4) {
             return bytes4(0);
         }";
-        assert!(detector.check_return_value_validation(vulnerable_code).is_some());
+        assert!(
+            detector
+                .check_return_value_validation(vulnerable_code)
+                .is_some()
+        );
 
         // Should not flag proper selector return
         let safe_code = "function afterSwap() external returns (bytes4) {
@@ -418,14 +428,22 @@ mod tests {
         let vulnerable_code = "function afterSwap() external {
             performAction();
         }";
-        assert!(detector.check_access_control(vulnerable_code, "afterSwap").is_some());
+        assert!(
+            detector
+                .check_access_control(vulnerable_code, "afterSwap")
+                .is_some()
+        );
 
         // Should not flag code with access control
         let safe_code = "function afterSwap() external {
             require(msg.sender == pool, \"Only pool\");
             performAction();
         }";
-        assert!(detector.check_access_control(safe_code, "afterSwap").is_none());
+        assert!(
+            detector
+                .check_access_control(safe_code, "afterSwap")
+                .is_none()
+        );
     }
 
     #[test]

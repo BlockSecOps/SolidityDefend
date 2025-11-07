@@ -9,6 +9,12 @@ pub struct UnsafeTypeCastingDetector {
     base: BaseDetector,
 }
 
+impl Default for UnsafeTypeCastingDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UnsafeTypeCastingDetector {
     pub fn new() -> Self {
         Self {
@@ -100,9 +106,7 @@ impl UnsafeTypeCastingDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<Vec<(usize, String)>> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let lines: Vec<&str> = func_source.lines().collect();
@@ -116,7 +120,7 @@ impl UnsafeTypeCastingDetector {
                 if !has_validation {
                     issues.push((
                         line_idx,
-                        format!("Unsafe downcast detected without range validation. Value may exceed target type capacity")
+                        "Unsafe downcast detected without range validation. Value may exceed target type capacity".to_string()
                     ));
                 }
             }
@@ -128,7 +132,7 @@ impl UnsafeTypeCastingDetector {
                 if !has_sign_check {
                     issues.push((
                         line_idx,
-                        format!("int to uint conversion without sign check. Negative values will wrap to large positive")
+                        "int to uint conversion without sign check. Negative values will wrap to large positive".to_string()
                     ));
                 }
             }
@@ -140,7 +144,7 @@ impl UnsafeTypeCastingDetector {
                 if !has_overflow_check {
                     issues.push((
                         line_idx,
-                        format!("uint to int conversion without overflow check. Large values may become negative")
+                        "uint to int conversion without overflow check. Large values may become negative".to_string()
                     ));
                 }
             }
@@ -154,9 +158,8 @@ impl UnsafeTypeCastingDetector {
                 if !has_validation {
                     issues.push((
                         line_idx,
-                        format!(
-                            "address type casting without validation. May result in zero address"
-                        ),
+                        "address type casting without validation. May result in zero address"
+                            .to_string(),
                     ));
                 }
             }
@@ -201,11 +204,7 @@ impl UnsafeTypeCastingDetector {
 
     fn has_range_check(&self, lines: &[&str], current_line: usize) -> bool {
         // Check few lines before for require() with range check
-        let start = if current_line >= 3 {
-            current_line - 3
-        } else {
-            0
-        };
+        let start = current_line.saturating_sub(3);
 
         for i in start..current_line {
             if lines[i].contains("require")
@@ -222,11 +221,7 @@ impl UnsafeTypeCastingDetector {
 
     fn has_sign_check(&self, lines: &[&str], current_line: usize) -> bool {
         // Check few lines before for require() with sign check
-        let start = if current_line >= 3 {
-            current_line - 3
-        } else {
-            0
-        };
+        let start = current_line.saturating_sub(3);
 
         for i in start..current_line {
             if lines[i].contains("require")
@@ -240,11 +235,7 @@ impl UnsafeTypeCastingDetector {
 
     fn has_address_validation(&self, lines: &[&str], current_line: usize) -> bool {
         // Check few lines before for address validation
-        let start = if current_line >= 3 {
-            current_line - 3
-        } else {
-            0
-        };
+        let start = current_line.saturating_sub(3);
 
         for i in start..current_line {
             if lines[i].contains("require")

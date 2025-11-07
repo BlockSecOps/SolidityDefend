@@ -140,7 +140,7 @@ mod tests {
                 println!("Analyzed {} functions", results.function_analyses.len());
 
                 // Should have analyzed multiple functions
-                assert!(results.function_analyses.len() >= 1);
+                assert!(!results.function_analyses.is_empty());
 
                 for func in &results.function_analyses {
                     println!("Function: {}", func.function_name);

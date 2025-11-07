@@ -93,8 +93,8 @@ impl Detector for AAUserOperationReplayDetector {
         // Pattern 1: Missing nonce validation
         let has_validate = lower.contains("validateuserop");
         if has_validate {
-            let has_nonce_check = lower.contains("nonce")
-                && (lower.contains("require(") || lower.contains("if ("));
+            let has_nonce_check =
+                lower.contains("nonce") && (lower.contains("require(") || lower.contains("if ("));
 
             if !has_nonce_check {
                 let finding = self.base.create_finding(
@@ -114,8 +114,7 @@ impl Detector for AAUserOperationReplayDetector {
 
         // Pattern 2: No chain ID validation for cross-chain deployment
         if is_aa_contract {
-            let has_chain_id = lower.contains("chainid")
-                || lower.contains("block.chainid");
+            let has_chain_id = lower.contains("chainid") || lower.contains("block.chainid");
 
             if !has_chain_id {
                 let finding = self.base.create_finding(
@@ -190,8 +189,7 @@ impl Detector for AAUserOperationReplayDetector {
                 || lower.contains("nonce += 1")
                 || lower.contains("_nonce++");
 
-            let checks_nonce_value = lower.contains("nonce ==")
-                || lower.contains("nonce >=");
+            let checks_nonce_value = lower.contains("nonce ==") || lower.contains("nonce >=");
 
             if checks_nonce_value && !has_nonce_increment {
                 let finding = self.base.create_finding(
@@ -211,8 +209,8 @@ impl Detector for AAUserOperationReplayDetector {
 
         // Pattern 6: EntryPoint address not validated
         if is_aa_contract {
-            let references_entrypoint = lower.contains("entrypoint")
-                || lower.contains("_entrypoint");
+            let references_entrypoint =
+                lower.contains("entrypoint") || lower.contains("_entrypoint");
 
             let validates_entrypoint = lower.contains("msg.sender == entrypoint")
                 || lower.contains("onlyentrypoint")

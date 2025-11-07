@@ -63,9 +63,8 @@ impl Detector for TimeLockedAdminBypassDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Check if contract mentions timelock
-        let mentions_timelock = lower.contains("timelock")
-            || lower.contains("timelocked")
-            || lower.contains("delay");
+        let mentions_timelock =
+            lower.contains("timelock") || lower.contains("timelocked") || lower.contains("delay");
 
         if !mentions_timelock {
             return Ok(findings);
@@ -107,16 +106,20 @@ impl Detector for TimeLockedAdminBypassDetector {
                 || lower.contains("timelockcontroller");
 
             if !has_delay {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Upgrade function lacks timelock delay - instant upgrades possible".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Add minimum delay period before upgrade execution (e.g., 2-7 days)".to_string()
-                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        "Upgrade function lacks timelock delay - instant upgrades possible"
+                            .to_string(),
+                        1,
+                        1,
+                        ctx.source_code.len() as u32,
+                    )
+                    .with_fix_suggestion(
+                        "Add minimum delay period before upgrade execution (e.g., 2-7 days)"
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -142,9 +145,8 @@ impl Detector for TimeLockedAdminBypassDetector {
         }
 
         // Pattern 4: Emergency functions bypassing timelock
-        let has_emergency = lower.contains("emergency")
-            || lower.contains("urgent")
-            || lower.contains("immediate");
+        let has_emergency =
+            lower.contains("emergency") || lower.contains("urgent") || lower.contains("immediate");
 
         if has_emergency && mentions_timelock {
             let has_multisig = lower.contains("multisig")
@@ -152,16 +154,20 @@ impl Detector for TimeLockedAdminBypassDetector {
                 || lower.contains("requiresignatures");
 
             if !has_multisig {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Emergency functions bypass timelock without multisig protection".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Require multisig approval for emergency functions that bypass timelock".to_string()
-                );
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        "Emergency functions bypass timelock without multisig protection"
+                            .to_string(),
+                        1,
+                        1,
+                        ctx.source_code.len() as u32,
+                    )
+                    .with_fix_suggestion(
+                        "Require multisig approval for emergency functions that bypass timelock"
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }

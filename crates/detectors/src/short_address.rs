@@ -13,21 +13,35 @@ pub struct ShortAddressDetector {
     base: BaseDetector,
 }
 
+impl Default for ShortAddressDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShortAddressDetector {
     pub fn new() -> Self {
         Self {
             base: BaseDetector::new(
                 DetectorId("short-address-attack".to_string()),
                 "Short Address Attack".to_string(),
-                "Detects missing msg.data.length validation that enables short address attacks".to_string(),
-                vec![DetectorCategory::Validation, DetectorCategory::BestPractices],
+                "Detects missing msg.data.length validation that enables short address attacks"
+                    .to_string(),
+                vec![
+                    DetectorCategory::Validation,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::Medium,
             ),
         }
     }
 
     /// Check if function is vulnerable to short address attack
-    fn check_short_address_vulnerability(&self, function_source: &str, function_name: &str) -> bool {
+    fn check_short_address_vulnerability(
+        &self,
+        function_source: &str,
+        function_name: &str,
+    ) -> bool {
         // Must accept address parameters
         let has_address_param = function_source.contains("address _")
             || function_source.contains("address to")

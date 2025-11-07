@@ -63,8 +63,7 @@ impl Detector for MEVPriorityGasAuctionDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Pattern 1: First-come-first-served minting
-        let has_mint = lower.contains("function mint")
-            || lower.contains("function claim");
+        let has_mint = lower.contains("function mint") || lower.contains("function claim");
 
         if has_mint {
             let is_fcfs = lower.contains("while (supply")
@@ -95,7 +94,9 @@ impl Detector for MEVPriorityGasAuctionDetector {
         let has_liquidation = lower.contains("liquidate");
         if has_liquidation {
             let rewards_caller = lower.contains("msg.sender")
-                && (lower.contains("reward") || lower.contains("bonus") || lower.contains("incentive"));
+                && (lower.contains("reward")
+                    || lower.contains("bonus")
+                    || lower.contains("incentive"));
 
             if rewards_caller {
                 let finding = self.base.create_finding(
@@ -119,8 +120,7 @@ impl Detector for MEVPriorityGasAuctionDetector {
             || (lower.contains("buy") && lower.contains("sell"));
 
         if has_arbitrage {
-            let is_public = lower.contains("external")
-                || lower.contains("public");
+            let is_public = lower.contains("external") || lower.contains("public");
 
             if is_public {
                 let finding = self.base.create_finding(
@@ -139,13 +139,12 @@ impl Detector for MEVPriorityGasAuctionDetector {
         }
 
         // Pattern 4: Time-sensitive operations
-        let has_time_sensitive = lower.contains("deadline")
-            || lower.contains("expires")
-            || lower.contains("validuntil");
+        let has_time_sensitive =
+            lower.contains("deadline") || lower.contains("expires") || lower.contains("validuntil");
 
         if has_time_sensitive {
-            let is_first_wins = lower.contains("require(!executed")
-                || lower.contains("require(!claimed");
+            let is_first_wins =
+                lower.contains("require(!executed") || lower.contains("require(!claimed");
 
             if is_first_wins {
                 let finding = self.base.create_finding(

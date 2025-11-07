@@ -11,6 +11,12 @@ pub struct FrontRunningDetector {
     base: BaseDetector,
 }
 
+impl Default for SandwichAttackDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SandwichAttackDetector {
     pub fn new() -> Self {
         Self {
@@ -22,6 +28,12 @@ impl SandwichAttackDetector {
                 Severity::Medium,
             ),
         }
+    }
+}
+
+impl Default for FrontRunningDetector {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -9,6 +9,12 @@ pub struct SelfdestructAbuseDetector {
     base: BaseDetector,
 }
 
+impl Default for SelfdestructAbuseDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SelfdestructAbuseDetector {
     pub fn new() -> Self {
         Self {
@@ -102,9 +108,7 @@ impl SelfdestructAbuseDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -126,18 +130,20 @@ impl SelfdestructAbuseDetector {
             || func_source.contains("if (msg.sender != owner)");
 
         if is_public && !has_access_control {
-            return Some(format!(
+            return Some(
                 "Selfdestruct is publicly accessible without access control, \
                 allowing anyone to destroy the contract"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Selfdestruct with user-controlled beneficiary
         if self.has_user_controlled_beneficiary(&func_source, function) {
-            return Some(format!(
+            return Some(
                 "Selfdestruct beneficiary is controlled by function parameters, \
                 allowing arbitrary ether destination"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Selfdestruct without time-lock or governance
@@ -150,16 +156,17 @@ impl SelfdestructAbuseDetector {
             || func_source.contains("vote");
 
         if !has_timelock && !has_governance && has_access_control {
-            return Some(format!(
+            return Some(
                 "Selfdestruct can be executed immediately without time-lock or governance delay"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Explicit vulnerability marker
         if func_source.contains("VULNERABILITY")
             && (func_source.contains("selfdestruct") || func_source.contains("destroy"))
         {
-            return Some(format!("Selfdestruct vulnerability marker detected"));
+            return Some("Selfdestruct vulnerability marker detected".to_string());
         }
 
         None
@@ -208,9 +215,7 @@ impl SelfdestructAbuseDetector {
             || contract_source.contains("assert(address(this).balance == ");
 
         if has_exact_balance_check {
-            return Some(format!(
-                "Uses exact ether balance checks which can be bypassed by force-sending ether via selfdestruct"
-            ));
+            return Some("Uses exact ether balance checks which can be bypassed by force-sending ether via selfdestruct".to_string());
         }
 
         // Pattern 2: Balance-dependent logic without internal accounting
@@ -224,10 +229,11 @@ impl SelfdestructAbuseDetector {
         let has_payable_function = contract_source.contains("payable");
 
         if has_balance_logic && has_payable_function {
-            return Some(format!(
+            return Some(
                 "Logic depends on ether balance but lacks internal accounting, \
                 vulnerable to forced ether via selfdestruct"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Explicit vulnerability marker
@@ -236,7 +242,7 @@ impl SelfdestructAbuseDetector {
                 || contract_source.contains("selfdestruct")
                 || contract_source.contains("force-send"))
         {
-            return Some(format!("Forced ether vulnerability marker detected"));
+            return Some("Forced ether vulnerability marker detected".to_string());
         }
 
         None

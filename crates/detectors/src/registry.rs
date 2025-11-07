@@ -332,7 +332,7 @@ impl DetectorRegistry {
 
         // Note: This implementation is incomplete due to trait object limitations
         // In practice, we'd need a different approach for accessing metrics
-        for (id, _detector) in &self.detectors {
+        for id in self.detectors.keys() {
             // Placeholder - would need to implement a different pattern
             metrics.insert(id.clone(), crate::detector::DetectorMetrics::new());
         }
@@ -390,9 +390,7 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::array_length_mismatch::ArrayLengthMismatchDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::short_address::ShortAddressDetector::new(),
-        ));
+        self.register(Arc::new(crate::short_address::ShortAddressDetector::new()));
 
         // Oracle Detectors
         self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
@@ -665,9 +663,7 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::restaking::RestakingSlashingConditionsDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::restaking::LRTShareInflationDetector::new(),
-        ));
+        self.register(Arc::new(crate::restaking::LRTShareInflationDetector::new()));
         self.register(Arc::new(
             crate::restaking::RestakingWithdrawalDelaysDetector::new(),
         ));
@@ -756,9 +752,7 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::mev_enhanced::MEVPriorityGasAuctionDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::mev_enhanced::MEVToxicFlowDetector::new(),
-        ));
+        self.register(Arc::new(crate::mev_enhanced::MEVToxicFlowDetector::new()));
 
         // Phase 37: Zero-Knowledge Proofs (v1.0.0 - 2025)
         self.register(Arc::new(
@@ -808,14 +802,26 @@ impl DetectorRegistry {
         // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
         self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
         self.register(Arc::new(crate::aa::AANonceManagementDetector::new()));
-        self.register(Arc::new(crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new())); // Phase 2+ enhanced
+        self.register(Arc::new(
+            crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new(),
+        )); // Phase 2+ enhanced
         self.register(Arc::new(crate::aa::AASignatureAggregationDetector::new()));
-        self.register(Arc::new(crate::aa_social_recovery::SocialRecoveryDetector::new())); // Phase 2+ enhanced
+        self.register(Arc::new(
+            crate::aa_social_recovery::SocialRecoveryDetector::new(),
+        )); // Phase 2+ enhanced
         self.register(Arc::new(crate::aa::ERC4337GasGriefingDetector::new()));
-        self.register(Arc::new(crate::flashloan::FlashloanPriceOracleManipulationDetector::new()));
-        self.register(Arc::new(crate::flashloan::FlashloanGovernanceAttackDetector::new()));
-        self.register(Arc::new(crate::flashloan::FlashmintTokenInflationDetector::new()));
-        self.register(Arc::new(crate::flashloan::FlashloanCallbackReentrancyDetector::new()));
+        self.register(Arc::new(
+            crate::flashloan::FlashloanPriceOracleManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan::FlashloanGovernanceAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan::FlashmintTokenInflationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flashloan::FlashloanCallbackReentrancyDetector::new(),
+        ));
 
         // DeFi Protocol Security (Phase 15 - 2025)
         self.register(Arc::new(
@@ -938,9 +944,7 @@ impl DetectorRegistry {
         ));
 
         // Phase 25: EIP-7702 Account Delegation Security (2025)
-        self.register(Arc::new(
-            crate::eip7702::EIP7702InitFrontrunDetector::new(),
-        ));
+        self.register(Arc::new(crate::eip7702::EIP7702InitFrontrunDetector::new()));
         self.register(Arc::new(
             crate::eip7702::EIP7702DelegateAccessControlDetector::new(),
         ));
@@ -953,17 +957,13 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::eip7702::EIP7702SweeperDetectionDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::eip7702::EIP7702BatchPhishingDetector::new(),
-        ));
+        self.register(Arc::new(crate::eip7702::EIP7702BatchPhishingDetector::new()));
 
         // Phase 26: ERC-7821 Batch Executor Security (2025)
         self.register(Arc::new(
             crate::erc7821::ERC7821BatchAuthorizationDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::erc7821::ERC7821TokenApprovalDetector::new(),
-        ));
+        self.register(Arc::new(crate::erc7821::ERC7821TokenApprovalDetector::new()));
         self.register(Arc::new(
             crate::erc7821::ERC7821ReplayProtectionDetector::new(),
         ));
@@ -995,29 +995,21 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::privacy::PlaintextSecretStorageDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::privacy::MissingCommitRevealDetector::new(),
-        ));
+        self.register(Arc::new(crate::privacy::MissingCommitRevealDetector::new()));
         self.register(Arc::new(
             crate::privacy::StorageSlotPredictabilityDetector::new(),
         ));
 
         // Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
-        self.register(Arc::new(
-            crate::owasp2025::LogicErrorPatternsDetector::new(),
-        ));
+        self.register(Arc::new(crate::owasp2025::LogicErrorPatternsDetector::new()));
         self.register(Arc::new(
             crate::owasp2025::OracleTimeWindowAttackDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::owasp2025::OracleStalenesDetector::new(),
-        ));
+        self.register(Arc::new(crate::owasp2025::OracleStalenesDetector::new()));
         self.register(Arc::new(
             crate::owasp2025::EnhancedInputValidationDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::owasp2025::Post080OverflowDetector::new(),
-        ));
+        self.register(Arc::new(crate::owasp2025::Post080OverflowDetector::new()));
         self.register(Arc::new(
             crate::owasp2025::EnhancedAccessControlDetector::new(),
         ));

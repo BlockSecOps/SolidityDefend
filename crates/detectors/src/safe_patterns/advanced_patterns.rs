@@ -53,10 +53,10 @@ pub fn has_safe_recursive_proof_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Recursion depth limit
-    if source.contains("recursionDepth") || source.contains("MAX_DEPTH") {
-        if source.contains("require(") || source.contains("if (") {
-            return true;
-        }
+    if (source.contains("recursionDepth") || source.contains("MAX_DEPTH"))
+        && (source.contains("require(") || source.contains("if ("))
+    {
+        return true;
     }
 
     // Pattern 2: Batch verification
@@ -130,10 +130,11 @@ pub fn has_safe_cross_rollup_pattern(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Two-phase commit
-    if source.contains("prepare") && source.contains("commit") {
-        if source.contains("rollback") || source.contains("abort") {
-            return true;
-        }
+    if source.contains("prepare")
+        && source.contains("commit")
+        && (source.contains("rollback") || source.contains("abort"))
+    {
+        return true;
     }
 
     // Pattern 2: Cross-rollup lock
@@ -217,10 +218,10 @@ pub fn has_safe_ai_oracle_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 3: Input validation for AI
-    if source.contains("validateInput") || source.contains("sanitize") {
-        if source.contains("oracle") || source.contains("ai") || source.contains("llm") {
-            return true;
-        }
+    if (source.contains("validateInput") || source.contains("sanitize"))
+        && (source.contains("oracle") || source.contains("ai") || source.contains("llm"))
+    {
+        return true;
     }
 
     // Pattern 4: Output bounds checking
@@ -289,10 +290,10 @@ pub fn has_prompt_injection_prevention(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Input sanitization
-    if source.contains("sanitize") || source.contains("escape") {
-        if source.contains("input") || source.contains("prompt") {
-            return true;
-        }
+    if (source.contains("sanitize") || source.contains("escape"))
+        && (source.contains("input") || source.contains("prompt"))
+    {
+        return true;
     }
 
     // Pattern 2: Template validation
@@ -301,10 +302,10 @@ pub fn has_prompt_injection_prevention(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 3: Input length limits
-    if source.contains("MAX_INPUT_LENGTH") || source.contains("inputLength") {
-        if source.contains("require(") || source.contains("if (") {
-            return true;
-        }
+    if (source.contains("MAX_INPUT_LENGTH") || source.contains("inputLength"))
+        && (source.contains("require(") || source.contains("if ("))
+    {
+        return true;
     }
 
     // Pattern 4: Delimiter checking

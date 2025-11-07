@@ -66,7 +66,7 @@ impl Detector for ZkProofBypassDetector {
             let func_source = self.get_function_source(function, ctx);
 
             // Check for batch submission functions
-            if self.is_batch_submission_function(&function.name.name, &func_source) {
+            if self.is_batch_submission_function(function.name.name, &func_source) {
                 let issues = self.check_proof_verification(&func_source);
 
                 for issue in issues {
@@ -103,7 +103,7 @@ impl Detector for ZkProofBypassDetector {
             }
 
             // Check for proof verification functions
-            if self.is_proof_verification_function(&function.name.name, &func_source) {
+            if self.is_proof_verification_function(function.name.name, &func_source) {
                 let issues = self.check_verification_implementation(&func_source);
 
                 for issue in issues {
@@ -139,7 +139,7 @@ impl Detector for ZkProofBypassDetector {
             }
 
             // Check for public input handling
-            if self.is_public_input_function(&function.name.name, &func_source) {
+            if self.is_public_input_function(function.name.name, &func_source) {
                 let issues = self.check_public_input_validation(&func_source);
 
                 for issue in issues {
@@ -202,7 +202,8 @@ impl ZkProofBypassDetector {
         patterns
             .iter()
             .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("batch") && (source.contains("commit") || source.contains("execute")))
+            || (source.contains("batch")
+                && (source.contains("commit") || source.contains("execute")))
     }
 
     fn is_proof_verification_function(&self, name: &str, source: &str) -> bool {
@@ -308,7 +309,10 @@ impl ZkProofBypassDetector {
         }
 
         // Pattern 4: No verifier address validation
-        if source.contains("verifier") && !source.contains("immutable") && !source.contains("constant") {
+        if source.contains("verifier")
+            && !source.contains("immutable")
+            && !source.contains("constant")
+        {
             issues.push(
                 "Verifier address not immutable. Should use immutable verifier address to prevent upgrades to malicious verifier"
                     .to_string(),
@@ -444,13 +448,14 @@ mod tests {
         let issues = detector.check_proof_verification(source);
 
         // Should have minimal issues with proper verification
-        assert!(issues.len() == 0);
+        assert!(issues.is_empty());
     }
 
     #[test]
     fn test_check_verification_implementation() {
         let detector = ZkProofBypassDetector::new();
-        let source = "function verifyProof(bytes calldata proof) public returns (bool) { return true; }";
+        let source =
+            "function verifyProof(bytes calldata proof) public returns (bool) { return true; }";
         let issues = detector.check_verification_implementation(source);
 
         assert!(!issues.is_empty());

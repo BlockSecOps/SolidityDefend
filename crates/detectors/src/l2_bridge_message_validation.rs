@@ -10,6 +10,12 @@ pub struct L2BridgeMessageValidationDetector {
     base: BaseDetector,
 }
 
+impl Default for L2BridgeMessageValidationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl L2BridgeMessageValidationDetector {
     pub fn new() -> Self {
         Self {
@@ -66,7 +72,7 @@ impl Detector for L2BridgeMessageValidationDetector {
             let func_source = self.get_function_source(function, ctx);
 
             // Check for L2→L1 message relay functions
-            if self.is_message_relay_function(&function.name.name, &func_source) {
+            if self.is_message_relay_function(function.name.name, &func_source) {
                 let issues = self.check_message_validation(&func_source);
 
                 for issue in issues {
@@ -103,7 +109,7 @@ impl Detector for L2BridgeMessageValidationDetector {
             }
 
             // Check for withdrawal finalization functions
-            if self.is_withdrawal_function(&function.name.name, &func_source) {
+            if self.is_withdrawal_function(function.name.name, &func_source) {
                 let issues = self.check_withdrawal_validation(&func_source);
 
                 for issue in issues {
@@ -191,10 +197,7 @@ impl L2BridgeMessageValidationDetector {
         let mut issues = Vec::new();
 
         // Pattern 1: Missing Merkle proof validation
-        if !source.contains("merkle")
-            && !source.contains("proof")
-            && !source.contains("verify")
-        {
+        if !source.contains("merkle") && !source.contains("proof") && !source.contains("verify") {
             issues.push(
                 "Missing Merkle proof validation. Messages should verify against L2 state root"
                     .to_string(),
@@ -213,15 +216,18 @@ impl L2BridgeMessageValidationDetector {
         }
 
         // Pattern 3: Missing nonce/sequence validation
-        if !source.contains("nonce") && !source.contains("sequence") && !source.contains("messageId") {
+        if !source.contains("nonce")
+            && !source.contains("sequence")
+            && !source.contains("messageId")
+        {
             issues.push(
-                "Missing nonce or sequence validation. Vulnerable to replay attacks"
-                    .to_string(),
+                "Missing nonce or sequence validation. Vulnerable to replay attacks".to_string(),
             );
         }
 
         // Pattern 4: No signature verification
-        if source.contains("signature") && !source.contains("recover") && !source.contains("verify") {
+        if source.contains("signature") && !source.contains("recover") && !source.contains("verify")
+        {
             issues.push(
                 "Signature present but no verification detected. Should validate message authenticity"
                     .to_string(),

@@ -217,7 +217,7 @@ impl DataFlowEngine {
                         .get(&block_id)
                         .cloned()
                         .unwrap_or_else(|| analysis.initial_state());
-                    let new_exit = analysis.transfer_block(&current_entry, block_id, &instructions);
+                    let new_exit = analysis.transfer_block(&current_entry, block_id, instructions);
 
                     // Check if exit state changed
                     if !analysis.states_equal(&old_exit, &new_exit) {
@@ -251,7 +251,7 @@ impl DataFlowEngine {
                         .get(&block_id)
                         .cloned()
                         .unwrap_or_else(|| analysis.initial_state());
-                    let new_entry = analysis.transfer_block(&current_exit, block_id, &instructions);
+                    let new_entry = analysis.transfer_block(&current_exit, block_id, instructions);
 
                     // Check if entry state changed
                     if !analysis.states_equal(&old_entry, &new_entry) {
@@ -312,6 +312,12 @@ pub struct CallGraph {
     pub calls: HashMap<String, HashSet<String>>,
     /// Map from function to the functions that call it
     pub callers: HashMap<String, HashSet<String>>,
+}
+
+impl Default for CallGraph {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CallGraph {

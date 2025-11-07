@@ -71,26 +71,34 @@ impl Detector for OracleTimeWindowAttackDetector {
         let source = &ctx.source_code;
 
         // Check for oracle usage
-        let has_oracle = source.contains("oracle") || source.contains("Oracle")
-            || source.contains("price") || source.contains("Price");
+        let has_oracle = source.contains("oracle")
+            || source.contains("Oracle")
+            || source.contains("price")
+            || source.contains("Price");
 
-        let has_uniswap = source.contains("uniswap") || source.contains("Uniswap")
-            || source.contains("IUniswap");
+        let has_uniswap =
+            source.contains("uniswap") || source.contains("Uniswap") || source.contains("IUniswap");
 
-        let has_twap = source.contains("twap") || source.contains("TWAP")
-            || source.contains("TimeWeighted") || source.contains("observe");
+        let has_twap = source.contains("twap")
+            || source.contains("TWAP")
+            || source.contains("TimeWeighted")
+            || source.contains("observe");
 
         // Uniswap without TWAP is dangerous
         if has_uniswap && !has_twap {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Uniswap price oracle without TWAP - vulnerable to time-window manipulation".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "❌ VULNERABLE - Spot price manipulation:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Uniswap price oracle without TWAP - vulnerable to time-window manipulation"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "❌ VULNERABLE - Spot price manipulation:\n\
                  IUniswapV2Pair pair = IUniswapV2Pair(pairAddress);\n\
                  (uint112 reserve0, uint112 reserve1,) = pair.getReserves();\n\
                  uint256 price = reserve1 / reserve0;  // Manipulable!\n\
@@ -113,22 +121,27 @@ impl Detector for OracleTimeWindowAttackDetector {
                  // Reject if deviation > threshold\n\
                  require(abs(twap10min - twap30min) < maxDeviation);\n\
                  \n\
-                 Attack vector: Flash loan → Manipulate spot price → Exploit → Repay".to_string()
-            );
+                 Attack vector: Flash loan → Manipulate spot price → Exploit → Repay"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // General oracle without time-averaging
-        if has_oracle && !has_twap && !source.contains("chainlink") && !source.contains("Chainlink") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Oracle price usage without time-weighted average - consider TWAP".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Single-block price oracles are manipulable:\n\
+        if has_oracle && !has_twap && !source.contains("chainlink") && !source.contains("Chainlink")
+        {
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Oracle price usage without time-weighted average - consider TWAP".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Single-block price oracles are manipulable:\n\
                  \n\
                  ❌ Vulnerable patterns:\n\
                  - Using spot price from DEX\n\
@@ -149,22 +162,27 @@ impl Detector for OracleTimeWindowAttackDetector {
                     avgPrice = priceSum / priceCount;\n\
                  \n\
                  Minimum TWAP window: 30 minutes (longer is better)\n\
-                 Maximum price deviation: 2-5% from last update".to_string()
-            );
+                 Maximum price deviation: 2-5% from last update"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for getReserves() which is spot price
         if source.contains("getReserves") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Using getReserves() for pricing - this is a spot price, not time-weighted".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "getReserves() returns SPOT price - manipulable in single block!\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Using getReserves() for pricing - this is a spot price, not time-weighted"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "getReserves() returns SPOT price - manipulable in single block!\n\
                  \n\
                  Attack: Flash loan → Swap large amount → getReserves() → Exploit → Unwind\n\
                  \n\
@@ -183,8 +201,9 @@ impl Detector for OracleTimeWindowAttackDetector {
                      uint224((price0Cumulative - price0CumulativeLast) / timeElapsed)\n\
                  );\n\
                  \n\
-                 // For Uniswap V3: Use observe() as shown above".to_string()
-            );
+                 // For Uniswap V3: Use observe() as shown above"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 

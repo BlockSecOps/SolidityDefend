@@ -9,6 +9,12 @@ pub struct AaBundlerDosDetector {
     base: BaseDetector,
 }
 
+impl Default for AaBundlerDosDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AaBundlerDosDetector {
     pub fn new() -> Self {
         Self {

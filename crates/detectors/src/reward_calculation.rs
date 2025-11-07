@@ -9,6 +9,12 @@ pub struct RewardCalculationDetector {
     base: BaseDetector,
 }
 
+impl Default for RewardCalculationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RewardCalculationDetector {
     pub fn new() -> Self {
         Self {

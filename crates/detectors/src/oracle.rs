@@ -14,6 +14,12 @@ pub struct PriceValidationDetector {
     base: BaseDetector,
 }
 
+impl Default for SingleSourceDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SingleSourceDetector {
     pub fn new() -> Self {
         Self {
@@ -77,15 +83,12 @@ impl SingleSourceDetector {
         expr: &ast::Expression<'_>,
         sources: &mut std::collections::HashSet<String>,
     ) {
-        match expr {
-            ast::Expression::FunctionCall { function, .. } => {
-                if let ast::Expression::MemberAccess { expression, .. } = function {
-                    if let ast::Expression::Identifier(id) = expression {
-                        sources.insert(id.name.to_string());
-                    }
+        if let ast::Expression::FunctionCall { function, .. } = expr {
+            if let ast::Expression::MemberAccess { expression, .. } = function {
+                if let ast::Expression::Identifier(id) = expression {
+                    sources.insert(id.name.to_string());
                 }
             }
-            _ => {}
         }
     }
 }
@@ -148,6 +151,12 @@ impl Detector for SingleSourceDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl Default for PriceValidationDetector {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

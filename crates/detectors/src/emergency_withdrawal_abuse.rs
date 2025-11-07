@@ -9,6 +9,12 @@ pub struct EmergencyWithdrawalAbuseDetector {
     base: BaseDetector,
 }
 
+impl Default for EmergencyWithdrawalAbuseDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmergencyWithdrawalAbuseDetector {
     pub fn new() -> Self {
         Self {

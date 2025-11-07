@@ -23,9 +23,9 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::restaking::classification::*;
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::restaking::classification::*;
 use ast;
 
 pub struct RestakingRewardsManipulationDetector {
@@ -56,15 +56,15 @@ impl RestakingRewardsManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check reward distribution functions
-        if !func_name_lower.contains("distribute") &&
-           !func_name_lower.contains("claim") &&
-           !func_name_lower.contains("reward") {
+        if !func_name_lower.contains("distribute")
+            && !func_name_lower.contains("claim")
+            && !func_name_lower.contains("reward")
+        {
             return findings;
         }
 
         // Skip if not reward-related
-        if !func_name_lower.contains("reward") &&
-           !func_name_lower.contains("distribute") {
+        if !func_name_lower.contains("reward") && !func_name_lower.contains("distribute") {
             return findings;
         }
 
@@ -130,27 +130,30 @@ impl RestakingRewardsManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check point accrual functions
-        if !func_name_lower.contains("point") &&
-           !func_name_lower.contains("accrue") &&
-           !func_name_lower.contains("calculatepoints") {
+        if !func_name_lower.contains("point")
+            && !func_name_lower.contains("accrue")
+            && !func_name_lower.contains("calculatepoints")
+        {
             return findings;
         }
 
         // Check for time-weighting
         if !has_time_weighting(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No time-weighted points in '{}' - vulnerable to farming (Renzo-style)",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Implement time-weighted points to prevent farming:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No time-weighted points in '{}' - vulnerable to farming (Renzo-style)",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Implement time-weighted points to prevent farming:\n\
                  \n\
                  struct StakeInfo {\n\
                      uint256 amount;\n\
@@ -177,8 +180,9 @@ impl RestakingRewardsManipulationDetector {
                      stakes[msg.sender].depositTime = block.timestamp;\n\
                  }\n\
                  \n\
-                 This prevents quick deposit/withdrawal farming.".to_string()
-            );
+                 This prevents quick deposit/withdrawal farming."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -197,9 +201,10 @@ impl RestakingRewardsManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check reward calculation functions
-        if !func_name_lower.contains("reward") &&
-           !func_name_lower.contains("earned") &&
-           !func_name_lower.contains("calculatereward") {
+        if !func_name_lower.contains("reward")
+            && !func_name_lower.contains("earned")
+            && !func_name_lower.contains("calculatereward")
+        {
             return findings;
         }
 
@@ -258,9 +263,10 @@ impl RestakingRewardsManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check reward rate setting functions
-        if !func_name_lower.contains("setrewardrate") &&
-           !func_name_lower.contains("setrate") &&
-           !func_name_lower.contains("updaterate") {
+        if !func_name_lower.contains("setrewardrate")
+            && !func_name_lower.contains("setrate")
+            && !func_name_lower.contains("updaterate")
+        {
             return findings;
         }
 
@@ -270,19 +276,21 @@ impl RestakingRewardsManipulationDetector {
 
         // Check for max rate cap
         if !has_max_rate_cap(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No maximum reward rate cap in '{}' - operator can set unsustainable rates",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Low,
-            )
-            .with_fix_suggestion(
-                "Enforce maximum reward rate:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No maximum reward rate cap in '{}' - operator can set unsustainable rates",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Low,
+                )
+                .with_fix_suggestion(
+                    "Enforce maximum reward rate:\n\
                  \n\
                  uint256 public constant MAX_REWARD_RATE = 1e18;  // 100% APR maximum\n\
                  \n\
@@ -300,8 +308,9 @@ impl RestakingRewardsManipulationDetector {
                      );\n\
                      \n\
                      rewardRate = newRate;\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -320,8 +329,7 @@ impl RestakingRewardsManipulationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check withdrawal functions
-        if !func_name_lower.contains("withdraw") &&
-           !func_name_lower.contains("unstake") {
+        if !func_name_lower.contains("withdraw") && !func_name_lower.contains("unstake") {
             return findings;
         }
 
@@ -454,7 +462,6 @@ impl Detector for RestakingRewardsManipulationDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

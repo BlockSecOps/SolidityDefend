@@ -9,6 +9,12 @@ pub struct AuctionTimingDetector {
     base: BaseDetector,
 }
 
+impl Default for AuctionTimingDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AuctionTimingDetector {
     pub fn new() -> Self {
         Self {

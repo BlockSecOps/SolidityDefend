@@ -5,9 +5,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::classification::is_intent_contract;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::classification::is_intent_contract;
 
 pub struct IntentCrossChainValidationDetector {
     base: BaseDetector,
@@ -19,7 +19,8 @@ impl IntentCrossChainValidationDetector {
             base: BaseDetector::new(
                 DetectorId("erc7683-crosschain-validation".to_string()),
                 "ERC-7683 Cross-Chain Validation".to_string(),
-                "Detects missing cross-chain message validation in intent settlement contracts".to_string(),
+                "Detects missing cross-chain message validation in intent settlement contracts"
+                    .to_string(),
                 vec![DetectorCategory::CrossChain],
                 Severity::Critical,
             ),
@@ -69,29 +70,33 @@ impl Detector for IntentCrossChainValidationDetector {
         let source_lower = source.to_lowercase();
 
         // Check for cross-chain indicators
-        let is_crosschain = source_lower.contains("originchainid") ||
-            source_lower.contains("destinationchainid") ||
-            source_lower.contains("crosschain");
+        let is_crosschain = source_lower.contains("originchainid")
+            || source_lower.contains("destinationchainid")
+            || source_lower.contains("crosschain");
 
         if !is_crosschain {
             return Ok(findings);
         }
 
         // Check for proper chain ID validation
-        let has_chain_validation = source_lower.contains("require") &&
-            source_lower.contains("chainid") &&
-            (source_lower.contains("==") || source_lower.contains("!="));
+        let has_chain_validation = source_lower.contains("require")
+            && source_lower.contains("chainid")
+            && (source_lower.contains("==") || source_lower.contains("!="));
 
         if !has_chain_validation {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Missing cross-chain ID validation - intents can be replayed on wrong chains".to_string(),
-                1,
-                0,
-                20,
-                Severity::Critical,
-            ).with_fix_suggestion(
-                "Add chain ID validation:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Missing cross-chain ID validation - intents can be replayed on wrong chains"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Critical,
+                )
+                .with_fix_suggestion(
+                    "Add chain ID validation:\n\
                  \n\
                  function settle(\n\
                      CrossChainOrder calldata order,\n\
@@ -116,25 +121,30 @@ impl Detector for IntentCrossChainValidationDetector {
                      );\n\
                      \n\
                      // Process settlement...\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for message proof verification
-        let has_proof_verification = source_lower.contains("proof") &&
-            (source_lower.contains("verify") || source_lower.contains("merkle"));
+        let has_proof_verification = source_lower.contains("proof")
+            && (source_lower.contains("verify") || source_lower.contains("merkle"));
 
         if is_crosschain && !has_proof_verification {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Missing cross-chain message proof verification - untrusted origin data".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "Add Merkle proof verification:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Missing cross-chain message proof verification - untrusted origin data"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Add Merkle proof verification:\n\
                  \n\
                  function _verifyMerkleProof(\n\
                      bytes32[] calldata proof,\n\
@@ -147,8 +157,9 @@ impl Detector for IntentCrossChainValidationDetector {
                      }\n\
                      \n\
                      return computedHash == merkleRoot;\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 

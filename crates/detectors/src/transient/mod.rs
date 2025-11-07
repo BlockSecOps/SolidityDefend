@@ -56,18 +56,18 @@
 //! - **EIP-1153**: https://eips.ethereum.org/EIPS/eip-1153
 //! - **Solidity 0.8.24+**: Native transient storage support
 
-pub mod reentrancy;
 pub mod composability;
-pub mod state_leak;
-pub mod misuse;
 pub mod guard;
+pub mod misuse;
+pub mod reentrancy;
+pub mod state_leak;
 
 // Re-export detectors
-pub use reentrancy::TransientStorageReentrancyDetector;
 pub use composability::TransientStorageComposabilityDetector;
-pub use state_leak::TransientStorageStateLeakDetector;
-pub use misuse::TransientStorageMisuseDetector;
 pub use guard::TransientReentrancyGuardDetector;
+pub use misuse::TransientStorageMisuseDetector;
+pub use reentrancy::TransientStorageReentrancyDetector;
+pub use state_leak::TransientStorageStateLeakDetector;
 
 /// Helper function to detect if contract uses transient storage
 pub fn uses_transient_storage(ctx: &crate::types::AnalysisContext) -> bool {
@@ -93,6 +93,6 @@ pub fn has_transient_storage_declarations(ctx: &crate::types::AnalysisContext) -
     // Match patterns like:
     // - uint256 transient counter;
     // - mapping(address => uint256) transient balances;
-    source.contains("transient") &&
-    (source.contains("uint") || source.contains("mapping") || source.contains("struct"))
+    source.contains("transient")
+        && (source.contains("uint") || source.contains("mapping") || source.contains("struct"))
 }

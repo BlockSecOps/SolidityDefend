@@ -301,7 +301,7 @@ impl<'a> LiveVariables<'a> {
             .sum::<usize>() as f64
             / result.exit_states.len() as f64;
 
-        report.push_str(&format!("\nLiveness Statistics:\n"));
+        report.push_str("\nLiveness Statistics:\n");
         report.push_str(&format!(
             "  Maximum simultaneously live variables: {}\n",
             max_live
@@ -631,7 +631,7 @@ mod tests {
         let pressure = analysis.compute_register_pressure(&result);
 
         // Each block should have some register pressure
-        assert!(pressure.len() > 0);
+        assert!(!pressure.is_empty());
         for (_, _count) in pressure {
             // Count values are inherently non-negative due to type constraints
         }

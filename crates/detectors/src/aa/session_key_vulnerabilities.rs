@@ -10,9 +10,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct AASessionKeyVulnerabilitiesDetector {
     base: BaseDetector,
@@ -82,52 +82,92 @@ impl Detector for AASessionKeyVulnerabilitiesDetector {
 
         // Check 2: No expiration
         if !has_session_expiration(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "Session keys never expire - indefinite access".to_string(),
-                1, 0, 20,
-                Severity::High,
-            ).with_fix_suggestion("Add validUntil field and time validation in validateUserOp".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Session keys never expire - indefinite access".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::High,
+                    )
+                    .with_fix_suggestion(
+                        "Add validUntil field and time validation in validateUserOp".to_string(),
+                    ),
+            );
         }
 
         // Check 3: No target restrictions
         if !has_target_restrictions(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "Session keys can call any contract - should restrict targets".to_string(),
-                1, 0, 20,
-                Severity::High,
-            ).with_fix_suggestion("Add allowedTargets array and validation".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Session keys can call any contract - should restrict targets".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::High,
+                    )
+                    .with_fix_suggestion("Add allowedTargets array and validation".to_string()),
+            );
         }
 
         // Check 4: No function selector restrictions
         if !has_selector_restrictions(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "Session keys can call any function - should restrict selectors".to_string(),
-                1, 0, 20,
-                Severity::Medium,
-            ).with_fix_suggestion("Add allowedSelectors array (bytes4[]) and validation".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Session keys can call any function - should restrict selectors"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "Add allowedSelectors array (bytes4[]) and validation".to_string(),
+                    ),
+            );
         }
 
         // Check 5: No period-based spending limits
         if !has_period_based_limits(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "Spending limit doesn't reset - should be per-period (daily/weekly)".to_string(),
-                1, 0, 20,
-                Severity::Low,
-            ).with_fix_suggestion("Add periodDuration and periodStart for resetting limits".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Spending limit doesn't reset - should be per-period (daily/weekly)"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Low,
+                    )
+                    .with_fix_suggestion(
+                        "Add periodDuration and periodStart for resetting limits".to_string(),
+                    ),
+            );
         }
 
         // Check 6: No emergency pause
         if !has_emergency_pause(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "No emergency pause for compromised session keys".to_string(),
-                1, 0, 20,
-                Severity::Medium,
-            ).with_fix_suggestion("Add paused field and pauseSessionKey function".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "No emergency pause for compromised session keys".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "Add paused field and pauseSessionKey function".to_string(),
+                    ),
+            );
         }
 
         Ok(findings)

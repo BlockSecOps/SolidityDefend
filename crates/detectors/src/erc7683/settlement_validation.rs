@@ -20,8 +20,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::erc7683::classification::*;
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use ast;
 
 pub struct IntentSettlementValidationDetector {
@@ -52,9 +52,10 @@ impl IntentSettlementValidationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Check fill functions for fillDeadline
-        if is_fill_function(function) {
-            if !has_deadline_validation(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
+        if is_fill_function(function) && !has_deadline_validation(function, ctx) {
+            let finding = self
+                .base
+                .create_finding_with_severity(
                     ctx,
                     format!(
                         "Missing fillDeadline validation in '{}' - expired orders can be filled",
@@ -87,17 +88,21 @@ impl IntentSettlementValidationDetector {
                          // ... rest of fill logic\n\
                      }\n\
                      \n\
-                     This prevents solvers from filling orders after they've expired.".to_string()
+                     This prevents solvers from filling orders after they've expired."
+                        .to_string(),
                 );
 
-                findings.push(finding);
-            }
+            findings.push(finding);
         }
 
         // Check open/openFor functions for openDeadline
-        if func_name_lower.contains("open") && !func_name_lower.contains("opened") {
-            if !has_deadline_validation(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
+        if func_name_lower.contains("open")
+            && !func_name_lower.contains("opened")
+            && !has_deadline_validation(function, ctx)
+        {
+            let finding = self
+                .base
+                .create_finding_with_severity(
                     ctx,
                     format!(
                         "Missing openDeadline validation in '{}' - stale orders can be opened",
@@ -125,11 +130,11 @@ impl IntentSettlementValidationDetector {
                          // ... rest of open logic\n\
                      }\n\
                      \n\
-                     This prevents opening orders after the user's intended deadline.".to_string()
+                     This prevents opening orders after the user's intended deadline."
+                        .to_string(),
                 );
 
-                findings.push(finding);
-            }
+            findings.push(finding);
         }
 
         findings
@@ -329,8 +334,8 @@ impl IntentSettlementValidationDetector {
         let func_lower = func_source.to_lowercase();
 
         // Check if fill instructions are processed
-        let processes_instructions = func_lower.contains("fillinstruction")
-            || func_lower.contains("fill_instruction");
+        let processes_instructions =
+            func_lower.contains("fillinstruction") || func_lower.contains("fill_instruction");
 
         // Check if destination chain is validated
         let validates_chain = func_lower.contains("destinationchainid")
@@ -338,19 +343,21 @@ impl IntentSettlementValidationDetector {
             || func_lower.contains("chainid") && func_lower.contains("block.chainid");
 
         if !processes_instructions {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Fill instructions not processed in '{}' - may execute on wrong chain",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Process fill instructions and validate destination chain:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Fill instructions not processed in '{}' - may execute on wrong chain",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Process fill instructions and validate destination chain:\n\
                  \n\
                  function fill(...) external {\n\
                      ResolvedCrossChainOrder memory order = abi.decode(...);\n\
@@ -373,29 +380,34 @@ impl IntentSettlementValidationDetector {
                      }\n\
                      \n\
                      require(foundInstruction, \"No instruction for this chain\");\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         } else if !validates_chain {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Fill instruction destination chain not validated in '{}'",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Validate fill instruction is for current chain:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Fill instruction destination chain not validated in '{}'",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Validate fill instruction is for current chain:\n\
                  \n\
                  if (instruction.destinationChainId == uint64(block.chainid)) {\n\
                      // Only process instructions for this chain\n\
                      _processFill(instruction);\n\
-                 }".to_string());
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -410,20 +422,22 @@ impl IntentSettlementValidationDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check if contract uses order IDs
-        let uses_order_ids = source_lower.contains("orderid")
-            || source_lower.contains("order_id");
+        let uses_order_ids = source_lower.contains("orderid") || source_lower.contains("order_id");
 
         if !uses_order_ids && is_destination_settler(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "No order ID tracking - cannot prevent double-fills or track order status".to_string(),
-                1,
-                0,
-                20,
-                Severity::Low,
-            )
-            .with_fix_suggestion(
-                "Use order IDs for tracking:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "No order ID tracking - cannot prevent double-fills or track order status"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Low,
+                )
+                .with_fix_suggestion(
+                    "Use order IDs for tracking:\n\
                  \n\
                  // Generate consistent order ID\n\
                  bytes32 orderId = keccak256(abi.encode(\n\
@@ -441,8 +455,9 @@ impl IntentSettlementValidationDetector {
                      require(!filledOrders[orderId], \"Already filled\");\n\
                      filledOrders[orderId] = true;\n\
                      // ...\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -512,7 +527,6 @@ impl Detector for IntentSettlementValidationDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

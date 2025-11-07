@@ -93,8 +93,8 @@ impl Detector for AAEntryPointReentrancyDetector {
         }
 
         // Pattern 1: External call in validateUserOp without reentrancy guard
-        let has_validate = lower.contains("function validateuserop")
-            || lower.contains("function _validateuserop");
+        let has_validate =
+            lower.contains("function validateuserop") || lower.contains("function _validateuserop");
 
         if has_validate {
             let has_external_call = lower.contains(".call{")
@@ -173,7 +173,9 @@ impl Detector for AAEntryPointReentrancyDetector {
                 if let Some(call_line) = found_external_call_line {
                     if i > call_line
                         && i < call_line + 10
-                        && (line_lower.contains(" = ") || line_lower.contains("++") || line_lower.contains("--"))
+                        && (line_lower.contains(" = ")
+                            || line_lower.contains("++")
+                            || line_lower.contains("--"))
                         && !line_lower.contains("//")
                     {
                         let finding = self.base.create_finding(
@@ -196,9 +198,8 @@ impl Detector for AAEntryPointReentrancyDetector {
 
         // Pattern 4: Callback to untrusted contract during validation
         if has_validate {
-            let has_callback = lower.contains("callback")
-                || lower.contains("hook")
-                || lower.contains("notify");
+            let has_callback =
+                lower.contains("callback") || lower.contains("hook") || lower.contains("notify");
 
             let validates_callback_target = lower.contains("trusted")
                 || lower.contains("whitelist")
@@ -223,8 +224,8 @@ impl Detector for AAEntryPointReentrancyDetector {
         // Pattern 5: postOp function lacks reentrancy protection
         let has_post_op = lower.contains("function postop") || lower.contains("function _postop");
         if has_post_op {
-            let has_reentrancy_guard = lower.contains("nonreentrant")
-                || lower.contains("_reentrancyguard");
+            let has_reentrancy_guard =
+                lower.contains("nonreentrant") || lower.contains("_reentrancyguard");
 
             if !has_reentrancy_guard {
                 let finding = self.base.create_finding(

@@ -13,6 +13,12 @@ pub struct TxOriginDetector {
     base: BaseDetector,
 }
 
+impl Default for TxOriginDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TxOriginDetector {
     pub fn new() -> Self {
         Self {
@@ -120,21 +126,23 @@ impl Detector for TxOriginDetector {
                     function.name.name
                 );
 
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
-                    function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(477) // CWE-477: Use of Obsolete Function
-                .with_cwe(284) // CWE-284: Improper Access Control
-                .with_fix_suggestion(format!(
-                    "Replace 'tx.origin' with 'msg.sender' in function '{}'. \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(477) // CWE-477: Use of Obsolete Function
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_fix_suggestion(format!(
+                        "Replace 'tx.origin' with 'msg.sender' in function '{}'. \
                     If you need to track the original sender across multiple calls, \
                     pass the address as a function parameter or use a trusted registry.",
-                    function.name.name
-                ));
+                        function.name.name
+                    ));
 
                 findings.push(finding);
             }

@@ -293,9 +293,7 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("msg.sender only")));
+        assert!(result.iter().any(|f| f.message.contains("msg.sender only")));
     }
 
     #[test]
@@ -339,9 +337,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("without access control")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("without access control"))
+        );
     }
 
     #[test]
@@ -361,9 +361,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("salt not validated")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("salt not validated"))
+        );
     }
 
     #[test]
@@ -384,9 +386,10 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("initialization without frontrunning protection")));
+        assert!(result.iter().any(|f| {
+            f.message
+                .contains("initialization without frontrunning protection")
+        }));
     }
 
     #[test]
@@ -409,9 +412,11 @@ mod tests {
         let result = detector.detect(&ctx).unwrap();
         // Should detect CREATE2 without deployment success check
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("CREATE2") && f.message.contains("success")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("CREATE2") && f.message.contains("success"))
+        );
     }
 
     #[test]
@@ -447,7 +452,10 @@ mod tests {
         let has_address_calc_finding = result
             .iter()
             .any(|f| f.message.contains("exposes CREATE2 address calculation"));
-        assert!(!has_address_calc_finding, "computeAddress is a standard feature, not a vulnerability");
+        assert!(
+            !has_address_calc_finding,
+            "computeAddress is a standard feature, not a vulnerability"
+        );
     }
 
     #[test]

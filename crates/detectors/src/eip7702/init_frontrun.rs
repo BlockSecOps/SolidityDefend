@@ -36,9 +36,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_eip7702_delegate;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_eip7702_delegate;
 
 pub struct EIP7702InitFrontrunDetector {
     base: BaseDetector,
@@ -67,12 +67,16 @@ impl EIP7702InitFrontrunDetector {
         let func_name = &function.name.name.to_lowercase();
 
         // Check for initialization functions
-        if !func_name.contains("init") && !func_name.contains("setup") && !func_name.contains("configure") {
+        if !func_name.contains("init")
+            && !func_name.contains("setup")
+            && !func_name.contains("configure")
+        {
             return issues;
         }
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
@@ -80,19 +84,20 @@ impl EIP7702InitFrontrunDetector {
         let func_lower = func_text.to_lowercase();
 
         // Check if function is protected
-        let has_owner_check = func_lower.contains("msg.sender") &&
-            (func_lower.contains("owner") || func_lower.contains("admin"));
+        let has_owner_check = func_lower.contains("msg.sender")
+            && (func_lower.contains("owner") || func_lower.contains("admin"));
 
         let has_modifier = !function.modifiers.is_empty();
 
-        let is_external_or_public = matches!(function.visibility,
-            ast::Visibility::Public | ast::Visibility::External);
+        let is_external_or_public = matches!(
+            function.visibility,
+            ast::Visibility::Public | ast::Visibility::External
+        );
 
         // Vulnerable if: external/public + no protection + sets important state
         let sets_owner = func_lower.contains("owner") && func_lower.contains("=");
-        let sets_important_state = sets_owner ||
-            func_lower.contains("initialized") ||
-            func_lower.contains("admin");
+        let sets_important_state =
+            sets_owner || func_lower.contains("initialized") || func_lower.contains("admin");
 
         if is_external_or_public && !has_owner_check && !has_modifier && sets_important_state {
             issues.push((

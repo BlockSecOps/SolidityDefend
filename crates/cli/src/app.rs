@@ -132,8 +132,14 @@ impl CliApp {
         println!("╔═══════════════════════════════════════╗");
         println!("║       🧙  SOLIDITY DEFEND 🧙          ║");
         println!("║    Smart Contract Security Analyzer   ║");
-        println!("║{:left_pad$}{}{:right_pad$}║", "", version_line, "",
-                 left_pad = left_padding, right_pad = right_padding);
+        println!(
+            "║{:left_pad$}{}{:right_pad$}║",
+            "",
+            version_line,
+            "",
+            left_pad = left_padding,
+            right_pad = right_padding
+        );
         println!("╚═══════════════════════════════════════╝");
         println!();
     }
@@ -359,7 +365,14 @@ impl CliApp {
             let output_file = matches.get_one::<String>("output").map(PathBuf::from);
             let use_cache = !matches.get_flag("no-cache");
 
-            return app.analyze_from_url(url, format, output_file, min_severity, min_confidence, use_cache);
+            return app.analyze_from_url(
+                url,
+                format,
+                output_file,
+                min_severity,
+                min_confidence,
+                use_cache,
+            );
         }
 
         let files: Vec<&str> = matches
@@ -819,7 +832,11 @@ impl CliApp {
     }
 
     /// Generate a configuration hash for cache invalidation
-    fn generate_config_hash(&self, min_severity: &Severity, min_confidence: &detectors::types::Confidence) -> String {
+    fn generate_config_hash(
+        &self,
+        min_severity: &Severity,
+        min_confidence: &detectors::types::Confidence,
+    ) -> String {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
 
@@ -876,7 +893,8 @@ impl CliApp {
             findings: cached_findings,
             metadata,
             file_path: file_path.to_string(),
-            config_hash: self.generate_config_hash(&Severity::Info, &detectors::types::Confidence::Low), // TODO: Pass actual severity/confidence
+            config_hash: self
+                .generate_config_hash(&Severity::Info, &detectors::types::Confidence::Low), // TODO: Pass actual severity/confidence
         })
     }
 

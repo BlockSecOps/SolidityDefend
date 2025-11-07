@@ -64,9 +64,8 @@ impl Detector for GuardianRoleCentralizationDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Check for guardian/emergency role definitions
-        let has_guardian_role = lower.contains("guardian")
-            || lower.contains("emergency")
-            || lower.contains("keeper");
+        let has_guardian_role =
+            lower.contains("guardian") || lower.contains("emergency") || lower.contains("keeper");
 
         if !has_guardian_role {
             return Ok(findings);
@@ -83,9 +82,8 @@ impl Detector for GuardianRoleCentralizationDetector {
                 || lower.contains("requiresignatures")
                 || lower.contains("gnosis");
 
-            let has_timelock = lower.contains("timelock")
-                || lower.contains("delay")
-                || lower.contains("schedule");
+            let has_timelock =
+                lower.contains("timelock") || lower.contains("delay") || lower.contains("schedule");
 
             if !has_multisig_protection && !has_timelock {
                 let finding = self.base.create_finding(
@@ -110,13 +108,10 @@ impl Detector for GuardianRoleCentralizationDetector {
 
         if has_withdrawal && has_guardian_role {
             // Check if guardian modifier is used with withdrawal
-            let guardian_withdraw_patterns = [
-                "onlyguardian",
-                "onlyemergency",
-                "onlykeeper",
-            ];
+            let guardian_withdraw_patterns = ["onlyguardian", "onlyemergency", "onlykeeper"];
 
-            let guardian_can_withdraw = guardian_withdraw_patterns.iter()
+            let guardian_can_withdraw = guardian_withdraw_patterns
+                .iter()
                 .any(|pattern| lower.contains(pattern));
 
             if guardian_can_withdraw {

@@ -9,9 +9,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct AASignatureAggregationDetector {
     base: BaseDetector,
@@ -23,7 +23,8 @@ impl AASignatureAggregationDetector {
             base: BaseDetector::new(
                 DetectorId("aa-signature-aggregation".to_string()),
                 "AA Signature Aggregation Bypass".to_string(),
-                "Detects vulnerabilities in signature aggregation allowing threshold bypass".to_string(),
+                "Detects vulnerabilities in signature aggregation allowing threshold bypass"
+                    .to_string(),
                 vec![DetectorCategory::DeFi],
                 Severity::Medium,
             ),

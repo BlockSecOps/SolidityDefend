@@ -5,9 +5,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_eip7702_delegate;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_eip7702_delegate;
 
 pub struct EIP7702StorageCollisionDetector {
     base: BaseDetector,
@@ -66,19 +66,23 @@ impl Detector for EIP7702StorageCollisionDetector {
         }
 
         // Check for storage variables
-        let has_storage = ctx.source_code.contains("mapping(") ||
-            (ctx.source_code.contains("uint") && ctx.source_code.contains("public"));
+        let has_storage = ctx.source_code.contains("mapping(")
+            || (ctx.source_code.contains("uint") && ctx.source_code.contains("public"));
 
         if has_storage {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "EIP-7702 delegate uses storage - verify no collision with EOA state".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "Use EIP-7201 namespaced storage to avoid collisions:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "EIP-7702 delegate uses storage - verify no collision with EOA state"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Use EIP-7201 namespaced storage to avoid collisions:\n\
                  \n\
                  bytes32 private constant STORAGE_LOCATION = \n\
                      keccak256(\"myprotocol.delegate.storage\");\n\
@@ -90,8 +94,9 @@ impl Detector for EIP7702StorageCollisionDetector {
                  \n\
                  function _getStorage() private pure returns (DelegateStorage storage $) {\n\
                      assembly { $.slot := STORAGE_LOCATION }\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
             findings.push(finding);
         }
 

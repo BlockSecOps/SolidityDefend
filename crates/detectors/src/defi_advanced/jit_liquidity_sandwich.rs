@@ -143,9 +143,8 @@ impl Detector for JitLiquiditySandwichDetector {
         }
 
         // Check for instant liquidity activation
-        let has_add_liquidity = lower.contains("addliquidity")
-            || lower.contains("deposit")
-            || lower.contains("mint");
+        let has_add_liquidity =
+            lower.contains("addliquidity") || lower.contains("deposit") || lower.contains("mint");
 
         if has_add_liquidity {
             let has_activation_delay = lower.contains("activationdelay")

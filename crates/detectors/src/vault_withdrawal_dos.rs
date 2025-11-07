@@ -11,6 +11,12 @@ pub struct VaultWithdrawalDosDetector {
     base: BaseDetector,
 }
 
+impl Default for VaultWithdrawalDosDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VaultWithdrawalDosDetector {
     pub fn new() -> Self {
         Self {
@@ -80,11 +86,21 @@ impl Detector for VaultWithdrawalDosDetector {
 
         // Calculate protection score for confidence calibration
         let mut protection_score = 0;
-        if has_pause { protection_score += 2; } // Critical for DOS prevention
-        if has_timelock { protection_score += 1; }
-        if has_pull_pattern { protection_score += 2; } // Strong protection
-        if has_emergency_mechanism { protection_score += 2; } // Critical
-        if has_withdrawal_limits { protection_score += 1; }
+        if has_pause {
+            protection_score += 2;
+        } // Critical for DOS prevention
+        if has_timelock {
+            protection_score += 1;
+        }
+        if has_pull_pattern {
+            protection_score += 2;
+        } // Strong protection
+        if has_emergency_mechanism {
+            protection_score += 2;
+        } // Critical
+        if has_withdrawal_limits {
+            protection_score += 1;
+        }
 
         for function in ctx.get_functions() {
             if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx, is_vault) {
@@ -154,9 +170,7 @@ impl VaultWithdrawalDosDetector {
         ctx: &AnalysisContext,
         is_vault: bool,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -180,10 +194,11 @@ impl VaultWithdrawalDosDetector {
             || func_source.contains("MAX_");
 
         if has_unbounded_loop && !has_loop_limit {
-            return Some(format!(
+            return Some(
                 "Unbounded withdrawal queue processing. Loop over queue without iteration limit \
                 can be exploited for DOS by creating many requests"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Withdrawal requires successful external call
@@ -197,10 +212,8 @@ impl VaultWithdrawalDosDetector {
         // Skip for ERC-4626 vaults - they MUST transfer assets out, this is normal behavior
         // ERC-4626 redeem/withdraw functions transfer underlying assets, not a DOS vector
         if has_external_call && checks_call_success && !is_vault {
-            return Some(format!(
-                "Withdrawal requires successful external call. Failing calls can permanently block withdrawals. \
-                Consider using pull-over-push pattern"
-            ));
+            return Some("Withdrawal requires successful external call. Failing calls can permanently block withdrawals. \
+                Consider using pull-over-push pattern".to_string());
         }
 
         // Pattern 3: Missing withdrawal cap or limit
@@ -214,10 +227,11 @@ impl VaultWithdrawalDosDetector {
 
         // Skip for vaults - ERC-4626 vaults have built-in limits via share balances and maxRedeem/maxWithdraw
         if !has_withdrawal_cap && processes_large_amount && is_withdrawal_function && !is_vault {
-            return Some(format!(
+            return Some(
                 "No withdrawal cap or limit detected. Large withdrawals can drain liquidity \
                 and DOS subsequent withdrawers"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: No circuit breaker or emergency withdrawal
@@ -229,10 +243,11 @@ impl VaultWithdrawalDosDetector {
             || function.visibility == ast::Visibility::External;
 
         if !has_circuit_breaker && is_public_withdraw {
-            return Some(format!(
+            return Some(
                 "No circuit breaker or emergency withdrawal mechanism. \
                 Vault cannot be paused during attacks or emergencies"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Accounting mismatch that can cause reverts
@@ -251,10 +266,11 @@ impl VaultWithdrawalDosDetector {
                 || func_source.contains("totalSupply > 0");
 
             if !checks_zero_division {
-                return Some(format!(
+                return Some(
                     "Potential accounting mismatch. Division by totalSupply without zero check \
                     can cause withdrawal reverts and DOS"
-                ));
+                        .to_string(),
+                );
             }
         }
 
@@ -268,10 +284,11 @@ impl VaultWithdrawalDosDetector {
             || func_source.contains("chunk");
 
         if has_queue_processing && !supports_partial {
-            return Some(format!(
+            return Some(
                 "Withdrawal queue processing without partial execution support. \
                 All-or-nothing execution can cause DOS if any withdrawal fails"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Explicit vulnerability marker
@@ -280,9 +297,7 @@ impl VaultWithdrawalDosDetector {
                 || func_source.contains("denial")
                 || func_source.contains("lock"))
         {
-            return Some(format!(
-                "Vault withdrawal DOS vulnerability marker detected"
-            ));
+            return Some("Vault withdrawal DOS vulnerability marker detected".to_string());
         }
 
         None

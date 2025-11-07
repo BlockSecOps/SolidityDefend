@@ -21,13 +21,13 @@
 //!    - Recursive proof validation issues
 //!    - Real-world: Proof aggregation vulnerabilities
 
-pub mod proof_malleability;
-pub mod trusted_setup_bypass;
 pub mod circuit_constraints;
+pub mod proof_malleability;
 pub mod recursive_proof;
+pub mod trusted_setup_bypass;
 
 // Re-export detectors
-pub use proof_malleability::ZKProofMalleabilityDetector;
-pub use trusted_setup_bypass::ZKTrustedSetupBypassDetector;
 pub use circuit_constraints::ZKCircuitUnderConstrainedDetector;
+pub use proof_malleability::ZKProofMalleabilityDetector;
 pub use recursive_proof::ZKRecursiveProofValidationDetector;
+pub use trusted_setup_bypass::ZKTrustedSetupBypassDetector;

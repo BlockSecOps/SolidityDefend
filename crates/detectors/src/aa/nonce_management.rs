@@ -12,9 +12,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct AANonceManagementDetector {
     base: BaseDetector,
@@ -80,16 +80,18 @@ impl Detector for AANonceManagementDetector {
 
                 // Check 1: Fixed nonce key (no parallel support)
                 if uses_fixed_nonce_key(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "Always uses nonce key 0 - no parallel operation support".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
-                    .with_fix_suggestion(
-                        "Support dynamic nonce keys for parallel operations:\n\
+                    let finding = self
+                        .base
+                        .create_finding_with_severity(
+                            ctx,
+                            "Always uses nonce key 0 - no parallel operation support".to_string(),
+                            line,
+                            0,
+                            20,
+                            Severity::Medium,
+                        )
+                        .with_fix_suggestion(
+                            "Support dynamic nonce keys for parallel operations:\n\
                          \n\
                          function validateUserOp(...) external {\n\
                              // Extract nonce key from userOp.nonce\n\
@@ -100,24 +102,27 @@ impl Detector for AANonceManagementDetector {
                              require(userOp.nonce == expectedNonce, \"Invalid nonce\");\n\
                          }\n\
                          \n\
-                         This allows parallel UserOps with different nonce keys.".to_string()
-                    );
+                         This allows parallel UserOps with different nonce keys."
+                                .to_string(),
+                        );
 
                     findings.push(finding);
                 }
 
                 // Check 2: Manual nonce tracking
                 if !uses_entrypoint_nonce(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "Manual nonce tracking - not using EntryPoint enforcement".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::High,
-                    )
-                    .with_fix_suggestion(
-                        "Use EntryPoint's nonce validation (ERC-4337 spec):\n\
+                    let finding = self
+                        .base
+                        .create_finding_with_severity(
+                            ctx,
+                            "Manual nonce tracking - not using EntryPoint enforcement".to_string(),
+                            line,
+                            0,
+                            20,
+                            Severity::High,
+                        )
+                        .with_fix_suggestion(
+                            "Use EntryPoint's nonce validation (ERC-4337 spec):\n\
                          \n\
                          IEntryPoint public immutable entryPoint;\n\
                          \n\
@@ -134,8 +139,9 @@ impl Detector for AANonceManagementDetector {
                          Benefits:\n\
                          - Sequential nonce enforcement\n\
                          - Unique userOpHash guarantee\n\
-                         - Standard compliant".to_string()
-                    );
+                         - Standard compliant"
+                                .to_string(),
+                        );
 
                     findings.push(finding);
                 }
@@ -144,16 +150,18 @@ impl Detector for AANonceManagementDetector {
 
         // Check 3: Session key nonce isolation
         if has_session_keys(ctx) && !has_session_key_nonce_isolation(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Session keys share nonce space - parallel operations will collide".to_string(),
-                1,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Assign unique nonce key per session key:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Session keys share nonce space - parallel operations will collide".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Assign unique nonce key per session key:\n\
                  \n\
                  mapping(address => uint192) public sessionNonceKeys;\n\
                  uint192 private _nextNonceKey;\n\
@@ -176,8 +184,9 @@ impl Detector for AANonceManagementDetector {
                      );\n\
                  }\n\
                  \n\
-                 This prevents nonce collisions between owner and session keys.".to_string()
-            );
+                 This prevents nonce collisions between owner and session keys."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }

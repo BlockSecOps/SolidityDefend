@@ -123,7 +123,9 @@ impl SelfdestructRecipientDetector {
             if let Some(constructor_pos) = source_lower.find("constructor") {
                 if let Some(selfdestruct_pos) = source_lower.find("selfdestruct") {
                     // Only flag if selfdestruct appears within 500 chars after constructor keyword
-                    if selfdestruct_pos > constructor_pos && selfdestruct_pos - constructor_pos < 500 {
+                    if selfdestruct_pos > constructor_pos
+                        && selfdestruct_pos - constructor_pos < 500
+                    {
                         // Additional check: Make sure there's no other function definition between them
                         let between = &source_lower[constructor_pos..selfdestruct_pos];
                         if !between.contains("function ") {
@@ -146,9 +148,11 @@ impl SelfdestructRecipientDetector {
 
             // Timelock + recipient validation is also a safety pattern
             let has_timelock = source_lower.contains("timestamp")
-                && (source_lower.contains("delay") || source_lower.contains("days") || source_lower.contains("hours"));
-            let has_recipient_check = source_lower.contains("recipient")
-                && source_lower.contains("require");
+                && (source_lower.contains("delay")
+                    || source_lower.contains("days")
+                    || source_lower.contains("hours"));
+            let has_recipient_check =
+                source_lower.contains("recipient") && source_lower.contains("require");
 
             if !has_balance_check && !has_timelock && !has_recipient_check {
                 findings.push((
@@ -326,9 +330,7 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("metamorphic")));
+        assert!(result.iter().any(|f| f.message.contains("metamorphic")));
     }
 
     #[test]

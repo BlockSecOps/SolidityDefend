@@ -10,6 +10,12 @@ pub struct AaAccountTakeoverDetector {
     base: BaseDetector,
 }
 
+impl Default for AaAccountTakeoverDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AaAccountTakeoverDetector {
     pub fn new() -> Self {
         Self {
@@ -64,12 +70,12 @@ impl Detector for AaAccountTakeoverDetector {
         if modern_eip_patterns::has_safe_metatx_pattern(ctx) {
             // Safe meta-tx pattern includes comprehensive signature validation + replay protection
             // This prevents signature bypass and ensures proper authentication
-            if access_control_patterns::has_two_step_ownership(ctx) {
-                if access_control_patterns::has_timelock_pattern(ctx) {
-                    // Comprehensive protection: EIP-712 sigs + two-step ownership + timelock
-                    // Prevents all account takeover vectors
-                    return Ok(findings);
-                }
+            if access_control_patterns::has_two_step_ownership(ctx)
+                && access_control_patterns::has_timelock_pattern(ctx)
+            {
+                // Comprehensive protection: EIP-712 sigs + two-step ownership + timelock
+                // Prevents all account takeover vectors
+                return Ok(findings);
             }
         }
 

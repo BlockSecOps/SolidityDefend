@@ -8,15 +8,15 @@
 // Date: October 2025
 
 pub mod classification;
-pub mod signature_replay;
-pub mod solver_manipulation;
+pub mod crosschain_validation;
 pub mod nonce_management;
 pub mod settlement_validation;
-pub mod crosschain_validation;
+pub mod signature_replay;
+pub mod solver_manipulation;
 
 pub use classification::*;
-pub use signature_replay::IntentSignatureReplayDetector;
-pub use solver_manipulation::IntentSolverManipulationDetector;
+pub use crosschain_validation::IntentCrossChainValidationDetector;
 pub use nonce_management::IntentNonceManagementDetector;
 pub use settlement_validation::IntentSettlementValidationDetector;
-pub use crosschain_validation::IntentCrossChainValidationDetector;
+pub use signature_replay::IntentSignatureReplayDetector;
+pub use solver_manipulation::IntentSolverManipulationDetector;

@@ -9,6 +9,12 @@ pub struct InefficientStorageDetector {
     base: BaseDetector,
 }
 
+impl Default for InefficientStorageDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl InefficientStorageDetector {
     pub fn new() -> Self {
         Self {
@@ -65,14 +71,15 @@ impl Detector for InefficientStorageDetector {
                     .base
                     .create_finding(ctx, message, line_num, 0, 30)
                     .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                    .with_fix_suggestion(format!(
+                    .with_fix_suggestion(
                         "Optimize storage layout. \
                     Consider: (1) Pack variables <32 bytes together in structs, \
                     (2) Order struct fields by size (largest to smallest), \
                     (3) Use uint256 instead of smaller types for standalone variables, \
                     (4) Combine boolean flags into a single uint256 bitmap, \
                     (5) Use constants/immutables for unchanging values."
-                    ));
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }

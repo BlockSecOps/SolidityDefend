@@ -71,8 +71,8 @@ impl MultisigBypassDetector {
                 || source_lower.contains("set<")
                 || source_lower.contains("unique");
 
-            let checks_length = source_lower.contains("signatures.length")
-                && source_lower.contains("threshold");
+            let checks_length =
+                source_lower.contains("signatures.length") && source_lower.contains("threshold");
 
             if checks_length && !has_duplicate_check {
                 findings.push((
@@ -84,16 +84,21 @@ impl MultisigBypassDetector {
         }
 
         // Pattern 3: Owner enumeration issues
-        if source_lower.contains("owner") && (source_lower.contains("add") || source_lower.contains("remove")) {
-            let modifies_owners = (source_lower.contains("addowner") || source_lower.contains("removeowner"))
-                || (source_lower.contains("function addowner") || source_lower.contains("function removeowner"));
+        if source_lower.contains("owner")
+            && (source_lower.contains("add") || source_lower.contains("remove"))
+        {
+            let modifies_owners = (source_lower.contains("addowner")
+                || source_lower.contains("removeowner"))
+                || (source_lower.contains("function addowner")
+                    || source_lower.contains("function removeowner"));
 
             let adjusts_threshold = source_lower.contains("threshold")
                 && (source_lower.contains("=") || source_lower.contains("update"));
 
             if modifies_owners {
                 // Check for threshold validation
-                let validates_threshold = (source_lower.contains("require") && source_lower.contains("threshold"))
+                let validates_threshold = (source_lower.contains("require")
+                    && source_lower.contains("threshold"))
                     || source_lower.contains("threshold <=")
                     || source_lower.contains("threshold <");
 
@@ -120,12 +125,14 @@ impl MultisigBypassDetector {
         if source_lower.contains("ecrecover") {
             let has_malleability_check = source_lower.contains("secp256k1")
                 || (source_lower.contains("require") && source_lower.contains("s <="))
-                || source_lower.contains("0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0");
+                || source_lower
+                    .contains("0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0");
 
             // Skip for ERC-2612 permit tokens (nonce provides replay protection)
             let is_permit_token = source_lower.contains("permit")
                 && source_lower.contains("nonces")
-                && (source_lower.contains("domainseparator") || source_lower.contains("domain_separator"));
+                && (source_lower.contains("domainseparator")
+                    || source_lower.contains("domain_separator"));
 
             if !has_malleability_check && !is_permit_token {
                 findings.push((
@@ -155,11 +162,11 @@ impl MultisigBypassDetector {
 
         // Pattern 6: Off-by-one threshold validation
         if source_lower.contains("threshold") {
-            let _has_strict_comparison = source_lower.contains(">=")
-                && source_lower.contains("threshold");
+            let _has_strict_comparison =
+                source_lower.contains(">=") && source_lower.contains("threshold");
 
-            let has_loose_comparison = source_lower.contains("> threshold")
-                || source_lower.contains("< threshold");
+            let has_loose_comparison =
+                source_lower.contains("> threshold") || source_lower.contains("< threshold");
 
             if has_loose_comparison {
                 findings.push((
@@ -173,13 +180,20 @@ impl MultisigBypassDetector {
         // Pattern 7: Missing signature expiration
         if source_lower.contains("execute") && source_lower.contains("signature") {
             // Look for actual deadline usage patterns or nonce (nonce also prevents replay)
-            let has_deadline = (source_lower.contains("deadline") && (source_lower.contains("<=") || source_lower.contains("<") || source_lower.contains("require")))
+            let has_deadline = (source_lower.contains("deadline")
+                && (source_lower.contains("<=")
+                    || source_lower.contains("<")
+                    || source_lower.contains("require")))
                 || (source_lower.contains("expir") && source_lower.contains("block.timestamp"))
-                || (source_lower.contains("block.timestamp") && source_lower.contains("<=") && source_lower.contains("require"));
+                || (source_lower.contains("block.timestamp")
+                    && source_lower.contains("<=")
+                    && source_lower.contains("require"));
 
             // Nonce also prevents replay and is an alternative to deadline
             let has_nonce_in_execution = source_lower.contains("nonce")
-                && (source_lower.contains("nonce++") || source_lower.contains("nonce + 1") || source_lower.contains("increment"));
+                && (source_lower.contains("nonce++")
+                    || source_lower.contains("nonce + 1")
+                    || source_lower.contains("increment"));
 
             if !has_deadline && !has_nonce_in_execution {
                 findings.push((
@@ -221,7 +235,8 @@ impl MultisigBypassDetector {
         }
 
         // Pattern 9: Public execute function without proper validation
-        if (source_lower.contains("function execute") || source_lower.contains("function executetransaction"))
+        if (source_lower.contains("function execute")
+            || source_lower.contains("function executetransaction"))
             && (source_lower.contains("public") || source_lower.contains("external"))
         {
             let has_signature_check = source_lower.contains("signature")
@@ -239,7 +254,8 @@ impl MultisigBypassDetector {
 
         // Pattern 10: Threshold zero or exceeds owner count
         if source_lower.contains("threshold") {
-            let has_threshold_validation = (source_lower.contains("require") || source_lower.contains("if"))
+            let has_threshold_validation = (source_lower.contains("require")
+                || source_lower.contains("if"))
                 && source_lower.contains("threshold")
                 && (source_lower.contains("> 0") || source_lower.contains("!= 0"));
 
@@ -380,9 +396,7 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("duplicate")));
+        assert!(result.iter().any(|f| f.message.contains("duplicate")));
     }
 
     #[test]
@@ -406,9 +420,7 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("threshold")));
+        assert!(result.iter().any(|f| f.message.contains("threshold")));
     }
 
     #[test]
@@ -427,9 +439,7 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("malleability")));
+        assert!(result.iter().any(|f| f.message.contains("malleability")));
     }
 
     #[test]
@@ -452,9 +462,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("domain separator")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("domain separator"))
+        );
     }
 
     #[test]
@@ -478,8 +490,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result.iter().any(|f| f.message.contains("expiration")
-            || f.message.contains("deadline")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("expiration") || f.message.contains("deadline"))
+        );
     }
 
     #[test]
@@ -504,10 +519,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         // Should recognize implicit zero address check
-        let has_zero_address_finding = result
-            .iter()
-            .any(|f| f.message.contains("zero address"));
-        assert!(!has_zero_address_finding, "require(isOwner[signer]) provides implicit zero address check");
+        let has_zero_address_finding = result.iter().any(|f| f.message.contains("zero address"));
+        assert!(
+            !has_zero_address_finding,
+            "require(isOwner[signer]) provides implicit zero address check"
+        );
     }
 
     #[test]

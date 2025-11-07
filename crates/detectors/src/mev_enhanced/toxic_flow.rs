@@ -126,11 +126,9 @@ impl Detector for MEVToxicFlowDetector {
 
         // Pattern 3: Instant arbitrage possible
         if is_amm {
-            let allows_instant_arb = lower.contains("sync()")
-                || lower.contains("update");
+            let allows_instant_arb = lower.contains("sync()") || lower.contains("update");
 
-            let has_delay = lower.contains("blocknumber")
-                || lower.contains("lastupdate");
+            let has_delay = lower.contains("blocknumber") || lower.contains("lastupdate");
 
             if allows_instant_arb && !has_delay {
                 let finding = self.base.create_finding(
@@ -172,9 +170,8 @@ impl Detector for MEVToxicFlowDetector {
 
         // Pattern 5: Oracle price not checked
         if lower.contains("swap") {
-            let checks_oracle = lower.contains("oracle")
-                || lower.contains("twap")
-                || lower.contains("chainlink");
+            let checks_oracle =
+                lower.contains("oracle") || lower.contains("twap") || lower.contains("chainlink");
 
             if !checks_oracle {
                 let finding = self.base.create_finding(

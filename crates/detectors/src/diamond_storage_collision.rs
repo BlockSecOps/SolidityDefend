@@ -64,18 +64,18 @@ impl Detector for DiamondStorageCollisionDetector {
 
         // Pattern 1: Direct storage variables without Diamond Storage pattern
         if self.has_direct_storage_variables(&contract_source) {
-                let has_diamond_storage = self.uses_diamond_storage_pattern(&contract_source);
+            let has_diamond_storage = self.uses_diamond_storage_pattern(&contract_source);
 
-                if !has_diamond_storage {
-                    let message = format!(
-                        "Contract '{}' declares storage variables directly without using Diamond Storage pattern. \
+            if !has_diamond_storage {
+                let message = format!(
+                    "Contract '{}' declares storage variables directly without using Diamond Storage pattern. \
                         This creates collision risk when multiple facets share the same proxy storage. \
                         Direct storage at sequential slots (0, 1, 2...) will collide across facets, \
                         corrupting state and causing critical failures.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -96,43 +96,43 @@ impl Detector for DiamondStorageCollisionDetector {
                             contract.name.name.to_lowercase()
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
         }
 
         // Pattern 2: Missing namespace isolation even with library pattern
         if contract_source.contains("library") && contract_source.contains("Storage") {
-                let issues = self.check_storage_pattern_correctness(&contract_source);
+            let issues = self.check_storage_pattern_correctness(&contract_source);
 
-                for issue in issues {
-                    let message = format!(
-                        "Contract '{}' storage pattern issue: {} \
+            for issue in issues {
+                let message = format!(
+                    "Contract '{}' storage pattern issue: {} \
                         Improper Diamond Storage implementation can still lead to collisions.",
-                        contract.name.name, issue
-                    );
+                    contract.name.name, issue
+                );
 
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            contract.name.location.start().line() as u32,
-                            contract.name.location.start().column() as u32,
-                            contract.name.name.len() as u32,
-                        )
-                        .with_cwe(1321)
-                        .with_fix_suggestion(format!(
-                            "Fix storage pattern in '{}': \
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        contract.name.location.start().line() as u32,
+                        contract.name.location.start().column() as u32,
+                        contract.name.name.len() as u32,
+                    )
+                    .with_cwe(1321)
+                    .with_fix_suggestion(format!(
+                        "Fix storage pattern in '{}': \
                             (1) Ensure STORAGE_POSITION uses unique namespace with keccak256, \
                             (2) Verify assembly block correctly sets 'ds.slot := position', \
                             (3) Make STORAGE_POSITION constant to prevent modification, \
                             (4) Use consistent pattern across all facets, \
                             (5) Document storage layout for each facet.",
-                            contract.name.name
-                        ));
+                        contract.name.name
+                    ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
         }
 
         Ok(findings)
@@ -218,9 +218,7 @@ impl DiamondStorageCollisionDetector {
 
         // Pattern 1: STORAGE_POSITION not constant
         if source.contains("STORAGE_POSITION") && !source.contains("constant STORAGE_POSITION") {
-            issues.push(
-                "STORAGE_POSITION should be constant to prevent modification".to_string(),
-            );
+            issues.push("STORAGE_POSITION should be constant to prevent modification".to_string());
         }
 
         // Pattern 2: Missing keccak256 for namespace
@@ -231,12 +229,14 @@ impl DiamondStorageCollisionDetector {
         }
 
         // Pattern 3: Assembly slot assignment looks wrong
-        if source.contains("assembly") && source.contains("slot") {
-            if !source.contains("ds.slot") && !source.contains("s.slot") {
-                issues.push(
+        if source.contains("assembly")
+            && source.contains("slot")
+            && !source.contains("ds.slot")
+            && !source.contains("s.slot")
+        {
+            issues.push(
                     "Assembly block should assign storage position to struct slot (ds.slot := position)".to_string(),
                 );
-            }
         }
 
         // Pattern 4: Generic storage namespace (collision risk)
@@ -294,9 +294,11 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "diamond-storage-collision");
         assert!(detector.categories().contains(&DetectorCategory::Diamond));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Upgradeable));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Upgradeable)
+        );
     }
 
     #[test]
@@ -320,7 +322,8 @@ mod tests {
         let vulnerable_mapping = "contract Facet { mapping(address => uint256) public balances; }";
         assert!(detector.has_direct_storage_variables(vulnerable_mapping));
 
-        let no_storage = "contract Facet { function getValue() external view returns (uint256) {} }";
+        let no_storage =
+            "contract Facet { function getValue() external view returns (uint256) {} }";
         assert!(!detector.has_direct_storage_variables(no_storage));
     }
 

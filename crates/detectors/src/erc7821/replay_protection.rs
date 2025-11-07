@@ -3,9 +3,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_erc7821_executor;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_erc7821_executor;
 
 pub struct ERC7821ReplayProtectionDetector {
     base: BaseDetector,

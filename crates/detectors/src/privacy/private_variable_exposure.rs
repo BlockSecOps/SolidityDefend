@@ -63,8 +63,15 @@ impl Detector for PrivateVariableExposureDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         let sensitive_keywords = [
-            "password", "secret", "key", "seed", "private",
-            "credential", "token", "passphrase", "pin"
+            "password",
+            "secret",
+            "key",
+            "seed",
+            "private",
+            "credential",
+            "token",
+            "passphrase",
+            "pin",
         ];
 
         for (line_num, line) in lines.iter().enumerate() {

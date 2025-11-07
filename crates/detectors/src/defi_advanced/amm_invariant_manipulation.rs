@@ -88,9 +88,8 @@ impl Detector for AmmInvariantManipulationDetector {
         }
 
         // Check for K invariant enforcement
-        let has_reserves = lower.contains("reserve0")
-            || lower.contains("reserve1")
-            || lower.contains("_reserve");
+        let has_reserves =
+            lower.contains("reserve0") || lower.contains("reserve1") || lower.contains("_reserve");
 
         if has_reserves {
             let has_k_check = lower.contains("k =")
@@ -119,9 +118,8 @@ impl Detector for AmmInvariantManipulationDetector {
         }
 
         // Check for reserve update protection
-        let has_reserve_update = lower.contains("_update")
-            || lower.contains("sync")
-            || lower.contains("updatereserves");
+        let has_reserve_update =
+            lower.contains("_update") || lower.contains("sync") || lower.contains("updatereserves");
 
         if has_reserve_update {
             let has_update_protection = lower.contains("private")
@@ -146,9 +144,8 @@ impl Detector for AmmInvariantManipulationDetector {
         }
 
         // Check for TWAP implementation
-        let has_price_oracle = lower.contains("price")
-            || lower.contains("getprice")
-            || lower.contains("oracle");
+        let has_price_oracle =
+            lower.contains("price") || lower.contains("getprice") || lower.contains("oracle");
 
         if has_price_oracle {
             let has_twap = lower.contains("twap")
@@ -173,8 +170,7 @@ impl Detector for AmmInvariantManipulationDetector {
         }
 
         // Check for flash swap protection
-        let has_swap = lower.contains("function swap")
-            || lower.contains("swapexacttoken");
+        let has_swap = lower.contains("function swap") || lower.contains("swapexacttoken");
 
         if has_swap {
             let has_flash_protection = lower.contains("callback")
@@ -225,8 +221,7 @@ impl Detector for AmmInvariantManipulationDetector {
         }
 
         // Check for fee-on-transfer token support
-        let has_transfer = lower.contains("transferfrom")
-            || lower.contains("safetransferfrom");
+        let has_transfer = lower.contains("transferfrom") || lower.contains("safetransferfrom");
 
         if has_transfer && has_reserves {
             let checks_balance = lower.contains("balanceof")

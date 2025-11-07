@@ -71,8 +71,8 @@ impl Detector for ZKTrustedSetupBypassDetector {
 
         // Pattern 1: Verifier parameters hardcoded without validation
         if lower.contains("verifyingkey") || lower.contains("vk") {
-            let validates_params = lower.contains("require")
-                && (lower.contains("alpha") || lower.contains("beta"));
+            let validates_params =
+                lower.contains("require") && (lower.contains("alpha") || lower.contains("beta"));
 
             if !validates_params {
                 let finding = self.base.create_finding(

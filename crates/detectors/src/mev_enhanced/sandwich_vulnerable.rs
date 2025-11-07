@@ -104,8 +104,8 @@ impl Detector for MEVSandwichVulnerableDetector {
         }
 
         // Pattern 2: No slippage parameter in swap function
-        let has_swap_function = lower.contains("function swap")
-            || lower.contains("function execute");
+        let has_swap_function =
+            lower.contains("function swap") || lower.contains("function execute");
 
         if has_swap_function {
             let has_slippage_param = lower.contains("slippage")
@@ -134,9 +134,8 @@ impl Detector for MEVSandwichVulnerableDetector {
                 || lower.contains("totalassets")
                 || lower.contains("reserves");
 
-            let uses_flashbots = lower.contains("flashbots")
-                || lower.contains("private")
-                || lower.contains("mev");
+            let uses_flashbots =
+                lower.contains("flashbots") || lower.contains("private") || lower.contains("mev");
 
             if has_large_amount && !uses_flashbots {
                 let finding = self.base.create_finding(
@@ -158,8 +157,8 @@ impl Detector for MEVSandwichVulnerableDetector {
         if has_swap {
             let has_deadline = lower.contains("deadline");
             if has_deadline {
-                let has_long_deadline = lower.contains("type(uint256).max")
-                    || lower.contains("deadline: max");
+                let has_long_deadline =
+                    lower.contains("type(uint256).max") || lower.contains("deadline: max");
 
                 if has_long_deadline {
                     let finding = self.base.create_finding(

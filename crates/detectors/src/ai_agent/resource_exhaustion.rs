@@ -1,9 +1,9 @@
 //! AI Agent Resource Exhaustion Detector
 
-use anyhow::Result;
-use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use anyhow::Result;
+use std::any::Any;
 
 pub struct AIAgentResourceExhaustionDetector {
     base: BaseDetector,
@@ -24,22 +24,37 @@ impl AIAgentResourceExhaustionDetector {
 }
 
 impl Default for AIAgentResourceExhaustionDetector {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Detector for AIAgentResourceExhaustionDetector {
-    fn id(&self) -> DetectorId { self.base.id.clone() }
-    fn name(&self) -> &str { &self.base.name }
-    fn description(&self) -> &str { &self.base.description }
-    fn categories(&self) -> Vec<DetectorCategory> { self.base.categories.clone() }
-    fn default_severity(&self) -> Severity { self.base.default_severity }
-    fn is_enabled(&self) -> bool { self.base.enabled }
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
         let lower = ctx.source_code.to_lowercase();
 
-        if lower.contains("aicompute") || lower.contains("inference") || lower.contains("modelrun") {
+        if lower.contains("aicompute") || lower.contains("inference") || lower.contains("modelrun")
+        {
             let has_gas_limit = lower.contains("gasleft()") || lower.contains("gas limit");
             let has_rate_limit = lower.contains("ratelimit") || lower.contains("cooldown");
 
@@ -54,5 +69,7 @@ impl Detector for AIAgentResourceExhaustionDetector {
         Ok(findings)
     }
 
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }

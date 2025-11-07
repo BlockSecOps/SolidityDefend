@@ -75,11 +75,11 @@ impl Detector for ERC20TransferReturnBombDetector {
         let has_token_call = lower.contains(".transfer(") || lower.contains(".transferfrom(");
 
         if has_token_call {
-            let uses_returndatasize = lower.contains("returndatasize")
-                || lower.contains("returndata.length");
+            let uses_returndatasize =
+                lower.contains("returndatasize") || lower.contains("returndata.length");
 
-            let has_size_limit = lower.contains("require(returndatasize")
-                || lower.contains("if (returndatasize");
+            let has_size_limit =
+                lower.contains("require(returndatasize") || lower.contains("if (returndatasize");
 
             if !uses_returndatasize || !has_size_limit {
                 let finding = self.base.create_finding(
@@ -99,12 +99,10 @@ impl Detector for ERC20TransferReturnBombDetector {
 
         // Pattern 2: Using low-level call for transfers without gas limit
         if has_token_call {
-            let uses_call = lower.contains(".call(")
-                || lower.contains(".call{");
+            let uses_call = lower.contains(".call(") || lower.contains(".call{");
 
             if uses_call {
-                let has_gas_limit = lower.contains(".call{gas:")
-                    || lower.contains("gasleft()");
+                let has_gas_limit = lower.contains(".call{gas:") || lower.contains("gasleft()");
 
                 if !has_gas_limit {
                     let finding = self.base.create_finding(
@@ -125,8 +123,8 @@ impl Detector for ERC20TransferReturnBombDetector {
 
         // Pattern 3: Copying return data without size check
         if has_token_call {
-            let copies_returndata = lower.contains("returndatacopy")
-                || lower.contains("abi.decode(returndata");
+            let copies_returndata =
+                lower.contains("returndatacopy") || lower.contains("abi.decode(returndata");
 
             if copies_returndata {
                 let finding = self.base.create_finding(

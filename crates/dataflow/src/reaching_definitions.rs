@@ -121,7 +121,7 @@ impl<'a> ReachingDefinitions<'a> {
             for (instr_index, instruction) in instructions.iter().enumerate() {
                 if let Some(defined_var) = utils::get_instruction_definition(instruction) {
                     let def_site = DefinitionSite {
-                        block_id: block_id,
+                        block_id,
                         instruction_index: instr_index,
                         variable: defined_var,
                         instruction_type: self.classify_definition(instruction),

@@ -8,9 +8,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct AASocialRecoveryDetector {
     base: BaseDetector,
@@ -70,32 +70,58 @@ impl Detector for AASocialRecoveryDetector {
 
         // Check 1: Recovery delay
         if !has_recovery_delay(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "No recovery delay - instant account takeover possible".to_string(),
-                1, 0, 20,
-                Severity::High,
-            ).with_fix_suggestion("Add 24-48 hour delay between initiateRecovery and executeRecovery".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "No recovery delay - instant account takeover possible".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::High,
+                    )
+                    .with_fix_suggestion(
+                        "Add 24-48 hour delay between initiateRecovery and executeRecovery"
+                            .to_string(),
+                    ),
+            );
         }
 
         // Check 2: Guardian threshold
         if !has_sufficient_threshold(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "Weak guardian threshold - 1-of-N or too low".to_string(),
-                1, 0, 20,
-                Severity::Medium,
-            ).with_fix_suggestion("Use threshold >= 50% of guardians (e.g., 3-of-5)".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Weak guardian threshold - 1-of-N or too low".to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "Use threshold >= 50% of guardians (e.g., 3-of-5)".to_string(),
+                    ),
+            );
         }
 
         // Check 3: Recovery cancellation
         if !has_recovery_cancellation(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "No recovery cancellation - owner can't abort malicious recovery".to_string(),
-                1, 0, 20,
-                Severity::Medium,
-            ).with_fix_suggestion("Add cancelRecovery function callable by current owner".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "No recovery cancellation - owner can't abort malicious recovery"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Medium,
+                    )
+                    .with_fix_suggestion(
+                        "Add cancelRecovery function callable by current owner".to_string(),
+                    ),
+            );
         }
 
         Ok(findings)

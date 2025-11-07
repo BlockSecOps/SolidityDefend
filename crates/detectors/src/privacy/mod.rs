@@ -20,12 +20,12 @@
 //!    - Unhashed secrets on-chain
 //!    - Credential exposure
 
-pub mod private_variable_exposure;
-pub mod storage_slot_predictability;
 pub mod missing_commit_reveal;
 pub mod plaintext_secret_storage;
+pub mod private_variable_exposure;
+pub mod storage_slot_predictability;
 
-pub use private_variable_exposure::PrivateVariableExposureDetector;
-pub use storage_slot_predictability::StorageSlotPredictabilityDetector;
 pub use missing_commit_reveal::MissingCommitRevealDetector;
 pub use plaintext_secret_storage::PlaintextSecretStorageDetector;
+pub use private_variable_exposure::PrivateVariableExposureDetector;
+pub use storage_slot_predictability::StorageSlotPredictabilityDetector;

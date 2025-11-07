@@ -18,9 +18,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use crate::aa::classification::*;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::aa::classification::*;
 
 pub struct ERC4337PaymasterAbuseDetector {
     base: BaseDetector,
@@ -152,16 +152,19 @@ impl Detector for ERC4337PaymasterAbuseDetector {
 
                 // Check 3: Target validation
                 if !has_target_validation(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "No target whitelist - arbitrary transactions can be sponsored".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::High,
-                    )
-                    .with_fix_suggestion(
-                        "Add target contract whitelist:\n\
+                    let finding = self
+                        .base
+                        .create_finding_with_severity(
+                            ctx,
+                            "No target whitelist - arbitrary transactions can be sponsored"
+                                .to_string(),
+                            line,
+                            0,
+                            20,
+                            Severity::High,
+                        )
+                        .with_fix_suggestion(
+                            "Add target contract whitelist:\n\
                          \n\
                          mapping(address => bool) public allowedTargets;\n\
                          \n\
@@ -176,8 +179,9 @@ impl Detector for ERC4337PaymasterAbuseDetector {
                          \n\
                          function addAllowedTarget(address target) external onlyOwner {\n\
                              allowedTargets[target] = true;\n\
-                         }".to_string()
-                    );
+                         }"
+                            .to_string(),
+                        );
 
                     findings.push(finding);
                 }
@@ -256,7 +260,6 @@ impl Detector for ERC4337PaymasterAbuseDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

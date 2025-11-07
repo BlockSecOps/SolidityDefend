@@ -122,14 +122,14 @@ pub enum ImplementationEffort {
 
 impl AdvancedSecurityEngine {
     pub fn new(config: AdvancedSecurityConfig) -> Self {
-        let mut defi_detectors: Vec<Box<dyn DeFiDetector>> = Vec::new();
-
         // Add DeFi detectors
-        defi_detectors.push(Box::new(FlashLoanDetector));
-        defi_detectors.push(Box::new(MEVDetector));
-        defi_detectors.push(Box::new(PriceManipulationDetector));
-        defi_detectors.push(Box::new(LiquidityAttackDetector));
-        defi_detectors.push(Box::new(GovernanceAttackDetector));
+        let defi_detectors: Vec<Box<dyn DeFiDetector>> = vec![
+            Box::new(FlashLoanDetector),
+            Box::new(MEVDetector),
+            Box::new(PriceManipulationDetector),
+            Box::new(LiquidityAttackDetector),
+            Box::new(GovernanceAttackDetector),
+        ];
 
         let cross_contract_analyzer = CrossContractAnalyzer::new();
         let taint_analyzer = TaintAnalyzer::new(config.taint_config.clone());
@@ -196,7 +196,7 @@ impl AdvancedSecurityEngine {
     ) -> Vec<DetectorResult> {
         let mut all_findings = Vec::new();
 
-        for (_contract_name, context) in contexts {
+        for context in contexts.values() {
             for detector in &self.defi_detectors {
                 if detector.applies_to_contract(context) {
                     let findings = detector.detect_defi_vulnerabilities(context);
@@ -233,7 +233,7 @@ impl AdvancedSecurityEngine {
     ) -> Vec<crate::taint::TaintFinding> {
         let mut all_taint_findings = Vec::new();
 
-        for (_contract_name, context) in contexts {
+        for context in contexts.values() {
             let analysis_result = self.taint_analyzer.analyze(context);
             all_taint_findings.extend(analysis_result.findings);
         }

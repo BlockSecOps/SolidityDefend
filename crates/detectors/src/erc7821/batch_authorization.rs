@@ -5,9 +5,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_erc7821_executor;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_erc7821_executor;
 
 pub struct ERC7821BatchAuthorizationDetector {
     base: BaseDetector,
@@ -19,14 +19,19 @@ impl ERC7821BatchAuthorizationDetector {
             base: BaseDetector::new(
                 DetectorId("erc7821-batch-authorization".to_string()),
                 "ERC-7821 Batch Authorization".to_string(),
-                "Detects missing authorization in ERC-7821 batch executor implementations".to_string(),
+                "Detects missing authorization in ERC-7821 batch executor implementations"
+                    .to_string(),
                 vec![DetectorCategory::AccessControl],
                 Severity::High,
             ),
         }
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let func_name = &function.name.name.to_lowercase();
 
@@ -36,7 +41,8 @@ impl ERC7821BatchAuthorizationDetector {
         }
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
@@ -44,8 +50,10 @@ impl ERC7821BatchAuthorizationDetector {
         let func_lower = func_text.to_lowercase();
 
         // Check for authorization
-        let has_auth = func_lower.contains("require") &&
-            (func_lower.contains("msg.sender") || func_lower.contains("owner") || func_lower.contains("authorized"));
+        let has_auth = func_lower.contains("require")
+            && (func_lower.contains("msg.sender")
+                || func_lower.contains("owner")
+                || func_lower.contains("authorized"));
 
         let has_modifier = !function.modifiers.is_empty();
 
@@ -115,9 +123,17 @@ impl Detector for ERC7821BatchAuthorizationDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx, title, function.name.location.start().line() as u32, 0, 20, severity
-                ).with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
                 findings.push(finding);
             }
         }

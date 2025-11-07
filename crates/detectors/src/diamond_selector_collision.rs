@@ -70,18 +70,18 @@ impl Detector for DiamondSelectorCollisionDetector {
 
         // Check for diamondCut function
         if self.has_diamond_cut_function(&contract_source) {
-                // Pattern 1: Missing selector uniqueness validation
-                if !self.validates_selector_uniqueness(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' implements diamondCut without selector collision protection. \
+            // Pattern 1: Missing selector uniqueness validation
+            if !self.validates_selector_uniqueness(&contract_source) {
+                let message = format!(
+                    "Contract '{}' implements diamondCut without selector collision protection. \
                         When adding function selectors via FacetCutAction.Add, the contract must verify \
                         that selectorToFacet[selector] == address(0) before registration. Without this check, \
                         adding a selector that already exists will silently overwrite the existing facet mapping, \
                         redirecting calls to the wrong implementation and causing critical state corruption or security bypasses.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -101,20 +101,20 @@ impl Detector for DiamondSelectorCollisionDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 2: Missing FacetCutAction validation
-                if !self.validates_facet_cut_action(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' diamondCut lacks FacetCutAction-specific validation. \
+            // Pattern 2: Missing FacetCutAction validation
+            if !self.validates_facet_cut_action(&contract_source) {
+                let message = format!(
+                    "Contract '{}' diamondCut lacks FacetCutAction-specific validation. \
                         The Add action must check existingFacet == address(0), Replace must check existingFacet != address(0), \
                         and Remove must verify selector exists. Without action-specific checks, invalid operations \
                         can corrupt the facet registry causing undefined behavior.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -133,20 +133,20 @@ impl Detector for DiamondSelectorCollisionDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
 
-                // Pattern 3: Unsafe selectorToFacet mapping update
-                if self.has_unsafe_selector_mapping_update(&contract_source) {
-                    let message = format!(
-                        "Contract '{}' updates selectorToFacet mapping without collision prevention. \
+            // Pattern 3: Unsafe selectorToFacet mapping update
+            if self.has_unsafe_selector_mapping_update(&contract_source) {
+                let message = format!(
+                    "Contract '{}' updates selectorToFacet mapping without collision prevention. \
                         Direct assignment 'selectorToFacet[selector] = facet' without checking existing value \
                         creates collision risk. Multiple facets with the same selector will overwrite each other, \
                         causing loss of functionality and potential security vulnerabilities.",
-                        contract.name.name
-                    );
+                    contract.name.name
+                );
 
-                    let finding = self
+                let finding = self
                         .base
                         .create_finding(
                             ctx,
@@ -166,43 +166,43 @@ impl Detector for DiamondSelectorCollisionDetector {
                             contract.name.name
                         ));
 
-                    findings.push(finding);
-                }
+                findings.push(finding);
+            }
         }
 
         // Pattern 4: Missing selector registry for collision detection
         if self.is_facet_management_contract(&contract_source)
             && !self.has_selector_registry(&contract_source)
         {
-                let message = format!(
-                    "Contract '{}' manages facets without comprehensive selector registry. \
+            let message = format!(
+                "Contract '{}' manages facets without comprehensive selector registry. \
                     Tracking only selectorToFacet is insufficient - you need facetToSelectors for validation. \
                     Without bidirectional mapping, removing/replacing facets can leave orphaned selectors \
                     creating collision vulnerabilities.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        contract.name.location.start().line() as u32,
-                        contract.name.location.start().column() as u32,
-                        contract.name.name.len() as u32,
-                    )
-                    .with_cwe(694)
-                    .with_fix_suggestion(format!(
-                        "Implement full selector registry in '{}': \
+            let finding = self
+                .base
+                .create_finding(
+                    ctx,
+                    message,
+                    contract.name.location.start().line() as u32,
+                    contract.name.location.start().column() as u32,
+                    contract.name.name.len() as u32,
+                )
+                .with_cwe(694)
+                .with_fix_suggestion(format!(
+                    "Implement full selector registry in '{}': \
                         (1) Add 'mapping(address => bytes4[]) facetToSelectors' for reverse lookup \
                         (2) Maintain synchronized updates to both mappings \
                         (3) Implement getAllSelectors() view function \
                         (4) Add getSelectorCollisions() to detect conflicts \
                         (5) Create comprehensive facet management library",
-                        contract.name.name
-                    ));
+                    contract.name.name
+                ));
 
-                findings.push(finding);
+            findings.push(finding);
         }
 
         Ok(findings)
@@ -262,16 +262,15 @@ impl DiamondSelectorCollisionDetector {
 
     fn validates_facet_cut_action(&self, source: &str) -> bool {
         // Check for action-specific validation
-        let has_action_enum =
-            source.contains("FacetCutAction") || source.contains("enum Action");
+        let has_action_enum = source.contains("FacetCutAction") || source.contains("enum Action");
 
         if !has_action_enum {
             return false;
         }
 
         // Look for Add/Replace/Remove specific validation
-        let add_validation =
-            source.contains("Add") && (source.contains("== address(0)") || source.contains("!= address(0)"));
+        let add_validation = source.contains("Add")
+            && (source.contains("== address(0)") || source.contains("!= address(0)"));
         let replace_validation = source.contains("Replace") && source.contains("!= address(0)");
         let remove_validation = source.contains("Remove") && source.contains("address(0)");
 
@@ -294,8 +293,7 @@ impl DiamondSelectorCollisionDetector {
         }
 
         // Check if there's assignment without prior validation
-        let has_direct_assignment =
-            source.contains("selectorToFacet[") && source.contains("=");
+        let has_direct_assignment = source.contains("selectorToFacet[") && source.contains("=");
 
         // Check for missing validation
         let has_validation = source.contains("require(selectorToFacet")
@@ -329,8 +327,8 @@ impl DiamondSelectorCollisionDetector {
         let has_reverse_mapping = source.contains("facetToSelectors")
             || source.contains("facetFunctionSelectors")
             || source.contains("_facetSelectors");
-        let has_selector_list =
-            source.contains("bytes4[]") && (source.contains("selector") || source.contains("Selector"));
+        let has_selector_list = source.contains("bytes4[]")
+            && (source.contains("selector") || source.contains("Selector"));
 
         has_forward_mapping && (has_reverse_mapping || has_selector_list)
     }
@@ -366,9 +364,11 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "diamond-selector-collision");
         assert!(detector.categories().contains(&DetectorCategory::Diamond));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Upgradeable));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Upgradeable)
+        );
     }
 
     #[test]
@@ -386,7 +386,9 @@ mod tests {
     fn test_has_diamond_cut_function() {
         let detector = DiamondSelectorCollisionDetector::new();
 
-        assert!(detector.has_diamond_cut_function("function diamondCut(FacetCut[] memory cuts) {}"));
+        assert!(
+            detector.has_diamond_cut_function("function diamondCut(FacetCut[] memory cuts) {}")
+        );
         assert!(detector.has_diamond_cut_function("function _diamondCut() internal {}"));
         assert!(!detector.has_diamond_cut_function("function updateFacet() {}"));
     }

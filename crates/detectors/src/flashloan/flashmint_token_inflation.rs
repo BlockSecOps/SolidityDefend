@@ -25,7 +25,8 @@ impl FlashmintTokenInflationDetector {
             base: BaseDetector::new(
                 DetectorId("flashmint-token-inflation".to_string()),
                 "Flash Mint Token Inflation Attack".to_string(),
-                "Detects flash mint vulnerabilities allowing unlimited minting and spam".to_string(),
+                "Detects flash mint vulnerabilities allowing unlimited minting and spam"
+                    .to_string(),
                 vec![DetectorCategory::DeFi],
                 Severity::High,
             ),
@@ -36,12 +37,16 @@ impl FlashmintTokenInflationDetector {
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check for MAX_FLASH_MINT or similar constant
-        (source_lower.contains("max") && source_lower.contains("flash")) ||
-        source_lower.contains("flashlimit") ||
-        source_lower.contains("maxflashloan")
+        (source_lower.contains("max") && source_lower.contains("flash"))
+            || source_lower.contains("flashlimit")
+            || source_lower.contains("maxflashloan")
     }
 
-    fn get_function_source<'a>(&self, function: &ast::Function, ctx: &'a AnalysisContext) -> &'a str {
+    fn get_function_source<'a>(
+        &self,
+        function: &ast::Function,
+        ctx: &'a AnalysisContext,
+    ) -> &'a str {
         let source = &ctx.source_code;
         let func_start = function.location.start().offset();
         let func_end = function.location.end().offset();
@@ -58,8 +63,8 @@ impl FlashmintTokenInflationDetector {
         let func_lower = func_source.to_lowercase();
 
         // Check if function calculates a fee
-        func_lower.contains("fee") &&
-        (func_lower.contains("*") || func_lower.contains("/") || func_lower.contains("mul"))
+        func_lower.contains("fee")
+            && (func_lower.contains("*") || func_lower.contains("/") || func_lower.contains("mul"))
     }
 }
 
@@ -106,22 +111,39 @@ impl Detector for FlashmintTokenInflationDetector {
 
                 // Check 1: Flash mint cap
                 if !self.has_flash_mint_cap(ctx) {
-                    findings.push(self.base.create_finding_with_severity(
-                        ctx,
-                        "Uncapped flash mint - unlimited token minting possible".to_string(),
-                        line, 0, 20,
-                        Severity::High,
-                    ).with_fix_suggestion("Add MAX_FLASH_MINT constant and validate amount".to_string()));
+                    findings.push(
+                        self.base
+                            .create_finding_with_severity(
+                                ctx,
+                                "Uncapped flash mint - unlimited token minting possible"
+                                    .to_string(),
+                                line,
+                                0,
+                                20,
+                                Severity::High,
+                            )
+                            .with_fix_suggestion(
+                                "Add MAX_FLASH_MINT constant and validate amount".to_string(),
+                            ),
+                    );
                 }
 
                 // Check 2: Flash mint fee
                 if !self.has_flash_mint_fee(function, ctx) {
-                    findings.push(self.base.create_finding_with_severity(
-                        ctx,
-                        "No flash mint fee - free flash mints enable spam".to_string(),
-                        line, 0, 20,
-                        Severity::Medium,
-                    ).with_fix_suggestion("Add flash mint fee (e.g., 0.05% like MakerDAO)".to_string()));
+                    findings.push(
+                        self.base
+                            .create_finding_with_severity(
+                                ctx,
+                                "No flash mint fee - free flash mints enable spam".to_string(),
+                                line,
+                                0,
+                                20,
+                                Severity::Medium,
+                            )
+                            .with_fix_suggestion(
+                                "Add flash mint fee (e.g., 0.05% like MakerDAO)".to_string(),
+                            ),
+                    );
                 }
             }
         }

@@ -50,21 +50,21 @@
 //! - Renzo Protocol: https://docs.renzoprotocol.com
 //! - ERC-4626 Vault Standard: https://eips.ethereum.org/EIPS/eip-4626
 
+pub mod avs_validation;
 pub mod classification;
 pub mod delegation_manipulation;
-pub mod slashing_conditions;
 pub mod lrt_share_inflation;
-pub mod withdrawal_delays;
-pub mod avs_validation;
 pub mod rewards_manipulation;
+pub mod slashing_conditions;
+pub mod withdrawal_delays;
 
 // Re-export classification utilities for use by all detectors
 pub use classification::*;
 
 // Re-export detectors
-pub use delegation_manipulation::RestakingDelegationManipulationDetector;
-pub use slashing_conditions::RestakingSlashingConditionsDetector;
-pub use lrt_share_inflation::LRTShareInflationDetector;
-pub use withdrawal_delays::RestakingWithdrawalDelaysDetector;
 pub use avs_validation::AVSValidationBypassDetector;
+pub use delegation_manipulation::RestakingDelegationManipulationDetector;
+pub use lrt_share_inflation::LRTShareInflationDetector;
 pub use rewards_manipulation::RestakingRewardsManipulationDetector;
+pub use slashing_conditions::RestakingSlashingConditionsDetector;
+pub use withdrawal_delays::RestakingWithdrawalDelaysDetector;

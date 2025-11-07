@@ -60,7 +60,7 @@ impl Detector for L2FeeManipulationDetector {
             let func_source = self.get_function_source(function, ctx);
 
             // Check for fee calculation functions
-            if self.is_fee_calculation_function(&function.name.name, &func_source) {
+            if self.is_fee_calculation_function(function.name.name, &func_source) {
                 let issues = self.check_fee_bounds(&func_source);
 
                 for issue in issues {
@@ -95,7 +95,7 @@ impl Detector for L2FeeManipulationDetector {
             }
 
             // Check for fee update functions
-            if self.is_fee_update_function(&function.name.name, &func_source) {
+            if self.is_fee_update_function(function.name.name, &func_source) {
                 let issues = self.check_fee_update_protection(&func_source);
 
                 for issue in issues {
@@ -130,7 +130,7 @@ impl Detector for L2FeeManipulationDetector {
             }
 
             // Check for oracle-based fee functions
-            if self.is_oracle_fee_function(&function.name.name, &func_source) {
+            if self.is_oracle_fee_function(function.name.name, &func_source) {
                 let issues = self.check_oracle_fee_security(&func_source);
 
                 for issue in issues {
@@ -165,7 +165,7 @@ impl Detector for L2FeeManipulationDetector {
             }
 
             // Check for dynamic fee functions
-            if self.is_dynamic_fee_function(&function.name.name, &func_source) {
+            if self.is_dynamic_fee_function(function.name.name, &func_source) {
                 let issues = self.check_dynamic_fee_logic(&func_source);
 
                 for issue in issues {
@@ -228,7 +228,8 @@ impl L2FeeManipulationDetector {
         patterns
             .iter()
             .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("fee") && (source.contains("calculate") || source.contains("compute")))
+            || (source.contains("fee")
+                && (source.contains("calculate") || source.contains("compute")))
     }
 
     fn is_fee_update_function(&self, name: &str, source: &str) -> bool {
@@ -249,11 +250,7 @@ impl L2FeeManipulationDetector {
     }
 
     fn is_oracle_fee_function(&self, name: &str, source: &str) -> bool {
-        let patterns = [
-            "getL1FeeOracle",
-            "getGasPriceOracle",
-            "fetchL1BaseFee",
-        ];
+        let patterns = ["getL1FeeOracle", "getGasPriceOracle", "fetchL1BaseFee"];
 
         let name_lower = name.to_lowercase();
         patterns
@@ -263,11 +260,7 @@ impl L2FeeManipulationDetector {
     }
 
     fn is_dynamic_fee_function(&self, name: &str, source: &str) -> bool {
-        let patterns = [
-            "adjustFee",
-            "updateDynamicFee",
-            "calculateDynamicFee",
-        ];
+        let patterns = ["adjustFee", "updateDynamicFee", "calculateDynamicFee"];
 
         let name_lower = name.to_lowercase();
         patterns
@@ -280,7 +273,10 @@ impl L2FeeManipulationDetector {
         let mut issues = Vec::new();
 
         // Pattern 1: No upper bound check
-        if (source.contains("fee") || source.contains("Fee")) && !source.contains("MAX_FEE") && !source.contains("<=") {
+        if (source.contains("fee") || source.contains("Fee"))
+            && !source.contains("MAX_FEE")
+            && !source.contains("<=")
+        {
             issues.push(
                 "No maximum fee bound. Should define MAX_FEE constant and enforce: require(fee <= MAX_FEE)"
                     .to_string(),
@@ -288,7 +284,10 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 2: No lower bound check
-        if (source.contains("fee") || source.contains("Fee")) && !source.contains("MIN_FEE") && !source.contains(">=") {
+        if (source.contains("fee") || source.contains("Fee"))
+            && !source.contains("MIN_FEE")
+            && !source.contains(">=")
+        {
             issues.push(
                 "No minimum fee bound. Should define MIN_FEE to prevent zero or negative fees"
                     .to_string(),
@@ -330,7 +329,10 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 2: Immediate effect without delay
-        if !source.contains("timestamp") && !source.contains("delay") && !source.contains("timelock") {
+        if !source.contains("timestamp")
+            && !source.contains("delay")
+            && !source.contains("timelock")
+        {
             issues.push(
                 "Fee updates take immediate effect. Should implement time delay to prevent front-running"
                     .to_string(),
@@ -376,7 +378,10 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 2: No freshness check
-        if source.contains("oracle") && !source.contains("timestamp") && !source.contains("updatedAt") {
+        if source.contains("oracle")
+            && !source.contains("timestamp")
+            && !source.contains("updatedAt")
+        {
             issues.push(
                 "No staleness check for oracle data. Should verify price was updated recently"
                     .to_string(),
@@ -392,7 +397,10 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 4: No circuit breaker
-        if source.contains("oracle") && !source.contains("circuitBreaker") && !source.contains("paused") {
+        if source.contains("oracle")
+            && !source.contains("circuitBreaker")
+            && !source.contains("paused")
+        {
             issues.push(
                 "No circuit breaker for extreme price movements. Should pause or limit fees on anomalous prices"
                     .to_string(),
@@ -414,7 +422,8 @@ impl L2FeeManipulationDetector {
         let mut issues = Vec::new();
 
         // Pattern 1: Unbounded adjustment
-        if (source.contains("increase") || source.contains("decrease")) && !source.contains("MAX_") {
+        if (source.contains("increase") || source.contains("decrease")) && !source.contains("MAX_")
+        {
             issues.push(
                 "Unbounded fee adjustment. Should cap maximum increase/decrease per adjustment"
                     .to_string(),
@@ -430,7 +439,9 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 3: Missing parameter validation
-        if (source.contains("gasUsed") || source.contains("gasTarget")) && !source.contains("require") {
+        if (source.contains("gasUsed") || source.contains("gasTarget"))
+            && !source.contains("require")
+        {
             issues.push(
                 "No validation of input parameters. Should verify gasUsed and other inputs are valid"
                     .to_string(),
@@ -438,10 +449,12 @@ impl L2FeeManipulationDetector {
         }
 
         // Pattern 4: No minimum change threshold
-        if source.contains("baseFee") && !source.contains("MIN_CHANGE") && !source.contains("threshold") {
+        if source.contains("baseFee")
+            && !source.contains("MIN_CHANGE")
+            && !source.contains("threshold")
+        {
             issues.push(
-                "No minimum change threshold. Tiny adjustments can be gas inefficient"
-                    .to_string(),
+                "No minimum change threshold. Tiny adjustments can be gas inefficient".to_string(),
             );
         }
 
@@ -560,7 +573,8 @@ mod tests {
     #[test]
     fn test_check_oracle_fee_security() {
         let detector = L2FeeManipulationDetector::new();
-        let source = "function getL1Fee() public view returns (uint256) { return oracle.getPrice(); }";
+        let source =
+            "function getL1Fee() public view returns (uint256) { return oracle.getPrice(); }";
         let issues = detector.check_oracle_fee_security(source);
 
         assert!(!issues.is_empty());
@@ -593,7 +607,9 @@ mod tests {
 
         assert!(!issues.is_empty());
         // Will detect missing smoothing, parameter validation, and minimum change threshold
-        assert!(issues.iter().any(|i| i.contains("smoothing") || i.contains("validation") || i.contains("threshold")));
+        assert!(issues.iter().any(|i| i.contains("smoothing")
+            || i.contains("validation")
+            || i.contains("threshold")));
     }
 
     #[test]

@@ -9,9 +9,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_eip7702_delegate;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_eip7702_delegate;
 
 pub struct EIP7702DelegateAccessControlDetector {
     base: BaseDetector,
@@ -30,30 +30,41 @@ impl EIP7702DelegateAccessControlDetector {
         }
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let func_name = &function.name.name.to_lowercase();
 
         // Check execute/call functions
-        if !func_name.contains("execute") && !func_name.contains("call") && !func_name.contains("batch") {
+        if !func_name.contains("execute")
+            && !func_name.contains("call")
+            && !func_name.contains("batch")
+        {
             return issues;
         }
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
 
-        let has_auth = func_text.to_lowercase().contains("require") &&
-            func_text.to_lowercase().contains("msg.sender");
+        let has_auth = func_text.to_lowercase().contains("require")
+            && func_text.to_lowercase().contains("msg.sender");
 
-        let has_call = func_text.to_lowercase().contains(".call") ||
-            func_text.to_lowercase().contains("delegatecall");
+        let has_call = func_text.to_lowercase().contains(".call")
+            || func_text.to_lowercase().contains("delegatecall");
 
         if has_call && !has_auth {
             issues.push((
-                format!("Missing access control in '{}' - allows arbitrary execution", function.name.name),
+                format!(
+                    "Missing access control in '{}' - allows arbitrary execution",
+                    function.name.name
+                ),
                 Severity::Critical,
                 "Fix: Add owner/authorization check:\n\
                  \n\
@@ -63,7 +74,8 @@ impl EIP7702DelegateAccessControlDetector {
                      require(msg.sender == owner, \"Not authorized\");\n\
                      (bool success, ) = target.call{value: msg.value}(data);\n\
                      require(success, \"Call failed\");\n\
-                 }".to_string()
+                 }"
+                .to_string(),
             ));
         }
 
@@ -111,9 +123,17 @@ impl Detector for EIP7702DelegateAccessControlDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx, title, function.name.location.start().line() as u32, 0, 20, severity
-                ).with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
                 findings.push(finding);
             }
         }

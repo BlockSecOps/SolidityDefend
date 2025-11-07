@@ -73,11 +73,9 @@ impl Detector for ERC721EnumerationDosDetector {
 
         // Pattern 1: tokenOfOwnerByIndex in unbounded loop
         if lower.contains("tokenofownerbyindex") {
-            let has_loop = lower.contains("for (")
-                || lower.contains("while");
+            let has_loop = lower.contains("for (") || lower.contains("while");
 
-            let has_balance_loop = lower.contains("balanceof")
-                && has_loop;
+            let has_balance_loop = lower.contains("balanceof") && has_loop;
 
             if has_balance_loop {
                 let finding = self.base.create_finding(
@@ -97,8 +95,8 @@ impl Detector for ERC721EnumerationDosDetector {
 
         // Pattern 2: totalSupply iteration without bounds
         if lower.contains("totalsupply") {
-            let has_total_supply_loop = lower.contains("for (uint")
-                && lower.contains("totalsupply");
+            let has_total_supply_loop =
+                lower.contains("for (uint") && lower.contains("totalsupply");
 
             if has_total_supply_loop {
                 let finding = self.base.create_finding(
@@ -122,9 +120,8 @@ impl Detector for ERC721EnumerationDosDetector {
             || lower.contains("function listtokens");
 
         if has_enum_function {
-            let has_pagination = lower.contains("offset")
-                || lower.contains("limit")
-                || lower.contains("pagesize");
+            let has_pagination =
+                lower.contains("offset") || lower.contains("limit") || lower.contains("pagesize");
 
             if !has_pagination {
                 let finding = self.base.create_finding(

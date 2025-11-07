@@ -9,6 +9,12 @@ pub struct PriceOracleStaleDetector {
     base: BaseDetector,
 }
 
+impl Default for PriceOracleStaleDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PriceOracleStaleDetector {
     pub fn new() -> Self {
         Self {
@@ -98,9 +104,7 @@ impl PriceOracleStaleDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -116,10 +120,11 @@ impl PriceOracleStaleDetector {
             || func_source.contains("STALE");
 
         if has_oracle_call && !has_staleness_check {
-            return Some(format!(
+            return Some(
                 "Oracle price fetch without staleness validation. \
                 Missing checks for updatedAt timestamp, price age, or heartbeat threshold"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Using stored price without checking lastUpdate
@@ -131,10 +136,11 @@ impl PriceOracleStaleDetector {
             && (func_source.contains("block.timestamp") || func_source.contains("require"));
 
         if uses_stored_price && !checks_last_update {
-            return Some(format!(
+            return Some(
                 "Uses stored oracle price without verifying lastUpdate timestamp. \
                 Price may be stale and cause incorrect calculations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: getPrice() without latestRoundData() timestamp validation
@@ -142,10 +148,11 @@ impl PriceOracleStaleDetector {
             && !func_source.contains("latestRoundData")
             && !func_source.contains("updatedAt")
         {
-            return Some(format!(
+            return Some(
                 "Uses simplified getPrice() without fetching round metadata. \
                 Should use latestRoundData() to access updatedAt timestamp"
-            ));
+                    .to_string(),
+            );
         }
 
         None

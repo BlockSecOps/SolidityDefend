@@ -9,6 +9,12 @@ pub struct IntegerOverflowDetector {
     base: BaseDetector,
 }
 
+impl Default for IntegerOverflowDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl IntegerOverflowDetector {
     pub fn new() -> Self {
         Self {
@@ -158,9 +164,7 @@ impl IntegerOverflowDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -211,9 +215,7 @@ impl IntegerOverflowDetector {
                 || func_source.contains("underflow")
                 || func_source.contains("SafeMath"))
         {
-            return Some(format!(
-                "Integer overflow/underflow vulnerability marker detected"
-            ));
+            return Some("Integer overflow/underflow vulnerability marker detected".to_string());
         }
 
         None
@@ -225,9 +227,7 @@ impl IntegerOverflowDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -250,9 +250,7 @@ impl IntegerOverflowDetector {
             || func_source.contains("supply");
 
         if has_unchecked && (has_user_input || has_state_changes) {
-            return Some(format!(
-                "Unchecked block performs arithmetic on user-controlled values or critical state variables"
-            ));
+            return Some("Unchecked block performs arithmetic on user-controlled values or critical state variables".to_string());
         }
 
         // Pattern: Unchecked without clear justification comment
@@ -261,9 +259,7 @@ impl IntegerOverflowDetector {
             || func_source.contains("// Checked above");
 
         if has_unchecked && !has_safety_comment {
-            return Some(format!(
-                "Unchecked block lacks safety justification comments"
-            ));
+            return Some("Unchecked block lacks safety justification comments".to_string());
         }
 
         None

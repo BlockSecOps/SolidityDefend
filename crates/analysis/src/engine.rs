@@ -258,12 +258,12 @@ impl FunctionAnalysisResult {
             "  Return Types: {}\n",
             self.ir_function.return_types.len()
         ));
-        report.push_str("\n");
+        report.push('\n');
 
         // CFG Analysis
         report.push_str("CFG Analysis:\n");
         report.push_str(&self.cfg_analysis.generate_report());
-        report.push_str("\n");
+        report.push('\n');
 
         // Dataflow Analysis
         report.push_str("Dataflow Analysis:\n");

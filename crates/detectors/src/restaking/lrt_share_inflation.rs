@@ -22,9 +22,9 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::restaking::classification::*;
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::restaking::classification::*;
 use ast;
 
 pub struct LRTShareInflationDetector {
@@ -55,9 +55,10 @@ impl LRTShareInflationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check deposit/mint/stake functions
-        if !func_name_lower.contains("deposit") &&
-           !func_name_lower.contains("mint") &&
-           !func_name_lower.contains("stake") {
+        if !func_name_lower.contains("deposit")
+            && !func_name_lower.contains("mint")
+            && !func_name_lower.contains("stake")
+        {
             return findings;
         }
 
@@ -125,26 +126,27 @@ impl LRTShareInflationDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check deposit/mint functions
-        if !func_name_lower.contains("deposit") &&
-           !func_name_lower.contains("mint") {
+        if !func_name_lower.contains("deposit") && !func_name_lower.contains("mint") {
             return findings;
         }
 
         // Check for minimum shares check
         if !checks_minimum_shares(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No minimum shares check in '{}' - can mint 0 shares (rounding attack)",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Validate minimum shares minted:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No minimum shares check in '{}' - can mint 0 shares (rounding attack)",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Validate minimum shares minted:\n\
                  \n\
                  function deposit(uint256 assets) external returns (uint256 shares) {\n\
                      shares = convertToShares(assets);\n\
@@ -156,8 +158,9 @@ impl LRTShareInflationDetector {
                      _totalTrackedAssets += assets;\n\
                  }\n\
                  \n\
-                 This prevents victim from depositing assets but receiving 0 shares.".to_string()
-            );
+                 This prevents victim from depositing assets but receiving 0 shares."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -239,16 +242,19 @@ impl LRTShareInflationDetector {
         if let Some(func) = total_assets_func {
             // Check if it uses balanceOf
             if uses_balance_of(func, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    "totalAssets() uses balanceOf - vulnerable to donation manipulation".to_string(),
-                    func.name.location.start().line() as u32,
-                    0,
-                    20,
-                    Severity::Critical,
-                )
-                .with_fix_suggestion(
-                    "Use tracked assets instead of balanceOf:\n\
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        "totalAssets() uses balanceOf - vulnerable to donation manipulation"
+                            .to_string(),
+                        func.name.location.start().line() as u32,
+                        0,
+                        20,
+                        Severity::Critical,
+                    )
+                    .with_fix_suggestion(
+                        "Use tracked assets instead of balanceOf:\n\
                      \n\
                      // BAD: Includes donations\n\
                      function totalAssets() public view returns (uint256) {\n\
@@ -273,8 +279,9 @@ impl LRTShareInflationDetector {
                          // ...\n\
                      }\n\
                      \n\
-                     This prevents attacker from inflating totalAssets via direct transfer.".to_string()
-                );
+                     This prevents attacker from inflating totalAssets via direct transfer."
+                            .to_string(),
+                    );
 
                 findings.push(finding);
             }
@@ -342,9 +349,9 @@ impl LRTShareInflationDetector {
         }
 
         // Check for minimum deposit constant
-        let has_min_deposit = source_lower.contains("min_deposit") ||
-                              source_lower.contains("mindeposit") ||
-                              source_lower.contains("minimum_deposit");
+        let has_min_deposit = source_lower.contains("min_deposit")
+            || source_lower.contains("mindeposit")
+            || source_lower.contains("minimum_deposit");
 
         if !has_min_deposit {
             let finding = self.base.create_finding_with_severity(
@@ -450,7 +457,6 @@ impl Detector for LRTShareInflationDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

@@ -60,7 +60,7 @@ impl Detector for OptimisticChallengeBypassDetector {
             let func_source = self.get_function_source(function, ctx);
 
             // Check for withdrawal finalization functions
-            if self.is_withdrawal_finalization_function(&function.name.name, &func_source) {
+            if self.is_withdrawal_finalization_function(function.name.name, &func_source) {
                 let issues = self.check_challenge_period(&func_source);
 
                 for issue in issues {
@@ -95,7 +95,7 @@ impl Detector for OptimisticChallengeBypassDetector {
             }
 
             // Check for state commitment functions
-            if self.is_state_commitment_function(&function.name.name, &func_source) {
+            if self.is_state_commitment_function(function.name.name, &func_source) {
                 let issues = self.check_fraud_proof_mechanism(&func_source);
 
                 for issue in issues {
@@ -130,7 +130,7 @@ impl Detector for OptimisticChallengeBypassDetector {
             }
 
             // Check for challenge functions
-            if self.is_challenge_function(&function.name.name, &func_source) {
+            if self.is_challenge_function(function.name.name, &func_source) {
                 let issues = self.check_challenge_validation(&func_source);
 
                 for issue in issues {
@@ -209,7 +209,8 @@ impl OptimisticChallengeBypassDetector {
         patterns
             .iter()
             .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("stateRoot") && (source.contains("propose") || source.contains("commit")))
+            || (source.contains("stateRoot")
+                && (source.contains("propose") || source.contains("commit")))
     }
 
     fn is_challenge_function(&self, name: &str, source: &str) -> bool {
@@ -392,7 +393,11 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "optimistic-challenge-bypass");
         assert!(detector.categories().contains(&DetectorCategory::L2));
-        assert!(detector.categories().contains(&DetectorCategory::CrossChain));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::CrossChain)
+        );
     }
 
     #[test]

@@ -9,6 +9,12 @@ pub struct UncheckedMathDetector {
     base: BaseDetector,
 }
 
+impl Default for UncheckedMathDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UncheckedMathDetector {
     pub fn new() -> Self {
         Self {
@@ -96,9 +102,7 @@ impl UncheckedMathDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<Vec<String>> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let mut issues = Vec::new();

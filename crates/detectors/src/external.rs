@@ -8,6 +8,12 @@ pub struct UncheckedCallDetector {
     base: BaseDetector,
 }
 
+impl Default for UncheckedCallDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UncheckedCallDetector {
     pub fn new() -> Self {
         Self {
@@ -117,22 +123,20 @@ impl UncheckedCallDetector {
 
     /// Check if expression is an external call
     fn is_external_call(&self, expr: &ast::Expression<'_>) -> bool {
-        match expr {
-            ast::Expression::MemberAccess {
-                expression, member, ..
-            } => {
-                // Common external call patterns
-                let method = member.name.to_lowercase();
-                if method == "call" || method == "send" || method == "transfer" {
-                    return true;
-                }
-
-                // Check for contract interface calls
-                if let ast::Expression::Identifier(_) = expression {
-                    return true;
-                }
+        if let ast::Expression::MemberAccess {
+            expression, member, ..
+        } = expr
+        {
+            // Common external call patterns
+            let method = member.name.to_lowercase();
+            if method == "call" || method == "send" || method == "transfer" {
+                return true;
             }
-            _ => {}
+
+            // Check for contract interface calls
+            if let ast::Expression::Identifier(_) = expression {
+                return true;
+            }
         }
         false
     }

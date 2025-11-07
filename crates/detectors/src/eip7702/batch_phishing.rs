@@ -5,9 +5,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::is_eip7702_delegate;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::is_eip7702_delegate;
 
 pub struct EIP7702BatchPhishingDetector {
     base: BaseDetector,
@@ -19,14 +19,19 @@ impl EIP7702BatchPhishingDetector {
             base: BaseDetector::new(
                 DetectorId("eip7702-batch-phishing".to_string()),
                 "EIP-7702 Batch Phishing".to_string(),
-                "Detects batch execution used for multi-asset drainage in phishing attacks".to_string(),
+                "Detects batch execution used for multi-asset drainage in phishing attacks"
+                    .to_string(),
                 vec![DetectorCategory::MEV],
                 Severity::High,
             ),
         }
     }
 
-    fn check_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Vec<(String, Severity, String)> {
+    fn check_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Vec<(String, Severity, String)> {
         let mut issues = Vec::new();
         let func_name = &function.name.name.to_lowercase();
 
@@ -35,7 +40,8 @@ impl EIP7702BatchPhishingDetector {
         }
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
@@ -49,7 +55,10 @@ impl EIP7702BatchPhishingDetector {
 
         if has_loop && has_call && !has_auth {
             issues.push((
-                format!("Unprotected batch execution in '{}' - phishing risk", function.name.name),
+                format!(
+                    "Unprotected batch execution in '{}' - phishing risk",
+                    function.name.name
+                ),
                 Severity::High,
                 "Batch functions without authorization enable phishing:\n\
                  \n\
@@ -67,7 +76,8 @@ impl EIP7702BatchPhishingDetector {
                          (bool success,) = calls[i].target.call(calls[i].data);\n\
                          require(success, \"Call failed\");\n\
                      }\n\
-                 }".to_string()
+                 }"
+                .to_string(),
             ));
         }
 
@@ -115,9 +125,17 @@ impl Detector for EIP7702BatchPhishingDetector {
 
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self.base.create_finding_with_severity(
-                    ctx, title, function.name.location.start().line() as u32, 0, 20, severity
-                ).with_fix_suggestion(remediation);
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        title,
+                        function.name.location.start().line() as u32,
+                        0,
+                        20,
+                        severity,
+                    )
+                    .with_fix_suggestion(remediation);
                 findings.push(finding);
             }
         }

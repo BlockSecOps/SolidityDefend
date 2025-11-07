@@ -22,9 +22,9 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::restaking::classification::*;
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::restaking::classification::*;
 use ast;
 
 pub struct RestakingSlashingConditionsDetector {
@@ -55,8 +55,7 @@ impl RestakingSlashingConditionsDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check slashing functions
-        if !func_name_lower.contains("slash") &&
-           !func_name_lower.contains("penalize") {
+        if !func_name_lower.contains("slash") && !func_name_lower.contains("penalize") {
             return findings;
         }
 
@@ -101,19 +100,21 @@ impl RestakingSlashingConditionsDetector {
 
         // Check 2: Evidence is validated
         if has_evidence_parameter(function) && !validates_evidence(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Evidence parameter present but not validated in '{}'",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Critical,
-            )
-            .with_fix_suggestion(
-                "Validate evidence before accepting slashing request:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Evidence parameter present but not validated in '{}'",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Critical,
+                )
+                .with_fix_suggestion(
+                    "Validate evidence before accepting slashing request:\n\
                  \n\
                  function requestSlashing(\n\
                      address operator,\n\
@@ -130,8 +131,9 @@ impl RestakingSlashingConditionsDetector {
                      slashingEvidence[operator] = evidence;\n\
                      \n\
                      emit SlashingRequested(operator, amount, evidence);\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -150,8 +152,7 @@ impl RestakingSlashingConditionsDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check slashing execution functions
-        if !func_name_lower.contains("slash") &&
-           !func_name_lower.contains("penalize") {
+        if !func_name_lower.contains("slash") && !func_name_lower.contains("penalize") {
             return findings;
         }
 
@@ -302,10 +303,11 @@ impl RestakingSlashingConditionsDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check AVS registration and slashing policy functions
-        if !func_name_lower.contains("registeravs") &&
-           !func_name_lower.contains("register") &&
-           !func_name_lower.contains("setslashing") &&
-           !func_name_lower.contains("slashingpolicy") {
+        if !func_name_lower.contains("registeravs")
+            && !func_name_lower.contains("register")
+            && !func_name_lower.contains("setslashing")
+            && !func_name_lower.contains("slashingpolicy")
+        {
             return findings;
         }
 
@@ -365,9 +367,10 @@ impl RestakingSlashingConditionsDetector {
         let mut findings = Vec::new();
 
         // Only check if contract has slashing functions
-        let has_slashing = ctx.get_functions().iter().any(|f| {
-            f.name.name.to_lowercase().contains("slash")
-        });
+        let has_slashing = ctx
+            .get_functions()
+            .iter()
+            .any(|f| f.name.name.to_lowercase().contains("slash"));
 
         if !has_slashing {
             return findings;
@@ -478,7 +481,6 @@ impl Detector for RestakingSlashingConditionsDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

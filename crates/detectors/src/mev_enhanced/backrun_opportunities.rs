@@ -63,8 +63,8 @@ impl Detector for MEVBackrunOpportunitiesDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Check for state-changing operations
-        let has_state_change = lower.contains("function")
-            && (lower.contains("external") || lower.contains("public"));
+        let has_state_change =
+            lower.contains("function") && (lower.contains("external") || lower.contains("public"));
 
         if !has_state_change {
             return Ok(findings);
@@ -120,12 +120,11 @@ impl Detector for MEVBackrunOpportunitiesDetector {
         }
 
         // Pattern 3: Liquidation triggers without protection
-        let has_liquidation = lower.contains("liquidate")
-            || lower.contains("canbeliquidated");
+        let has_liquidation = lower.contains("liquidate") || lower.contains("canbeliquidated");
 
         if has_liquidation {
-            let has_backrun_protection = lower.contains("liquidationdelay")
-                || lower.contains("graceperiod");
+            let has_backrun_protection =
+                lower.contains("liquidationdelay") || lower.contains("graceperiod");
 
             if !has_backrun_protection {
                 let finding = self.base.create_finding(
@@ -144,9 +143,8 @@ impl Detector for MEVBackrunOpportunitiesDetector {
         }
 
         // Pattern 4: Rebalancing operations
-        let has_rebalance = lower.contains("rebalance")
-            || lower.contains("reweight")
-            || lower.contains("adjust");
+        let has_rebalance =
+            lower.contains("rebalance") || lower.contains("reweight") || lower.contains("adjust");
 
         if has_rebalance {
             let finding = self.base.create_finding(

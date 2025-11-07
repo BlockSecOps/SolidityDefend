@@ -29,17 +29,17 @@
 //!    - Enhanced bundler DOS detection (2024 patterns)
 //!    - Real-world: Production bundler attacks
 
+pub mod bundler_dos_enhanced;
 pub mod calldata_encoding_exploit;
+pub mod entry_point_reentrancy;
 pub mod paymaster_fund_drain;
 pub mod signature_aggregation_bypass;
 pub mod user_operation_replay;
-pub mod entry_point_reentrancy;
-pub mod bundler_dos_enhanced;
 
 // Re-export detectors
+pub use bundler_dos_enhanced::AABundlerDosEnhancedDetector;
 pub use calldata_encoding_exploit::AACalldataEncodingExploitDetector;
+pub use entry_point_reentrancy::AAEntryPointReentrancyDetector;
 pub use paymaster_fund_drain::AAPaymasterFundDrainDetector;
 pub use signature_aggregation_bypass::AASignatureAggregationBypassDetector;
 pub use user_operation_replay::AAUserOperationReplayDetector;
-pub use entry_point_reentrancy::AAEntryPointReentrancyDetector;
-pub use bundler_dos_enhanced::AABundlerDosEnhancedDetector;

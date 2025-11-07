@@ -16,6 +16,12 @@ pub struct AmmKInvariantViolationDetector {
     base: BaseDetector,
 }
 
+impl Default for AmmKInvariantViolationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AmmKInvariantViolationDetector {
     pub fn new() -> Self {
         Self {
@@ -33,9 +39,10 @@ impl AmmKInvariantViolationDetector {
     fn is_swap_function(&self, func_name: &str, func_source: &str) -> bool {
         let swap_keywords = ["swap", "exchange", "trade", "convert"];
 
-        swap_keywords.iter().any(|&keyword| {
-            func_name.to_lowercase().contains(keyword)
-        }) || func_source.contains("SwapParams")
+        swap_keywords
+            .iter()
+            .any(|&keyword| func_name.to_lowercase().contains(keyword))
+            || func_source.contains("SwapParams")
             || func_source.contains("amountOut")
             || func_source.contains("amountIn")
     }
@@ -61,8 +68,7 @@ impl AmmKInvariantViolationDetector {
                 || func_source.contains("* reserve")
                 || func_source.contains("kLast"));
 
-        let has_require_with_k = func_source.contains("require(")
-            && has_k_calculation;
+        let has_require_with_k = func_source.contains("require(") && has_k_calculation;
 
         if modifies_reserves && !has_k_check && !has_require_with_k {
             return Some(
@@ -90,8 +96,8 @@ impl AmmKInvariantViolationDetector {
             || func_source.contains("balance0Before")
             || func_source.contains("balance1Before");
 
-        let has_balance_check = func_source.contains("balanceOf(address(this))")
-            && func_source.contains("balance");
+        let has_balance_check =
+            func_source.contains("balanceOf(address(this))") && func_source.contains("balance");
 
         // Check if actual received amount is calculated
         let calculates_actual_amount = func_source.contains("balance") && func_source.contains("-")
@@ -108,8 +114,10 @@ impl AmmKInvariantViolationDetector {
 
         // Check if reserves are synced with actual balances
         let syncs_with_balance = func_source.contains("balanceOf")
-            && (func_source.contains("reserve0 =") || func_source.contains("reserve1 =")
-                || func_source.contains("reserve0 +=") || func_source.contains("reserve1 +="));
+            && (func_source.contains("reserve0 =")
+                || func_source.contains("reserve1 =")
+                || func_source.contains("reserve0 +=")
+                || func_source.contains("reserve1 +="));
 
         if has_transfer && has_balance_check && !syncs_with_balance {
             return Some(
@@ -207,8 +215,8 @@ impl AmmKInvariantViolationDetector {
         }
 
         // Check for deadline validation
-        let has_deadline = func_source.contains("deadline")
-            || func_source.contains("block.timestamp");
+        let has_deadline =
+            func_source.contains("deadline") || func_source.contains("block.timestamp");
 
         let has_deadline_check = func_source.contains("require(")
             && func_source.contains("deadline")
@@ -417,7 +425,11 @@ mod tests {
             reserve0 = balance0;
             reserve1 = balance1;
         }";
-        assert!(detector.check_k_invariant_validation(vulnerable_code).is_some());
+        assert!(
+            detector
+                .check_k_invariant_validation(vulnerable_code)
+                .is_some()
+        );
 
         // Should not flag code with K validation
         let safe_code = "function swap() external {
@@ -479,15 +491,24 @@ mod tests {
             uint256 amountOut = getAmountOut(amountIn);
             token.transfer(msg.sender, amountOut);
         }";
-        assert!(detector.check_slippage_validation(vulnerable_code, true).is_some());
+        assert!(
+            detector
+                .check_slippage_validation(vulnerable_code, true)
+                .is_some()
+        );
 
         // Should not flag code with slippage protection
-        let safe_code = "function swap(uint256 amountIn, uint256 minAmountOut, uint256 deadline) external {
+        let safe_code =
+            "function swap(uint256 amountIn, uint256 minAmountOut, uint256 deadline) external {
             require(block.timestamp <= deadline, \"Expired\");
             uint256 amountOut = getAmountOut(amountIn);
             require(amountOut >= minAmountOut, \"Slippage\");
             token.transfer(msg.sender, amountOut);
         }";
-        assert!(detector.check_slippage_validation(safe_code, true).is_none());
+        assert!(
+            detector
+                .check_slippage_validation(safe_code, true)
+                .is_none()
+        );
     }
 }

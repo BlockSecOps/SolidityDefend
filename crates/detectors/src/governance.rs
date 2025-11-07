@@ -8,6 +8,12 @@ use ast;
 /// Governance vulnerability detector that implements the Detector trait
 pub struct GovernanceDetector;
 
+impl Default for GovernanceDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GovernanceDetector {
     pub fn new() -> Self {
         Self
@@ -276,7 +282,7 @@ impl GovernanceDetector {
         let snapshot_patterns = [
             "snapshot",
             "getPastVotes",  // OpenZeppelin Governor
-            "getPriorVotes",  // Compound Governor Bravo
+            "getPriorVotes", // Compound Governor Bravo
             "balanceOfAt",
             "checkpoints",
             "timeWeighted",
@@ -304,6 +310,12 @@ impl GovernanceDetector {
 
 /// External calls in loop detector for governance execution vulnerabilities
 pub struct ExternalCallsLoopDetector;
+
+impl Default for ExternalCallsLoopDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl ExternalCallsLoopDetector {
     pub fn new() -> Self {
@@ -432,6 +444,12 @@ impl Detector for ExternalCallsLoopDetector {
 
 /// Signature replay attack detector
 pub struct SignatureReplayDetector;
+
+impl Default for SignatureReplayDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl SignatureReplayDetector {
     pub fn new() -> Self {
@@ -584,6 +602,12 @@ impl Detector for SignatureReplayDetector {
 /// Emergency pause centralization detector
 pub struct EmergencyPauseCentralizationDetector;
 
+impl Default for EmergencyPauseCentralizationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EmergencyPauseCentralizationDetector {
     pub fn new() -> Self {
         Self
@@ -686,10 +710,8 @@ impl Detector for EmergencyPauseCentralizationDetector {
                     self.id(),
                     Severity::Medium,
                     Confidence::Medium,
-                    format!(
-                        "Contract has centralized emergency pause functionality without multisig protection. \
-                        A single compromised account can halt the entire system, creating a single point of failure."
-                    ),
+                    "Contract has centralized emergency pause functionality without multisig protection. \
+                        A single compromised account can halt the entire system, creating a single point of failure.".to_string(),
                     SourceLocation::new(
                         ctx.file_path.clone(),
                         func.location.start().line() as u32,

@@ -34,12 +34,16 @@ impl FlashloanGovernanceAttackDetector {
     }
 
     fn is_governance_contract(&self, ctx: &AnalysisContext) -> bool {
-        ctx.get_functions().iter().any(|f| f.name.name == "propose") &&
-        ctx.get_functions().iter().any(|f| f.name.name == "vote") &&
-        ctx.get_functions().iter().any(|f| f.name.name == "execute")
+        ctx.get_functions().iter().any(|f| f.name.name == "propose")
+            && ctx.get_functions().iter().any(|f| f.name.name == "vote")
+            && ctx.get_functions().iter().any(|f| f.name.name == "execute")
     }
 
-    fn get_function_source<'a>(&self, function: &ast::Function, ctx: &'a AnalysisContext) -> &'a str {
+    fn get_function_source<'a>(
+        &self,
+        function: &ast::Function,
+        ctx: &'a AnalysisContext,
+    ) -> &'a str {
         let source = &ctx.source_code;
         let func_start = function.location.start().offset();
         let func_end = function.location.end().offset();
@@ -56,9 +60,9 @@ impl FlashloanGovernanceAttackDetector {
         let func_lower = func_source.to_lowercase();
 
         // Check for snapshot-based voting functions
-        func_lower.contains("getpastvotes") ||
-        func_lower.contains("balanceofat") ||
-        func_lower.contains("snapshot")
+        func_lower.contains("getpastvotes")
+            || func_lower.contains("balanceofat")
+            || func_lower.contains("snapshot")
     }
 
     fn has_timelock(&self, ctx: &AnalysisContext) -> bool {
@@ -128,12 +132,21 @@ impl Detector for FlashloanGovernanceAttackDetector {
 
         // Check timelock
         if !self.has_timelock(ctx) {
-            findings.push(self.base.create_finding_with_severity(
-                ctx,
-                "No timelock delay - instant execution (Compound Proposal 289 pattern)".to_string(),
-                1, 0, 20,
-                Severity::Critical,
-            ).with_fix_suggestion("Add timelock with queue() → execute() pattern (2+ days delay)".to_string()));
+            findings.push(
+                self.base
+                    .create_finding_with_severity(
+                        ctx,
+                        "No timelock delay - instant execution (Compound Proposal 289 pattern)"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::Critical,
+                    )
+                    .with_fix_suggestion(
+                        "Add timelock with queue() → execute() pattern (2+ days delay)".to_string(),
+                    ),
+            );
         }
 
         Ok(findings)

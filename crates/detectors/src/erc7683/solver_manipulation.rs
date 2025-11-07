@@ -17,8 +17,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::erc7683::classification::*;
+use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use ast;
 
 pub struct IntentSolverManipulationDetector {
@@ -53,19 +53,21 @@ impl IntentSolverManipulationDetector {
 
         // Check for solver authentication
         if !has_solver_authentication(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No solver authentication in '{}' - any address can fill orders",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Implement solver whitelist:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No solver authentication in '{}' - any address can fill orders",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Implement solver whitelist:\n\
                  \n\
                  mapping(address => bool) public approvedSolvers;\n\
                  \n\
@@ -78,8 +80,9 @@ impl IntentSolverManipulationDetector {
                      // ... rest of fill logic\n\
                  }\n\
                  \n\
-                 This prevents unauthorized actors from filling orders maliciously.".to_string()
-            );
+                 This prevents unauthorized actors from filling orders maliciously."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -102,19 +105,21 @@ impl IntentSolverManipulationDetector {
 
         // Check for reentrancy protection
         if !has_reentrancy_protection(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "Missing reentrancy protection in '{}' - vulnerable to reentrancy attacks",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::High,
-            )
-            .with_fix_suggestion(
-                "Add reentrancy protection:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "Missing reentrancy protection in '{}' - vulnerable to reentrancy attacks",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "Add reentrancy protection:\n\
                  \n\
                  import \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\
                  \n\
@@ -133,8 +138,9 @@ impl IntentSolverManipulationDetector {
                      _locked = 2;\n\
                      _;\n\
                      _locked = 1;\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -174,19 +180,21 @@ impl IntentSolverManipulationDetector {
             || (func_lower.contains("before") && func_lower.contains("after"));
 
         if !has_balance_check && !has_state_snapshot {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No state validation in '{}' - vulnerable to state manipulation",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Add state validation before and after execution:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No state validation in '{}' - vulnerable to state manipulation",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Add state validation before and after execution:\n\
                  \n\
                  function fill(...) external {\n\
                      // State snapshot before\n\
@@ -203,8 +211,9 @@ impl IntentSolverManipulationDetector {
                      );\n\
                  }\n\
                  \n\
-                 This prevents attackers from manipulating state between validation and execution.".to_string()
-            );
+                 This prevents attackers from manipulating state between validation and execution."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -225,16 +234,19 @@ impl IntentSolverManipulationDetector {
 
         // Check for MEV protection
         if !has_mev_protection(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "No MEV protection detected - orders visible in mempool can be front-run".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Consider implementing MEV protection:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "No MEV protection detected - orders visible in mempool can be front-run"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Consider implementing MEV protection:\n\
                  \n\
                  Option 1: Commit-Reveal Scheme\n\
                  \n\
@@ -262,8 +274,9 @@ impl IntentSolverManipulationDetector {
                  - Integrate with Flashbots Protect or similar service\n\
                  - Orders submitted through private mempool\n\
                  \n\
-                 This prevents front-runners from seeing order details before execution.".to_string()
-            );
+                 This prevents front-runners from seeing order details before execution."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -415,7 +428,6 @@ impl Detector for IntentSolverManipulationDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

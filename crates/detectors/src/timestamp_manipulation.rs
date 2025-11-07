@@ -9,6 +9,12 @@ pub struct TimestampManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for TimestampManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TimestampManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -97,9 +103,7 @@ impl TimestampManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -122,11 +126,9 @@ impl TimestampManipulationDetector {
                 || func_source.contains("blockhash"));
 
         if has_keccak_block_vars {
-            return Some(format!(
-                "Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. \
+            return Some("Uses keccak256 with block variables (timestamp/difficulty/number/prevrandao) for randomness. \
                 These values are predictable/manipulable by miners and validators, enabling attacks on randomness-dependent logic. \
-                Use Chainlink VRF or commit-reveal schemes instead"
-            ));
+                Use Chainlink VRF or commit-reveal schemes instead".to_string());
         }
 
         // Pattern 2b: Direct modulo on block variables
@@ -137,21 +139,17 @@ impl TimestampManipulationDetector {
             || (func_source.contains("blockhash") && func_source.contains('%'));
 
         if has_block_modulo {
-            return Some(format!(
-                "Uses modulo operator on block variables for randomness or decision-making. \
-                Block variables are predictable and can be manipulated by miners, leading to biased or exploitable outcomes"
-            ));
+            return Some("Uses modulo operator on block variables for randomness or decision-making. \
+                Block variables are predictable and can be manipulated by miners, leading to biased or exploitable outcomes".to_string());
         }
 
         // Pattern 2c: block.difficulty or block.prevrandao usage (weak randomness)
-        let uses_difficulty_or_prevrandao = func_source.contains("block.difficulty")
-            || func_source.contains("block.prevrandao");
+        let uses_difficulty_or_prevrandao =
+            func_source.contains("block.difficulty") || func_source.contains("block.prevrandao");
 
         if uses_difficulty_or_prevrandao && !has_keccak_block_vars {
-            return Some(format!(
-                "Uses block.difficulty or block.prevrandao which are manipulable by validators. \
-                These should never be used for randomness. Use Chainlink VRF or similar oracle-based randomness"
-            ));
+            return Some("Uses block.difficulty or block.prevrandao which are manipulable by validators. \
+                These should never be used for randomness. Use Chainlink VRF or similar oracle-based randomness".to_string());
         }
 
         // Pattern 1: Timestamp used in comparison without tolerance
@@ -163,10 +161,11 @@ impl TimestampManipulationDetector {
             && !func_source.contains("BUFFER");
 
         if has_exact_comparison {
-            return Some(format!(
+            return Some(
                 "Uses exact timestamp comparison without tolerance, \
                 vulnerable to minor miner manipulation for edge cases"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Timestamp for randomness (GENERIC - check last)
@@ -177,10 +176,11 @@ impl TimestampManipulationDetector {
             && uses_timestamp;
 
         if uses_for_randomness {
-            return Some(format!(
+            return Some(
                 "Uses block.timestamp for randomness or lottery selection, \
                 allowing miners to manipulate outcomes by choosing favorable timestamps"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Critical state changes based on timestamp
@@ -196,10 +196,11 @@ impl TimestampManipulationDetector {
                 || func_source.contains("require(block.timestamp"));
 
         if timestamp_controls_critical {
-            return Some(format!(
+            return Some(
                 "Critical operations (transfer/mint/burn/withdraw) controlled by timestamp, \
                 enabling miners to manipulate timing for advantage"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Timestamp used for deadline without block.number fallback
@@ -211,10 +212,11 @@ impl TimestampManipulationDetector {
             has_deadline && uses_timestamp && !func_source.contains("block.number");
 
         if lacks_block_number {
-            return Some(format!(
+            return Some(
                 "Uses timestamp-based deadline without block.number as fallback, \
                 vulnerable to timestamp manipulation for deadline extensions"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Timestamp arithmetic without safety checks
@@ -226,10 +228,11 @@ impl TimestampManipulationDetector {
             && !func_source.contains("checked");
 
         if has_timestamp_math {
-            return Some(format!(
+            return Some(
                 "Performs arithmetic on block.timestamp without overflow protection, \
                 potentially manipulable by miners within bounds"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Auction or time-sensitive mechanism
@@ -243,10 +246,11 @@ impl TimestampManipulationDetector {
             && (func_source.contains("endTime") || func_source.contains("startTime"));
 
         if timestamp_affects_auction {
-            return Some(format!(
+            return Some(
                 "Auction mechanism depends on block.timestamp for start/end times, \
                 miners can manipulate to snipe auctions or extend bidding"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Vesting or unlock schedules
@@ -259,19 +263,18 @@ impl TimestampManipulationDetector {
             && (func_source.contains(">=") || func_source.contains("<="));
 
         if timestamp_controls_vesting {
-            return Some(format!(
+            return Some(
                 "Vesting or unlock schedule controlled by timestamp, \
                 allowing miners to manipulate release timing"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Explicit vulnerability marker
         if func_source.contains("VULNERABILITY")
             && (func_source.contains("timestamp") || func_source.contains("time manipulation"))
         {
-            return Some(format!(
-                "Timestamp manipulation vulnerability marker detected"
-            ));
+            return Some("Timestamp manipulation vulnerability marker detected".to_string());
         }
 
         None

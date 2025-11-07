@@ -9,6 +9,12 @@ pub struct DeprecatedFunctionsDetector {
     base: BaseDetector,
 }
 
+impl Default for DeprecatedFunctionsDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DeprecatedFunctionsDetector {
     pub fn new() -> Self {
         Self {

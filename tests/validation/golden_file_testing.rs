@@ -582,7 +582,7 @@ impl GoldenFileRegression {
             .filter(|r| r.status == TestStatus::Updated)
             .count();
 
-        report.push_str(&format!("## Summary\n\n"));
+        report.push_str("## Summary\n\n");
         report.push_str(&format!("- Total Tests: {}\n", results.len()));
         report.push_str(&format!("- Passed: {}\n", passed));
         report.push_str(&format!("- Failed: {}\n", failed));
@@ -637,7 +637,7 @@ impl GoldenFileRegression {
                             diff.actual
                         ));
                     }
-                    report.push_str("\n");
+                    report.push('\n');
                 }
             }
         }

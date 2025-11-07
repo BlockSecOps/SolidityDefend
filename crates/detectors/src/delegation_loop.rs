@@ -9,6 +9,12 @@ pub struct DelegationLoopDetector {
     base: BaseDetector,
 }
 
+impl Default for DelegationLoopDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DelegationLoopDetector {
     pub fn new() -> Self {
         Self {

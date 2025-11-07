@@ -73,15 +73,19 @@ pub fn follows_cei_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Check for explicit CEI structure in comments
-    if source.contains("// Checks") && source.contains("// Effects") && source.contains("// Interactions") {
+    if source.contains("// Checks")
+        && source.contains("// Effects")
+        && source.contains("// Interactions")
+    {
         return true;
     }
 
     // Look for state updates before external calls
     // This is a weak heuristic but can help
     let has_balance_update = source.contains("balanceOf[") || source.contains("balances[");
-    let has_external_call =
-        source.contains(".transfer(") || source.contains(".transferFrom(") || source.contains(".call{");
+    let has_external_call = source.contains(".transfer(")
+        || source.contains(".transferFrom(")
+        || source.contains(".call{");
 
     if has_balance_update && has_external_call {
         // Try to determine order (very rough heuristic)
@@ -106,7 +110,10 @@ pub fn is_standard_erc20(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Check for ERC777 (has hooks - NOT safe)
-    if source.contains("ERC777") || source.contains("tokensReceived") || source.contains("_callTokensReceived") {
+    if source.contains("ERC777")
+        || source.contains("tokensReceived")
+        || source.contains("_callTokensReceived")
+    {
         return false;
     }
 

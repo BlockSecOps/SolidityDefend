@@ -43,9 +43,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::{has_transient_storage_declarations, uses_transient_storage};
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::{uses_transient_storage, has_transient_storage_declarations};
 
 pub struct TransientStorageComposabilityDetector {
     base: BaseDetector,
@@ -85,18 +85,26 @@ impl TransientStorageComposabilityDetector {
                 continue;
             };
 
-            let has_write = func_text.contains("transient") &&
-                (func_text.contains("=") || func_text.contains("++") || func_text.contains("--"));
+            let has_write = func_text.contains("transient")
+                && (func_text.contains("=")
+                    || func_text.contains("++")
+                    || func_text.contains("--"));
 
-            let has_read = func_text.contains("transient") &&
-                (func_text.contains("require(") || func_text.contains("if ("));
+            let has_read = func_text.contains("transient")
+                && (func_text.contains("require(") || func_text.contains("if ("));
 
             if has_write {
-                writers.push((function.name.name, function.name.location.start().line() as u32));
+                writers.push((
+                    function.name.name,
+                    function.name.location.start().line() as u32,
+                ));
             }
 
             if has_read {
-                readers.push((function.name.name, function.name.location.start().line() as u32));
+                readers.push((
+                    function.name.name,
+                    function.name.location.start().line() as u32,
+                ));
             }
         }
 
@@ -139,16 +147,15 @@ impl TransientStorageComposabilityDetector {
                      }}",
                     writer_names.join(", "),
                     reader_names.join(", "),
-                    writer_names.get(0).unwrap_or(&"writer".to_string()),
-                    reader_names.get(0).unwrap_or(&"reader".to_string()),
-                    reader_names.get(0).unwrap_or(&"reader".to_string())
+                    writer_names.first().unwrap_or(&"writer".to_string()),
+                    reader_names.first().unwrap_or(&"reader".to_string()),
+                    reader_names.first().unwrap_or(&"reader".to_string())
                 )
             ));
         }
 
         // Check for explicit cleanup patterns
-        let has_cleanup = source.to_lowercase().contains("delete") &&
-            source.contains("transient");
+        let has_cleanup = source.to_lowercase().contains("delete") && source.contains("transient");
 
         if !has_cleanup && !writers.is_empty() {
             issues.push((
@@ -164,7 +171,8 @@ impl TransientStorageComposabilityDetector {
                  While transient storage auto-clears at transaction end, explicit cleanup:\n\
                  1. Makes intent clear to auditors\n\
                  2. Prevents mid-transaction state pollution\n\
-                 3. Improves composability with other contracts".to_string()
+                 3. Improves composability with other contracts"
+                    .to_string(),
             ));
         }
 

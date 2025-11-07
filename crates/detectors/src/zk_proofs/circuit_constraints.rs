@@ -62,9 +62,8 @@ impl Detector for ZKCircuitUnderConstrainedDetector {
         let mut findings = Vec::new();
         let lower = ctx.source_code.to_lowercase();
 
-        let is_zk_system = lower.contains("circuit")
-            || lower.contains("constraint")
-            || lower.contains("r1cs");
+        let is_zk_system =
+            lower.contains("circuit") || lower.contains("constraint") || lower.contains("r1cs");
 
         if !is_zk_system {
             return Ok(findings);
@@ -93,8 +92,7 @@ impl Detector for ZKCircuitUnderConstrainedDetector {
 
         // Pattern 2: No input validation for proof
         if lower.contains("verifyproof") {
-            let validates_inputs = lower.contains("require(")
-                || lower.contains("assert(");
+            let validates_inputs = lower.contains("require(") || lower.contains("assert(");
 
             if !validates_inputs {
                 let finding = self.base.create_finding(

@@ -10,6 +10,12 @@ pub struct TokenSupplyManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for TokenSupplyManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TokenSupplyManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -59,7 +65,9 @@ impl Detector for TokenSupplyManipulationDetector {
         let is_flash_loan = utils::is_erc3156_flash_loan(ctx);
 
         for function in ctx.get_functions() {
-            if let Some(supply_issue) = self.check_token_supply_manipulation(function, ctx, is_vault, is_flash_loan) {
+            if let Some(supply_issue) =
+                self.check_token_supply_manipulation(function, ctx, is_vault, is_flash_loan)
+            {
                 let message = format!(
                     "Function '{}' has token supply manipulation vulnerability. {} \
                     Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
@@ -106,9 +114,7 @@ impl TokenSupplyManipulationDetector {
         is_vault: bool,
         is_flash_loan: bool,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -141,10 +147,11 @@ impl TokenSupplyManipulationDetector {
             && !func_source.contains("cap()");
 
         if no_supply_cap {
-            return Some(format!(
+            return Some(
                 "Mint function lacks maximum supply cap, \
                 enables unlimited token minting and hyperinflation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Mint without access control
@@ -155,10 +162,11 @@ impl TokenSupplyManipulationDetector {
             && !func_source.contains("require(msg.sender");
 
         if lacks_access_control {
-            return Some(format!(
+            return Some(
                 "Mint function lacks proper access control, \
                 anyone can mint unlimited tokens"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: No minting rate limit
@@ -170,10 +178,11 @@ impl TokenSupplyManipulationDetector {
         let no_rate_limit = is_mint && !has_rate_limit && func_source.contains("amount");
 
         if no_rate_limit {
-            return Some(format!(
+            return Some(
                 "Mint function has no rate limit, \
                 single transaction can mint excessive tokens"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Burn without balance check
@@ -187,10 +196,11 @@ impl TokenSupplyManipulationDetector {
             && func_source.contains("amount");
 
         if no_balance_check {
-            return Some(format!(
+            return Some(
                 "Burn function doesn't check balance before burning, \
                 can underflow balances or total supply"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: TotalSupply can be manipulated directly
@@ -202,10 +212,11 @@ impl TokenSupplyManipulationDetector {
         let direct_manipulation = modifies_total_supply && !is_mint && !is_burn && !is_vault;
 
         if direct_manipulation {
-            return Some(format!(
+            return Some(
                 "Function directly modifies totalSupply variable, \
                 bypasses mint/burn controls for supply manipulation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Mint doesn't update totalSupply
@@ -216,10 +227,11 @@ impl TokenSupplyManipulationDetector {
             is_mint && updates_balance && !func_source.contains("totalSupply");
 
         if doesnt_update_supply {
-            return Some(format!(
+            return Some(
                 "Mint function updates balance but not totalSupply, \
                 creates discrepancy between balances and reported supply"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: No supply change events
@@ -228,10 +240,11 @@ impl TokenSupplyManipulationDetector {
         let no_supply_event = (is_mint || is_burn) && !emits_event;
 
         if no_supply_event {
-            return Some(format!(
+            return Some(
                 "Supply-changing operation doesn't emit event, \
                 off-chain systems cannot track supply changes"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Mint to zero address
@@ -243,10 +256,11 @@ impl TokenSupplyManipulationDetector {
             && !func_source.contains("require(recipient != address(0)");
 
         if no_zero_check {
-            return Some(format!(
+            return Some(
                 "Mint function doesn't validate recipient address, \
                 tokens can be minted to zero address (burned)"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Rebasing without proper controls
@@ -258,10 +272,11 @@ impl TokenSupplyManipulationDetector {
             is_rebasing && !func_source.contains("maxRebase") && !func_source.contains("rebaseCap");
 
         if uncontrolled_rebase {
-            return Some(format!(
+            return Some(
                 "Rebase function lacks bounds checking, \
                 extreme rebases can manipulate supply drastically"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Flash mint without fees or limits
@@ -278,10 +293,11 @@ impl TokenSupplyManipulationDetector {
             && !func_source.contains("maxFlash");
 
         if no_flash_controls {
-            return Some(format!(
+            return Some(
                 "Flash mint without fees or maximum limits, \
                 enables free unlimited supply expansion attacks"
-            ));
+                    .to_string(),
+            );
         }
 
         None

@@ -9,6 +9,12 @@ pub struct GasGriefingDetector {
     base: BaseDetector,
 }
 
+impl Default for GasGriefingDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl GasGriefingDetector {
     pub fn new() -> Self {
         Self {
@@ -93,9 +99,7 @@ impl GasGriefingDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -106,18 +110,20 @@ impl GasGriefingDetector {
             || func_source.contains(".send");
 
         if has_loop && has_external_call && !func_source.contains("gas:") {
-            return Some(format!(
+            return Some(
                 "External call in loop without gas limit, \
                 attacker can grief by consuming all gas"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Transfer without gas stipend
         if has_external_call && !func_source.contains("gas(") && func_source.contains(".transfer") {
-            return Some(format!(
+            return Some(
                 "Transfer without gas stipend, \
                 recipient can grief by consuming gas in fallback"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Push pattern for mass distribution
@@ -125,10 +131,11 @@ impl GasGriefingDetector {
             has_loop && (func_source.contains("transfer") || func_source.contains("balances["));
 
         if distributes_to_many && !func_source.contains("pull") {
-            return Some(format!(
+            return Some(
                 "Push pattern for mass distribution, \
                 single failing recipient can grief entire distribution"
-            ));
+                    .to_string(),
+            );
         }
 
         None

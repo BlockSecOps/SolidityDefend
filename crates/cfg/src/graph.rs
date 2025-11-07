@@ -432,7 +432,7 @@ impl ControlFlowGraph {
     pub fn find_unreachable_blocks(&self) -> Vec<BlockId> {
         let mut unreachable = Vec::new();
 
-        for (block_id, _) in &self.block_to_node {
+        for block_id in self.block_to_node.keys() {
             if !self.is_reachable_from_entry(*block_id) {
                 unreachable.push(*block_id);
             }
@@ -512,7 +512,7 @@ impl ControlFlowGraph {
         }
 
         // Check that all blocks except entry have at least one predecessor
-        for (block_id, _) in &self.block_to_node {
+        for block_id in self.block_to_node.keys() {
             if self.entry_block_id() != Some(*block_id) {
                 let preds = self.predecessors(*block_id);
                 if preds.is_empty() {
@@ -598,7 +598,7 @@ impl ControlFlowGraph {
             ));
         }
 
-        dot.push_str("\n");
+        dot.push('\n');
 
         // Add edges
         for edge_ref in self.graph.edge_references() {

@@ -10,6 +10,12 @@ pub struct VaultDonationAttackDetector {
     base: BaseDetector,
 }
 
+impl Default for VaultDonationAttackDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VaultDonationAttackDetector {
     pub fn new() -> Self {
         Self {
@@ -93,8 +99,12 @@ impl Detector for VaultDonationAttackDetector {
 
         // Calculate protection score for confidence calibration
         let mut protection_score = 0;
-        if has_strategy_isolation { protection_score += 1; }
-        if has_reward_distribution { protection_score += 1; }
+        if has_strategy_isolation {
+            protection_score += 1;
+        }
+        if has_reward_distribution {
+            protection_score += 1;
+        }
 
         for function in ctx.get_functions() {
             if let Some(donation_issue) = self.check_donation_vulnerability(function, ctx) {
@@ -159,14 +169,12 @@ impl VaultDonationAttackDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
         // Identify vault-related functions
-        let is_vault_function = self.is_vault_related_function(&func_source, &function.name.name);
+        let is_vault_function = self.is_vault_related_function(&func_source, function.name.name);
 
         if !is_vault_function {
             return None;
@@ -184,10 +192,8 @@ impl VaultDonationAttackDetector {
             || func_source.contains("accountedBalance");
 
         if uses_balance_of && !has_internal_accounting {
-            return Some(format!(
-                "Uses balanceOf(address(this)) for share price calculation without internal balance tracking. \
-                Vulnerable to direct token donation manipulation"
-            ));
+            return Some("Uses balanceOf(address(this)) for share price calculation without internal balance tracking. \
+                Vulnerable to direct token donation manipulation".to_string());
         }
 
         // Pattern 2: totalAssets() implementation that uses balance directly
@@ -195,10 +201,11 @@ impl VaultDonationAttackDetector {
             || function.name.name == "totalAssets";
 
         if is_total_assets && uses_balance_of && !has_internal_accounting {
-            return Some(format!(
+            return Some(
                 "totalAssets() uses balanceOf directly without internal accounting. \
                 Any direct token transfer will inflate share price"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Share calculation using potentially manipulable balance
@@ -207,9 +214,10 @@ impl VaultDonationAttackDetector {
             && (func_source.contains("totalAssets()") || func_source.contains("totalAssets"));
 
         if calculates_shares && uses_balance_of && !has_internal_accounting {
-            return Some(format!(
+            return Some(
                 "Share calculation depends on balanceOf which can be manipulated by donations"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Missing donation guards or balance validation
@@ -219,9 +227,10 @@ impl VaultDonationAttackDetector {
             || func_source.contains("balanceCheck");
 
         if (is_total_assets || calculates_shares) && uses_balance_of && !has_donation_guard {
-            return Some(format!(
+            return Some(
                 "No donation guard detected. Missing validation for unexpected balance increases"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Asset balance read without update tracking
@@ -237,10 +246,11 @@ impl VaultDonationAttackDetector {
             || function.name.name.to_lowercase().contains("redeem");
 
         if is_deposit_withdraw && reads_balance && !updates_tracking {
-            return Some(format!(
+            return Some(
                 "Deposit/withdrawal function reads balance without updating internal tracking. \
                 Donations between operations will cause accounting mismatch"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Explicit vulnerability marker
@@ -249,7 +259,7 @@ impl VaultDonationAttackDetector {
                 || func_source.contains("direct transfer")
                 || func_source.contains("balance manipulation"))
         {
-            return Some(format!("Vault donation vulnerability marker detected"));
+            return Some("Vault donation vulnerability marker detected".to_string());
         }
 
         None

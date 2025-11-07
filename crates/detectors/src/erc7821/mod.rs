@@ -32,22 +32,22 @@
 //! - Permit2 documentation
 
 pub mod batch_authorization;
-pub mod token_approval;
-pub mod replay_protection;
 pub mod msg_sender_validation;
+pub mod replay_protection;
+pub mod token_approval;
 
 // Re-export detectors
 pub use batch_authorization::ERC7821BatchAuthorizationDetector;
-pub use token_approval::ERC7821TokenApprovalDetector;
-pub use replay_protection::ERC7821ReplayProtectionDetector;
 pub use msg_sender_validation::ERC7821MsgSenderValidationDetector;
+pub use replay_protection::ERC7821ReplayProtectionDetector;
+pub use token_approval::ERC7821TokenApprovalDetector;
 
 /// Helper function to detect if contract implements ERC-7821
 pub fn is_erc7821_executor(ctx: &crate::types::AnalysisContext) -> bool {
     let source = &ctx.source_code.to_lowercase();
 
     // Check for ERC-7821 specific patterns
-    source.contains("execute") && source.contains("batch") ||
-    source.contains("ierc7821") ||
-    source.contains("executebatch")
+    source.contains("execute") && source.contains("batch")
+        || source.contains("ierc7821")
+        || source.contains("executebatch")
 }

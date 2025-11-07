@@ -56,6 +56,12 @@ pub struct UrlFetcher {
     api_keys: HashMap<ExplorerPlatform, String>,
 }
 
+impl Default for UrlFetcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UrlFetcher {
     pub fn new() -> Self {
         let client = Client::builder()
@@ -426,7 +432,7 @@ impl UrlFetcher {
             contract.optimization, contract.optimization_runs
         )?;
         writeln!(file, "// Verified: {}", contract.is_verified)?;
-        writeln!(file, "")?;
+        writeln!(file)?;
 
         file.write_all(contract.source_code.as_bytes())?;
         file.flush()?;

@@ -9,6 +9,12 @@ pub struct ExcessiveGasUsageDetector {
     base: BaseDetector,
 }
 
+impl Default for ExcessiveGasUsageDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ExcessiveGasUsageDetector {
     pub fn new() -> Self {
         Self {
@@ -99,9 +105,7 @@ impl ExcessiveGasUsageDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<Vec<String>> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
         let mut issues = Vec::new();
@@ -144,13 +148,15 @@ impl ExcessiveGasUsageDetector {
         }
 
         // Pattern 4: Dynamic array length in loop condition
-        if func_source.contains("for") && func_source.contains(".length") {
-            if !func_source.contains("uint len =") && !func_source.contains("uint256 len =") {
-                issues.push(
-                    "Array length read in every loop iteration. Cache length in local variable"
-                        .to_string(),
-                );
-            }
+        if func_source.contains("for")
+            && func_source.contains(".length")
+            && !func_source.contains("uint len =")
+            && !func_source.contains("uint256 len =")
+        {
+            issues.push(
+                "Array length read in every loop iteration. Cache length in local variable"
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Emitting events in loops

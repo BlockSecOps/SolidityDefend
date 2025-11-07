@@ -46,6 +46,12 @@ pub enum ComplexityLevel {
     Enterprise, // > 10000 LOC
 }
 
+impl Default for PerformanceBenchmark {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl PerformanceBenchmark {
     pub fn new() -> Self {
         Self {
@@ -281,7 +287,7 @@ impl PerformanceBenchmark {
         #[cfg(target_os = "macos")]
         {
             let output = Command::new("ps")
-                .args(&["-o", "rss=", "-p"])
+                .args(["-o", "rss=", "-p"])
                 .arg(std::process::id().to_string())
                 .output()?;
 
@@ -371,7 +377,7 @@ impl PerformanceBenchmark {
             for (key, value) in &result.relative_performance {
                 report.push_str(&format!("- {}: {:.2}x\n", key, value));
             }
-            report.push_str("\n");
+            report.push('\n');
         }
 
         report

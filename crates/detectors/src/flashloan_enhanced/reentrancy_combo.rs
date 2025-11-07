@@ -142,7 +142,9 @@ impl Detector for FlashLoanReentrancyComboDetector {
                 if let Some(repay_line) = found_repay_line {
                     if i > repay_line
                         && i < repay_line + 15
-                        && (line_lower.contains(" = ") || line_lower.contains("++") || line_lower.contains("--"))
+                        && (line_lower.contains(" = ")
+                            || line_lower.contains("++")
+                            || line_lower.contains("--"))
                         && !line_lower.contains("//")
                     {
                         let finding = self.base.create_finding(

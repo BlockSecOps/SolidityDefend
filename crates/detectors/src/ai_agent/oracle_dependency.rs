@@ -1,9 +1,9 @@
 //! Autonomous Contract Oracle Dependency Detector
 
-use anyhow::Result;
-use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use anyhow::Result;
+use std::any::Any;
 
 pub struct AutonomousContractOracleDependencyDetector {
     base: BaseDetector,
@@ -24,16 +24,30 @@ impl AutonomousContractOracleDependencyDetector {
 }
 
 impl Default for AutonomousContractOracleDependencyDetector {
-    fn default() -> Self { Self::new() }
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Detector for AutonomousContractOracleDependencyDetector {
-    fn id(&self) -> DetectorId { self.base.id.clone() }
-    fn name(&self) -> &str { &self.base.name }
-    fn description(&self) -> &str { &self.base.description }
-    fn categories(&self) -> Vec<DetectorCategory> { self.base.categories.clone() }
-    fn default_severity(&self) -> Severity { self.base.default_severity }
-    fn is_enabled(&self) -> bool { self.base.enabled }
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
@@ -44,15 +58,26 @@ impl Detector for AutonomousContractOracleDependencyDetector {
             let has_fallback = lower.contains("fallback") || lower.contains("backup");
 
             if oracle_count == 1 && !has_fallback {
-                findings.push(self.base.create_finding(
-                    ctx,
-                    "Autonomous contract depends on single oracle - SPOF risk".to_string(),
-                    1, 1, ctx.source_code.len() as u32,
-                ).with_fix_suggestion("Add fallback oracle: if (primaryOracle.isDown()) use backupOracle".to_string()));
+                findings.push(
+                    self.base
+                        .create_finding(
+                            ctx,
+                            "Autonomous contract depends on single oracle - SPOF risk".to_string(),
+                            1,
+                            1,
+                            ctx.source_code.len() as u32,
+                        )
+                        .with_fix_suggestion(
+                            "Add fallback oracle: if (primaryOracle.isDown()) use backupOracle"
+                                .to_string(),
+                        ),
+                );
             }
         }
         Ok(findings)
     }
 
-    fn as_any(&self) -> &dyn Any { self }
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
 }

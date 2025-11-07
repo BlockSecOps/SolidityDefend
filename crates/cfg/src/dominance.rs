@@ -257,13 +257,9 @@ impl DominatorTree {
         let b_dominators = self.dominators(b);
 
         // Find the first common dominator walking up from b
-        for dominator in b_dominators {
-            if a_dominators.contains(&dominator) {
-                return Some(dominator);
-            }
-        }
-
-        None
+        b_dominators
+            .into_iter()
+            .find(|&dominator| a_dominators.contains(&dominator))
     }
 
     /// Get the root of the dominator tree
@@ -386,7 +382,7 @@ impl DominatorTree {
             ));
         }
 
-        dot.push_str("\n");
+        dot.push('\n');
 
         // Add edges (parent -> child relationships)
         for (parent, children) in &self.children {
@@ -453,13 +449,13 @@ pub struct DominatorTreeStatistics {
 
 impl std::fmt::Display for DominatorTreeStatistics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Dominator Tree Statistics:\n")?;
-        write!(f, "  Total blocks: {}\n", self.total_blocks)?;
-        write!(f, "  Tree height: {}\n", self.tree_height)?;
-        write!(f, "  Leaf blocks: {}\n", self.leaf_blocks)?;
-        write!(
+        writeln!(f, "Dominator Tree Statistics:")?;
+        writeln!(f, "  Total blocks: {}", self.total_blocks)?;
+        writeln!(f, "  Tree height: {}", self.tree_height)?;
+        writeln!(f, "  Leaf blocks: {}", self.leaf_blocks)?;
+        writeln!(
             f,
-            "  Average frontier size: {:.2}\n",
+            "  Average frontier size: {:.2}",
             self.average_frontier_size
         )?;
         write!(f, "  Max frontier size: {}", self.max_frontier_size)

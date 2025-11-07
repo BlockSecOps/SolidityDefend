@@ -71,8 +71,7 @@ impl Detector for ZKRecursiveProofValidationDetector {
 
         // Pattern 1: Batch proof verification without individual validation
         if lower.contains("batchverify") || lower.contains("aggregate") {
-            let validates_each = lower.contains("for (")
-                || lower.contains("while");
+            let validates_each = lower.contains("for (") || lower.contains("while");
 
             if !validates_each {
                 let finding = self.base.create_finding(

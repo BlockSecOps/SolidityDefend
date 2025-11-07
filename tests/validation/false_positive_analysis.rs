@@ -299,7 +299,7 @@ impl FalsePositiveAnalyzer {
                 {
                     reasons
                         .entry(finding.detector.clone())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(fp.reason.clone());
                     return;
                 }
@@ -309,7 +309,7 @@ impl FalsePositiveAnalyzer {
         // Default reason for unclassified false positives
         reasons
             .entry(finding.detector.clone())
-            .or_insert_with(Vec::new)
+            .or_default()
             .push("Unclassified false positive".to_string());
     }
 
@@ -456,7 +456,7 @@ impl FalsePositiveAnalyzer {
         report.push_str("| Detector | Total | TP | FP | Precision | Recall |\n");
         report.push_str("|----------|-------|----|----|-----------|--------|\n");
 
-        for (_, detector_analysis) in &analysis.detector_analysis {
+        for detector_analysis in analysis.detector_analysis.values() {
             report.push_str(&format!(
                 "| {} | {} | {} | {} | {:.2}% | {:.2}% |\n",
                 detector_analysis.detector_name,
@@ -473,7 +473,7 @@ impl FalsePositiveAnalyzer {
         report.push_str("| Severity | Total | TP | FP | FP Rate |\n");
         report.push_str("|----------|-------|----|----|----------|\n");
 
-        for (_, severity_analysis) in &analysis.severity_analysis {
+        for severity_analysis in analysis.severity_analysis.values() {
             report.push_str(&format!(
                 "| {:?} | {} | {} | {} | {:.2}% |\n",
                 severity_analysis.severity,

@@ -19,7 +19,8 @@ impl PrivilegeEscalationPathsDetector {
             base: BaseDetector::new(
                 DetectorId("privilege-escalation-paths".to_string()),
                 "Privilege Escalation Paths".to_string(),
-                "Detects indirect paths to gain higher privileges through function chains".to_string(),
+                "Detects indirect paths to gain higher privileges through function chains"
+                    .to_string(),
                 vec![DetectorCategory::AccessControl],
                 Severity::High,
             ),
@@ -63,9 +64,8 @@ impl Detector for PrivilegeEscalationPathsDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Check for role-based access control systems
-        let uses_roles = lower.contains("hasrole")
-            || lower.contains("onlyrole")
-            || lower.contains("grantrole");
+        let uses_roles =
+            lower.contains("hasrole") || lower.contains("onlyrole") || lower.contains("grantrole");
 
         if !uses_roles {
             return Ok(findings);
@@ -73,7 +73,8 @@ impl Detector for PrivilegeEscalationPathsDetector {
 
         // Pattern 1: Public/external functions that call grantRole without proper checks
         let has_grant_role = lower.contains("grantrole");
-        let has_public_grant_wrapper = (lower.contains("function add") && lower.contains("grantrole"))
+        let has_public_grant_wrapper = (lower.contains("function add")
+            && lower.contains("grantrole"))
             || (lower.contains("function register") && lower.contains("grantrole"))
             || (lower.contains("function setup") && lower.contains("grantrole"));
 

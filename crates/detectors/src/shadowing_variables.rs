@@ -9,6 +9,12 @@ pub struct ShadowingVariablesDetector {
     base: BaseDetector,
 }
 
+impl Default for ShadowingVariablesDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ShadowingVariablesDetector {
     pub fn new() -> Self {
         Self {
@@ -148,25 +154,36 @@ impl ShadowingVariablesDetector {
 
         let mut found_type = false;
 
-        for (_i, part) in parts.iter().enumerate() {
+        for part in parts.iter() {
             // Track if we've seen a type
-            if part.starts_with("uint") || part.starts_with("int")
-                || *part == "address" || *part == "bool"
-                || part.starts_with("bytes") || part.starts_with("string")
-                || part.starts_with("mapping") {
+            if part.starts_with("uint")
+                || part.starts_with("int")
+                || *part == "address"
+                || *part == "bool"
+                || part.starts_with("bytes")
+                || part.starts_with("string")
+                || part.starts_with("mapping")
+            {
                 found_type = true;
                 continue;
             }
 
             // Skip visibility keywords
-            if *part == "public" || *part == "private" || *part == "internal"
-                || *part == "constant" || *part == "immutable" {
+            if *part == "public"
+                || *part == "private"
+                || *part == "internal"
+                || *part == "constant"
+                || *part == "immutable"
+            {
                 continue;
             }
 
             // After we've found the type, extract the variable name
             if found_type {
-                let name = part.trim_end_matches(';').trim_end_matches('=').trim_end_matches(',');
+                let name = part
+                    .trim_end_matches(';')
+                    .trim_end_matches('=')
+                    .trim_end_matches(',');
 
                 // Validate it's a proper identifier
                 if self.is_valid_identifier(name) {
@@ -199,9 +216,7 @@ impl ShadowingVariablesDetector {
         state_vars: &[String],
         ctx: &AnalysisContext,
     ) -> Option<Vec<String>> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let mut issues = Vec::new();
 

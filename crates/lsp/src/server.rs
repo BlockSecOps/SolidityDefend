@@ -168,14 +168,14 @@ impl SolidityDefendLanguageServer {
             .map(|finding| {
                 let range = Range {
                     start: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: finding.primary_location.column.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
+                        character: finding.primary_location.column.saturating_sub(1),
                     },
                     end: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
                         character: (finding.primary_location.column
                             + finding.primary_location.length)
-                            .saturating_sub(1) as u32,
+                            .saturating_sub(1),
                     },
                 };
 
@@ -403,14 +403,14 @@ impl LanguageServer for SolidityDefendLanguageServer {
             for finding in &doc.findings {
                 let finding_range = Range {
                     start: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: finding.primary_location.column.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
+                        character: finding.primary_location.column.saturating_sub(1),
                     },
                     end: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
                         character: (finding.primary_location.column
                             + finding.primary_location.length)
-                            .saturating_sub(1) as u32,
+                            .saturating_sub(1),
                     },
                 };
 
@@ -461,14 +461,14 @@ impl LanguageServer for SolidityDefendLanguageServer {
             for finding in &doc.findings {
                 let finding_range = Range {
                     start: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
-                        character: finding.primary_location.column.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
+                        character: finding.primary_location.column.saturating_sub(1),
                     },
                     end: Position {
-                        line: finding.primary_location.line.saturating_sub(1) as u32,
+                        line: finding.primary_location.line.saturating_sub(1),
                         character: (finding.primary_location.column
                             + finding.primary_location.length)
-                            .saturating_sub(1) as u32,
+                            .saturating_sub(1),
                     },
                 };
 

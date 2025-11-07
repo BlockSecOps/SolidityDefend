@@ -84,7 +84,7 @@ pub fn has_virtual_shares_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 4: decimalsOffset() function (OpenZeppelin pattern)
-    if source.contains("decimalsOffset()") || source.contains("_decimalsOffset()")  {
+    if source.contains("decimalsOffset()") || source.contains("_decimalsOffset()") {
         return true;
     }
 
@@ -135,17 +135,18 @@ pub fn has_minimum_deposit_pattern(ctx: &AnalysisContext) -> bool {
 
     // Pattern 3: Implicit minimum from dead shares subtraction
     // Pattern: assets - MINIMUM_LIQUIDITY with require(shares > 0)
-    if source.contains("assets - MINIMUM") || source.contains("amount - MINIMUM") {
-        if source.contains("require(shares > 0") || source.contains("require(amount > 0") {
-            return true;
-        }
+    if (source.contains("assets - MINIMUM") || source.contains("amount - MINIMUM"))
+        && (source.contains("require(shares > 0") || source.contains("require(amount > 0"))
+    {
+        return true;
     }
 
     // Pattern 4: First deposit minimum
-    if source.contains("if (totalSupply == 0)") || source.contains("if (totalSupply() == 0)") {
-        if source.contains("require(") && (source.contains("MINIMUM") || source.contains("MIN_")) {
-            return true;
-        }
+    if (source.contains("if (totalSupply == 0)") || source.contains("if (totalSupply() == 0)"))
+        && source.contains("require(")
+        && (source.contains("MINIMUM") || source.contains("MIN_"))
+    {
+        return true;
     }
 
     false
@@ -286,10 +287,11 @@ pub fn has_lrt_peg_protection(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: Redemption rate bounds
-    if source.contains("redemptionRate") && (source.contains("require(") || source.contains("if (")) {
-        if source.contains("MAX_") || source.contains("MIN_") {
-            return true;
-        }
+    if source.contains("redemptionRate")
+        && (source.contains("require(") || source.contains("if ("))
+        && (source.contains("MAX_") || source.contains("MIN_"))
+    {
+        return true;
     }
 
     // Pattern 2: Peg deviation checks
@@ -304,7 +306,8 @@ pub fn has_lrt_peg_protection(ctx: &AnalysisContext) -> bool {
 
     // Pattern 4: Circuit breaker on depeg
     if (source.contains("pause()") || source.contains("_pause()"))
-        && (source.contains("depeg") || source.contains("deviation")) {
+        && (source.contains("depeg") || source.contains("deviation"))
+    {
         return true;
     }
 

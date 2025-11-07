@@ -91,8 +91,7 @@ impl Detector for FlashLoanCollateralSwapDetector {
             || lower.contains("healthfactor");
 
         if has_collateral_valuation {
-            let uses_spot_price = (lower.contains("getreserves")
-                || lower.contains("balanceof"))
+            let uses_spot_price = (lower.contains("getreserves") || lower.contains("balanceof"))
                 && (lower.contains("price") || lower.contains("value"));
 
             let has_twap = lower.contains("twap")
@@ -143,8 +142,7 @@ impl Detector for FlashLoanCollateralSwapDetector {
         }
 
         // Pattern 3: Liquidation based on single-block health factor
-        let has_liquidation = lower.contains("liquidate")
-            || lower.contains("liquidationthreshold");
+        let has_liquidation = lower.contains("liquidate") || lower.contains("liquidationthreshold");
 
         if has_liquidation {
             let checks_health = lower.contains("healthfactor")

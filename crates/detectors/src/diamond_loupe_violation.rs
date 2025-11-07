@@ -56,7 +56,7 @@ impl Detector for DiamondLoupeViolationDetector {
         let mut findings = Vec::new();
 
         // Check if this looks like a Diamond proxy contract
-        
+
         let is_diamond_contract = self.is_diamond_contract(&ctx.source_code);
 
         if !is_diamond_contract {
@@ -67,25 +67,25 @@ impl Detector for DiamondLoupeViolationDetector {
         let contract = ctx.contract;
         let contract_source = self.get_contract_source(contract, ctx);
 
-            // Only check contracts that implement Diamond pattern
-            if !self.is_diamond_implementation(&contract_source) {
-                return Ok(findings);
+        // Only check contracts that implement Diamond pattern
+        if !self.is_diamond_implementation(&contract_source) {
+            return Ok(findings);
         }
 
-            // Check for required loupe functions
-            let missing_functions = self.get_missing_loupe_functions(&contract_source);
+        // Check for required loupe functions
+        let missing_functions = self.get_missing_loupe_functions(&contract_source);
 
-            if !missing_functions.is_empty() {
-                let message = format!(
-                    "Contract '{}' is a Diamond proxy but missing required ERC-2535 Loupe functions: {}. \
+        if !missing_functions.is_empty() {
+            let message = format!(
+                "Contract '{}' is a Diamond proxy but missing required ERC-2535 Loupe functions: {}. \
                     The Diamond Loupe standard defines 4 introspection functions that enable tools, users, \
                     and contracts to discover which facets and functions a Diamond implements. Without these, \
                     the Diamond becomes a black box, hindering integration, debugging, and security auditing.",
-                    contract.name.name,
-                    missing_functions.join(", ")
-                );
+                contract.name.name,
+                missing_functions.join(", ")
+            );
 
-                let finding = self
+            let finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -105,19 +105,19 @@ impl Detector for DiamondLoupeViolationDetector {
                         contract.name.name
                     ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
-            // Pattern 2: Missing IDiamondLoupe interface support
-            if !self.supports_loupe_interface(&contract_source) {
-                let message = format!(
-                    "Contract '{}' implements loupe functions but doesn't declare IDiamondLoupe interface support. \
+        // Pattern 2: Missing IDiamondLoupe interface support
+        if !self.supports_loupe_interface(&contract_source) {
+            let message = format!(
+                "Contract '{}' implements loupe functions but doesn't declare IDiamondLoupe interface support. \
                     The ERC-2535 standard requires supportsInterface(0x48e2b093) to return true for IDiamondLoupe. \
                     Without proper interface support, tools cannot reliably detect Diamond Loupe compliance.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
+            let finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -137,22 +137,22 @@ impl Detector for DiamondLoupeViolationDetector {
                         contract.name.name
                     ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
-            // Pattern 3: Incorrect facets() return type
-            if self.has_facets_function(&contract_source)
-                && !self.has_correct_facets_return_type(&contract_source)
-            {
-                let message = format!(
-                    "Contract '{}' implements facets() with incorrect return type. \
+        // Pattern 3: Incorrect facets() return type
+        if self.has_facets_function(&contract_source)
+            && !self.has_correct_facets_return_type(&contract_source)
+        {
+            let message = format!(
+                "Contract '{}' implements facets() with incorrect return type. \
                     ERC-2535 requires 'function facets() external view returns (Facet[] memory)' where \
                     Facet is 'struct Facet {{ address facetAddress; bytes4[] functionSelectors; }}'. \
                     Incorrect return types break compatibility with standard tooling.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
+            let finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -172,26 +172,26 @@ impl Detector for DiamondLoupeViolationDetector {
                         contract.name.name
                     ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
-            // Pattern 4: Missing Facet struct definition
-            // Check both contract source AND full source (for file-level structs)
-            let has_struct_in_contract = self.has_facet_struct_definition(&contract_source);
-            let has_struct_in_file = self.has_facet_struct_definition(&ctx.source_code);
+        // Pattern 4: Missing Facet struct definition
+        // Check both contract source AND full source (for file-level structs)
+        let has_struct_in_contract = self.has_facet_struct_definition(&contract_source);
+        let has_struct_in_file = self.has_facet_struct_definition(&ctx.source_code);
 
-            if self.has_loupe_functions(&contract_source)
-                && !has_struct_in_contract
-                && !has_struct_in_file
-            {
-                let message = format!(
-                    "Contract '{}' implements loupe functions but missing required Facet struct. \
+        if self.has_loupe_functions(&contract_source)
+            && !has_struct_in_contract
+            && !has_struct_in_file
+        {
+            let message = format!(
+                "Contract '{}' implements loupe functions but missing required Facet struct. \
                     ERC-2535 requires 'struct Facet {{ address facetAddress; bytes4[] functionSelectors; }}' \
                     for the facets() return value. Without this struct, the implementation is non-compliant.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
+            let finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -211,40 +211,40 @@ impl Detector for DiamondLoupeViolationDetector {
                         contract.name.name
                     ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
-            // Pattern 5: Loupe functions not externally accessible
-            if self.has_private_loupe_functions(&contract_source) {
-                let message = format!(
-                    "Contract '{}' implements loupe functions with incorrect visibility. \
+        // Pattern 5: Loupe functions not externally accessible
+        if self.has_private_loupe_functions(&contract_source) {
+            let message = format!(
+                "Contract '{}' implements loupe functions with incorrect visibility. \
                     All Diamond Loupe functions must be 'external view' to be accessible for introspection. \
                     Private, internal, or public functions violate the standard and prevent external access.",
-                    contract.name.name
-                );
+                contract.name.name
+            );
 
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        contract.name.location.start().line() as u32,
-                        contract.name.location.start().column() as u32,
-                        contract.name.name.len() as u32,
-                    )
-                    .with_cwe(573)
-                    .with_fix_suggestion(format!(
-                        "Fix loupe function visibility in '{}': \
+            let finding = self
+                .base
+                .create_finding(
+                    ctx,
+                    message,
+                    contract.name.location.start().line() as u32,
+                    contract.name.location.start().column() as u32,
+                    contract.name.name.len() as u32,
+                )
+                .with_cwe(573)
+                .with_fix_suggestion(format!(
+                    "Fix loupe function visibility in '{}': \
                         (1) Change all loupe functions to 'external view' \
                         (2) Remove 'public', 'internal', or 'private' modifiers \
                         (3) Ensure functions return correct types \
                         (4) Test external accessibility from contracts and tools \
                         (5) Verify gas efficiency with 'external' vs 'public'",
-                        contract.name.name
-                    ));
+                    contract.name.name
+                ));
 
-                findings.push(finding);
-            }
+            findings.push(finding);
+        }
 
         Ok(findings)
     }
@@ -323,8 +323,7 @@ impl DiamondLoupeViolationDetector {
     }
 
     fn has_facet_address(&self, source: &str) -> bool {
-        source.contains("function facetAddress(")
-            || source.contains("function facetAddress(bytes4")
+        source.contains("function facetAddress(") || source.contains("function facetAddress(bytes4")
     }
 
     fn has_loupe_functions(&self, source: &str) -> bool {
@@ -356,8 +355,7 @@ impl DiamondLoupeViolationDetector {
     fn has_facet_struct_definition(&self, source: &str) -> bool {
         // Check for Facet struct with required fields
         let has_struct = source.contains("struct Facet");
-        let has_address_field =
-            source.contains("facetAddress") || source.contains("address facet");
+        let has_address_field = source.contains("facetAddress") || source.contains("address facet");
         let has_selectors_field =
             source.contains("functionSelectors") || source.contains("bytes4[]");
 
@@ -429,12 +427,16 @@ mod tests {
         assert!(detector.is_enabled());
         assert_eq!(detector.id().0, "diamond-loupe-violation");
         assert!(detector.categories().contains(&DetectorCategory::Diamond));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::Upgradeable));
-        assert!(detector
-            .categories()
-            .contains(&DetectorCategory::BestPractices));
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::Upgradeable)
+        );
+        assert!(
+            detector
+                .categories()
+                .contains(&DetectorCategory::BestPractices)
+        );
     }
 
     #[test]
@@ -452,8 +454,14 @@ mod tests {
     fn test_has_loupe_functions() {
         let detector = DiamondLoupeViolationDetector::new();
 
-        assert!(detector.has_facets_function("function facets() external view returns (Facet[] memory)"));
-        assert!(detector.has_facet_function_selectors("function facetFunctionSelectors(address _facet)"));
+        assert!(
+            detector
+                .has_facets_function("function facets() external view returns (Facet[] memory)")
+        );
+        assert!(
+            detector
+                .has_facet_function_selectors("function facetFunctionSelectors(address _facet)")
+        );
         assert!(detector.has_facet_addresses("function facetAddresses() external view"));
         assert!(detector.has_facet_address("function facetAddress(bytes4 _selector)"));
     }

@@ -39,9 +39,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::has_transient_storage_declarations;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::has_transient_storage_declarations;
 
 pub struct TransientStorageStateLeakDetector {
     base: BaseDetector,
@@ -68,7 +68,8 @@ impl TransientStorageStateLeakDetector {
         let mut issues = Vec::new();
 
         let func_text = if let Some(body) = &function.body {
-            ctx.source_code[body.location.start().offset()..body.location.end().offset()].to_string()
+            ctx.source_code[body.location.start().offset()..body.location.end().offset()]
+                .to_string()
         } else {
             return issues;
         };
@@ -76,8 +77,8 @@ impl TransientStorageStateLeakDetector {
         let func_lower = func_text.to_lowercase();
 
         // Check if function modifies transient storage
-        let modifies_transient = func_lower.contains("transient") &&
-            (func_lower.contains("=") || func_lower.contains("++") || func_lower.contains("--"));
+        let modifies_transient = func_lower.contains("transient")
+            && (func_lower.contains("=") || func_lower.contains("++") || func_lower.contains("--"));
 
         if !modifies_transient {
             return issues;
@@ -87,12 +88,15 @@ impl TransientStorageStateLeakDetector {
         let has_cleanup = func_lower.contains("delete") && func_lower.contains("transient");
 
         // Check for early returns (which skip cleanup)
-        let has_early_return = func_text.matches("return").count() > 1 ||
-            (func_text.contains("return") && !func_text.ends_with("return"));
+        let has_early_return = func_text.matches("return").count() > 1
+            || (func_text.contains("return") && !func_text.ends_with("return"));
 
         if !has_cleanup {
             issues.push((
-                format!("No transient storage cleanup in '{}' - can poison multicall transactions", function.name.name),
+                format!(
+                    "No transient storage cleanup in '{}' - can poison multicall transactions",
+                    function.name.name
+                ),
                 Severity::Medium,
                 "Add explicit cleanup to prevent state pollution:\n\
                  \n\
@@ -122,13 +126,17 @@ impl TransientStorageStateLeakDetector {
                      }\n\
                      // ✅ Always cleanup\n\
                      delete transientState;\n\
-                 }".to_string()
+                 }"
+                .to_string(),
             ));
         }
 
         if has_early_return && has_cleanup {
             issues.push((
-                format!("Early returns in '{}' may skip transient storage cleanup", function.name.name),
+                format!(
+                    "Early returns in '{}' may skip transient storage cleanup",
+                    function.name.name
+                ),
                 Severity::Medium,
                 "Early returns can skip cleanup, leaving dirty state:\n\
                  \n\
@@ -167,7 +175,8 @@ impl TransientStorageStateLeakDetector {
                      transientState = amount;\n\
                      if (amount == 0) return;  // Cleanup still happens\n\
                      // ... logic\n\
-                 }".to_string()
+                 }"
+                .to_string(),
             ));
         }
 

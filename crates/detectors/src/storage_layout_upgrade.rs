@@ -46,19 +46,23 @@ impl StorageLayoutUpgradeDetector {
             || source_lower.contains("facet");
 
         // If contract has a constructor, it's not upgradeable (upgradeable contracts use initializers)
-        let has_constructor = source_lower.contains("constructor()") || source_lower.contains("constructor(");
+        let has_constructor =
+            source_lower.contains("constructor()") || source_lower.contains("constructor(");
 
         if !is_upgradeable || has_constructor {
             return findings;
         }
 
         // Check for EIP-2535 Diamond storage pattern (should skip most checks)
-        let uses_diamond_storage = (source_lower.contains("diamond") || source_lower.contains("facet"))
+        let uses_diamond_storage = (source_lower.contains("diamond")
+            || source_lower.contains("facet"))
             && source_lower.contains("keccak256")
             && (source_lower.contains("storage_position")
                 || source_lower.contains("storage.slot")
                 || source_lower.contains("diamond.storage")
-                || (source_lower.contains("bytes32") && source_lower.contains("constant") && source_lower.contains("position")));
+                || (source_lower.contains("bytes32")
+                    && source_lower.contains("constant")
+                    && source_lower.contains("position")));
 
         // Check for EIP-1967 namespaced storage pattern
         let uses_namespaced_storage = source_lower.contains("eip1967")
@@ -66,7 +70,9 @@ impl StorageLayoutUpgradeDetector {
                 && source_lower.contains("bytes32")
                 && source_lower.contains("constant")
                 && (source_lower.contains(".slot") || source_lower.contains("_slot")))
-            || (source_lower.contains("bytes32") && source_lower.contains("slot") && source_lower.contains("assembly"));
+            || (source_lower.contains("bytes32")
+                && source_lower.contains("slot")
+                && source_lower.contains("assembly"));
 
         // If using diamond or namespaced storage patterns, skip most checks
         if uses_diamond_storage || uses_namespaced_storage {
@@ -127,7 +133,9 @@ impl StorageLayoutUpgradeDetector {
         // These are standard patterns in well-designed contracts and don't indicate vulnerabilities
 
         // Pattern 8: Using delete keyword on complex types
-        if source_lower.contains("delete ") && (source_lower.contains("struct") || source_lower.contains("mapping")) {
+        if source_lower.contains("delete ")
+            && (source_lower.contains("struct") || source_lower.contains("mapping"))
+        {
             findings.push((
                 "Uses delete on complex types (upgrade compatibility concern)".to_string(),
                 0,
@@ -306,9 +314,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("small") || f.message.contains("insufficient")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("small") || f.message.contains("insufficient"))
+        );
     }
 
     #[test]
@@ -334,9 +344,13 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         // Structs are legitimate - should only flag if missing storage gap
-        let has_struct_specific_finding = result.iter().any(|f|
-            f.message.contains("struct") && !f.message.contains("gap"));
-        assert!(!has_struct_specific_finding, "Structs should not be flagged as inherently unsafe");
+        let has_struct_specific_finding = result
+            .iter()
+            .any(|f| f.message.contains("struct") && !f.message.contains("gap"));
+        assert!(
+            !has_struct_specific_finding,
+            "Structs should not be flagged as inherently unsafe"
+        );
     }
 
     #[test]
@@ -366,9 +380,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("inheritance") || f.message.contains("gap")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("inheritance") || f.message.contains("gap"))
+        );
     }
 
     #[test]
@@ -392,10 +408,15 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         // Arrays of structs are legitimate - should only flag if missing storage gap
-        let has_array_struct_specific_finding = result
-            .iter()
-            .any(|f| f.message.contains("array") && f.message.contains("struct") && !f.message.contains("gap"));
-        assert!(!has_array_struct_specific_finding, "Arrays of structs should not be flagged as inherently unsafe");
+        let has_array_struct_specific_finding = result.iter().any(|f| {
+            f.message.contains("array")
+                && f.message.contains("struct")
+                && !f.message.contains("gap")
+        });
+        assert!(
+            !has_array_struct_specific_finding,
+            "Arrays of structs should not be flagged as inherently unsafe"
+        );
     }
 
     #[test]
@@ -443,9 +464,11 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         assert!(!result.is_empty());
-        assert!(result
-            .iter()
-            .any(|f| f.message.contains("diamond") || f.message.contains("explicit slot")));
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("diamond") || f.message.contains("explicit slot"))
+        );
     }
 
     #[test]

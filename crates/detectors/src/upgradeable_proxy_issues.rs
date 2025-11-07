@@ -9,6 +9,12 @@ pub struct UpgradeableProxyIssuesDetector {
     base: BaseDetector,
 }
 
+impl Default for UpgradeableProxyIssuesDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl UpgradeableProxyIssuesDetector {
     pub fn new() -> Self {
         Self {
@@ -97,9 +103,7 @@ impl UpgradeableProxyIssuesDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -126,10 +130,11 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("require(msg.sender");
 
         if lacks_access_control {
-            return Some(format!(
+            return Some(
                 "Upgrade function lacks proper access control, \
                 anyone can upgrade contract to malicious implementation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Initialize function can be called multiple times
@@ -142,10 +147,11 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("require(!initialized");
 
         if no_initialization_guard {
-            return Some(format!(
+            return Some(
                 "Initialize function lacks initialization guard, \
                 can be called multiple times to reset contract state"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Missing storage gap for future upgrades
@@ -160,10 +166,11 @@ impl UpgradeableProxyIssuesDetector {
             && !contract_source.contains("uint256[50]");
 
         if no_storage_gap && is_proxy_related {
-            return Some(format!(
+            return Some(
                 "Upgradeable contract missing storage gap, \
                 future upgrades may cause storage collision"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Unsafe delegatecall without implementation validation
@@ -174,10 +181,11 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("isContract");
 
         if no_impl_validation {
-            return Some(format!(
+            return Some(
                 "Delegatecall without validating implementation address, \
                 can delegate to non-contract or malicious code"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: No upgrade delay/timelock
@@ -188,10 +196,11 @@ impl UpgradeableProxyIssuesDetector {
         let immediate_upgrade = is_upgrade_function && !has_timelock;
 
         if immediate_upgrade {
-            return Some(format!(
+            return Some(
                 "Upgrade executes immediately without timelock delay, \
                 no time for users to exit before malicious upgrade"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Constructor instead of initializer
@@ -202,20 +211,22 @@ impl UpgradeableProxyIssuesDetector {
                 || contract_source.contains("Initializable"));
 
         if constructor_in_upgradeable {
-            return Some(format!(
+            return Some(
                 "Upgradeable contract uses constructor instead of initializer, \
                 constructor code only runs for implementation, not proxy"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Selfdestruct in implementation
         let has_selfdestruct = func_source.contains("selfdestruct");
 
         if has_selfdestruct && is_proxy_related {
-            return Some(format!(
+            return Some(
                 "Implementation contract contains selfdestruct, \
                 can destroy implementation leaving proxy pointing to empty address"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: No upgrade event emission
@@ -224,10 +235,11 @@ impl UpgradeableProxyIssuesDetector {
         let no_upgrade_event = is_upgrade_function && !emits_event;
 
         if no_upgrade_event {
-            return Some(format!(
+            return Some(
                 "Upgrade function doesn't emit event, \
                 users cannot track contract upgrades"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: UUPS without _authorizeUpgrade override
@@ -238,10 +250,11 @@ impl UpgradeableProxyIssuesDetector {
             is_uups && !contract_source.contains("_authorizeUpgrade") && is_upgrade_function;
 
         if no_authorize_override {
-            return Some(format!(
+            return Some(
                 "UUPS pattern without _authorizeUpgrade override, \
                 missing upgrade authorization check"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Transparent proxy with function selector clash
@@ -254,10 +267,11 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("ifAdmin");
 
         if potential_clash {
-            return Some(format!(
+            return Some(
                 "Transparent proxy may have function selector clash, \
                 admin functions could conflict with implementation functions"
-            ));
+                    .to_string(),
+            );
         }
 
         None

@@ -133,10 +133,9 @@ pub fn has_chain_id_validation(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
     // Pattern 1: block.chainid check
-    if source.contains("block.chainid") {
-        if source.contains("require(") || source.contains("if (") {
-            return true;
-        }
+    if source.contains("block.chainid") && (source.contains("require(") || source.contains("if ("))
+    {
+        return true;
     }
 
     // Pattern 2: Supported chains mapping
@@ -185,10 +184,10 @@ pub fn has_nonce_replay_protection(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 4: Sequence number
-    if source.contains("sequenceNumber") || source.contains("sequence") {
-        if source.contains("++") || source.contains("+ 1") {
-            return true;
-        }
+    if (source.contains("sequenceNumber") || source.contains("sequence"))
+        && (source.contains("++") || source.contains("+ 1"))
+    {
+        return true;
     }
 
     // Pattern 5: Message hash tracking (prevents duplicate processing)
@@ -262,10 +261,11 @@ pub fn has_safe_bridge_pattern(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 3: Token vault
-    if source.contains("vault") && source.contains("withdraw") {
-        if source.contains("require(") || source.contains("if (") {
-            return true;
-        }
+    if source.contains("vault")
+        && source.contains("withdraw")
+        && (source.contains("require(") || source.contains("if ("))
+    {
+        return true;
     }
 
     // Pattern 4: Locked balance tracking

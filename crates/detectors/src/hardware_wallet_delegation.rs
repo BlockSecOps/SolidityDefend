@@ -9,6 +9,12 @@ pub struct HardwareWalletDelegationDetector {
     base: BaseDetector,
 }
 
+impl Default for HardwareWalletDelegationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HardwareWalletDelegationDetector {
     pub fn new() -> Self {
         Self {

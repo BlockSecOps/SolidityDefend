@@ -10,6 +10,12 @@ pub struct SlippageProtectionDetector {
     base: BaseDetector,
 }
 
+impl Default for SlippageProtectionDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SlippageProtectionDetector {
     pub fn new() -> Self {
         Self {
@@ -107,9 +113,7 @@ impl SlippageProtectionDetector {
         ctx: &AnalysisContext,
     ) -> Option<usize> {
         // Only check functions with actual implementations
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         // Get function source code
         let func_start = function.location.start().line();

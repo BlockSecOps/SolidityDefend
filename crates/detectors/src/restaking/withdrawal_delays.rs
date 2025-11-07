@@ -22,9 +22,9 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::restaking::classification::*;
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::restaking::classification::*;
 use ast;
 
 pub struct RestakingWithdrawalDelaysDetector {
@@ -55,9 +55,10 @@ impl RestakingWithdrawalDelaysDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check withdrawal/redeem/unstake functions
-        if !func_name_lower.contains("withdraw") &&
-           !func_name_lower.contains("redeem") &&
-           !func_name_lower.contains("unstake") {
+        if !func_name_lower.contains("withdraw")
+            && !func_name_lower.contains("redeem")
+            && !func_name_lower.contains("unstake")
+        {
             return findings;
         }
 
@@ -68,19 +69,21 @@ impl RestakingWithdrawalDelaysDetector {
 
         // Check for withdrawal delay
         if !has_withdrawal_delay(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No withdrawal delay in '{}' - bypasses EigenLayer 7-day delay requirement",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Critical,
-            )
-            .with_fix_suggestion(
-                "Implement 7-day withdrawal delay (EigenLayer requirement):\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No withdrawal delay in '{}' - bypasses EigenLayer 7-day delay requirement",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Critical,
+                )
+                .with_fix_suggestion(
+                    "Implement 7-day withdrawal delay (EigenLayer requirement):\n\
                  \n\
                  uint256 public constant WITHDRAWAL_DELAY = 7 days;\n\
                  \n\
@@ -126,8 +129,9 @@ impl RestakingWithdrawalDelaysDetector {
                      asset.transfer(msg.sender, request.assets);\n\
                      \n\
                      emit WithdrawalCompleted(msg.sender, request.assets);\n\
-                 }".to_string()
-            );
+                 }"
+                    .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -206,27 +210,30 @@ impl RestakingWithdrawalDelaysDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check deposit/stake functions
-        if !func_name_lower.contains("deposit") &&
-           !func_name_lower.contains("stake") &&
-           !func_name_lower.contains("mint") {
+        if !func_name_lower.contains("deposit")
+            && !func_name_lower.contains("stake")
+            && !func_name_lower.contains("mint")
+        {
             return findings;
         }
 
         // Check for liquidity reserve
         if !has_liquidity_reserve(function, ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!(
-                    "No liquidity reserve in '{}' - 100% restaking prevents normal withdrawals",
-                    function.name.name
-                ),
-                function.name.location.start().line() as u32,
-                0,
-                20,
-                Severity::Medium,
-            )
-            .with_fix_suggestion(
-                "Maintain liquidity reserve for withdrawals:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!(
+                        "No liquidity reserve in '{}' - 100% restaking prevents normal withdrawals",
+                        function.name.name
+                    ),
+                    function.name.location.start().line() as u32,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "Maintain liquidity reserve for withdrawals:\n\
                  \n\
                  uint256 public constant LIQUIDITY_RESERVE_PERCENTAGE = 10;  // 10% liquid\n\
                  uint256 public totalAvailableLiquidity;\n\
@@ -258,8 +265,9 @@ impl RestakingWithdrawalDelaysDetector {
                      asset.transfer(msg.sender, request.assets);\n\
                  }\n\
                  \n\
-                 This prevents Renzo-style incidents where withdrawals are impossible.".to_string()
-            );
+                 This prevents Renzo-style incidents where withdrawals are impossible."
+                        .to_string(),
+                );
 
             findings.push(finding);
         }
@@ -272,9 +280,10 @@ impl RestakingWithdrawalDelaysDetector {
         let mut findings = Vec::new();
 
         // Only check if contract has withdrawal functions
-        let has_withdrawal = ctx.get_functions().iter().any(|f| {
-            f.name.name.to_lowercase().contains("withdraw")
-        });
+        let has_withdrawal = ctx
+            .get_functions()
+            .iter()
+            .any(|f| f.name.name.to_lowercase().contains("withdraw"));
 
         if !has_withdrawal {
             return findings;
@@ -322,8 +331,7 @@ impl RestakingWithdrawalDelaysDetector {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check withdraw/redeem functions
-        if !func_name_lower.contains("withdraw") &&
-           !func_name_lower.contains("redeem") {
+        if !func_name_lower.contains("withdraw") && !func_name_lower.contains("redeem") {
             return findings;
         }
 
@@ -445,7 +453,6 @@ impl Detector for RestakingWithdrawalDelaysDetector {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     // Test cases would go here
     // Should cover:

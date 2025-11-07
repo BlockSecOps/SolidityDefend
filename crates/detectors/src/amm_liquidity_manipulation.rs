@@ -10,6 +10,12 @@ pub struct AmmLiquidityManipulationDetector {
     base: BaseDetector,
 }
 
+impl Default for AmmLiquidityManipulationDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AmmLiquidityManipulationDetector {
     pub fn new() -> Self {
         Self {
@@ -113,9 +119,7 @@ impl AmmLiquidityManipulationDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -133,10 +137,11 @@ impl AmmLiquidityManipulationDetector {
             && !func_source.contains("timeWeighted");
 
         if is_swap_function && uses_spot_price {
-            return Some(format!(
+            return Some(
                 "Swap uses spot price from reserves without TWAP oracle protection, \
                 enabling price manipulation within single transaction"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Price calculation based on current reserves
@@ -152,10 +157,11 @@ impl AmmLiquidityManipulationDetector {
             && !func_source.contains("require");
 
         if lacks_manipulation_check {
-            return Some(format!(
+            return Some(
                 "Price calculation uses current reserves without slippage protection, \
                 deadline checks, or minimum output validation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Add/remove liquidity without minimum lock
@@ -171,10 +177,11 @@ impl AmmLiquidityManipulationDetector {
             || func_source.contains("mint");
 
         if lacks_liquidity_lock {
-            return Some(format!(
+            return Some(
                 "Liquidity operations lack minimum liquidity lock or time-based restrictions, \
                 enabling flash loan pool manipulation"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: K invariant not properly checked
@@ -188,10 +195,11 @@ impl AmmLiquidityManipulationDetector {
             && !func_source.contains("balance0 * balance1");
 
         if lacks_k_check {
-            return Some(format!(
+            return Some(
                 "Reserve updates don't verify constant product (K) invariant, \
                 allowing pool imbalance and value extraction"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Reentrancy in swap/liquidity functions
@@ -207,10 +215,11 @@ impl AmmLiquidityManipulationDetector {
             && !func_source.contains("_status");
 
         if lacks_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "AMM function performs external calls without reentrancy protection, \
                 enabling manipulation of reserves during callback"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Explicit vulnerability marker
@@ -220,9 +229,7 @@ impl AmmLiquidityManipulationDetector {
                 || func_source.contains("sandwich")
                 || func_source.contains("pool drain"))
         {
-            return Some(format!(
-                "AMM liquidity manipulation vulnerability marker detected"
-            ));
+            return Some("AMM liquidity manipulation vulnerability marker detected".to_string());
         }
 
         None

@@ -7,9 +7,9 @@
 use anyhow::Result;
 use std::any::Any;
 
+use super::{has_sweeper_pattern, is_eip7702_delegate};
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use super::{is_eip7702_delegate, has_sweeper_pattern};
 
 pub struct EIP7702SweeperDetectionDetector {
     base: BaseDetector,
@@ -44,8 +44,11 @@ impl EIP7702SweeperDetectionDetector {
         }
 
         // 2. Batch token operations
-        if (source_lower.contains("token") || source_lower.contains("erc20")) &&
-           (source_lower.contains("batch") || source_lower.contains("multi") || source_lower.contains("[]")) {
+        if (source_lower.contains("token") || source_lower.contains("erc20"))
+            && (source_lower.contains("batch")
+                || source_lower.contains("multi")
+                || source_lower.contains("[]"))
+        {
             risk_score += 2;
             reasons.push("Batch token operations");
         }
@@ -71,7 +74,11 @@ impl EIP7702SweeperDetectionDetector {
 
         if risk_score >= 4 {
             issues.push((
-                format!("MALICIOUS SWEEPER DETECTED (score: {}/10) - {}", risk_score, reasons.join(", ")),
+                format!(
+                    "MALICIOUS SWEEPER DETECTED (score: {}/10) - {}",
+                    risk_score,
+                    reasons.join(", ")
+                ),
                 1,
                 Severity::Critical,
                 format!(
@@ -103,8 +110,13 @@ impl EIP7702SweeperDetectionDetector {
                      - August 2025: $1.54M single transaction\n\
                      - 15,000+ wallets drained\n\
                      - 90% malicious delegation rate",
-                    reasons.iter().enumerate().map(|(i, r)| format!("{}. {}", i+1, r)).collect::<Vec<_>>().join("\n")
-                )
+                    reasons
+                        .iter()
+                        .enumerate()
+                        .map(|(i, r)| format!("{}. {}", i + 1, r))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                ),
             ));
         }
 
@@ -151,9 +163,10 @@ impl Detector for EIP7702SweeperDetectionDetector {
         }
 
         for (title, line, severity, remediation) in self.check_contract(ctx) {
-            let finding = self.base.create_finding_with_severity(
-                ctx, title, line, 0, 20, severity
-            ).with_fix_suggestion(remediation);
+            let finding = self
+                .base
+                .create_finding_with_severity(ctx, title, line, 0, 20, severity)
+                .with_fix_suggestion(remediation);
             findings.push(finding);
         }
 

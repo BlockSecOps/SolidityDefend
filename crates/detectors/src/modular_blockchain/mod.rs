@@ -25,15 +25,15 @@
 //!    - Sovereign rollup security
 //!    - Real-world: State transition validation
 
-pub mod data_availability;
 pub mod cross_rollup_atomicity;
+pub mod data_availability;
 pub mod fraud_proof_timing;
 pub mod message_ordering;
 pub mod sovereign_rollup;
 
 // Re-export detectors
-pub use data_availability::CelestiaDataAvailabilityDetector;
 pub use cross_rollup_atomicity::CrossRollupAtomicityDetector;
+pub use data_availability::CelestiaDataAvailabilityDetector;
 pub use fraud_proof_timing::OptimisticFraudProofTimingDetector;
 pub use message_ordering::CrossChainMessageOrderingDetector;
 pub use sovereign_rollup::SovereignRollupValidationDetector;

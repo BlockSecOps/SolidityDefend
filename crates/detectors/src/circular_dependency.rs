@@ -10,6 +10,12 @@ pub struct CircularDependencyDetector {
     base: BaseDetector,
 }
 
+impl Default for CircularDependencyDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CircularDependencyDetector {
     pub fn new() -> Self {
         Self {
@@ -104,9 +110,7 @@ impl CircularDependencyDetector {
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
     ) -> Option<String> {
-        if function.body.is_none() {
-            return None;
-        }
+        function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
 
@@ -137,10 +141,11 @@ impl CircularDependencyDetector {
             && !func_source.contains("require(!_locked");
 
         if no_reentrancy_guard {
-            return Some(format!(
+            return Some(
                 "Callback pattern without reentrancy guard, \
                 enables circular call chains and reentrancy attacks"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Mutual contract calls without depth limit
@@ -153,10 +158,11 @@ impl CircularDependencyDetector {
             && !func_source.contains("count");
 
         if no_depth_limit && makes_external_call {
-            return Some(format!(
+            return Some(
                 "External contract calls without depth limit, \
                 circular calls can cause stack overflow"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 3: Observer pattern with notification loops
@@ -171,10 +177,11 @@ impl CircularDependencyDetector {
             && !func_source.contains("break");
 
         if no_loop_protection {
-            return Some(format!(
+            return Some(
                 "Observer notification without loop protection, \
                 observers can create notification cycles"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 4: Recursive token transfer without guard
@@ -189,10 +196,11 @@ impl CircularDependencyDetector {
         let recursive_transfer = is_transfer && has_hook && !func_source.contains("nonReentrant");
 
         if recursive_transfer {
-            return Some(format!(
+            return Some(
                 "Transfer with hooks can create circular dependency, \
                 hook can trigger another transfer creating infinite loop"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 5: Delegation chain without cycle detection
@@ -206,10 +214,11 @@ impl CircularDependencyDetector {
             && !func_source.contains("checked");
 
         if no_cycle_detection {
-            return Some(format!(
+            return Some(
                 "Delegation chain without cycle detection, \
                 circular delegations can cause infinite loops"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 6: Cross-contract state dependencies (TIGHTENED)
@@ -221,24 +230,22 @@ impl CircularDependencyDetector {
             && !func_source.contains("pure");
 
         // Must have state writes AND external reads in vulnerable pattern
-        let has_state_writes = func_source.contains(" = ")
-            || func_source.contains("+=")
-            || func_source.contains("-=");
+        let has_state_writes =
+            func_source.contains(" = ") || func_source.contains("+=") || func_source.contains("-=");
 
         // Must have callback potential
         let has_callback_potential = func_source.contains(".call(")
             || func_source.contains("callback")
             || func_source.contains("hook");
 
-        let dependency_cycle = reads_external_state
-            && has_state_writes
-            && has_callback_potential;
+        let dependency_cycle = reads_external_state && has_state_writes && has_callback_potential;
 
         if dependency_cycle {
-            return Some(format!(
+            return Some(
                 "Reads external contract state during state changes with callback potential, \
                 creates interdependency that can deadlock"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 7: Upgrade circular dependency
@@ -249,10 +256,11 @@ impl CircularDependencyDetector {
         let calls_dependency = is_upgrade && calls_external && !func_source.contains("require");
 
         if calls_dependency {
-            return Some(format!(
+            return Some(
                 "Upgrade function calls external contracts, \
                 circular upgrade dependencies can brick contract"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 8: Event-based circular triggers
@@ -263,10 +271,11 @@ impl CircularDependencyDetector {
             && (func_source.contains("listener") || func_source.contains("subscriber"));
 
         if event_triggers_call {
-            return Some(format!(
+            return Some(
                 "Emits event that triggers external call in same function, \
                 can create circular event-call chains"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 9: Factory pattern circular reference
@@ -277,10 +286,11 @@ impl CircularDependencyDetector {
         let circular_factory = is_factory && func_source.contains("new ") && calls_external;
 
         if circular_factory {
-            return Some(format!(
+            return Some(
                 "Factory creates contracts that call back to factory, \
                 circular creation dependencies"
-            ));
+                    .to_string(),
+            );
         }
 
         // Pattern 10: Approval-transfer circular dependency
@@ -290,10 +300,11 @@ impl CircularDependencyDetector {
         let approval_transfers = is_approval && func_source.contains("transfer");
 
         if approval_transfers {
-            return Some(format!(
+            return Some(
                 "Approval function triggers transfer creating circular dependency, \
                 approve->transfer->approve loops possible"
-            ));
+                    .to_string(),
+            );
         }
 
         None
@@ -326,10 +337,10 @@ impl CircularDependencyDetector {
             || issue.contains("stack overflow");
 
         match protection_count {
-            0 if is_high_severity => Confidence::High,    // No protection, high severity
-            0 => Confidence::Medium,                      // No protection, lower severity
-            1 => Confidence::Medium,                      // Some protection
-            _ => Confidence::Low,                         // Multiple protections (2+)
+            0 if is_high_severity => Confidence::High, // No protection, high severity
+            0 => Confidence::Medium,                   // No protection, lower severity
+            1 => Confidence::Medium,                   // Some protection
+            _ => Confidence::Low,                      // Multiple protections (2+)
         }
     }
 

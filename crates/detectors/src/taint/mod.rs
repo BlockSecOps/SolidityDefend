@@ -289,7 +289,7 @@ impl TaintUtils {
             }
         }
 
-        fp_likelihood.min(0.9).max(0.01)
+        fp_likelihood.clamp(0.01, 0.9)
     }
 
     fn get_line_content(code: &str, line_number: usize) -> Option<String> {

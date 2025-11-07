@@ -10,7 +10,7 @@ use detectors::types::{Confidence, Severity};
 use output::OutputFormat;
 
 /// Main configuration structure for SolidityDefend
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SolidityDefendConfig {
     /// General settings
     #[serde(default)]
@@ -31,18 +31,6 @@ pub struct SolidityDefendConfig {
     /// Performance settings
     #[serde(default)]
     pub performance: PerformanceConfig,
-}
-
-impl Default for SolidityDefendConfig {
-    fn default() -> Self {
-        Self {
-            general: GeneralConfig::default(),
-            detectors: DetectorConfig::default(),
-            cache: CacheSettings::default(),
-            output: OutputConfig::default(),
-            performance: PerformanceConfig::default(),
-        }
-    }
 }
 
 /// General application settings

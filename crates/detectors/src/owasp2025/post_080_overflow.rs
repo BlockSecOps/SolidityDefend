@@ -65,15 +65,19 @@ impl Detector for Post080OverflowDetector {
 
         // Check for unchecked blocks
         if source.contains("unchecked") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Unchecked block found - overflows/underflows won't revert (OWASP 2025)".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Unchecked block found - overflows/underflows won't revert (OWASP 2025)"
+                        .to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "⚠️ UNCHECKED BLOCKS BYPASS SOLIDITY 0.8.0+ PROTECTION!\n\
                  \n\
                  Solidity 0.8.0+ has automatic overflow/underflow checks,\n\
                  but 'unchecked' blocks disable this protection.\n\
@@ -110,26 +114,33 @@ impl Detector for Post080OverflowDetector {
                  Only use unchecked when:\n\
                  1. Loop counters (i++, ++i)\n\
                  2. Mathematically proven safe\n\
-                 3. Gas optimization with careful review".to_string()
-            );
+                 3. Gas optimization with careful review"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for assembly arithmetic
         if source.contains("assembly") {
-            let has_arithmetic = source.contains("add(") || source.contains("sub(")
-                || source.contains("mul(") || source.contains("div(");
+            let has_arithmetic = source.contains("add(")
+                || source.contains("sub(")
+                || source.contains("mul(")
+                || source.contains("div(");
 
             if has_arithmetic {
-                let finding = self.base.create_finding_with_severity(
-                    ctx,
-                    "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)".to_string(),
-                    1,
-                    0,
-                    20,
-                    Severity::High,
-                ).with_fix_suggestion(
-                    "🚨 CRITICAL: Assembly has NO overflow protection!\n\
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::High,
+                    )
+                    .with_fix_suggestion(
+                        "🚨 CRITICAL: Assembly has NO overflow protection!\n\
                      \n\
                      Real incident: Cetus DEX - $223M loss (May 2025)\n\
                      Cause: Assembly arithmetic overflow\n\
@@ -171,23 +182,27 @@ impl Detector for Post080OverflowDetector {
                      - div(a, b)     → returns 0 if b is 0 (no revert!)\n\
                      \n\
                      ⚠️ Only use assembly arithmetic when absolutely necessary\n\
-                     and with manual overflow checks!".to_string()
-                );
+                     and with manual overflow checks!"
+                            .to_string(),
+                    );
                 findings.push(finding);
             }
         }
 
         // Check for assembly division by zero
         if source.contains("assembly") && source.contains("div(") {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                "Assembly division - no automatic division-by-zero protection".to_string(),
-                1,
-                0,
-                20,
-                Severity::Medium,
-            ).with_fix_suggestion(
-                "❌ ASSEMBLY DIVISION - NO PROTECTION:\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Assembly division - no automatic division-by-zero protection".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "❌ ASSEMBLY DIVISION - NO PROTECTION:\n\
                  assembly {\n\
                      let result := div(a, b)  // Returns 0 if b == 0, NO REVERT!\n\
                  }\n\
@@ -210,22 +225,27 @@ impl Detector for Post080OverflowDetector {
                  \n\
                  Same issue with mod:\n\
                  - mod(a, 0) = 0  (no revert!)\n\
-                 - Solidity a % 0 = REVERT".to_string()
-            );
+                 - Solidity a % 0 = REVERT"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
         // Check for type casting that might overflow
-        if source.contains("uint8") || source.contains("uint16") || source.contains("uint32") {
-            if source.contains("uint256") {
-                let finding = self.base.create_finding_with_severity(
+        if (source.contains("uint8") || source.contains("uint16") || source.contains("uint32"))
+            && source.contains("uint256")
+        {
+            let finding = self
+                .base
+                .create_finding_with_severity(
                     ctx,
                     "Type casting to smaller uint - verify no overflow on downcast".to_string(),
                     1,
                     0,
                     20,
                     Severity::Low,
-                ).with_fix_suggestion(
+                )
+                .with_fix_suggestion(
                     "Downcasting can silently overflow even in Solidity 0.8.0+!\n\
                      \n\
                      ❌ UNSAFE DOWNCAST:\n\
@@ -248,10 +268,10 @@ impl Detector for Post080OverflowDetector {
                      - uint16:  0 to 65,535\n\
                      - uint32:  0 to 4,294,967,295\n\
                      - uint64:  0 to 18,446,744,073,709,551,615\n\
-                     - uint256: 0 to 2^256-1".to_string()
+                     - uint256: 0 to 2^256-1"
+                        .to_string(),
                 );
-                findings.push(finding);
-            }
+            findings.push(finding);
         }
 
         Ok(findings)
