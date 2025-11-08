@@ -131,29 +131,41 @@ soliditydefend MyContract.sol
 
 **Example Output:**
 ```
-📊 SolidityDefend Analysis Report
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔍 Analyzing: MyContract.sol
+Found 2 issues in 1 file:
 
-⚠️  HIGH: Missing Access Control
+⚠️  HIGH: Function 'withdraw' should have access control
    ├─ Location: MyContract.sol:15:5
-   ├─ Function: withdraw() should have access control
-   └─ Suggestion: Add onlyOwner modifier
+   ├─ Detector: missing-access-control
+   ├─ CWE: CWE-284
+   └─ Fix: Add onlyOwner modifier
 
-   12 │ contract MyContract {
-   13 │     mapping(address => uint256) public balances;
-   14 │
-   15 │     function withdraw() public {  ← Issue here
-   16 │         payable(msg.sender).transfer(balances[msg.sender]);
-   17 │     }
-   18 │ }
-
-🔥 CRITICAL: Classic Reentrancy
+🔥 CRITICAL: External call before state change
    ├─ Location: MyContract.sol:16:9
-   ├─ External call before state change
+   ├─ Detector: classic-reentrancy
+   ├─ CWE: CWE-841
    └─ Fix: Update state before external call
 
-Summary: 2 issues found (1 critical, 1 high)
+
+📊 Analysis Summary
+┌─────────────────┬───────┐
+│ Severity        │ Count │
+├─────────────────┼───────┤
+│ 🔥 Critical     │     1 │
+│ ⚠️  High        │     1 │
+│ ⚡ Medium       │     0 │
+│ 📝 Low          │     0 │
+│ ℹ️  Info        │     0 │
+├─────────────────┼───────┤
+│ Total Issues    │     2 │
+└─────────────────┴───────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### JSON Output

@@ -40,42 +40,30 @@ The console format provides human-readable output with colors, code snippets, an
 ### Example Console Output
 
 ```
-📊 SolidityDefend Analysis Report
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-🔍 Analyzing: contracts/MyToken.sol
+Found 3 issues in 1 file:
 
-🔥 CRITICAL: Classic Reentrancy
-   ├─ Location: MyToken.sol:45:9
-   ├─ Function: withdraw()
-   ├─ External call before state change
+🔥 CRITICAL: External call before state change in withdraw() function
+   ├─ Location: MyContract.sol:45:9
+   ├─ Detector: classic-reentrancy
+   ├─ CWE: CWE-841
    └─ Fix: Update balances before external call
 
-   42 │ function withdraw() public {
-   43 │     uint256 amount = balances[msg.sender];
-   44 │     require(amount > 0, "No balance");
-   45 │     msg.sender.call{value: amount}("");  ← Issue here
-   46 │     balances[msg.sender] = 0;           ← State change after call
-   47 │ }
+⚠️  HIGH: Function 'mint' should have access control
+   ├─ Location: MyContract.sol:25:5
+   ├─ Detector: missing-access-control
+   ├─ CWE: CWE-284
+   └─ Fix: Add onlyOwner modifier
 
-⚠️  HIGH: Missing Access Control
-   ├─ Location: MyToken.sol:25:5
-   ├─ Function: mint() should have access control
-   └─ Suggestion: Add onlyOwner modifier
+⚡ MEDIUM: Address parameter 'to' is not checked for zero address
+   ├─ Location: MyContract.sol:30:5
+   ├─ Detector: missing-zero-address-check
+   ├─ CWE: CWE-476
+   └─ Fix: Add require(to != address(0), "Zero address not allowed");
 
-   23 │ contract MyToken {
-   24 │     mapping(address => uint256) public balances;
-   25 │     function mint(address to, uint256 amount) public {  ← Issue here
-   26 │         balances[to] += amount;
-   27 │     }
-
-⚡ MEDIUM: Zero Address Check Missing
-   ├─ Location: MyToken.sol:30:5
-   ├─ Parameter 'to' in transfer() not validated
-   └─ Fix: Add require(to != address(0))
-
-   29 │ }
-   30 │ function transfer(address to, uint256 amount) public {  ← Issue here
-   31 │     balances[msg.sender] -= amount;
 
 📊 Analysis Summary
 ┌─────────────────┬───────┐
@@ -90,9 +78,9 @@ The console format provides human-readable output with colors, code snippets, an
 │ Total Issues    │     3 │
 └─────────────────┴───────┘
 
-⏱️  Analysis Time: 0.25s
-📁 Files Analyzed: 1
-❌ Analysis failed due to high-severity issues
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ### Console Format Features
@@ -193,17 +181,28 @@ The JSON format provides structured data for programmatic processing and integra
       }
     }
   ],
-  "metrics": {
-    "lines_of_code": 156,
-    "functions_analyzed": 8,
-    "contracts_analyzed": 1,
-    "external_calls_found": 3,
-    "state_variables_found": 2
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.1",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.1",
+    "branding": {
+      "name": "BlockSecOps",
+      "url": "https://BlockSecOps.com",
+      "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
+    }
   },
-  "configuration": {
-    "detectors_enabled": 17,
-    "min_severity": "info",
-    "analysis_depth": "deep"
+  "statistics": {
+    "total_findings": 3,
+    "severity_counts": {
+      "info": 0,
+      "low": 0,
+      "medium": 1,
+      "high": 1,
+      "critical": 1
+    },
+    "unique_detectors": 3
   }
 }
 ```
@@ -213,10 +212,9 @@ The JSON format provides structured data for programmatic processing and integra
 #### Root Object
 - `version`: SolidityDefend version
 - `timestamp`: Analysis execution time (ISO 8601)
-- `summary`: High-level analysis results
 - `findings`: Array of security issues found
-- `metrics`: Code analysis statistics
-- `configuration`: Analysis settings used
+- `metadata`: Tool and scan metadata including branding information
+- `statistics`: Statistical analysis of findings
 
 #### Finding Object
 - `id`: Unique identifier for the finding
@@ -236,6 +234,22 @@ The JSON format provides structured data for programmatic processing and integra
 - `references`: Links to documentation and resources
 - `tags`: Machine-readable issue tags
 - `metadata`: Additional detector-specific information
+
+#### Metadata Object
+- `tool_name`: Name of the analysis tool (SolidityDefend)
+- `tool_version`: Version of SolidityDefend used
+- `scan_type`: Type of analysis performed (static_analysis)
+- `language`: Target language (solidity)
+- `rules_version`: Version of detection rules
+- `branding`: Enterprise platform information
+  - `name`: Platform name (BlockSecOps)
+  - `url`: Platform URL (https://BlockSecOps.com)
+  - `description`: Platform description
+
+#### Statistics Object
+- `total_findings`: Total number of issues detected
+- `severity_counts`: Breakdown of findings by severity level
+- `unique_detectors`: Number of unique detectors that found issues
 
 ### JSON Processing Examples
 

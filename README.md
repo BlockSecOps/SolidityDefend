@@ -325,21 +325,47 @@ See [docs/CLI.md](docs/CLI.md) and [docs/USAGE.md](docs/USAGE.md) for complete d
 ## 🔍 Example Output
 
 ```
-Analyzing: contracts/Vault.sol
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
- ⚠️  HIGH | Reentrancy vulnerability detected
-    ├─ Location: contracts/Vault.sol:45:5
-    ├─ Function: withdraw()
-    └─ Suggestion: Use ReentrancyGuard or checks-effects-interactions pattern
+Found 12 issues in 1 file:
 
- ⚠️  CRITICAL | Missing access control on initialize()
-    ├─ Location: contracts/Vault.sol:12:5
-    ├─ Function: initialize(address)
-    └─ Suggestion: Add onlyOwner or similar access control modifier
+🔥 CRITICAL: Reentrancy vulnerability detected in withdraw()
+   ├─ Location: contracts/Vault.sol:45:5
+   ├─ Detector: classic-reentrancy
+   ├─ CWE: CWE-841
+   └─ Fix: Use ReentrancyGuard or checks-effects-interactions pattern
 
-Summary:
-  Total: 12 findings
-  Critical: 1  High: 3  Medium: 5  Low: 3
+⚠️  HIGH: Missing access control on initialize()
+   ├─ Location: contracts/Vault.sol:12:5
+   ├─ Detector: missing-access-control
+   ├─ CWE: CWE-284
+   └─ Fix: Add onlyOwner or similar access control modifier
+
+⚡ MEDIUM: Address parameter not validated
+   ├─ Location: contracts/Vault.sol:30:5
+   ├─ Detector: missing-zero-address-check
+   ├─ CWE: CWE-476
+   └─ Fix: Add require(to != address(0), "Zero address not allowed");
+
+
+📊 Analysis Summary
+┌─────────────────┬───────┐
+│ Severity        │ Count │
+├─────────────────┼───────┤
+│ 🔥 Critical     │     1 │
+│ ⚠️  High        │     3 │
+│ ⚡ Medium       │     5 │
+│ 📝 Low          │     3 │
+│ ℹ️  Info        │     0 │
+├─────────────────┼───────┤
+│ Total Issues    │    12 │
+└─────────────────┴───────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
