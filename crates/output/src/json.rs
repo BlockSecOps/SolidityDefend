@@ -103,6 +103,11 @@ impl JsonFormatter {
             scan_type: "static_analysis".to_string(),
             language: "solidity".to_string(),
             rules_version: env!("CARGO_PKG_VERSION").to_string(),
+            branding: JsonBranding {
+                name: "BlockSecOps".to_string(),
+                url: "https://BlockSecOps.com".to_string(),
+                description: "Enterprise-Grade DevSecOps Platform for Smart Contracts".to_string(),
+            },
         }
     }
 
@@ -245,6 +250,15 @@ pub struct JsonMetadata {
     pub scan_type: String,
     pub language: String,
     pub rules_version: String,
+    pub branding: JsonBranding,
+}
+
+/// Branding information
+#[derive(Debug, Serialize, Deserialize)]
+pub struct JsonBranding {
+    pub name: String,
+    pub url: String,
+    pub description: String,
 }
 
 /// Statistics about the findings

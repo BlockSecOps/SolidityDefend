@@ -66,11 +66,20 @@ impl ConsoleFormatter {
     pub fn format_simple(&self, findings: &[Finding]) -> Result<String> {
         let filtered_findings = self.filter_findings_by_level(findings);
 
+        let mut output = Vec::new();
+
+        // Add BlockSecOps branding at the beginning
+        output.push(self.format_blocksecops_branding());
+        output.push(String::new());
+
         if filtered_findings.is_empty() {
-            return Ok(self.format_no_issues_message());
+            output.push(self.format_no_issues_message());
+            output.push(String::new());
+            // Add branding at the end even when no issues found
+            output.push(self.format_blocksecops_branding());
+            return Ok(output.join("\n"));
         }
 
-        let mut output = Vec::new();
         output.push(self.format_header(&filtered_findings));
 
         for finding in &filtered_findings {
@@ -79,6 +88,11 @@ impl ConsoleFormatter {
         }
 
         output.push(self.format_summary(&filtered_findings));
+
+        // Add BlockSecOps branding at the end
+        output.push(String::new());
+        output.push(self.format_blocksecops_branding());
+
         Ok(output.join("\n"))
     }
 
@@ -90,11 +104,19 @@ impl ConsoleFormatter {
     ) -> Result<String> {
         let filtered_findings = self.filter_findings_by_level(findings);
 
-        if filtered_findings.is_empty() {
-            return Ok(self.format_no_issues_message());
-        }
-
         let mut output = Vec::new();
+
+        // Add BlockSecOps branding at the beginning
+        output.push(self.format_blocksecops_branding());
+        output.push(String::new());
+
+        if filtered_findings.is_empty() {
+            output.push(self.format_no_issues_message());
+            output.push(String::new());
+            // Add branding at the end even when no issues found
+            output.push(self.format_blocksecops_branding());
+            return Ok(output.join("\n"));
+        }
 
         // Add header
         output.push(self.format_header(&filtered_findings));
@@ -104,6 +126,9 @@ impl ConsoleFormatter {
             output.push(self.format_finding(finding, ctx)?);
             output.push(String::new()); // Empty line between findings
         }
+
+        // Add BlockSecOps branding at the end
+        output.push(self.format_blocksecops_branding());
 
         Ok(output.join("\n"))
     }
@@ -145,37 +170,85 @@ impl ConsoleFormatter {
     fn format_finding_simple(&self, finding: &Finding) -> Result<String> {
         let mut output = Vec::new();
 
+        let severity_text = match finding.severity {
+            Severity::Critical => "CRITICAL",
+            Severity::High => "HIGH",
+            Severity::Medium => "MEDIUM",
+            Severity::Low => "LOW",
+            Severity::Info => "INFO",
+        };
+
         let severity_icon = self.get_severity_icon(&finding.severity);
         let severity_color = self.get_severity_color(&finding.severity);
 
+        // Header with severity, detector ID, and message
         let header = if self.should_use_colors() {
             format!(
-                "{} {} {} {}:{}",
+                "{} {}: {}",
                 style(severity_icon).fg(severity_color),
-                style(&finding.detector_id.0.as_str()).bold(),
-                style(&finding.message).fg(severity_color),
+                style(severity_text).fg(severity_color).bold(),
+                style(&finding.message)
+            )
+        } else {
+            format!("{} {}: {}", severity_icon, severity_text, finding.message)
+        };
+        output.push(header);
+
+        // Location line with tree formatting
+        let location_line = if self.should_use_colors() {
+            format!(
+                "   {} Location: {}:{}:{}",
+                style("├─").dim(),
+                style(&finding.primary_location.file).dim(),
                 style(finding.primary_location.line).dim(),
                 style(finding.primary_location.column).dim()
             )
         } else {
             format!(
-                "{} {} {} {}:{}",
-                severity_icon,
-                finding.detector_id.0.as_str(),
-                finding.message,
+                "   ├─ Location: {}:{}:{}",
+                finding.primary_location.file,
                 finding.primary_location.line,
                 finding.primary_location.column
             )
         };
-        output.push(header);
+        output.push(location_line);
 
-        if let Some(description) = finding.metadata.get("description") {
-            let desc_line = if self.should_use_colors() {
-                format!("   {}", style(description).dim())
+        // Detector ID line
+        let detector_line = if self.should_use_colors() {
+            format!(
+                "   {} Detector: {}",
+                style("├─").dim(),
+                style(finding.detector_id.0.as_str()).dim()
+            )
+        } else {
+            format!("   ├─ Detector: {}", finding.detector_id.0.as_str())
+        };
+        output.push(detector_line);
+
+        // CWE line if available
+        if let Some(&cwe) = finding.cwe_ids.first() {
+            let cwe_line = if self.should_use_colors() {
+                format!("   {} CWE: {}", style("├─").dim(), style(format!("CWE-{}", cwe)).dim())
             } else {
-                format!("   {}", description)
+                format!("   ├─ CWE: CWE-{}", cwe)
             };
-            output.push(desc_line);
+            output.push(cwe_line);
+        }
+
+        // Fix suggestion (last item, uses └─)
+        if let Some(fix) = &finding.fix_suggestion {
+            let fix_line = if self.should_use_colors() {
+                format!("   {} Fix: {}", style("└─").dim(), style(fix).dim())
+            } else {
+                format!("   └─ Fix: {}", fix)
+            };
+            output.push(fix_line);
+        } else {
+            // If no fix suggestion, make CWE or detector the last item
+            if output.len() > 1 {
+                let last_idx = output.len() - 1;
+                output[last_idx] = output[last_idx].replace("├─", "└─");
+            }
         }
 
         Ok(output.join("\n"))
@@ -275,73 +348,105 @@ impl ConsoleFormatter {
             *counts.entry(&finding.severity).or_insert(0) += 1;
         }
 
-        let mut summary_parts = Vec::new();
+        let critical_count = counts.get(&Severity::Critical).copied().unwrap_or(0);
+        let high_count = counts.get(&Severity::High).copied().unwrap_or(0);
+        let medium_count = counts.get(&Severity::Medium).copied().unwrap_or(0);
+        let low_count = counts.get(&Severity::Low).copied().unwrap_or(0);
+        let info_count = counts.get(&Severity::Info).copied().unwrap_or(0);
+        let total = findings.len();
 
-        // Count by severity
-        if let Some(&critical_count) = counts.get(&Severity::Critical) {
-            if critical_count > 0 {
-                let text = if self.should_use_colors() {
-                    style(format!("{} critical", critical_count))
-                        .fg(Color::Red)
-                        .bold()
-                        .to_string()
-                } else {
-                    format!("{} critical", critical_count)
-                };
-                summary_parts.push(text);
-            }
-        }
+        let mut output = Vec::new();
+        output.push(String::new());
 
-        if let Some(&high_count) = counts.get(&Severity::High) {
-            if high_count > 0 {
-                let text = if self.should_use_colors() {
-                    style(format!("{} high", high_count))
-                        .fg(Color::Red)
-                        .to_string()
-                } else {
-                    format!("{} high", high_count)
-                };
-                summary_parts.push(text);
-            }
-        }
-
-        if let Some(&medium_count) = counts.get(&Severity::Medium) {
-            if medium_count > 0 {
-                let text = if self.should_use_colors() {
-                    style(format!("{} medium", medium_count))
-                        .fg(Color::Yellow)
-                        .to_string()
-                } else {
-                    format!("{} medium", medium_count)
-                };
-                summary_parts.push(text);
-            }
-        }
-
-        if let Some(&low_count) = counts.get(&Severity::Low) {
-            if low_count > 0 {
-                let text = if self.should_use_colors() {
-                    style(format!("{} low", low_count))
-                        .fg(Color::Cyan)
-                        .to_string()
-                } else {
-                    format!("{} low", low_count)
-                };
-                summary_parts.push(text);
-            }
-        }
-
-        let summary_line = if summary_parts.is_empty() {
-            "No issues found".to_string()
-        } else {
-            format!("Summary: {}", summary_parts.join(", "))
-        };
-
+        // Table header
         if self.should_use_colors() {
-            format!("\n{}", style(summary_line).bold())
+            output.push(format!("{}", style("📊 Analysis Summary").bold()));
         } else {
-            format!("\n{}", summary_line)
+            output.push("📊 Analysis Summary".to_string());
         }
+
+        output.push("┌─────────────────┬───────┐".to_string());
+        output.push("│ Severity        │ Count │".to_string());
+        output.push("├─────────────────┼───────┤".to_string());
+
+        // Critical row
+        let critical_row = if self.should_use_colors() {
+            format!(
+                "│ {} Critical     │ {:5} │",
+                style("🔥").fg(Color::Red),
+                style(format!("{}", critical_count)).fg(Color::Red).bold()
+            )
+        } else {
+            format!("│ 🔥 Critical     │ {:5} │", critical_count)
+        };
+        output.push(critical_row);
+
+        // High row
+        let high_row = if self.should_use_colors() {
+            format!(
+                "│ {} High         │ {:5} │",
+                style("⚠️ ").fg(Color::Red),
+                style(format!("{}", high_count)).fg(Color::Red)
+            )
+        } else {
+            format!("│ ⚠️  High        │ {:5} │", high_count)
+        };
+        output.push(high_row);
+
+        // Medium row
+        let medium_row = if self.should_use_colors() {
+            format!(
+                "│ {} Medium       │ {:5} │",
+                style("⚡").fg(Color::Yellow),
+                style(format!("{}", medium_count)).fg(Color::Yellow)
+            )
+        } else {
+            format!("│ ⚡ Medium       │ {:5} │", medium_count)
+        };
+        output.push(medium_row);
+
+        // Low row
+        let low_row = if self.should_use_colors() {
+            format!(
+                "│ {} Low          │ {:5} │",
+                style("📝").fg(Color::Cyan),
+                style(format!("{}", low_count)).fg(Color::Cyan)
+            )
+        } else {
+            format!("│ 📝 Low          │ {:5} │", low_count)
+        };
+        output.push(low_row);
+
+        // Info row
+        let info_row = if self.should_use_colors() {
+            format!(
+                "│ {} Info         │ {:5} │",
+                style("ℹ️ ").fg(Color::Blue),
+                style(format!("{}", info_count)).fg(Color::Blue)
+            )
+        } else {
+            format!("│ ℹ️  Info        │ {:5} │", info_count)
+        };
+        output.push(info_row);
+
+        // Separator
+        output.push("├─────────────────┼───────┤".to_string());
+
+        // Total row
+        let total_row = if self.should_use_colors() {
+            format!(
+                "│ {} │ {}     │",
+                style("Total Issues    ").bold(),
+                style(format!("{}", total)).bold()
+            )
+        } else {
+            format!("│ Total Issues    │ {:5} │", total)
+        };
+        output.push(total_row);
+
+        output.push("└─────────────────┴───────┘".to_string());
+
+        output.join("\n")
     }
 
     /// Format no issues message
@@ -478,11 +583,11 @@ impl ConsoleFormatter {
     /// Get severity icon
     fn get_severity_icon(&self, severity: &Severity) -> &'static str {
         match severity {
-            Severity::Critical => "●",
-            Severity::High => "●",
-            Severity::Medium => "●",
-            Severity::Low => "●",
-            Severity::Info => "●",
+            Severity::Critical => "🔥",
+            Severity::High => "⚠️ ",
+            Severity::Medium => "⚡",
+            Severity::Low => "📝",
+            Severity::Info => "ℹ️ ",
         }
     }
 
@@ -506,6 +611,24 @@ impl ConsoleFormatter {
                 // Check if stdout is a TTY and supports colors
                 io::stdout().is_tty() && self.term.features().colors_supported()
             }
+        }
+    }
+
+    /// Format BlockSecOps branding banner
+    fn format_blocksecops_branding(&self) -> String {
+        let separator = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+        let branding_text =
+            "🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts";
+
+        if self.should_use_colors() {
+            format!(
+                "{}\n{}\n{}",
+                style(separator).fg(Color::Cyan),
+                style(branding_text).fg(Color::Cyan).bold(),
+                style(separator).fg(Color::Cyan)
+            )
+        } else {
+            format!("{}\n{}\n{}", separator, branding_text, separator)
         }
     }
 }

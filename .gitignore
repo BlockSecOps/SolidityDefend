@@ -67,4 +67,4 @@ venv/
 .temp/
 .claude
 debug_test
-debug_test*
+debug_test*release/
