@@ -901,6 +901,20 @@ impl DetectorRegistry {
             crate::diamond_delegatecall_zero::DiamondDelegatecallZeroDetector::new(),
         ));
 
+        // Proxy Security - Delegatecall Pattern Detectors (Phase 1 - 2025)
+        self.register(Arc::new(
+            crate::proxy_upgrade_unprotected::ProxyUpgradeUnprotectedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::proxy_storage_collision::ProxyStorageCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_user_controlled::DelegatecallUserControlledDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(),
+        ));
+
         // Phase 22: Metamorphic Contracts & CREATE2 (2025)
         self.register(Arc::new(
             crate::metamorphic_contract::MetamorphicContractDetector::new(),
