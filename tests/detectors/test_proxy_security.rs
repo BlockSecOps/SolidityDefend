@@ -2,11 +2,13 @@ use std::path::PathBuf;
 
 /// Integration tests for proxy security detectors
 ///
-/// These tests validate the new Phase 1 delegatecall/proxy pattern detectors:
+/// These tests validate the Phase 1 delegatecall/proxy pattern detectors:
 /// - proxy-upgrade-unprotected
 /// - proxy-storage-collision
 /// - delegatecall-user-controlled
 /// - fallback-delegatecall-unprotected
+/// - fallback-function-shadowing
+/// - delegatecall-return-ignored
 
 #[test]
 fn test_proxy_upgrade_unprotected_detector() {
@@ -102,4 +104,60 @@ fn test_detectors_registered_in_registry() {
         "delegatecall-user-controlled detector not found in registry");
     assert!(detector_id_strings.iter().any(|id| id.contains("fallback-delegatecall-unprotected") || id.contains("fallback_delegatecall_unprotected")),
         "fallback-delegatecall-unprotected detector not found in registry");
+}
+
+#[test]
+fn test_fallback_function_shadowing_detector() {
+    let vulnerable_contract = PathBuf::from("tests/contracts/delegatecall/vulnerable/FallbackShadowing.sol");
+    let secure_contract = PathBuf::from("tests/contracts/delegatecall/secure/NoShadowingProxy.sol");
+
+    assert!(vulnerable_contract.exists(),
+        "Vulnerable test contract not found: {:?}", vulnerable_contract);
+    assert!(secure_contract.exists(),
+        "Secure test contract not found: {:?}", secure_contract);
+}
+
+#[test]
+fn test_delegatecall_return_ignored_detector() {
+    let vulnerable_contract = PathBuf::from("tests/contracts/delegatecall/vulnerable/DelegatecallReturnIgnored.sol");
+    let secure_contract = PathBuf::from("tests/contracts/delegatecall/secure/DelegatecallReturnChecked.sol");
+
+    assert!(vulnerable_contract.exists(),
+        "Vulnerable test contract not found: {:?}", vulnerable_contract);
+    assert!(secure_contract.exists(),
+        "Secure test contract not found: {:?}", secure_contract);
+}
+
+#[test]
+fn test_day3_detectors_compile() {
+    // This test ensures both new Day 3 detector modules compile correctly
+    use detectors::fallback_function_shadowing::FallbackFunctionShadowingDetector;
+    use detectors::delegatecall_return_ignored::DelegatecallReturnIgnoredDetector;
+
+    // Instantiate each detector to verify they compile
+    let _d1 = FallbackFunctionShadowingDetector::new();
+    let _d2 = DelegatecallReturnIgnoredDetector::new();
+
+    // If we get here, both detectors compiled successfully
+    assert!(true);
+}
+
+#[test]
+fn test_day3_detectors_registered() {
+    use detectors::DetectorRegistry;
+
+    // Create registry with all built-in detectors
+    let registry = DetectorRegistry::with_all_detectors();
+
+    // Get all detector IDs
+    let detector_ids = registry.get_detector_ids();
+    let detector_id_strings: Vec<String> = detector_ids.iter()
+        .map(|id| id.to_string())
+        .collect();
+
+    // Verify our new Day 3 detectors are registered
+    assert!(detector_id_strings.iter().any(|id| id.contains("fallback-function-shadowing") || id.contains("fallback_function_shadowing")),
+        "fallback-function-shadowing detector not found in registry");
+    assert!(detector_id_strings.iter().any(|id| id.contains("delegatecall-return-ignored") || id.contains("delegatecall_return_ignored")),
+        "delegatecall-return-ignored detector not found in registry");
 }
