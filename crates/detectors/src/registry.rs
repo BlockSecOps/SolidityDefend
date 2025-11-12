@@ -914,6 +914,18 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::fallback_function_shadowing::FallbackFunctionShadowingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_return_ignored::DelegatecallReturnIgnoredDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_untrusted_library::DelegatecallUntrustedLibraryDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_in_constructor::DelegatecallInConstructorDetector::new(),
+        ));
 
         // Phase 22: Metamorphic Contracts & CREATE2 (2025)
         self.register(Arc::new(
