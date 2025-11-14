@@ -92,6 +92,32 @@ impl Detector for Erc20ApproveRaceDetector {
 }
 
 impl Erc20ApproveRaceDetector {
+    /// Checks if a contract has increaseAllowance function
+    fn has_increase_allowance(&self, ctx: &AnalysisContext) -> bool {
+        ctx.get_functions().iter().any(|func| {
+            func.name.name == "increaseAllowance" && func.parameters.len() == 2
+        })
+    }
+
+    /// Checks if contract has decreaseAllowance function
+    fn has_decrease_allowance(&self, ctx: &AnalysisContext) -> bool {
+        ctx.get_functions().iter().any(|func| {
+            func.name.name == "decreaseAllowance" && func.parameters.len() == 2
+        })
+    }
+
+    /// Checks if this appears to be an ERC20 contract
+    fn is_erc20_contract(&self, ctx: &AnalysisContext) -> bool {
+        let functions = ctx.get_functions();
+
+        // Check for minimal ERC20 interface
+        let has_transfer = functions.iter().any(|f| f.name.name == "transfer");
+        let has_transfer_from = functions.iter().any(|f| f.name.name == "transferFrom");
+        let has_approve = functions.iter().any(|f| f.name.name == "approve");
+
+        has_transfer && has_transfer_from && has_approve
+    }
+
     fn check_approve_race(
         &self,
         function: &ast::Function<'_>,
@@ -106,7 +132,16 @@ impl Erc20ApproveRaceDetector {
             return None;
         }
 
-        // Check for race condition mitigations
+        // Only report if this looks like an ERC20 contract
+        if !self.is_erc20_contract(ctx) {
+            return None;
+        }
+
+        // Check if contract provides safe alternatives
+        let has_increase = self.has_increase_allowance(ctx);
+        let has_decrease = self.has_decrease_allowance(ctx);
+
+        // Check for race condition mitigations in the approve function itself
         let has_require_zero = func_source.contains("require")
             && func_source.contains("allowance")
             && (func_source.contains("== 0") || func_source.contains("!= 0"));
@@ -124,8 +159,17 @@ impl Erc20ApproveRaceDetector {
             || func_source.contains("safeApprove")
             || has_expected_param;
 
-        if !has_require_zero && !has_safe_patterns {
-            return Some("Standard ERC-20 approve without race condition protection".to_string());
+        // Vulnerable if:
+        // 1. No increaseAllowance/decreaseAllowance alternatives
+        // 2. No protection in approve itself
+        // 3. No safe pattern usage
+        if !has_increase && !has_decrease && !has_require_zero && !has_safe_patterns {
+            return Some(format!(
+                "ERC-20 token implements approve() without safe alternatives. \
+                Missing increaseAllowance() and decreaseAllowance() functions. \
+                This is vulnerable to front-running attacks where a malicious spender \
+                can extract both old and new allowance values (SWC-114)"
+            ));
         }
 
         None

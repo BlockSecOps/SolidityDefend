@@ -839,6 +839,18 @@ impl DetectorRegistry {
             crate::erc20_approve_race::Erc20ApproveRaceDetector::new(),
         ));
         self.register(Arc::new(
+            crate::token_transfer_frontrun::TokenTransferFrontrunDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::allowance_toctou::AllowanceToctouDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::price_manipulation_frontrun::PriceManipulationFrontrunDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::missing_transaction_deadline::MissingTransactionDeadlineDetector::new(),
+        ));
+        self.register(Arc::new(
             crate::erc20_infinite_approval::Erc20InfiniteApprovalDetector::new(),
         ));
         self.register(Arc::new(

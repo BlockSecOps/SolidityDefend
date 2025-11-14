@@ -148,6 +148,10 @@ pub mod defi_yield_farming;
 
 // Phase 17: Token Standard Edge Cases (2025)
 pub mod erc20_approve_race;
+pub mod token_transfer_frontrun;
+pub mod allowance_toctou;
+pub mod price_manipulation_frontrun;
+pub mod missing_transaction_deadline;
 pub mod erc20_infinite_approval;
 pub mod erc721_callback_reentrancy;
 pub mod erc777_reentrancy_hooks;
