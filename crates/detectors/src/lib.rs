@@ -64,6 +64,7 @@ pub mod selfdestruct_abuse;
 pub mod shadowing_variables;
 pub mod short_address;
 pub mod signature_malleability;
+pub mod missing_eip712_domain;
 pub mod slashing_mechanism;
 pub mod slippage_protection;
 pub mod storage_collision;

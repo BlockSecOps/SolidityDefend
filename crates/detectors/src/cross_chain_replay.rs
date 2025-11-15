@@ -201,6 +201,17 @@ impl CrossChainReplayDetector {
             || func_source.contains("verify");
 
         if has_signature_ops && has_hashing {
+            // Check for EIP-712 domain separator pattern (proper implementation)
+            let has_eip712_pattern = (func_source.contains("\\x19\\x01")
+                && func_source.contains("DOMAIN_SEPARATOR"))
+                || (func_source.contains("\\x19\\\\x01")
+                && func_source.contains("DOMAIN_SEPARATOR"));
+
+            // Check for OpenZeppelin ECDSA library (has built-in protection)
+            let uses_oz_ecdsa = func_source.contains("ECDSA.recover")
+                || func_source.contains("ECDSA.tryRecover");
+
+            // Check for direct chainId usage in hash
             let has_chainid_in_hash =
                 func_source.contains("block.chainid") || func_source.contains("block.chainId");
 
@@ -208,7 +219,10 @@ impl CrossChainReplayDetector {
             let has_vulnerability_comment =
                 func_source.contains("Missing:") && func_source.contains("chainid");
 
-            return !has_chainid_in_hash || has_vulnerability_comment;
+            // Not vulnerable if using EIP-712 pattern, OZ ECDSA, or has chainId directly
+            let has_protection = has_eip712_pattern || uses_oz_ecdsa || has_chainid_in_hash;
+
+            return !has_protection || has_vulnerability_comment;
         }
 
         false
