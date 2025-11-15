@@ -479,6 +479,9 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::signature_malleability::SignatureMalleabilityDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::missing_eip712_domain::MissingEIP712DomainDetector::new(),
+        ));
 
         // DeFi Advanced Protocols (Phase 5)
         self.register(Arc::new(
