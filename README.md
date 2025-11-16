@@ -9,7 +9,7 @@
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 [![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
 
-> ✅ **v1.3.0 Released** - Enhanced vulnerability detection with 7 new/improved detectors addressing critical gaps. **+8.7% detection improvement** (34.8% → 43.5%) with new coverage for tx.origin authentication, weak randomness (keccak256 patterns), DoS by failed transfer, batch transfer overflow (BeautyChain vulnerability), short address attacks, and array length mismatches. Production-ready security suite with **204 detectors** covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
+> ✅ **v1.3.6 Released** - Production-ready security suite with **209 detectors** covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, front-running & MEV protection (Phase 2), delegatecall & proxy security (Phase 1), signature vulnerabilities (Phase 3), zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
 
 A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
 
@@ -32,7 +32,7 @@ soliditydefend -s high contract.sol
 
 ## ✨ Features
 
-- **204 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
+- **209 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, front-running protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
 - **OWASP 2025 Aligned** 🆕 - Full coverage of OWASP Smart Contract Top 10 (2025) addressing $1.42B in analyzed vulnerability patterns
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives

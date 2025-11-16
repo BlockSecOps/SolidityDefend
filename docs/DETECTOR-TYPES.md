@@ -1,6 +1,6 @@
 # Detector Types
 
-Complete list of all 204 security detectors organized by category.
+Complete list of all 209 security detectors organized by category.
 
 ## Table of Contents
 

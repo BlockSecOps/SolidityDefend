@@ -179,7 +179,7 @@ soliditydefend -f json contract.sol
 **Example Output:**
 ```json
 {
-  "version": "0.1.0",
+  "version": "1.3.6",
   "timestamp": "2024-01-01T12:00:00Z",
   "summary": {
     "files_analyzed": 1,

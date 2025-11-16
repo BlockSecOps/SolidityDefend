@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **195+ security detectors** in SolidityDefend v1.3.0.
+Complete reference for all **209 security detectors** in SolidityDefend v1.3.6.
 
-**Last Updated:** 2025-11-05
-**Version:** v1.3.0
-**Total Detectors:** 215 (documented) | 204 (in tool) | **100% coverage**
+**Last Updated:** 2025-11-16
+**Version:** v1.3.6
+**Total Detectors:** 209 (in tool)
 **Categories:** 17
 
 ---
@@ -120,5 +120,5 @@ soliditydefend --list-detectors
 ---
 
 **Maintained by:** Advanced Blockchain Security
-**Generated:** 2025-11-05
-**Documentation Coverage:** 210/204 detectors (100% of tool) 🎉
+**Generated:** 2025-11-16
+**Documentation Coverage:** 209 detectors (100% of tool) 🎉

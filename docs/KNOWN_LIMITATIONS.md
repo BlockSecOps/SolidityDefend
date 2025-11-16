@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.3.0
-**Last Updated:** 2025-11-03
+**Version:** v1.3.6
+**Last Updated:** 2025-11-16
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 

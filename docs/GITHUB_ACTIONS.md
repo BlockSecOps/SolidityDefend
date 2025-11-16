@@ -16,7 +16,7 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
    - Run clippy linter (`cargo clippy`)
    - Build in debug and release modes
    - Run all tests
-   - Verify detector count (204 expected)
+   - Verify detector count (209 expected)
    - Upload build artifacts
 
 2. **Docker Build**
