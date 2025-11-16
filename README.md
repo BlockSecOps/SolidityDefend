@@ -9,12 +9,6 @@
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 [![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
 
-> ✅ **v1.3.6 Released** - Production-ready security suite with **209 detectors** covering ERC-4337 AA advanced, advanced access control ($953M in losses), restaking/LRT security ($15B+ TVL), flash loan exploits, token standards, MEV protection, front-running & MEV protection (Phase 2), delegatecall & proxy security (Phase 1), signature vulnerabilities (Phase 3), zero-knowledge proofs, and OWASP 2025 Top 10. See [v1.3.0 Improvements](#v130-improvements) and [Validation Report](#validation-testing).
-
-A high-performance static analysis security tool for Solidity smart contracts, built with Rust for speed and accuracy. SolidityDefend helps developers identify security vulnerabilities, code quality issues, and potential exploits before deploying to production.
-
----
-
 ## 🚀 Quick Start
 
 ```bash
