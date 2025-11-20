@@ -1,0 +1,903 @@
+{
+  "version": "1.3.6",
+  "timestamp": "2025-11-17T22:55:22.866233Z",
+  "findings": [
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'deposit' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'withdraw' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 74,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'mint' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 99,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'redeem' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 122,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "erc20-transfer-return-bomb",
+      "message": "Token transfer lacks return data size validation - vulnerable to return bomb DOS",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Check returndatasize() and reject if excessive (>64 bytes): require(returndatasize() <= 64)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Multiple tokens (3) without decimal tracking - calculation errors likely",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Store decimals per token: mapping(address => uint8) public tokenDecimals",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-sandwich-vulnerable-swaps",
+      "message": "Large swaps without MEV protection (Flashbots/private mempool) - high sandwich risk",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Use Flashbots/MEV-Share for large swaps or implement private transaction submission",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-priority-gas-auction",
+      "message": "First-come-first-served mint - creates PGA where users bid up gas to mint first",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Use commit-reveal, whitelist, or fair launch mechanism instead of FCFS",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Static fees on AMM - no protection against toxic flow from informed traders",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Implement dynamic fees that increase with volatility or trade size to discourage toxic flow",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "No trade size limits - large informed trades can extract maximum value from LPs",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Add maximum trade size as percentage of reserves: require(amountIn < reserves * maxBps / 10000)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Instant arbitrage possible - informed traders can extract value with zero risk",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Add block delay or use time-weighted pricing to reduce instant arbitrage opportunities",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-toxic-flow-exposure",
+      "message": "Swaps don't check oracle price - no protection against informed traders exploiting price deviations",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Compare swap price against TWAP oracle; reject if deviation exceeds threshold",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 23
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "oracle-time-window-attack",
+      "message": "Uniswap price oracle without TWAP - vulnerable to time-window manipulation",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ VULNERABLE - Spot price manipulation:\nIUniswapV2Pair pair = IUniswapV2Pair(pairAddress);\n(uint112 reserve0, uint112 reserve1,) = pair.getReserves();\nuint256 price = reserve1 / reserve0;  // Manipulable!\n\n✅ SECURE - Use Uniswap V3 TWAP:\nuint32[] memory secondsAgos = new uint32[](2);\nsecondsAgos[0] = 1800;  // 30 min ago\nsecondsAgos[1] = 0;     // now\n\n(int56[] memory tickCumulatives,) = pool.observe(secondsAgos);\nint56 tickCumulativeDelta = tickCumulatives[1] - tickCumulatives[0];\nint24 avgTick = int24(tickCumulativeDelta / 1800);\nuint256 twapPrice = OracleLibrary.getQuoteAtTick(avgTick, ...);\n\n✅ BEST - Use multiple TWAPs with different windows:\nuint256 twap10min = getTWAP(600);   // 10 min\nuint256 twap30min = getTWAP(1800);  // 30 min\nuint256 twap1hour = getTWAP(3600);  // 1 hour\n\n// Reject if deviation > threshold\nrequire(abs(twap10min - twap30min) < maxDeviation);\n\nAttack vector: Flash loan → Manipulate spot price → Exploit → Repay",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Array access without length validation - can cause out-of-bounds access",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\nfunction process(uint256[] calldata ids) external {\nfor (uint256 i = 0; i < ids.length; i++) {\n// What if ids is empty? Or too large?\n}\n}\n\n✅ VALIDATE ARRAY LENGTH:\nfunction process(uint256[] calldata ids) external {\n// Check minimum length\nrequire(ids.length > 0, \"Empty array\");\n\n// Check maximum length (prevent DoS)\nrequire(ids.length <= MAX_BATCH_SIZE, \"Batch too large\");\n\nfor (uint256 i = 0; i < ids.length; i++) {\n// Safe to access ids[i]\n}\n}\n\n✅ VALIDATE ARRAY MATCHING:\nfunction batchTransfer(\naddress[] calldata recipients,\nuint256[] calldata amounts\n) external {\n// Arrays must match in length\nrequire(\nrecipients.length == amounts.length,\n\"Length mismatch\"\n);\nrequire(recipients.length > 0, \"Empty arrays\");\nrequire(recipients.length <= MAX_BATCH, \"Too many\");\n\nfor (uint256 i = 0; i < recipients.length; i++) {\n// Safe parallel access\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hook-reentrancy-enhanced",
+      "message": "Callback function lacks sender validation - attacker can trigger malicious reentry",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Validate callback sender (e.g., require(msg.sender == pool)) to prevent unauthorized reentry",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "ERC-4626 vault lacks initial share protection - vulnerable to share inflation attack",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Share calculation uses contract balance directly - vulnerable to donation attack via direct transfer",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Track balances internally instead of using balanceOf(), or use virtual assets/shares in calculations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "No minimum deposit requirement - small deposits may round down to zero shares",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Pool initialization lacks protection - first depositor can manipulate initial share price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 5731
+      },
+      "fix_suggestion": {
+        "description": "Require minimum initial deposit, mint dead shares on initialization, or use time-delayed activation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'deposit' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares - Uniswap V2 pattern), (2) Implement virtual shares/assets (OpenZeppelin ERC4626 with decimalsOffset), (3) Enforce minimum first deposit amount (>= 1e6 recommended), (4) Use higher precision decimals (1e18 instead of 1e6), (5) Track assets internally instead of using balanceOf, (6) Consider EigenLayer delegation pattern for restaking vaults.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-share-inflation",
+      "message": "Function 'mint' may be vulnerable to vault share inflation attack. No minimum deposit amount enforced, allowing 1 wei deposit that can be used for share price manipulation First depositor can manipulate share price by depositing 1 wei, donating assets directly to vault, causing rounding errors that steal from subsequent depositors.",
+      "severity": "critical",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'mint' from share inflation attack. Solutions: (1) Mint initial shares to zero address on deployment (dead shares - Uniswap V2 pattern), (2) Implement virtual shares/assets (OpenZeppelin ERC4626 with decimalsOffset), (3) Enforce minimum first deposit amount (>= 1e6 recommended), (4) Use higher precision decimals (1e18 instead of 1e6), (5) Track assets internally instead of using balanceOf, (6) Consider EigenLayer delegation pattern for restaking vaults.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'deposit' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), (4) Require minimum initial deposits, (5) Use dead shares pattern (Uniswap V2 style), (6) Consider EigenLayer delegation pattern for restaking protocols.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'withdraw' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), (4) Require minimum initial deposits, (5) Use dead shares pattern (Uniswap V2 style), (6) Consider EigenLayer delegation pattern for restaking protocols.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'mint' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'mint' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), (4) Require minimum initial deposits, (5) Use dead shares pattern (Uniswap V2 style), (6) Consider EigenLayer delegation pattern for restaking protocols.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'redeem' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'redeem' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), (4) Require minimum initial deposits, (5) Use dead shares pattern (Uniswap V2 style), (6) Consider EigenLayer delegation pattern for restaking protocols.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-donation-attack",
+      "message": "Function 'totalAssets' may be vulnerable to vault donation attack. Uses balanceOf(address(this)) for share price calculation without internal balance tracking. Vulnerable to direct token donation manipulation Attacker can manipulate share price by directly transferring tokens to vault, causing rounding errors that steal from depositors.",
+      "severity": "high",
+      "location": {
+        "line": 138,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Protect 'totalAssets' from donation attack. Solutions: (1) Track assets internally instead of using balanceOf, (2) Implement donation guards that track expected vs actual balance, (3) Use virtual shares/assets to make donations economically infeasible (OpenZeppelin ERC4626), (4) Require minimum initial deposits, (5) Use dead shares pattern (Uniswap V2 style), (6) Consider EigenLayer delegation pattern for restaking protocols.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'withdraw' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-withdrawal-dos",
+      "message": "Function 'redeem' may be vulnerable to withdrawal DOS attack. No circuit breaker or emergency withdrawal mechanism. Vault cannot be paused during attacks or emergencies Attacker can block withdrawals, causing funds to be locked indefinitely.",
+      "severity": "high",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Protect 'redeem' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'deposit' may be vulnerable to hook reentrancy attack. State changes after token transfer without reentrancy guard. ERC-777/ERC-1363 callbacks can re-enter before state updates complete ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'deposit' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'withdraw' may be vulnerable to hook reentrancy attack. Balance updates after token transfer. Reentrancy via hooks can occur before balances are updated ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'withdraw' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'mint' may be vulnerable to hook reentrancy attack. State changes after token transfer without reentrancy guard. ERC-777/ERC-1363 callbacks can re-enter before state updates complete ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'mint' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "vault-hook-reentrancy",
+      "message": "Function 'redeem' may be vulnerable to hook reentrancy attack. State changes after token transfer without reentrancy guard. ERC-777/ERC-1363 callbacks can re-enter before state updates complete ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
+      "severity": "high",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Protect 'redeem' from hook reentrancy. Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, (2) Follow checks-effects-interactions (CEI) pattern strictly, (3) Update state BEFORE external calls with callbacks, (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), (5) Use reentrancy guard on all vault entry points, (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), (7) Use SafeERC20 wrapper library for token operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'withdraw' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'withdraw'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-supply-manipulation",
+      "message": "Function 'mint' has token supply manipulation vulnerability. Mint function lacks proper access control, anyone can mint unlimited tokens Improper supply controls can lead to unlimited minting, hyperinflation, or complete token devaluation.",
+      "severity": "critical",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Fix token supply controls in 'mint'. Implement maximum supply cap, add minting rate limits, require multi-signature for minting, add supply change events, validate burn amounts, and implement supply monitoring.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'deposit' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'deposit'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'withdraw' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'withdraw'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'mint' has gas griefing vulnerability. Transfer without gas stipend, recipient can grief by consuming gas in fallback Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'mint'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'redeem' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'redeem'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'deposit' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'deposit'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'withdraw' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'withdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'mint' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'mint'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'redeem' contains excessive gas usage pattern. Multiple storage reads detected (5). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'redeem'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-liquidity-pool-manipulation",
+      "message": "No ratio validation for liquidity provision in 'mint'",
+      "severity": "medium",
+      "location": {
+        "line": 99,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate ratio: require(amount0 * reserve1 == amount1 * reserve0, \"Invalid ratio\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No zero-share validation (rounding error exploitation) in 'deposit'",
+      "severity": "high",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate shares: require(shares > 0, \"Shares must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No deposit cap (unlimited exposure risk) in 'deposit'",
+      "severity": "low",
+      "location": {
+        "line": 48,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add cap: require(totalAssets() + amount <= depositCap, \"Cap exceeded\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'withdraw'",
+      "severity": "medium",
+      "location": {
+        "line": 74,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "defi-yield-farming-exploits",
+      "message": "No validation for zero assets on withdrawal in 'redeem'",
+      "severity": "medium",
+      "location": {
+        "line": 122,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Validate assets: require(assets > 0, \"Assets must be non-zero\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-transfer-frontrun",
+      "message": "Function 'mint' has token transfer front-running vulnerability. Price-dependent transfer without slippage protection. Function 'mint' performs transferFrom in price-dependent context but lacks minAmountOut/slippage parameters or deadline checks This enables sandwich attacks where attackers can front-run user transactions to extract MEV by manipulating prices",
+      "severity": "medium",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Add slippage protection to 'mint'. Implement: (1) Add minAmountOut parameter and validate: require(amountOut >= minAmountOut, 'Slippage'); (2) Add deadline parameter: require(block.timestamp <= deadline, 'Expired'); (3) Use TWAP oracles instead of spot prices; (4) Implement commit-reveal for sensitive operations; (5) Consider private transaction pools (Flashbots) for MEV protection",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'deposit' is missing transaction deadline. Missing transaction deadline. Time-sensitive operation 'deposit' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 48,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'deposit'. Implement: (1) Add 'deadline' parameter: function deposit(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'withdraw' is missing transaction deadline. Missing transaction deadline. Withdrawal operation 'withdraw' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 74,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'withdraw'. Implement: (1) Add 'deadline' parameter: function withdraw(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'mint' is missing transaction deadline. Missing transaction deadline. Time-sensitive operation 'mint' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 99,
+        "column": 14,
+        "length": 4
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'mint'. Implement: (1) Add 'deadline' parameter: function mint(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'redeem' is missing transaction deadline. Missing transaction deadline. Redemption operation 'redeem' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 122,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'redeem'. Implement: (1) Add 'deadline' parameter: function redeem(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Classic reentrancy pattern with transient storage risk in 'withdraw'",
+      "severity": "critical",
+      "location": {
+        "line": 74,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "State update after external call is vulnerable to reentrancy:\n\nCurrent pattern (VULNERABLE):\n1. Read balance\n2. Call transfer() ← attacker can reenter here with transient storage!\n3. Update balance to 0\n\nSecure pattern:\n1. Read balance\n2. Update balance to 0 ← do this FIRST\n3. Call transfer()\n\nWith EIP-1153, even 2300 gas is enough to modify transient state and re-enter.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Classic reentrancy pattern with transient storage risk in 'redeem'",
+      "severity": "critical",
+      "location": {
+        "line": 122,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "State update after external call is vulnerable to reentrancy:\n\nCurrent pattern (VULNERABLE):\n1. Read balance\n2. Call transfer() ← attacker can reenter here with transient storage!\n3. Update balance to 0\n\nSecure pattern:\n1. Read balance\n2. Update balance to 0 ← do this FIRST\n3. Call transfer()\n\nWith EIP-1153, even 2300 gas is enough to modify transient state and re-enter.",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.6",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.6",
+    "branding": {
+      "name": "BlockSecOps",
+      "url": "https://BlockSecOps.com",
+      "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
+    }
+  },
+  "statistics": {
+    "total_findings": 60,
+    "severity_counts": {
+      "high": 23,
+      "medium": 21,
+      "low": 10,
+      "critical": 6,
+      "info": 0
+    },
+    "unique_detectors": 26
+  }
+}

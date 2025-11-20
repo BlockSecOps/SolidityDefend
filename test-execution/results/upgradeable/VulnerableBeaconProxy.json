@@ -1,0 +1,747 @@
+{
+  "version": "1.3.6",
+  "timestamp": "2025-11-18T16:27:49.731867Z",
+  "findings": [
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'upgradeTo' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 28,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'upgradeTo'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'newImplementation' in function 'upgradeTo' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 28,
+        "column": 32,
+        "length": 17
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(newImplementation != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'newImplementation' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 28,
+        "column": 32,
+        "length": 17
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(newImplementation != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 22,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 22,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'upgradeTo' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 28,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'upgradeTo'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 86,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Function 'initialize' reads same storage variable multiple times. Cache in memory Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Contract has centralization risk. Contract uses single owner without multi-signature protection. Single private key compromise leads to total contract control Single point of failure can lead to fund loss, governance attacks, or complete system compromise.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "aa-initialization-vulnerability",
+      "message": "Account abstraction initialization lacks signature verification. Initialization function lacks signature verification Missing signature verification allows anyone to initialize the account with arbitrary parameters, leading to account takeover.",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-306",
+      "fix_suggestion": {
+        "description": "Implement secure initialization: (1) Add initWithSig function requiring user signature, (2) Verify signature matches expected owner, (3) Use nonce to prevent replay attacks, (4) Implement one-time initialization flag, (5) Consider ERC-4337 EntryPoint-only initialization.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "aa-initialization-vulnerability",
+      "message": "EIP-7702 delegation initialized without safety checks. Delegation without validation of target contract Unsafe delegation initialization can brick the account if delegating to incompatible or malicious contract.",
+      "severity": "high",
+      "location": {
+        "line": 12,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Validate delegation target: (1) Verify delegate implements required interfaces, (2) Ensure delegate is not zero address, (3) Check delegate has valid code, (4) Require signature for delegation setup, (5) Follow EIP-7702 security guidelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "aa-initialization-vulnerability",
+      "message": "EIP-7702 delegation initialized without safety checks. Delegation without validation of target contract Unsafe delegation initialization can brick the account if delegating to incompatible or malicious contract.",
+      "severity": "high",
+      "location": {
+        "line": 72,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Validate delegation target: (1) Verify delegate implements required interfaces, (2) Ensure delegate is not zero address, (3) Check delegate has valid code, (4) Require signature for delegation setup, (5) Follow EIP-7702 security guidelines.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation contract missing recovery mechanism. No recovery mechanism found - users cannot undo delegation Without recovery, hardware wallet users lose access if delegation target is compromised or becomes incompatible.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-672",
+      "fix_suggestion": {
+        "description": "Implement delegation recovery: (1) Add removeDelegation function, (2) Allow switching delegation targets, (3) Implement emergency mode fallback, (4) Support direct EOA transactions, (5) Require hardware wallet signature for changes.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation target not validated for interface compatibility. Missing interface validation can cause hardware wallet to delegate to incompatible code, bricking the account.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Validate delegation target: (1) Check supportsInterface for EIP-165, (2) Verify required functions exist, (3) Test delegation in simulation first, (4) Implement delegation preview/confirmation, (5) Maintain whitelist of verified delegation targets.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.19;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.19;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "proxy-upgrade-unprotected",
+      "message": "Function 'upgradeTo' is an unprotected proxy upgrade function. The upgrade function 'upgradeTo' is public and lacks access control modifiers. It modifies implementation storage without verifying msg.sender permissions. This allows any address to upgrade the implementation contract, potentially leading to complete takeover with fund theft and data manipulation.",
+      "severity": "critical",
+      "location": {
+        "line": 28,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add access control to 'upgradeTo'. Use modifiers like 'onlyOwner', 'onlyAdmin', or implement role-based access control. Example: function upgradeTo(...) external onlyOwner { ... }",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "proxy-storage-collision",
+      "message": "Contract 'VulnerableBeacon' has potential proxy storage collision vulnerability. Proxy contract declares storage variables without using EIP-1967 slots, risking collision with implementation contract storage. Storage collisions can corrupt critical state variables and lead to fund loss.",
+      "severity": "high",
+      "location": {
+        "line": 19,
+        "column": 10,
+        "length": 16
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Use EIP-1967 standard storage slots for proxy-specific variables. Reserve storage slots using 'bytes32 private constant SLOT = keccak256(...)'. Avoid declaring storage variables at the beginning of proxy contracts. Use upgradeable patterns like OpenZeppelin's transparent proxy.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "fallback-function-shadowing",
+      "message": "Function 'upgradeTo' in proxy contract may shadow implementation. Function 'upgradeTo' may shadow implementation's function. In transparent proxies, use ifAdmin pattern to separate admin and user calls Real-world impact: Similar to issues in various proxy implementations where admin functions were shadowed.",
+      "severity": "medium",
+      "location": {
+        "line": 28,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-670"
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "private-variable-exposure",
+      "message": "Sensitive data 'private' in 'private' variable - all blockchain storage is publicly readable",
+      "severity": "high",
+      "location": {
+        "line": 43,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "CRITICAL: 'private' visibility does NOT encrypt data!\n\nAll blockchain storage is publicly readable via:\n- eth_getStorageAt RPC call\n- Block explorers\n- Archive nodes\n\n❌ This is INSECURE:\nstring private password = \"mysecret123\";\n\n✅ Correct approaches:\n\n1. NEVER store secrets on-chain\n2. Store hashes instead:\nbytes32 public passwordHash = keccak256(\"password\");\n\n3. Use commit-reveal for sensitive values:\nbytes32 public commitment = keccak256(abi.encode(value, salt));\n\n4. For truly private data, use off-chain storage or ZK proofs",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Array access without length validation - can cause out-of-bounds access",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\nfunction process(uint256[] calldata ids) external {\nfor (uint256 i = 0; i < ids.length; i++) {\n// What if ids is empty? Or too large?\n}\n}\n\n✅ VALIDATE ARRAY LENGTH:\nfunction process(uint256[] calldata ids) external {\n// Check minimum length\nrequire(ids.length > 0, \"Empty array\");\n\n// Check maximum length (prevent DoS)\nrequire(ids.length <= MAX_BATCH_SIZE, \"Batch too large\");\n\nfor (uint256 i = 0; i < ids.length; i++) {\n// Safe to access ids[i]\n}\n}\n\n✅ VALIDATE ARRAY MATCHING:\nfunction batchTransfer(\naddress[] calldata recipients,\nuint256[] calldata amounts\n) external {\n// Arrays must match in length\nrequire(\nrecipients.length == amounts.length,\n\"Length mismatch\"\n);\nrequire(recipients.length > 0, \"Empty arrays\");\nrequire(recipients.length <= MAX_BATCH, \"Too many\");\n\nfor (uint256 i = 0; i < recipients.length; i++) {\n// Safe parallel access\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "jit-liquidity-sandwich",
+      "message": "Liquidity becomes active immediately - may enable JIT sandwich attacks",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 3053
+      },
+      "fix_suggestion": {
+        "description": "Consider delaying liquidity activation to the next epoch or block to mitigate JIT attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "No minimum deposit requirement - small deposits may round down to zero shares",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 3053
+      },
+      "fix_suggestion": {
+        "description": "Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'changeBeacon' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 63,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'changeBeacon'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'newBeacon' in function 'changeBeacon' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 63,
+        "column": 35,
+        "length": 9
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(newBeacon != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'newBeacon' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 63,
+        "column": 35,
+        "length": 9
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(newBeacon != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 39,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 68,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 68,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '_implementation' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 55,
+        "column": 14,
+        "length": 15
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in '_implementation'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 68,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_beacon' contains variable shadowing. Parameter 'BEACON_SLOT' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 49,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_beacon'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "diamond-storage-collision",
+      "message": "Contract 'VulnerableBeaconProxy' declares storage variables directly without using Diamond Storage pattern. This creates collision risk when multiple facets share the same proxy storage. Direct storage at sequential slots (0, 1, 2...) will collide across facets, corrupting state and causing critical failures.",
+      "severity": "critical",
+      "location": {
+        "line": 34,
+        "column": 10,
+        "length": 21
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Implement Diamond Storage pattern for 'VulnerableBeaconProxy': (1) Create a library with 'bytes32 constant STORAGE_POSITION = keccak256(\"diamond.storage.vulnerablebeaconproxy\")' (2) Define a struct containing all storage variables, (3) Create a function returning 'Storage storage ds' using assembly to set slot to STORAGE_POSITION, (4) Access all storage through this function instead of direct variables, (5) Use unique namespace per facet to guarantee isolation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "proxy-storage-collision",
+      "message": "Contract 'VulnerableBeaconProxy' has potential proxy storage collision vulnerability. Contract uses assembly storage operations (sstore/sload) without proper slot collision prevention. This can overwrite critical proxy state. Storage collisions can corrupt critical state variables and lead to fund loss.",
+      "severity": "high",
+      "location": {
+        "line": 34,
+        "column": 10,
+        "length": 21
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Use EIP-1967 standard storage slots for proxy-specific variables. Reserve storage slots using 'bytes32 private constant SLOT = keccak256(...)'. Avoid declaring storage variables at the beginning of proxy contracts. Use upgradeable patterns like OpenZeppelin's transparent proxy.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "fallback-delegatecall-unprotected",
+      "message": "Function '' performs delegatecall in fallback/receive without access control. Fallback/receive function performs delegatecall without validating the caller. Any address can trigger this by calling a non-existent function or sending ETH. This allows any caller to execute arbitrary code by calling non-existent functions or sending ETH to the contract.",
+      "severity": "high",
+      "location": {
+        "line": 68,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Add access control to fallback function ''. Validate implementation address before delegatecall. Use modifiers like 'onlyOwner' or check msg.sender explicitly. Consider using OpenZeppelin's transparent or UUPS proxy patterns.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'initialize' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'initialize'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "unprotected-initializer",
+      "message": "Initializer function 'initialize' lacks access control and can be called by anyone",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier to 'initialize' or ensure it can only be called once during deployment",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'initialized' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 93,
+        "column": 9,
+        "length": 18
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter '_owner' in function 'initialize' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 33,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(_owner != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter '_owner' of type 'address' may need validation",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 33,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(_owner != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'initialize' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'initialize'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'initialize' contains excessive gas usage pattern. Multiple storage reads detected (6). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'initialize'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "proxy-storage-collision",
+      "message": "Contract 'BeaconImplementation' has potential proxy storage collision vulnerability. Proxy contract declares storage variables without using EIP-1967 slots, risking collision with implementation contract storage. Storage collisions can corrupt critical state variables and lead to fund loss.",
+      "severity": "high",
+      "location": {
+        "line": 83,
+        "column": 10,
+        "length": 20
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Use EIP-1967 standard storage slots for proxy-specific variables. Reserve storage slots using 'bytes32 private constant SLOT = keccak256(...)'. Avoid declaring storage variables at the beginning of proxy contracts. Use upgradeable patterns like OpenZeppelin's transparent proxy.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "fallback-function-shadowing",
+      "message": "Function 'initialize' in proxy contract may shadow implementation. Function 'initialize' may shadow implementation's function. In transparent proxies, use ifAdmin pattern to separate admin and user calls Real-world impact: Similar to issues in various proxy implementations where admin functions were shadowed.",
+      "severity": "medium",
+      "location": {
+        "line": 90,
+        "column": 14,
+        "length": 10
+      },
+      "cwe": "CWE-670"
+    },
+    {
+      "detector_id": "eip7702-init-frontrun",
+      "message": "Unprotected initialization in 'initialize' - vulnerable to front-running takeover ($1.54M August 2025 attack)",
+      "severity": "critical",
+      "location": {
+        "line": 90,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-7702 Front-Running Attack:\n\nCurrent code (VULNERABLE):\nfunction initialize(...) public {\nrequire(owner == address(0));\nowner = newOwner;  // ❌ Attacker can front-run!\n}\n\nAttack sequence:\n1. User signs EIP-7702 authorization\n2. Attacker sees authorization in mempool\n3. Attacker front-runs with initialize(attackerAddress)\n4. User's delegation is now controlled by attacker\n5. Attacker drains all assets\n\nFix 1: Authorization-based initialization\nfunction initialize(address _owner, bytes memory signature) public {\nrequire(owner == address(0));\n\n// ✅ Verify user signed this specific initialization\nbytes32 hash = keccak256(abi.encodePacked(_owner, address(this)));\naddress signer = ECDSA.recover(hash, signature);\nrequire(signer == _owner, \"Invalid signature\");\n\nowner = _owner;\n}\n\nFix 2: Constructor initialization (if possible)\nconstructor(address _owner) {\nowner = _owner;  // ✅ Set during deployment\n}\n\nFix 3: Factory pattern with immediate initialization\ncontract DelegateFactory {\nfunction createDelegate() public returns (address) {\nDelegate delegate = new Delegate(msg.sender);\nreturn address(delegate);\n}\n}\n\nFix 4: Commit-reveal with time-lock\nmapping(bytes32 => uint256) public commitments;\n\nfunction commitInit(bytes32 commitment) public {\ncommitments[commitment] = block.timestamp;\n}\n\nfunction initialize(address _owner, bytes32 salt) public {\nbytes32 commitment = keccak256(abi.encodePacked(_owner, salt));\nrequire(commitments[commitment] > 0, \"No commitment\");\nrequire(block.timestamp >= commitments[commitment] + 10 minutes);\n\nowner = _owner;\n}\n\nReal-World Loss: $1.54M (August 2025)",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.6",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.6",
+    "branding": {
+      "name": "BlockSecOps",
+      "url": "https://BlockSecOps.com",
+      "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
+    }
+  },
+  "statistics": {
+    "total_findings": 49,
+    "severity_counts": {
+      "info": 0,
+      "medium": 9,
+      "critical": 13,
+      "high": 21,
+      "low": 6
+    },
+    "unique_detectors": 28
+  }
+}

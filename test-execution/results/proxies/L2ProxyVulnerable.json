@@ -1,0 +1,675 @@
+{
+  "version": "1.3.6",
+  "timestamp": "2025-11-18T18:34:47.704687Z",
+  "findings": [
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'target' in function 'relayMessage' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 31,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(target != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'target' in function 'forwardCall' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 64,
+        "column": 34,
+        "length": 6
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(target != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'target' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 31,
+        "column": 17,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(target != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Parameter 'target' of type 'address' may need validation",
+      "severity": "low",
+      "location": {
+        "line": 64,
+        "column": 34,
+        "length": 6
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "require(target != address(0), \"Invalid address\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Contract uses governance tokens without snapshot protection mechanisms. This enables flash loan attacks where attackers can temporarily acquire tokens to manipulate governance decisions.",
+      "severity": "high",
+      "location": {
+        "line": 23,
+        "column": 0,
+        "length": 20
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Implement snapshot-based voting power using block-based or time-based snapshots.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "test-governance",
+      "message": "Function 'executeL1Message' lacks time-delay protection for governance actions. New token holders can immediately use their voting power, enabling flash loan governance attacks.",
+      "severity": "medium",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 16
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Implement time-delayed voting rights requiring minimum holding periods.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-replay",
+      "message": "Function 'recoverSigner' verifies signatures without replay protection. Attackers can reuse valid signatures to perform unauthorized actions. This is particularly dangerous in governance systems for vote manipulation.",
+      "severity": "high",
+      "location": {
+        "line": 70,
+        "column": 0,
+        "length": 13
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Implement a nonce system to prevent signature replay attacks. Include a unique nonce in the signed message and track used nonces.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "cross-chain-replay",
+      "message": "Function 'relayMessage' generates hash/signature without chain ID protection. This allows the same signature to be replayed on different chains, potentially draining funds on all supported chains.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Include 'block.chainid' in the hash calculation for function 'relayMessage'. Example: keccak256(abi.encodePacked(..., block.chainid))",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function 'executeL1Message' uses delegatecall which can cause storage collision. Delegatecall with storage collision vulnerability marker detected Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in 'executeL1Message'. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "storage-collision",
+      "message": "Function '' uses delegatecall which can cause storage collision. Delegatecall to variable target without storage layout verification Delegatecall executes code in the context of the calling contract's storage, and mismatched storage layouts can corrupt state.",
+      "severity": "critical",
+      "location": {
+        "line": 80,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-662",
+      "fix_suggestion": {
+        "description": "Ensure storage layout compatibility in ''. Verify that delegatecall targets have identical storage layout, use storage slots explicitly, or implement storage layout versioning.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function 'executeL1Message' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in 'executeL1Message'. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dangerous-delegatecall",
+      "message": "Function '' contains dangerous delegatecall pattern. Delegatecall is performed without proper access control, potentially accessible by any caller Delegatecall executes arbitrary code in the context of the current contract, allowing complete control over contract state and funds.",
+      "severity": "critical",
+      "location": {
+        "line": 80,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Restrict delegatecall target in ''. Use whitelist of approved addresses, implement access control, or avoid delegatecall entirely. Example: mapping(address => bool) public approvedTargets; require(approvedTargets[target], \"Unauthorized target\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-malleability",
+      "message": "Function 'recoverSigner' uses ECDSA signature verification without malleability protection. Uses ecrecover without checking 's' value against secp256k1 curve order ECDSA signatures have two valid forms (s and -s mod n). Without checking that s is in the lower half range, attackers can create alternate valid signatures for replay attacks.",
+      "severity": "high",
+      "location": {
+        "line": 70,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-347",
+      "fix_suggestion": {
+        "description": "Add signature malleability check in 'recoverSigner'. Use OpenZeppelin's ECDSA library or add: `require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, \"Invalid signature 's' value\");` This ensures s is in the lower half of the curve order.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-eip712-domain",
+      "message": "Function 'recoverSigner' Uses ecrecover() without proper EIP-712 domain separator. Signatures are vulnerable to replay attacks across contracts and chains.",
+      "severity": "high",
+      "location": {
+        "line": 70,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Implement proper EIP-712 domain separator:\n1. Define DOMAIN_SEPARATOR with all required fields (name, version, chainId, verifyingContract)\n2. Use structured data hashing with EIP-712\n3. Include domain separator in signature hash: keccak256(abi.encodePacked(\"\\x19\\x01\", DOMAIN_SEPARATOR, structHash))\n4. Or use OpenZeppelin's EIP712 implementation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 23,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function 'executeL1Message' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in 'executeL1Message'. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "upgradeable-proxy-issues",
+      "message": "Function '' has upgradeable proxy vulnerability. Upgrade function lacks proper access control, anyone can upgrade contract to malicious implementation Improper proxy patterns can lead to storage corruption, unauthorized upgrades, or complete contract takeover.",
+      "severity": "critical",
+      "location": {
+        "line": 80,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-665",
+      "fix_suggestion": {
+        "description": "Fix proxy implementation in ''. Use storage gaps for future upgrades, implement initializer modifiers, add upgrade delay with timelock, validate implementation addresses, use UUPS pattern with _authorizeUpgrade, and emit events for all upgrades.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'relayMessage' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'relayMessage'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'executeL1Message' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'executeL1Message'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "circular-dependency",
+      "message": "Function 'forwardCall' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.",
+      "severity": "high",
+      "location": {
+        "line": 64,
+        "column": 14,
+        "length": 11
+      },
+      "cwe": "CWE-674",
+      "fix_suggestion": {
+        "description": "Break circular dependency in 'forwardCall'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'recoverSigner' contains variable shadowing. Local variable 'r' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 70,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'recoverSigner'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '' contains variable shadowing. Local variable 'impl' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 80,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in ''. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation target not validated for interface compatibility. Missing interface validation can cause hardware wallet to delegate to incompatible code, bricking the account.",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Validate delegation target: (1) Check supportsInterface for EIP-165, (2) Verify required functions exist, (3) Test delegation in simulation first, (4) Implement delegation preview/confirmation, (5) Maintain whitelist of verified delegation targets.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'relayMessage'",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'executeL1Message'",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeL1Message'",
+      "severity": "high",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'executeL1Message' is missing transaction deadline. Missing transaction deadline. Order execution operation 'executeL1Message' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'executeL1Message'. Implement: (1) Add 'deadline' parameter: function executeL1Message(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.19;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.19;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'relayMessage' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'relayMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'relayMessage' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'relayMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'relayMessage' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 30,
+        "column": 14,
+        "length": 12
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'relayMessage': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeL1Message' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeL1Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeL1Message' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeL1Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeL1Message' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeL1Message': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "proxy-storage-collision",
+      "message": "Contract 'L2ProxyVulnerable' has potential proxy storage collision vulnerability. Proxy contract declares storage variables without using EIP-1967 slots, risking collision with implementation contract storage. Storage collisions can corrupt critical state variables and lead to fund loss.",
+      "severity": "high",
+      "location": {
+        "line": 18,
+        "column": 10,
+        "length": 17
+      },
+      "cwe": "CWE-1321",
+      "fix_suggestion": {
+        "description": "Use EIP-1967 standard storage slots for proxy-specific variables. Reserve storage slots using 'bytes32 private constant SLOT = keccak256(...)'. Avoid declaring storage variables at the beginning of proxy contracts. Use upgradeable patterns like OpenZeppelin's transparent proxy.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "fallback-delegatecall-unprotected",
+      "message": "Function '' performs delegatecall in fallback/receive without access control. Fallback/receive function performs delegatecall without validating the caller. Any address can trigger this by calling a non-existent function or sending ETH. This allows any caller to execute arbitrary code by calling non-existent functions or sending ETH to the contract.",
+      "severity": "high",
+      "location": {
+        "line": 80,
+        "column": 5,
+        "length": 0
+      },
+      "cwe": "CWE-829",
+      "fix_suggestion": {
+        "description": "Add access control to fallback function ''. Validate implementation address before delegatecall. Use modifiers like 'onlyOwner' or check msg.sender explicitly. Consider using OpenZeppelin's transparent or UUPS proxy patterns.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "delegatecall-untrusted-library",
+      "message": "Function 'executeL1Message' uses delegatecall to mutable library address. Delegatecall to mutable library 'implementation' - library address can be changed after deployment",
+      "severity": "high",
+      "location": {
+        "line": 51,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-494"
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'executeL1Message' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 51,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'forwardCall' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 64,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Array access without length validation - can cause out-of-bounds access",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\nfunction process(uint256[] calldata ids) external {\nfor (uint256 i = 0; i < ids.length; i++) {\n// What if ids is empty? Or too large?\n}\n}\n\n✅ VALIDATE ARRAY LENGTH:\nfunction process(uint256[] calldata ids) external {\n// Check minimum length\nrequire(ids.length > 0, \"Empty array\");\n\n// Check maximum length (prevent DoS)\nrequire(ids.length <= MAX_BATCH_SIZE, \"Batch too large\");\n\nfor (uint256 i = 0; i < ids.length; i++) {\n// Safe to access ids[i]\n}\n}\n\n✅ VALIDATE ARRAY MATCHING:\nfunction batchTransfer(\naddress[] calldata recipients,\nuint256[] calldata amounts\n) external {\n// Arrays must match in length\nrequire(\nrecipients.length == amounts.length,\n\"Length mismatch\"\n);\nrequire(recipients.length > 0, \"Empty arrays\");\nrequire(recipients.length <= MAX_BATCH, \"Too many\");\n\nfor (uint256 i = 0; i < recipients.length; i++) {\n// Safe parallel access\n}\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Address parameter without zero-address validation",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ADDRESS VALIDATION:\nfunction setOwner(address newOwner) external {\nowner = newOwner;  // What if newOwner is address(0)?\n}\n\n✅ VALIDATE ADDRESS:\nfunction setOwner(address newOwner) external onlyOwner {\nrequire(newOwner != address(0), \"Zero address\");\nrequire(newOwner != owner, \"Same address\");\nowner = newOwner;\n}\n\n✅ VALIDATE MULTIPLE ADDRESSES:\nfunction initialize(\naddress _token,\naddress _oracle,\naddress _treasury\n) external {\nrequire(_token != address(0), \"Zero token\");\nrequire(_oracle != address(0), \"Zero oracle\");\nrequire(_treasury != address(0), \"Zero treasury\");\n\n// Check for duplicates if needed\nrequire(_token != _oracle, \"Token == oracle\");\nrequire(_token != _treasury, \"Token == treasury\");\n\ntoken = _token;\noracle = _oracle;\ntreasury = _treasury;\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: Assembly has NO overflow protection!\n\nReal incident: Cetus DEX - $223M loss (May 2025)\nCause: Assembly arithmetic overflow\n\n❌ VULNERABLE (Cetus-style vulnerability):\nassembly {\nlet result := add(a, b)  // NO OVERFLOW CHECK!\nlet product := mul(x, y) // NO OVERFLOW CHECK!\nmstore(0x00, result)\n}\n\n✅ SOLUTION 1 - Add manual checks:\nassembly {\nlet result := add(a, b)\n// Manual overflow check\nif lt(result, a) {\nrevert(0, 0)  // Overflow detected\n}\n}\n\n✅ SOLUTION 2 - Use Solidity instead:\n// Let Solidity handle overflow checks\nuint256 result = a + b;  // Automatic overflow check\n\n✅ SOLUTION 3 - SafeMath for assembly:\nfunction safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {\nuint256 c;\nassembly {\nc := add(a, b)\n}\nrequire(c >= a, \"Overflow\");  // Check outside assembly\nreturn c;\n}\n\nAssembly arithmetic operations with NO checks:\n- add(a, b)     → wraps on overflow\n- sub(a, b)     → wraps on underflow\n- mul(a, b)     → wraps on overflow\n- div(a, b)     → returns 0 if b is 0 (no revert!)\n\n⚠️ Only use assembly arithmetic when absolutely necessary\nand with manual overflow checks!",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.6",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.6",
+    "branding": {
+      "name": "BlockSecOps",
+      "url": "https://BlockSecOps.com",
+      "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
+    }
+  },
+  "statistics": {
+    "total_findings": 44,
+    "severity_counts": {
+      "critical": 18,
+      "medium": 7,
+      "info": 0,
+      "high": 16,
+      "low": 3
+    },
+    "unique_detectors": 26
+  }
+}

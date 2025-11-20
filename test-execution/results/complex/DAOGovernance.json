@@ -1,0 +1,1317 @@
+{
+  "version": "1.3.6",
+  "timestamp": "2025-11-17T22:55:13.821065Z",
+  "findings": [
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 50,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 68,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 75,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 91,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "inefficient-storage",
+      "message": "Inefficient storage pattern detected. Single boolean storage variable. Consider packing multiple bools into uint256 bitmap Inefficient storage layout increases gas costs for all state-modifying operations.",
+      "severity": "low",
+      "location": {
+        "line": 97,
+        "column": 0,
+        "length": 30
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize storage layout. Consider: (1) Pack variables <32 bytes together in structs, (2) Order struct fields by size (largest to smallest), (3) Use uint256 instead of smaller types for standalone variables, (4) Combine boolean flags into a single uint256 bitmap, (5) Use constants/immutables for unchanging values.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "hardware-wallet-delegation",
+      "message": "Delegation operations lack hardware wallet signature validation. Critical delegation function missing signature validation Missing signature checks allow unauthorized changes to delegation configuration.",
+      "severity": "high",
+      "location": {
+        "line": 338,
+        "column": 0,
+        "length": 40
+      },
+      "cwe": "CWE-306",
+      "fix_suggestion": {
+        "description": "Enforce hardware wallet signatures: (1) Require ECDSA signature from hardware wallet, (2) Validate signer matches EOA owner, (3) Include nonce to prevent replay, (4) Display operation details on hardware device, (5) Follow EIP-191 or EIP-712 signing standards.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "guardian-role-centralization",
+      "message": "Guardian role lacks explicit revocation mechanism - may be irremovable if compromised",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 16074
+      },
+      "fix_suggestion": {
+        "description": "Implement guardian revocation function callable by DAO/owner for emergency scenarios",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "guardian-role-centralization",
+      "message": "Guardian role has no expiration time - permanent emergency powers create long-term centralization",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 16074
+      },
+      "fix_suggestion": {
+        "description": "Consider time-bound guardian powers that expire and require DAO renewal",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "flash-loan-governance-attack",
+      "message": "No minimum token holding period - flash-borrowed tokens can vote immediately",
+      "severity": "critical",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 16074
+      },
+      "fix_suggestion": {
+        "description": "Require minimum token holding period (e.g., 7 days) before tokens can be used for voting",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "token-decimal-confusion",
+      "message": "Decimal-sensitive math operations without validation - verify decimal assumptions",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 16074
+      },
+      "fix_suggestion": {
+        "description": "Validate expected decimals: require(token.decimals() == EXPECTED_DECIMALS)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "floating-pragma",
+      "message": "Floating pragma detected: pragma solidity ^0.8.20;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.",
+      "severity": "low",
+      "location": {
+        "line": 2,
+        "column": 0,
+        "length": 24
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Lock pragma to specific version: 'pragma solidity 0.8.20;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-storage-collision",
+      "message": "EIP-7702 delegate uses storage - verify no collision with EOA state",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Use EIP-7201 namespaced storage to avoid collisions:\n\nbytes32 private constant STORAGE_LOCATION = \nkeccak256(\"myprotocol.delegate.storage\");\n\nstruct DelegateStorage {\naddress owner;\nmapping(address => uint256) balances;\n}\n\nfunction _getStorage() private pure returns (DelegateStorage storage $) {\nassembly { $.slot := STORAGE_LOCATION }\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Potential division before multiplication - causes precision loss (OWASP 2025)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ PRECISION LOSS ($63.8M in losses):\nuint256 reward = (amount / totalSupply) * rewardRate;\n// Result: 0 if amount < totalSupply!\n\n✅ CORRECT ORDER:\nuint256 reward = (amount * rewardRate) / totalSupply;\n// Maximizes precision, multiply before divide\n\n✅ BEST: Use fixed-point math:\nuint256 reward = (amount * rewardRate * 1e18) / totalSupply / 1e18;\n\nReal incidents:\n- Cork Protocol: $11M (May 2025) - Division rounding\n- SIR.trading: $355K (March 2025) - Reward calculation\n- Multiple 2024 incidents: $63.8M total",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "logic-error-patterns",
+      "message": "Percentage calculation - verify order of operations for precision",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Percentage calculations require careful ordering:\n\n❌ WRONG (precision loss):\nuint256 fee = (amount / 10000) * feePercent;\n\n✅ CORRECT:\nuint256 fee = (amount * feePercent) / 10000;\n\n✅ BEST (with basis points):\nuint256 constant BASIS_POINTS = 10000;\nuint256 fee = (amount * feeBasisPoints) / BASIS_POINTS;\n\nExample: 250 basis points = 2.5%\namount = 1000, feeBasisPoints = 250\nfee = (1000 * 250) / 10000 = 25 ✅\n\nWRONG order:\nfee = (1000 / 10000) * 250 = 0 * 250 = 0 ❌",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "enhanced-input-validation",
+      "message": "Transfer function without zero-value check - validate non-zero amounts",
+      "severity": "medium",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "❌ MISSING ZERO-VALUE CHECK:\nfunction transfer(address to, uint256 amount) external {\n_transfer(msg.sender, to, amount);\n// What if amount is 0? Wastes gas, may break accounting\n}\n\n✅ VALIDATE NON-ZERO:\nfunction transfer(address to, uint256 amount) external {\nrequire(amount > 0, \"Zero amount\");\nrequire(to != address(0), \"Zero address\");\n_transfer(msg.sender, to, amount);\n}\n\n✅ COMPLETE VALIDATION:\nfunction deposit(uint256 amount) external payable {\n// For ERC20 deposits\nrequire(amount > 0, \"Zero amount\");\nrequire(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\n// For native ETH deposits\nif (msg.value > 0) {\nrequire(msg.value == amount, \"Value mismatch\");\n}\n\n// Proceed with deposit\n}",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Assembly arithmetic detected - no overflow protection! ($223M Cetus DEX)",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "🚨 CRITICAL: Assembly has NO overflow protection!\n\nReal incident: Cetus DEX - $223M loss (May 2025)\nCause: Assembly arithmetic overflow\n\n❌ VULNERABLE (Cetus-style vulnerability):\nassembly {\nlet result := add(a, b)  // NO OVERFLOW CHECK!\nlet product := mul(x, y) // NO OVERFLOW CHECK!\nmstore(0x00, result)\n}\n\n✅ SOLUTION 1 - Add manual checks:\nassembly {\nlet result := add(a, b)\n// Manual overflow check\nif lt(result, a) {\nrevert(0, 0)  // Overflow detected\n}\n}\n\n✅ SOLUTION 2 - Use Solidity instead:\n// Let Solidity handle overflow checks\nuint256 result = a + b;  // Automatic overflow check\n\n✅ SOLUTION 3 - SafeMath for assembly:\nfunction safeAdd(uint256 a, uint256 b) internal pure returns (uint256) {\nuint256 c;\nassembly {\nc := add(a, b)\n}\nrequire(c >= a, \"Overflow\");  // Check outside assembly\nreturn c;\n}\n\nAssembly arithmetic operations with NO checks:\n- add(a, b)     → wraps on overflow\n- sub(a, b)     → wraps on underflow\n- mul(a, b)     → wraps on overflow\n- div(a, b)     → returns 0 if b is 0 (no revert!)\n\n⚠️ Only use assembly arithmetic when absolutely necessary\nand with manual overflow checks!",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "post-080-overflow",
+      "message": "Type casting to smaller uint - verify no overflow on downcast",
+      "severity": "low",
+      "location": {
+        "line": 1,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Downcasting can silently overflow even in Solidity 0.8.0+!\n\n❌ UNSAFE DOWNCAST:\nuint256 bigValue = 1000;\nuint8 smallValue = uint8(bigValue);  // Wraps to 232! (1000 % 256)\n\n✅ SAFE DOWNCAST with validation:\nuint256 bigValue = 1000;\nrequire(bigValue <= type(uint8).max, \"Value too large\");\nuint8 smallValue = uint8(bigValue);  // Safe now\n\n✅ USE SafeCast library (OpenZeppelin):\nimport \"@openzeppelin/contracts/utils/math/SafeCast.sol\";\n\nuint256 bigValue = 1000;\nuint8 smallValue = SafeCast.toUint8(bigValue);  // Reverts if > 255\n\nType limits:\n- uint8:   0 to 255\n- uint16:  0 to 65,535\n- uint32:  0 to 4,294,967,295\n- uint64:  0 to 18,446,744,073,709,551,615\n- uint256: 0 to 2^256-1",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "pool-donation-enhanced",
+      "message": "Pool initialization lacks protection - first depositor can manipulate initial share price",
+      "severity": "high",
+      "location": {
+        "line": 1,
+        "column": 1,
+        "length": 16074
+      },
+      "fix_suggestion": {
+        "description": "Require minimum initial deposit, mint dead shares on initialization, or use time-delayed activation",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'emergencyPause' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 411,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'emergencyPause'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-access-modifiers",
+      "message": "Function 'emergencyUnpause' performs critical operations but lacks access control modifiers",
+      "severity": "critical",
+      "location": {
+        "line": 419,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-284",
+      "fix_suggestion": {
+        "description": "Add an access control modifier like 'onlyOwner' to function 'emergencyUnpause'",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "readonly-reentrancy",
+      "message": "View function 'getVotingPower' reads state that may be inconsistent during reentrancy. Contract has state-changing functions that make external calls before updating state.",
+      "severity": "medium",
+      "location": {
+        "line": 364,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Add a reentrancy guard to state-changing functions or ensure view function 'getVotingPower' cannot be called during callbacks (e.g., using a reentrancy lock check in the view function)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "readonly-reentrancy",
+      "message": "View function 'getProposalState' reads state that may be inconsistent during reentrancy. Contract has state-changing functions that make external calls before updating state.",
+      "severity": "medium",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Add a reentrancy guard to state-changing functions or ensure view function 'getProposalState' cannot be called during callbacks (e.g., using a reentrancy lock check in the view function)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'emergencyPaused' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 413,
+        "column": 9,
+        "length": 22
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "invalid-state-transition",
+      "message": "State variable 'emergencyPaused' is modified without proper validation or state checks",
+      "severity": "high",
+      "location": {
+        "line": 420,
+        "column": 9,
+        "length": 23
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add proper validation before modifying state variables",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'delegatee' in function 'delegate' is not checked for zero address",
+      "severity": "high",
+      "location": {
+        "line": 338,
+        "column": 31,
+        "length": 9
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(delegatee != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-zero-address-check",
+      "message": "Address parameter 'newGuardian' in function 'setGuardian' is not checked for zero address",
+      "severity": "medium",
+      "location": {
+        "line": 462,
+        "column": 34,
+        "length": 11
+      },
+      "cwe": "CWE-476",
+      "fix_suggestion": {
+        "description": "Add require(newGuardian != address(0), \"Zero address not allowed\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "array-bounds-check",
+      "message": "Function 'propose' has multiple array parameters but no apparent length validation",
+      "severity": "high",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add length validation: require(array1.length == array2.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "parameter-consistency",
+      "message": "Function 'propose' has multiple array parameters (targets, values, calldatas) but no length consistency validation",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-20",
+      "fix_suggestion": {
+        "description": "Add validation: require(targets.length == values.length, \"Array length mismatch\");",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "external-calls-loop",
+      "message": "Function 'execute' contains external calls within loops. This can lead to DoS attacks if any external call fails or consumes excessive gas, and can be exploited in governance systems to block proposal execution.",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 7
+      },
+      "cwe": "CWE-834",
+      "fix_suggestion": {
+        "description": "Avoid external calls in loops. Consider using a withdrawal pattern, batch processing, or fail-safe mechanisms for critical operations.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "delegation-loop",
+      "message": "Function 'delegate' allows delegation without checking for circular delegation chains. Attackers can create delegation loops (A→B→C→A) to amplify voting power or cause denial-of-service when calculating delegated votes.",
+      "severity": "high",
+      "location": {
+        "line": 338,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-840",
+      "fix_suggestion": {
+        "description": "Implement loop detection in function 'delegate'. Example: Track delegation chain depth and reject if exceeds limit, or traverse delegation chain to detect cycles before allowing delegation.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "emergency-function-abuse",
+      "message": "Function 'emergencyPause' is an emergency function without time-lock or multi-signature protection. A single admin can execute emergency actions immediately, enabling potential abuse or rug pulls.",
+      "severity": "medium",
+      "location": {
+        "line": 411,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add time-lock and multi-sig protection to emergency function 'emergencyPause'. Example: Require time-lock delay (e.g., 24-48 hours) and multi-signature approval before emergency actions can be executed.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "signature-malleability",
+      "message": "Function 'castVoteBySig' uses ECDSA signature verification without malleability protection. Uses ecrecover without checking 's' value against secp256k1 curve order ECDSA signatures have two valid forms (s and -s mod n). Without checking that s is in the lower half range, attackers can create alternate valid signatures for replay attacks.",
+      "severity": "high",
+      "location": {
+        "line": 196,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-347",
+      "fix_suggestion": {
+        "description": "Add signature malleability check in 'castVoteBySig'. Use OpenZeppelin's ECDSA library or add: `require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, \"Invalid signature 's' value\");` This ensures s is in the lower half of the curve order.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'queue' has dangerous timestamp dependency. Performs arithmetic on block.timestamp without overflow protection, potentially manipulable by miners within bounds Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 271,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'queue'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "timestamp-manipulation",
+      "message": "Function 'execute' has dangerous timestamp dependency. Timestamp manipulation vulnerability marker detected Miners can manipulate block.timestamp by ~15 seconds, enabling manipulation of time-sensitive logic.",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-367",
+      "fix_suggestion": {
+        "description": "Reduce timestamp dependency in 'execute'. Use block.number for time intervals, add tolerance ranges (±15 seconds), implement commit-reveal schemes for time-sensitive operations, or use oracle-based time sources for critical logic.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'execute' is vulnerable to block stuffing attacks. First-come-first-served mechanism with strict ordering, attackers can stuff blocks to prevent others from participating Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'execute'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "block-stuffing-vulnerable",
+      "message": "Function 'getProposalState' is vulnerable to block stuffing attacks. Critical operation with narrow time window, block stuffing can prevent users from executing within deadline Attackers can fill blocks with transactions to prevent legitimate users from executing time-sensitive operations.",
+      "severity": "high",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Mitigate block stuffing in 'getProposalState'. Implement: (1) Grace periods extending deadlines, (2) Multi-block operation windows, (3) Commit-reveal with extended reveal period, (4) Allow batch processing across multiple blocks, (5) Emergency pause mechanisms.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'propose' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'propose'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'castVote' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 186,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'castVote'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'cancel' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 318,
+        "column": 14,
+        "length": 6
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'cancel'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "mev-extractable-value",
+      "message": "Function 'delegate' has extractable MEV. Public function with value transfer lacks MEV protection (no slippage/deadline checks), enabling front-running and back-running attacks Searchers can extract value through transaction ordering, front-running, or back-running.",
+      "severity": "high",
+      "location": {
+        "line": 338,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Reduce MEV extractability in 'delegate'. Implement: (1) Commit-reveal schemes, (2) Batch processing/auctions, (3) Private transaction pools (Flashbots), (4) Time-weighted mechanisms, (5) MEV-resistant AMM curves, (6) Encrypted mempools.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "nonce-reuse",
+      "message": "Function 'castVoteBySig' has nonce management vulnerability. Nonce reuse vulnerability marker detected Improper nonce handling enables replay attacks or transaction reordering exploits.",
+      "severity": "medium",
+      "location": {
+        "line": 196,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-294",
+      "fix_suggestion": {
+        "description": "Fix nonce management in 'castVoteBySig'. Increment nonce after validation, use mapping(address => uint256) for per-user nonces, validate nonce before execution, include nonce in signature hash, and implement nonce cancellation mechanism.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'propose' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'propose'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'execute' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'execute'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "gas-griefing",
+      "message": "Function 'delegate' has gas griefing vulnerability. External call in loop without gas limit, attacker can grief by consuming all gas Attackers can force users to waste gas or cause transactions to fail.",
+      "severity": "medium",
+      "location": {
+        "line": 338,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Mitigate gas griefing in 'delegate'. Use pull pattern for transfers, limit array sizes, add gas stipends, implement gas-efficient loops, avoid unbounded operations, use OpenZeppelin SafeERC20.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "dos-failed-transfer",
+      "message": "Function 'execute' uses push pattern for transfers which can cause DoS if recipient reverts. A malicious or buggy recipient contract can block this function by rejecting payments. Use the pull pattern (withdrawal pattern) instead where users withdraw their own funds.",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-841",
+      "fix_suggestion": {
+        "description": "Refactor 'execute' to use pull pattern instead of push. Store pending withdrawals in a mapping and let users withdraw their own funds. Example: balances[user] = amount; then separate withdraw() function. Use OpenZeppelin's PullPayment contract for reference.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'propose' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'propose'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'execute' contains excessive gas usage pattern. Array length read in every loop iteration. Cache length in local variable Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'execute'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "excessive-gas-usage",
+      "message": "Function 'execute' contains excessive gas usage pattern. Event emission inside loop. Can cause excessive gas costs for large arrays Excessive gas usage increases transaction costs and may cause out-of-gas errors.",
+      "severity": "low",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Optimize gas usage in 'execute'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "redundant-checks",
+      "message": "Function 'propose' contains redundant checks. 3 consecutive require statements. Consider combining into fewer checks Redundant checks waste gas and increase transaction costs unnecessarily.",
+      "severity": "low",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-400",
+      "fix_suggestion": {
+        "description": "Remove redundant checks in 'propose'. Consider: (1) Eliminate duplicate require() statements, (2) Combine multiple checks into single require(), (3) Remove overflow checks in Solidity >=0.8, (4) Avoid checking same condition in modifier and function, (5) Use custom errors instead of require with strings.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'notEmergencyPaused' has centralization risk. Emergency function 'notEmergencyPaused' lacks multi-party approval. Can be abused by single compromised key Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 129,
+        "column": 14,
+        "length": 18
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'notEmergencyPaused'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'emergencyPause' has centralization risk. Emergency function 'emergencyPause' lacks multi-party approval. Can be abused by single compromised key Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 411,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'emergencyPause'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "centralization-risk",
+      "message": "Function 'emergencyUnpause' has centralization risk. Emergency function 'emergencyUnpause' lacks multi-party approval. Can be abused by single compromised key Critical function controlled by single address creates attack vector.",
+      "severity": "high",
+      "location": {
+        "line": 419,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-269",
+      "fix_suggestion": {
+        "description": "Add decentralization to 'emergencyUnpause'. Implement multi-signature requirements, timelock delays, or DAO governance for this critical function.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'propose' contains variable shadowing. Parameter 'values' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'propose'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'propose' contains variable shadowing. Parameter 'calldatas' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'propose'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'propose' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'propose'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'propose' contains variable shadowing. Local variable 'startBlock' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'propose'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'propose' contains variable shadowing. Local variable 'endBlock' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'propose'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'castVote' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 186,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'castVote'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'castVote' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 186,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'castVote'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'castVoteBySig' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 196,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'castVoteBySig'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'castVoteBySig' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 196,
+        "column": 14,
+        "length": 13
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'castVoteBySig'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_castVote' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 227,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_castVote'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_castVote' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 227,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_castVote'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function '_castVote' contains variable shadowing. Local variable 'delegatee' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 227,
+        "column": 14,
+        "length": 9
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in '_castVote'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'queue' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 271,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'queue'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'queue' contains variable shadowing. Local variable 'eta' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 271,
+        "column": 14,
+        "length": 5
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'queue'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'execute' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'execute'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'delegate' contains variable shadowing. Parameter 'delegatee' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 338,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'delegate'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'delegate' contains variable shadowing. Local variable 'currentDelegate' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 338,
+        "column": 14,
+        "length": 8
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'delegate'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getVotingPower' contains variable shadowing. Local variable 'delegatedBalance' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 364,
+        "column": 14,
+        "length": 14
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getVotingPower'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getProposalState' contains variable shadowing. Parameter 'proposalCount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getProposalState'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'getProposalState' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 376,
+        "column": 14,
+        "length": 16
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'getProposalState'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeCrossChain' contains variable shadowing. Parameter 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeCrossChain'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeCrossChain' contains variable shadowing. Local variable 'proposalId' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeCrossChain'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "shadowing-variables",
+      "message": "Function 'executeCrossChain' contains variable shadowing. Local variable 'targetGovernor' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.",
+      "severity": "medium",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-710",
+      "fix_suggestion": {
+        "description": "Rename shadowing variables in 'executeCrossChain'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'execute'",
+      "severity": "critical",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "bridge-message-verification",
+      "message": "Missing message verification in 'executeCrossChain'",
+      "severity": "critical",
+      "location": {
+        "line": 442,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add verification: require(verifyMerkleProof(root, proof, leaf) OR ecrecover(hash, v, r, s) == signer);",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'execute'",
+      "severity": "high",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-chainid-validation",
+      "message": "Missing chain-ID validation in 'executeCrossChain'",
+      "severity": "high",
+      "location": {
+        "line": 442,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Add chain-ID validation: require(message.destinationChainId == block.chainid); OR include chain-ID in message hash",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "price-manipulation-frontrun",
+      "message": "Function 'propose' has price manipulation vulnerability. Uses balanceOf for price calculation. Function 'propose' calculates prices using token balances which can be manipulated via flash loans or large trades This enables flash loan attacks, sandwich attacks, and MEV extraction via price oracle manipulation. Attackers can manipulate prices and extract value from victim transactions",
+      "severity": "high",
+      "location": {
+        "line": 150,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-362",
+      "fix_suggestion": {
+        "description": "Fix price manipulation in 'propose'. Implement: (1) Use TWAP (Time-Weighted Average Price) instead of spot prices; (2) Validate price staleness: require(block.timestamp - updatedAt <= MAX_DELAY); (3) Add price deviation bounds: require(newPrice >= minPrice && newPrice <= maxPrice); (4) Use multiple oracle sources and median prices; (5) Implement circuit breakers for extreme price moves; (6) Add price impact validation for large operations; (7) Consider commit-reveal for price-sensitive operations",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'execute' is missing transaction deadline. Missing transaction deadline. Order execution operation 'execute' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 284,
+        "column": 14,
+        "length": 7
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'execute'. Implement: (1) Add 'deadline' parameter: function execute(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "missing-transaction-deadline",
+      "message": "Function 'executeCrossChain' is missing transaction deadline. Missing transaction deadline. Order execution operation 'executeCrossChain' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed",
+      "severity": "medium",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-682",
+      "fix_suggestion": {
+        "description": "Add deadline to 'executeCrossChain'. Implement: (1) Add 'deadline' parameter: function executeCrossChain(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeCrossChain' relays cross-layer messages without proper validation. Missing Merkle proof validation. Messages should verify against L2 state root This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeCrossChain': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeCrossChain' relays cross-layer messages without proper validation. No finality check detected. Should verify sufficient block confirmations before execution This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeCrossChain': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "l2-bridge-message-validation",
+      "message": "Function 'executeCrossChain' relays cross-layer messages without proper validation. Missing nonce or sequence validation. Vulnerable to replay attacks This can lead to unauthorized message execution and bridge exploits.",
+      "severity": "critical",
+      "location": {
+        "line": 442,
+        "column": 14,
+        "length": 17
+      },
+      "cwe": "CWE-345",
+      "fix_suggestion": {
+        "description": "Add proper validation to 'executeCrossChain': (1) Verify Merkle proof against L1/L2 state root, (2) Check message finality (block confirmations), (3) Implement nonce/sequence tracking to prevent replay, (4) Validate message signatures, (5) Add cross-chain replay protection.",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "transient-storage-reentrancy",
+      "message": "Vulnerable to transient storage reentrancy in 'execute' - transfer()/send() no longer safe with EIP-1153",
+      "severity": "critical",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "EIP-1153 breaks transfer()/send() safety assumption:\n\nCRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\nthe 2300 gas stipend of transfer() and send().\n\nFix 1: Use checks-effects-interactions pattern\nfunction withdraw() public {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\n// ✅ Update state BEFORE external call\nbalances[msg.sender] = 0;\n\npayable(msg.sender).transfer(amount);\n}\n\nFix 2: Use ReentrancyGuard\nimport \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\nfunction withdraw() public nonReentrant {\nuint256 amount = balances[msg.sender];\nrequire(amount > 0);\n\nbalances[msg.sender] = 0;\npayable(msg.sender).transfer(amount);\n}\n\nReference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)",
+        "replacements": []
+      }
+    },
+    {
+      "detector_id": "eip7702-delegate-access-control",
+      "message": "Missing access control in 'execute' - allows arbitrary execution",
+      "severity": "critical",
+      "location": {
+        "line": 284,
+        "column": 0,
+        "length": 20
+      },
+      "fix_suggestion": {
+        "description": "Fix: Add owner/authorization check:\n\naddress public owner;\n\nfunction execute(address target, bytes calldata data) external payable {\nrequire(msg.sender == owner, \"Not authorized\");\n(bool success, ) = target.call{value: msg.value}(data);\nrequire(success, \"Call failed\");\n}",
+        "replacements": []
+      }
+    }
+  ],
+  "metadata": {
+    "tool_name": "SolidityDefend",
+    "tool_version": "1.3.6",
+    "scan_type": "static_analysis",
+    "language": "solidity",
+    "rules_version": "1.3.6",
+    "branding": {
+      "name": "BlockSecOps",
+      "url": "https://BlockSecOps.com",
+      "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
+    }
+  },
+  "statistics": {
+    "total_findings": 87,
+    "severity_counts": {
+      "high": 27,
+      "medium": 39,
+      "low": 11,
+      "info": 0,
+      "critical": 10
+    },
+    "unique_detectors": 38
+  }
+}
