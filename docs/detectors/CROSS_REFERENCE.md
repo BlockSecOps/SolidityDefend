@@ -1,7 +1,7 @@
 # SolidityDefend Detector Cross-Reference Tables
 
-**Generated:** 2025-11-16
-**Version:** v1.3.6
+**Generated:** 2025-11-19
+**Version:** v1.3.7
 
 ---
 
