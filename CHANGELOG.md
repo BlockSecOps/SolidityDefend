@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.7] - 2025-11-19
+
+### 🔧 Maintenance & Documentation
+
+This release includes important maintenance updates, documentation improvements, and test enhancements to ensure reliability and compatibility.
+
+#### Fixed
+- Fixed API compatibility test for version 1.3.6
+- Resolved version compatibility issues in test suite
+
+#### Changed
+- Updated documentation with enhanced detector coverage information
+- Updated Homebrew tap integration to v1.3.6
+- Added comprehensive test execution documentation
+
+#### Improved
+- Enhanced test execution framework
+- Updated README with latest features and capabilities
+- Improved documentation organization and navigation
+
+---
+
 ## [1.3.6] - 2025-11-13
 
 ### 🎯 Phase 2: Front-Running & MEV Protection - Production Ready
