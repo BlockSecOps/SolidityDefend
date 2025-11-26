@@ -7,6 +7,7 @@ This comprehensive guide provides examples and tutorials for using SolidityDefen
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Project Mode (v1.4.0+)](#project-mode-v140)
 - [Basic Usage](#basic-usage)
 - [Advanced Usage](#advanced-usage)
 - [Output Formats](#output-formats)
@@ -49,6 +50,70 @@ soliditydefend --min-severity high MyContract.sol
 
 # Only critical issues
 soliditydefend --min-severity critical MyContract.sol
+```
+
+## Project Mode (v1.4.0+)
+
+**NEW in v1.4.0**: Analyze entire Foundry and Hardhat projects with automatic framework detection.
+
+### Foundry Projects
+
+```bash
+# Auto-detect Foundry from foundry.toml
+soliditydefend --project ./my-foundry-project
+
+# With JSON output for CI/CD
+soliditydefend --project ./my-foundry-project --format json --output results.json
+
+# Filter by severity
+soliditydefend --project ./my-foundry-project --min-severity high
+```
+
+**Foundry Behavior:**
+- Auto-detects from `foundry.toml`
+- Reads `src` directory from config (default: `src/`)
+- Excludes: `lib/`, `out/`, `cache/`, `broadcast/`
+
+### Hardhat Projects
+
+```bash
+# Auto-detect Hardhat from hardhat.config.js or hardhat.config.ts
+soliditydefend --project ./my-hardhat-project
+
+# Force Hardhat framework
+soliditydefend --project ./my-project --framework hardhat
+```
+
+**Hardhat Behavior:**
+- Auto-detects from `hardhat.config.js` or `hardhat.config.ts`
+- Reads `paths.sources` from config (default: `contracts/`)
+- Excludes: `node_modules/`, `artifacts/`, `cache/`, `typechain/`
+
+### Plain Projects
+
+```bash
+# Analyze directory without framework detection
+soliditydefend --project ./my-project --framework plain
+```
+
+**Plain Behavior:**
+- Scans all `.sol` files in directory recursively
+- No directory exclusions (manual filtering via glob patterns)
+
+### Project Mode Examples
+
+```bash
+# Full workflow for Foundry project
+cd my-foundry-project
+soliditydefend --project . --format json --output security-report.json
+cat security-report.json | jq '.summary'
+
+# CI/CD integration
+soliditydefend --project . --min-severity high --format json || exit 1
+
+# Compare two projects
+soliditydefend --project ./project-v1 --format json --output v1.json
+soliditydefend --project ./project-v2 --format json --output v2.json
 ```
 
 ## Basic Usage

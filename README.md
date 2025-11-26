@@ -4,7 +4,7 @@
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-209-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-217-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 [![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
@@ -29,7 +29,7 @@ soliditydefend -s high contract.sol
 
 ## ✨ Features
 
-- **209 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, front-running protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
+- **217 Security Detectors** - Comprehensive coverage including ERC-4337 AA advanced (calldata encoding, paymaster drain, signature aggregation), advanced access control (role hierarchy, timelock bypass, privilege escalation), restaking/LRT security (EigenLayer, Renzo, Puffer), flash loan exploits, token standards (ERC-20/721/1155), MEV protection, front-running protection, zero-knowledge proofs (zkSync, Scroll, Polygon zkEVM), modular blockchain (Celestia, Avail, cross-rollup), AI agent security, reentrancy, oracle manipulation, advanced DeFi exploits (JIT liquidity, AMM invariant, pool donation), and cutting-edge 2025 vulnerabilities
 - **OWASP 2025 Aligned** 🆕 - Full coverage of OWASP Smart Contract Top 10 (2025) addressing $1.42B in analyzed vulnerability patterns
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
@@ -491,7 +491,7 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
 - **Current Version**: v1.4.0 (Production Release)
-- **Detectors**: 209 fully validated security detectors
+- **Detectors**: 217 fully validated security detectors
 - **Status**: ✅ Production Ready
 
 ### What's New in v1.4.0

@@ -61,6 +61,33 @@ soliditydefend contracts/*.sol
 soliditydefend src/**/*.sol
 ```
 
+### Project Mode (v1.4.0+)
+
+```bash
+-p, --project <DIR>     Analyze entire project directory
+--framework <TYPE>      Framework type: foundry, hardhat, plain (auto-detect if not specified)
+```
+
+**Examples:**
+```bash
+# Analyze a Foundry project (auto-detects from foundry.toml)
+soliditydefend --project ./my-foundry-project
+
+# Analyze a Hardhat project (auto-detects from hardhat.config.js)
+soliditydefend --project ./my-hardhat-project
+
+# Force framework type
+soliditydefend --project ./my-project --framework foundry
+
+# Combine with output options
+soliditydefend --project ./my-project --format json --output results.json
+```
+
+**Framework Auto-Detection:**
+- **Foundry**: Detected from `foundry.toml`, reads `src` directory, excludes `lib/`, `out/`, `cache/`
+- **Hardhat**: Detected from `hardhat.config.js` or `hardhat.config.ts`, reads `contracts/`, excludes `node_modules/`, `artifacts/`
+- **Plain**: Scans all `.sol` files in directory
+
 ## Commands
 
 ### analyze (default)
