@@ -1,0 +1,30 @@
+[package]
+name = "project"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Project mode support for SolidityDefend - Foundry/Hardhat framework detection and configuration"
+
+[dependencies]
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = "0.8"
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# File system
+walkdir = { workspace = true }
+
+# Regex for Hardhat config parsing
+regex = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"
