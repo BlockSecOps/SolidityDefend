@@ -9,6 +9,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2025-11-26
+
+### Project Mode - Foundry & Hardhat Framework Support
+
+This release introduces **Project Mode** for analyzing complete Solidity projects with native framework detection.
+
+#### Added
+
+##### **Project Mode** (`--project <DIR>`)
+Analyze entire Solidity projects instead of individual files:
+
+```bash
+# Analyze a Foundry project
+soliditydefend --project ./my-foundry-project --output json
+
+# Analyze a Hardhat project
+soliditydefend --project ./my-hardhat-project --output sarif
+
+# Force framework type
+soliditydefend --project ./my-project --framework foundry
+```
+
+##### **Framework Auto-Detection**
+- **Foundry**: Automatically detected from `foundry.toml`
+- **Hardhat**: Automatically detected from `hardhat.config.js` or `hardhat.config.ts`
+- **Plain**: Fallback for non-framework projects
+
+##### **Smart Source Discovery**
+- Foundry: Reads `src` directory from config (defaults to `src/`)
+- Hardhat: Reads `paths.sources` from config (defaults to `contracts/`)
+- Configurable via `--framework` override
+
+##### **Directory Exclusions**
+Automatically skips build artifacts and dependencies:
+- Foundry: `lib/`, `out/`, `cache/`, `broadcast/`
+- Hardhat: `node_modules/`, `artifacts/`, `cache/`, `typechain/`
+
+##### **New Crates**
+- `project` crate - Framework detection, config parsing, file discovery (17 unit tests)
+- `resolver` crate - Import extraction and path resolution (19 unit tests)
+
+#### Changed
+- CLI now supports mutually exclusive `--project` and `--files` flags
+- Improved project-wide analysis with consistent file ordering by modification time
+
+#### Technical Details
+- Framework detection: ~1ms overhead
+- File discovery: Parallelized with rayon
+- Config parsing: TOML for Foundry, regex-based for Hardhat JS configs
+- Total: 36 new unit tests across both crates
+
+---
+
 ## [1.3.7] - 2025-11-19
 
 ### 🔧 Maintenance & Documentation

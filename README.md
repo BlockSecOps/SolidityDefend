@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.3.7-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.4.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
@@ -12,11 +12,14 @@
 ## 🚀 Quick Start
 
 ```bash
-# Analyze a contract
+# Analyze a single contract
 soliditydefend contract.sol
 
-# Analyze entire project
-soliditydefend contracts/**/*.sol
+# Analyze entire Foundry project (NEW in v1.4.0)
+soliditydefend --project ./my-foundry-project
+
+# Analyze entire Hardhat project (NEW in v1.4.0)
+soliditydefend --project ./my-hardhat-project --output json
 
 # Show only critical and high severity issues
 soliditydefend -s high contract.sol
@@ -31,7 +34,8 @@ soliditydefend -s high contract.sol
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
 - **Lightning Fast Analysis** - Built with Rust for optimal performance
-- **Multiple Output Formats** - Console with syntax highlighting, JSON for CI/CD integration
+- **Project Mode** 🆕 - Analyze entire Foundry and Hardhat projects with auto-detection (`--project`)
+- **Multiple Output Formats** - Console with syntax highlighting, JSON, SARIF for CI/CD integration
 - **URL-Based Analysis** - Analyze contracts directly from Etherscan and other blockchain explorers
 - **CI/CD Ready** - Exit codes, severity filtering, and JSON output
 - **Flexible Configuration** - YAML-based configuration system
@@ -173,28 +177,36 @@ cargo build --release
 sudo mv target/release/soliditydefend /usr/local/bin/
 ```
 
+### Homebrew (macOS - Recommended)
+
+```bash
+brew tap BlockSecOps/tap
+brew install soliditydefend
+```
+
 ### Pre-built Binaries
 
 Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
 
 **Linux (x86_64)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
-tar -xzf soliditydefend-v0.7.0-beta-linux-x86_64.tar.gz
-sudo mv soliditydefend /usr/local/bin/
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-linux-x86_64
+chmod +x soliditydefend-linux-x86_64
+sudo mv soliditydefend-linux-x86_64 /usr/local/bin/soliditydefend
 ```
 
-**macOS**
+**Linux (ARM64)**
 ```bash
-# Intel
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
-tar -xzf soliditydefend-v0.7.0-beta-macos-x86_64.tar.gz
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-linux-arm64
+chmod +x soliditydefend-linux-arm64
+sudo mv soliditydefend-linux-arm64 /usr/local/bin/soliditydefend
+```
 
-# Apple Silicon
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v0.7.0-beta/soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
-tar -xzf soliditydefend-v0.7.0-beta-macos-aarch64.tar.gz
-
-sudo mv soliditydefend /usr/local/bin/
+**macOS (Apple Silicon)**
+```bash
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-darwin-arm64
+chmod +x soliditydefend-darwin-arm64
+sudo mv soliditydefend-darwin-arm64 /usr/local/bin/soliditydefend
 ```
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for detailed instructions.
@@ -211,10 +223,30 @@ soliditydefend contract.sol
 
 # Analyze multiple files
 soliditydefend src/**/*.sol
-
-# Analyze entire project
-soliditydefend contracts/
 ```
+
+### Project Mode (v1.4.0+)
+
+Analyze entire Foundry or Hardhat projects with automatic framework detection:
+
+```bash
+# Analyze a Foundry project (auto-detects from foundry.toml)
+soliditydefend --project ./my-foundry-project
+
+# Analyze a Hardhat project (auto-detects from hardhat.config.js)
+soliditydefend --project ./my-hardhat-project
+
+# Force framework type
+soliditydefend --project ./my-project --framework foundry
+
+# Output as JSON
+soliditydefend --project ./my-project --output json
+```
+
+**Supported Frameworks:**
+- **Foundry**: Reads `src` from `foundry.toml`, excludes `lib/`, `out/`, `cache/`
+- **Hardhat**: Reads `paths.sources` from config, excludes `node_modules/`, `artifacts/`
+- **Plain**: Scans all `.sol` files in directory
 
 ### Filter by Severity
 
@@ -368,7 +400,9 @@ Found 12 issues in 1 file:
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `-f, --format` | Output format: `console` or `json` | console |
+| `-p, --project` | Analyze entire project directory | - |
+| `--framework` | Framework type: `foundry`, `hardhat`, `plain` | auto-detect |
+| `-f, --format` | Output format: `console`, `json`, `sarif` | console |
 | `-o, --output` | Output file path | stdout |
 | `-s, --min-severity` | Minimum severity level | info |
 | `--exit-code-level` | Exit with error at severity level | none |
@@ -456,55 +490,26 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
-- **Current Version**: v1.3.0 (Production Release)
-- **Detectors**: 204 fully validated security detectors
-- **Status**: ✅ Production Ready - Comprehensive testing completed
+- **Current Version**: v1.4.0 (Production Release)
+- **Detectors**: 209 fully validated security detectors
+- **Status**: ✅ Production Ready
 
-### Version History
+### What's New in v1.4.0
 
-- **v1.3.2** (2025-11-08) - Enhanced console output formatting with emoji severity indicators
-- **v0.11.1** (2025-10-27) - Patch release fixing Homebrew installation (E0583 module errors)
-- **v1.3.0** (2025-11-03) - Vulnerability Gap Remediation with 204 detectors
-- **v1.2.0** (2025-11-02) - Comprehensive Testing and False Positive Elimination
-- **v1.1.0** (2025-11-01) - Lending Protocol Context Detection (Phase 4)
-- **v0.11.0** (2025-10-27) - Production release with 100 detectors, AA + Flash Loan security
-- **v0.7.0-beta** (2025-10-25) - Beta preview with 74 detectors
-- **v0.9.0** (2025-10-09) - Internal milestone (not released)
+- **Project Mode** (`--project`): Analyze entire Foundry and Hardhat projects
+- **Framework Auto-Detection**: Automatically detects Foundry and Hardhat configurations
+- **Smart Source Discovery**: Finds source directories from project configs
+- **Directory Exclusions**: Skips build artifacts and dependencies
 
-### Comprehensive Testing
+### Recent Releases
 
-**v1.2.0 Validation Results:**
-- ✅ **703 findings** across 11 vulnerable smart contracts
-- ✅ **204 detectors** validated and working
-- ✅ **Test Categories:** Reentrancy, Access Control, Integer Overflow, DoS, Front-Running, Signatures, Storage, Delegatecall
-- ✅ **Performance:** ~30ms (small), ~50ms (medium), ~180ms (large contracts)
-- ✅ **Detection Strengths:** Reentrancy (60%), Signatures (43%), Overflow (40%), Input Validation (57%)
-- ✅ **Real-World Validation:** 11 purposefully vulnerable contracts from common exploit patterns
-
-**Validated Contracts:**
-- Reentrancy attacks: Classic DAO pattern detection
-- Access control issues: Missing modifiers, tx.origin patterns
-- Integer overflow: Solidity 0.7.x and unchecked blocks
-- Signature issues: Replay, cross-chain, malleability
-- DoS patterns: Failed transfer, unbounded loops
-- See full report: [VALIDATION_REPORT.md](https://github.com/BlockSecOps/vulnerable-smart-contract-examples/blob/main/solidity/VALIDATION_REPORT.md)
-
-**Overall Assessment:** Grade C (70/100) - Production-ready for use in multi-tool security strategy
-
-### Roadmap
-
-**v1.3.0** (Target: Q1 2026) - Vulnerability Gap Remediation
-- **New Detectors (7):** tx.origin authentication, weak randomness, DoS by failed transfer, push-over-pull, batch transfer overflow, short address, array length mismatch
-- **Enhanced Detectors (2):** Improved timestamp manipulation and DoS detection
-- **Target Detection Rate:** ≥70% (up from 35%)
-- **Priority:** Address critical gaps identified in validation testing
-- See [vulnerability-gap-remediation-plan.md](docs/vulnerability-gap-remediation-plan.md)
-
-**v1.4.0** (Target: Q2 2026) - Advanced Pattern Detection
-- Front-running patterns (approve race condition, MEV sandwich)
-- ERC-7683 Intent-based protocol detectors
-- Restaking & LRT security enhancements
-- Token Economics detectors (deflation, rebasing, fee-on-transfer)
+| Version | Date | Highlights |
+|---------|------|------------|
+| **v1.4.0** | 2025-11-26 | Project Mode for Foundry/Hardhat |
+| v1.3.7 | 2025-11-19 | Maintenance and documentation |
+| v1.3.6 | 2025-11-13 | Front-running & MEV protection (5 detectors) |
+| v1.3.0 | 2025-11-03 | Vulnerability Gap Remediation (204 detectors) |
+| v1.0.0 | 2025-10-27 | Production release |
 
 See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
 
