@@ -1,0 +1,28 @@
+[package]
+name = "resolver"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Import resolution for SolidityDefend - remapping, path resolution, and dependency graph"
+
+[dependencies]
+# Project support
+project = { path = "../project" }
+
+# Graph algorithms
+petgraph = { workspace = true }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Regex for import extraction
+regex = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+
+[dev-dependencies]
+tempfile = "3.10"

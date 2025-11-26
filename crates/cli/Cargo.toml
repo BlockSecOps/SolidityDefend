@@ -17,6 +17,8 @@ db = { path = "../db" }
 ast = { path = "../ast" }
 semantic = { path = "../semantic" }
 lsp = { path = "../lsp" }
+project = { path = "../project" }
+resolver = { path = "../resolver" }
 clap.workspace = true
 serde.workspace = true
 serde_norway.workspace = true

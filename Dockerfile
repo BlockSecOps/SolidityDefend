@@ -51,7 +51,7 @@ CMD ["--help"]
 
 # OCI Image Format Specification labels
 LABEL org.opencontainers.image.title="SolidityDefend" \
-      org.opencontainers.image.version="1.3.0" \
+      org.opencontainers.image.version="1.3.7" \
       org.opencontainers.image.description="High-performance static analysis security tool for Solidity smart contracts with 178 detectors" \
       org.opencontainers.image.authors="Advanced Blockchain Security" \
       org.opencontainers.image.vendor="BlockSecOps" \

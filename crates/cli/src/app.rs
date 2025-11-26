@@ -1,5 +1,6 @@
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgAction, Command};
+use project::{Framework, Project};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -177,9 +178,24 @@ impl CliApp {
             .arg(
                 Arg::new("files")
                     .help("Solidity files to analyze")
-                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config", "from-url", "setup-api-keys"])
+                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config", "from-url", "setup-api-keys", "project"])
                     .num_args(1..)
                     .value_name("FILE"),
+            )
+            .arg(
+                Arg::new("project")
+                    .short('p')
+                    .long("project")
+                    .help("Analyze a Foundry or Hardhat project directory")
+                    .value_name("DIR")
+                    .conflicts_with("files"),
+            )
+            .arg(
+                Arg::new("framework")
+                    .long("framework")
+                    .help("Force framework type (auto-detected if not specified)")
+                    .value_parser(["foundry", "hardhat", "plain"])
+                    .value_name("TYPE"),
             )
             .arg(
                 Arg::new("format")
@@ -375,6 +391,71 @@ impl CliApp {
             );
         }
 
+        // Handle project-mode analysis
+        if let Some(project_path) = matches.get_one::<String>("project") {
+            let format = match matches.get_one::<String>("format").unwrap().as_str() {
+                "json" => OutputFormat::Json,
+                "console" => OutputFormat::Console,
+                _ => OutputFormat::Console,
+            };
+
+            let min_severity = match matches.get_one::<String>("severity").unwrap().as_str() {
+                "info" => Severity::Info,
+                "low" => Severity::Low,
+                "medium" => Severity::Medium,
+                "high" => Severity::High,
+                "critical" => Severity::Critical,
+                _ => Severity::Info,
+            };
+
+            let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str() {
+                "low" => detectors::types::Confidence::Low,
+                "medium" => detectors::types::Confidence::Medium,
+                "high" => detectors::types::Confidence::High,
+                "confirmed" => detectors::types::Confidence::Confirmed,
+                _ => detectors::types::Confidence::Low,
+            };
+
+            let output_file = matches.get_one::<String>("output").map(PathBuf::from);
+            let use_cache = !matches.get_flag("no-cache");
+
+            // Parse optional framework override
+            let framework_override = matches
+                .get_one::<String>("framework")
+                .and_then(|f| Framework::from_str(f));
+
+            // Configure exit code behavior
+            let mut exit_config = ExitCodeConfig::default();
+            if matches.get_flag("no-exit-code") {
+                exit_config.error_on_severity = None;
+                exit_config.error_on_high_severity = false;
+                exit_config.error_on_analysis_failure = false;
+            }
+            if let Some(level) = matches.get_one::<String>("exit-code-level") {
+                let severity = match level.as_str() {
+                    "info" => Severity::Info,
+                    "low" => Severity::Low,
+                    "medium" => Severity::Medium,
+                    "high" => Severity::High,
+                    "critical" => Severity::Critical,
+                    _ => Severity::High,
+                };
+                exit_config.error_on_severity = Some(severity);
+                exit_config.error_on_high_severity = false;
+            }
+
+            return app.analyze_project(
+                project_path,
+                framework_override,
+                format,
+                output_file,
+                min_severity,
+                min_confidence,
+                use_cache,
+                exit_config,
+            );
+        }
+
         let files: Vec<&str> = matches
             .get_many::<String>("files")
             .unwrap_or_default()
@@ -447,6 +528,128 @@ impl CliApp {
             use_cache,
             exit_config,
         )
+    }
+
+    /// Analyze a Foundry or Hardhat project
+    fn analyze_project(
+        &self,
+        project_path: &str,
+        framework_override: Option<Framework>,
+        format: OutputFormat,
+        output_file: Option<PathBuf>,
+        min_severity: Severity,
+        min_confidence: detectors::types::Confidence,
+        use_cache: bool,
+        exit_config: ExitCodeConfig,
+    ) -> Result<()> {
+        Self::display_banner();
+        println!("Starting project analysis...");
+        let start_time = Instant::now();
+
+        // Load the project
+        let project_dir = PathBuf::from(project_path);
+        if !project_dir.exists() {
+            return Err(anyhow!("Project directory does not exist: {}", project_path));
+        }
+
+        // Detect or use specified framework
+        let detected_framework = project::detect_framework(&project_dir);
+        let framework = framework_override.unwrap_or(detected_framework);
+
+        println!("Detected framework: {}", framework);
+        println!("Project root: {}", project_dir.display());
+
+        // Load project configuration
+        let project = match Project::load(&project_dir) {
+            Ok(p) => p,
+            Err(e) => {
+                eprintln!("Warning: Could not fully load project configuration: {}", e);
+                eprintln!("Falling back to plain file discovery...");
+
+                // Fall back to discovering .sol files in the directory
+                let mut sol_files = Vec::new();
+                for entry in walkdir::WalkDir::new(&project_dir)
+                    .follow_links(false)
+                    .into_iter()
+                    .filter_map(|e| e.ok())
+                {
+                    let path = entry.path();
+                    if path.is_file() {
+                        if let Some(ext) = path.extension() {
+                            if ext == "sol" {
+                                // Skip test and library directories
+                                let path_str = path.to_string_lossy();
+                                if !path_str.contains("/test/")
+                                    && !path_str.contains("/lib/")
+                                    && !path_str.contains("/node_modules/")
+                                {
+                                    sol_files.push(path.to_path_buf());
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if sol_files.is_empty() {
+                    return Err(anyhow!("No Solidity files found in project"));
+                }
+
+                // Convert to string references for analyze_files
+                let file_strs: Vec<String> = sol_files
+                    .iter()
+                    .map(|p| p.to_string_lossy().to_string())
+                    .collect();
+                let file_refs: Vec<&str> = file_strs.iter().map(|s| s.as_str()).collect();
+
+                return self.analyze_files(
+                    &file_refs,
+                    format,
+                    output_file,
+                    min_severity,
+                    min_confidence,
+                    use_cache,
+                    exit_config,
+                );
+            }
+        };
+
+        println!("Source directory: {}", project.source_dir().display());
+        println!("Found {} Solidity files", project.solidity_files.len());
+
+        if !project.remappings.is_empty() {
+            println!("Import remappings:");
+            for (prefix, target) in &project.remappings {
+                println!("  {} -> {}", prefix, target);
+            }
+        }
+
+        println!();
+
+        // Convert PathBufs to string references for analyze_files
+        let file_strs: Vec<String> = project
+            .solidity_files
+            .iter()
+            .map(|p| p.to_string_lossy().to_string())
+            .collect();
+        let file_refs: Vec<&str> = file_strs.iter().map(|s| s.as_str()).collect();
+
+        // Use existing analyze_files method
+        // Note: In the future, we can enhance this to use the dependency graph
+        // for proper analysis ordering
+        let result = self.analyze_files(
+            &file_refs,
+            format,
+            output_file,
+            min_severity,
+            min_confidence,
+            use_cache,
+            exit_config,
+        );
+
+        let elapsed = start_time.elapsed();
+        println!("\nProject analysis completed in {:.2}s", elapsed.as_secs_f64());
+
+        result
     }
 
     fn list_detectors(&self) -> Result<()> {
