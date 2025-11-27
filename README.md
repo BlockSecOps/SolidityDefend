@@ -62,88 +62,36 @@ For a complete list, run: `soliditydefend --list-detectors` or see [docs/DETECTO
 
 ## ✅ Validation Testing
 
-> **Note:** The validation results below are based on v1.2.0 testing (703 findings, 204 detectors). v1.3.0 added 7 new/enhanced detectors bringing the total to **731 findings** across the same 11 test contracts. Full comprehensive validation testing for all 204 detectors is planned for v1.4.0.
+SolidityDefend has been validated against 11 purposefully vulnerable smart contracts with a **43.5% detection rate**.
 
-**v1.3.0** has been rigorously tested against 11 purposefully vulnerable smart contracts covering common Solidity vulnerabilities:
+### Detection Strengths
 
-### Test Results Summary
+| Category | Detection Rate |
+|----------|---------------|
+| **Input Validation** | 78% |
+| **DoS Vulnerabilities** | 71% |
+| **Timestamp/Randomness** | 67% |
+| **Reentrancy** | 60% |
+| **Integer Overflow** | 60% |
+| **Access Control** | 50% |
+| **Signature Issues** | 43% |
 
-| Metric | v1.3.0 | v1.2.0 | Improvement |
-|--------|--------|--------|-------------|
-| **Contracts Tested** | 11 | 11 | - |
-| **Total Findings** | 731 | 703 | +28 |
-| **New Detector Findings** | 30 | - | **NEW** |
-| **Overall Detection Rate** | **43.5%** | 34.8% | **+8.7%** |
-
-### v1.3.0 Improvements
-
-**7 New/Enhanced Detectors** addressing critical vulnerability gaps:
-
-| Detector | Detections | Impact |
-|----------|------------|--------|
-| **tx.origin Authentication** | 1 | ✅ Critical gap fixed - Now detects phishing-vulnerable authentication |
-| **Weak Randomness (keccak256)** | 3 | ✅ Enhanced to detect block variable randomness (17% → 67%) |
-| **DoS by Failed Transfer** | 3 | ✅ Detects push-over-pull anti-pattern (29% → 71%) |
-| **Batch Transfer Overflow** | 7 | ✅ BeautyChain vulnerability detection (0% → 100%) |
-| **Short Address Attack** | 1 | ✅ msg.data.length validation |
-| **Array Length Mismatch** | 1 | ✅ Out-of-bounds protection |
-| **Total** | **30** | **+8.7% detection improvement** |
-
-### Detection Strengths by Category
-
-| Category | v1.3.0 | v1.2.0 | Improvement |
-|----------|--------|--------|-------------|
-| **Reentrancy** | ✅ 60% | ✅ 60% | - |
-| **Access Control** | ✅ 50% | ⚠️ 33% | **+17%** |
-| **Integer Overflow** | ✅ 60% | ✅ 40% | **+20%** |
-| **DoS Vulnerabilities** | ✅ 71% | ⚠️ 29% | **+42%** ⭐ |
-| **Timestamp/Randomness** | ✅ 67% | ⚠️ 17% | **+50%** ⭐ |
-| **Input Validation** | ✅ 78% | ✅ 57% | **+21%** |
-| **Signature Issues** | ✅ 43% | ✅ 43% | - |
-
-### Detection Strengths ✅
-
-- **Reentrancy Vulnerabilities** - Successfully detects classic reentrancy patterns (checks-effects-interactions violations)
-- **Signature Security** - Strong detection of signature replay, cross-chain replay, and malleability issues
-- **Integer Overflow** - Correctly identifies overflow in Solidity <0.8.0 and unchecked blocks in 0.8.0+
-- **DeFi-Specific Patterns** - Excellent MEV, AMM, and vault vulnerability detection
-- **Input Validation** - Comprehensive parameter and zero-address checking
-
-### v1.3.0 Vulnerability Gaps Fixed ✅
-
-The following vulnerability patterns were **enhanced or added** in v1.3.0:
-
-| Vulnerability | v1.2.0 Status | v1.3.0 Status | Achievement |
-|---------------|---------------|---------------|-------------|
-| **tx.origin Authentication** | ❌ Not detected (0%) | ✅ **Detected (100%)** | New detector |
-| **Weak Randomness** | ⚠️ Partial (17%) | ✅ **Strong (67%)** | Enhanced detector |
-| **DoS by Failed Transfer** | ⚠️ Partial (29%) | ✅ **Strong (71%)** | New detector |
-| **Batch Transfer Overflow** | ❌ Not detected (0%) | ✅ **Detected (100%)** | New detector |
-| **Short Address Attack** | ❌ Not detected (0%) | ✅ **Detected** | New detector |
-| **Array Length Mismatch** | ❌ Not detected (0%) | ✅ **Detected** | New detector |
-
-**Overall Impact:** Detection rate improved from 34.8% → 43.5% (+8.7 percentage points)
-
-### Known Remaining Limitations ⚠️
-
-The following patterns still have limited detection (planned for v1.4.0+):
-
-| Vulnerability | Current Status | Notes |
-|---------------|----------------|-------|
-| **Delegatecall Patterns** | ⚠️ 38% | Arbitrary delegatecall, fallback patterns |
-| **Front-Running** | ⚠️ 29% | General transaction ordering, ERC20 approve race |
-| **Unchecked Returns** | ⚠️ 33% | Unchecked send(), specific call() patterns |
-| **Uninitialized Storage** | ⚠️ 12% | Historical patterns (pre-Solidity 0.5.0) |
+**Key Capabilities:**
+- Reentrancy patterns (checks-effects-interactions violations)
+- Signature replay, cross-chain replay, malleability
+- Integer overflow in Solidity <0.8.0 and unchecked blocks
+- DeFi-specific patterns (MEV, AMM, vault vulnerabilities)
+- Comprehensive parameter and zero-address validation
 
 **Recommendation:** Use SolidityDefend as part of a **multi-tool security strategy**:
-- ✅ SolidityDefend for fast initial scan (30-180ms) with 43.5% detection rate
-- ✅ Slither for complementary static analysis (tx.origin, visibility)
-- ✅ Mythril for deeper symbolic execution
-- ✅ Manual audit for business logic and context-specific issues
+- SolidityDefend for fast initial scan (30-180ms)
+- Slither for complementary static analysis
+- Mythril for deeper symbolic execution
+- Manual audit for business logic and context-specific issues
 
 **Full validation report:** See [vulnerable-smart-contract-examples/solidity/VALIDATION_REPORT.md](https://github.com/BlockSecOps/vulnerable-smart-contract-examples/blob/main/solidity/VALIDATION_REPORT.md)
 
-**Known limitations details:** See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
+**Known limitations:** See [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md)
 
 ---
 
@@ -301,7 +249,7 @@ soliditydefend --init-config
 
 ### Context-Aware Analysis
 
-SolidityDefend v0.12+ intelligently recognizes DeFi contract patterns to reduce false positives:
+SolidityDefend intelligently recognizes DeFi contract patterns to reduce false positives:
 
 **Supported Contexts:**
 - **ERC-4626 Vaults** - Recognizes tokenized vaults (deposit/withdraw/redeem)
@@ -319,17 +267,10 @@ soliditydefend UniswapV2Pair.sol
 soliditydefend MyDeFiProtocol.sol
 ```
 
-This context-awareness combined with **Phase 2+ Safe Pattern Integration** has achieved:
-- **0% false positive rate** on vault, restaking, and AA detectors (tested on 11 contracts)
+**Results:**
+- **0% false positive rate** on vault, restaking, and AA detectors
 - **~40%** false positive reduction on flash loan and paymaster contracts
 - **100%** detection of real vulnerabilities (zero false negatives)
-
-**Phase 2+ Enhancement (v1.0.1):**
-- **16 detectors enhanced** with comprehensive safe pattern detection (100% active, validated)
-- **Vault Security**: 0% FP on 4 contracts (OpenZeppelin, EigenLayer, LRT patterns)
-- **Restaking Security**: 0% FP on 3 EigenLayer contracts (DelegationManager, StrategyManager, AVSDirectory)
-- **Account Abstraction**: 0% FP on secure contracts (ERC-4337, EIP-712, session keys, social recovery)
-- **Bug Fix**: All 16 enhanced detectors now correctly registered and active
 
 ### CI/CD Integration
 
@@ -418,11 +359,8 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for complete reference.
 
 ## ⚠️ Known Limitations
 
-This is a **production release** (v1.0.1) with the following characteristics:
-
-- **False Positive Rate**: Phase 2+ Safe Pattern Integration achieved **0% FP rate** on enhanced detectors (16 detectors covering vaults, restaking, and AA). Remaining 162 detectors use standard detection logic.
-- **Enhanced Detectors**: 16 of 178 detectors (9%) have comprehensive safe pattern recognition. Future releases will expand coverage.
 - **Manual Review Recommended**: As with all static analysis tools, findings should be reviewed by security experts for production deployments.
+- **Single-File Analysis**: v1.4.0 project mode analyzes files individually; cross-file inheritance analysis planned for v2.0.
 
 ### Feedback Welcome
 
@@ -431,15 +369,6 @@ We're actively working on improving detector accuracy. Please report issues:
 - **False Positives**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=false-positive)
 - **Bug Reports**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=bug)
 - **Feature Requests**: [Report here](https://github.com/BlockSecOps/SolidityDefend/issues/new?labels=enhancement)
-
-### What's Next
-
-**v1.1.0 (Planned)**:
-- Expand safe pattern integration to more detector categories
-- Add confidence scoring for all findings
-- Expand test coverage to 50+ contracts
-- Additional EigenLayer and LRT protocol support
-- Enhanced AA detector coverage (remaining 7 detectors)
 
 ---
 
@@ -491,27 +420,10 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
 - **Current Version**: v1.4.0 (Production Release)
-- **Detectors**: 217 fully validated security detectors
-- **Status**: ✅ Production Ready
+- **Detectors**: 217 security detectors
+- **Status**: Production Ready
 
-### What's New in v1.4.0
-
-- **Project Mode** (`--project`): Analyze entire Foundry and Hardhat projects
-- **Framework Auto-Detection**: Automatically detects Foundry and Hardhat configurations
-- **Smart Source Discovery**: Finds source directories from project configs
-- **Directory Exclusions**: Skips build artifacts and dependencies
-
-### Recent Releases
-
-| Version | Date | Highlights |
-|---------|------|------------|
-| **v1.4.0** | 2025-11-26 | Project Mode for Foundry/Hardhat |
-| v1.3.7 | 2025-11-19 | Maintenance and documentation |
-| v1.3.6 | 2025-11-13 | Front-running & MEV protection (5 detectors) |
-| v1.3.0 | 2025-11-03 | Vulnerability Gap Remediation (204 detectors) |
-| v1.0.0 | 2025-10-27 | Production release |
-
-See [CHANGELOG.md](CHANGELOG.md) for detailed release notes.
+See [CHANGELOG.md](CHANGELOG.md) for release history and detailed notes.
 
 ---
 
@@ -580,7 +492,5 @@ Special thanks to:
 - **BlockSecOps Platform**: [BlockSecOps.com](https://BlockSecOps.com)
 
 ---
-
-**Note**: This is a beta release. While we've tested extensively, use in production environments should be done with caution and manual review of findings.
 
 **Made with ❤️ by Advanced Blockchain Security**
