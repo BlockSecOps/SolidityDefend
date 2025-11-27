@@ -462,6 +462,76 @@ impl CliApp {
             .map(|s| s.as_str())
             .collect();
 
+        // Auto-detect if a single path is a directory (Foundry/Hardhat project)
+        if files.len() == 1 {
+            let path = Path::new(files[0]);
+            if path.is_dir() {
+                // Auto-switch to project mode
+                let format = match matches.get_one::<String>("format").unwrap().as_str() {
+                    "json" => OutputFormat::Json,
+                    "console" => OutputFormat::Console,
+                    _ => OutputFormat::Console,
+                };
+
+                let min_severity = match matches.get_one::<String>("severity").unwrap().as_str() {
+                    "info" => Severity::Info,
+                    "low" => Severity::Low,
+                    "medium" => Severity::Medium,
+                    "high" => Severity::High,
+                    "critical" => Severity::Critical,
+                    _ => Severity::Info,
+                };
+
+                let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str() {
+                    "low" => detectors::types::Confidence::Low,
+                    "medium" => detectors::types::Confidence::Medium,
+                    "high" => detectors::types::Confidence::High,
+                    "confirmed" => detectors::types::Confidence::Confirmed,
+                    _ => detectors::types::Confidence::Low,
+                };
+
+                let output_file = matches.get_one::<String>("output").map(PathBuf::from);
+                let use_cache = !matches.get_flag("no-cache");
+
+                // Parse optional framework override
+                let framework_override = matches
+                    .get_one::<String>("framework")
+                    .and_then(|f| Framework::from_str(f));
+
+                // Configure exit code behavior
+                let mut exit_config = ExitCodeConfig::default();
+                if matches.get_flag("no-exit-code") {
+                    exit_config.error_on_severity = None;
+                    exit_config.error_on_high_severity = false;
+                    exit_config.error_on_analysis_failure = false;
+                }
+                if let Some(level) = matches.get_one::<String>("exit-code-level") {
+                    let severity = match level.as_str() {
+                        "info" => Severity::Info,
+                        "low" => Severity::Low,
+                        "medium" => Severity::Medium,
+                        "high" => Severity::High,
+                        "critical" => Severity::Critical,
+                        _ => Severity::High,
+                    };
+                    exit_config.error_on_severity = Some(severity);
+                    exit_config.error_on_high_severity = false;
+                }
+
+                println!("Detected directory path, switching to project mode...");
+                return app.analyze_project(
+                    files[0],
+                    framework_override,
+                    format,
+                    output_file,
+                    min_severity,
+                    min_confidence,
+                    use_cache,
+                    exit_config,
+                );
+            }
+        }
+
         let format = match matches.get_one::<String>("format").unwrap().as_str() {
             "json" => OutputFormat::Json,
             "console" => OutputFormat::Console,

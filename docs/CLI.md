@@ -64,29 +64,38 @@ soliditydefend src/**/*.sol
 ### Project Mode (v1.4.0+)
 
 ```bash
--p, --project <DIR>     Analyze entire project directory
+<DIRECTORY>             Pass a directory path to auto-detect and analyze project
+-p, --project <DIR>     Explicitly analyze project directory
 --framework <TYPE>      Framework type: foundry, hardhat, plain (auto-detect if not specified)
 ```
 
 **Examples:**
 ```bash
-# Analyze a Foundry project (auto-detects from foundry.toml)
+# Auto-detect directory and framework (RECOMMENDED)
+soliditydefend ./my-foundry-project
+soliditydefend ./my-hardhat-project
+
+# Explicit project flag (equivalent to above)
 soliditydefend --project ./my-foundry-project
 
-# Analyze a Hardhat project (auto-detects from hardhat.config.js)
-soliditydefend --project ./my-hardhat-project
-
 # Force framework type
-soliditydefend --project ./my-project --framework foundry
+soliditydefend ./my-project --framework foundry
 
 # Combine with output options
-soliditydefend --project ./my-project --format json --output results.json
+soliditydefend ./my-project -f json -o results.json
 ```
+
+**Directory Auto-Detection:**
+When you pass a directory path, SolidityDefend automatically:
+1. Detects it's a directory (not a file)
+2. Switches to project mode
+3. Auto-detects the framework type
+4. Discovers all Solidity files in the appropriate source directory
 
 **Framework Auto-Detection:**
 - **Foundry**: Detected from `foundry.toml`, reads `src` directory, excludes `lib/`, `out/`, `cache/`
 - **Hardhat**: Detected from `hardhat.config.js` or `hardhat.config.ts`, reads `contracts/`, excludes `node_modules/`, `artifacts/`
-- **Plain**: Scans all `.sol` files in directory
+- **Plain**: Scans all `.sol` files in directory (excludes test/, lib/, node_modules/)
 
 ## Commands
 

@@ -15,10 +15,10 @@
 # Analyze a single contract
 soliditydefend contract.sol
 
-# Analyze entire Foundry project (NEW in v1.4.0)
-soliditydefend --project ./my-foundry-project
+# Analyze entire Foundry/Hardhat project (auto-detects directory)
+soliditydefend ./my-foundry-project
 
-# Analyze entire Hardhat project (NEW in v1.4.0)
+# Or use explicit project flag
 soliditydefend --project ./my-hardhat-project --output json
 
 # Show only critical and high severity issues
@@ -34,7 +34,7 @@ soliditydefend -s high contract.sol
 - **Modern EIP Coverage** 🆕 - EIP-7702 delegation ($12M+ losses), EIP-1153 transient storage, ERC-7821 batch executor, ERC-7683 intent-based systems
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
 - **Lightning Fast Analysis** - Built with Rust for optimal performance
-- **Project Mode** 🆕 - Analyze entire Foundry and Hardhat projects with auto-detection (`--project`)
+- **Project Mode** 🆕 - Analyze entire Foundry and Hardhat projects with automatic directory detection (just pass a directory path!)
 - **Multiple Output Formats** - Console with syntax highlighting, JSON, SARIF for CI/CD integration
 - **URL-Based Analysis** - Analyze contracts directly from Etherscan and other blockchain explorers
 - **CI/CD Ready** - Exit codes, severity filtering, and JSON output
@@ -175,20 +175,20 @@ soliditydefend src/**/*.sol
 
 ### Project Mode (v1.4.0+)
 
-Analyze entire Foundry or Hardhat projects with automatic framework detection:
+Analyze entire Foundry or Hardhat projects. Just pass a directory path - the framework is auto-detected:
 
 ```bash
-# Analyze a Foundry project (auto-detects from foundry.toml)
-soliditydefend --project ./my-foundry-project
+# Analyze a Foundry project (auto-detects directory and framework)
+soliditydefend ./my-foundry-project
 
 # Analyze a Hardhat project (auto-detects from hardhat.config.js)
-soliditydefend --project ./my-hardhat-project
+soliditydefend ./my-hardhat-project
 
-# Force framework type
+# Force framework type with explicit flag
 soliditydefend --project ./my-project --framework foundry
 
 # Output as JSON
-soliditydefend --project ./my-project --output json
+soliditydefend ./my-project -f json -o results.json
 ```
 
 **Supported Frameworks:**

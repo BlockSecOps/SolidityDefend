@@ -9,26 +9,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.4.0] - 2025-11-26
+## [1.4.0] - 2025-11-27
 
 ### Project Mode - Foundry & Hardhat Framework Support
 
-This release introduces **Project Mode** for analyzing complete Solidity projects with native framework detection.
+This release introduces **Project Mode** for analyzing complete Solidity projects with native framework detection and **automatic directory detection**.
 
 #### Added
 
-##### **Project Mode** (`--project <DIR>`)
-Analyze entire Solidity projects instead of individual files:
+##### **Automatic Directory Detection** (NEW!)
+Just pass a directory path - SolidityDefend automatically detects and analyzes the project:
 
 ```bash
-# Analyze a Foundry project
-soliditydefend --project ./my-foundry-project --output json
+# Simply pass a directory - auto-detects everything!
+soliditydefend ./my-foundry-project
+soliditydefend ./my-hardhat-project
 
-# Analyze a Hardhat project
-soliditydefend --project ./my-hardhat-project --output sarif
+# Works with any path format
+soliditydefend ~/projects/my-defi-app
+soliditydefend /home/user/contracts/vault
+```
+
+##### **Project Mode** (`--project <DIR>`)
+Explicit project mode flag (equivalent to passing directory):
+
+```bash
+# Explicit project flag
+soliditydefend --project ./my-foundry-project
+
+# With output options
+soliditydefend ./my-project -f json -o results.json
 
 # Force framework type
-soliditydefend --project ./my-project --framework foundry
+soliditydefend ./my-project --framework foundry
 ```
 
 ##### **Framework Auto-Detection**
@@ -51,10 +64,12 @@ Automatically skips build artifacts and dependencies:
 - `resolver` crate - Import extraction and path resolution (19 unit tests)
 
 #### Changed
-- CLI now supports mutually exclusive `--project` and `--files` flags
+- CLI now automatically switches to project mode when a directory path is passed
+- CLI supports mutually exclusive `--project` and `--files` flags
 - Improved project-wide analysis with consistent file ordering by modification time
 
 #### Technical Details
+- Directory detection: Automatic via `path.is_dir()` check
 - Framework detection: ~1ms overhead
 - File discovery: Parallelized with rayon
 - Config parsing: TOML for Foundry, regex-based for Hardhat JS configs

@@ -54,19 +54,36 @@ soliditydefend --min-severity critical MyContract.sol
 
 ## Project Mode (v1.4.0+)
 
-**NEW in v1.4.0**: Analyze entire Foundry and Hardhat projects with automatic framework detection.
+**NEW in v1.4.0**: Analyze entire Foundry and Hardhat projects with automatic directory and framework detection. Just pass a directory path!
+
+### Automatic Directory Detection
+
+Simply pass a directory path and SolidityDefend automatically detects and analyzes the project:
+
+```bash
+# Just pass a directory - auto-detects everything!
+soliditydefend ./my-foundry-project
+soliditydefend ./my-hardhat-project
+
+# Works with relative and absolute paths
+soliditydefend ~/projects/my-defi-app
+soliditydefend /home/user/contracts/vault
+```
 
 ### Foundry Projects
 
 ```bash
-# Auto-detect Foundry from foundry.toml
+# Auto-detect directory and framework (RECOMMENDED)
+solidifydefend ./my-foundry-project
+
+# Or use explicit project flag
 soliditydefend --project ./my-foundry-project
 
 # With JSON output for CI/CD
-soliditydefend --project ./my-foundry-project --format json --output results.json
+soliditydefend ./my-foundry-project -f json -o results.json
 
 # Filter by severity
-soliditydefend --project ./my-foundry-project --min-severity high
+soliditydefend ./my-foundry-project --min-severity high
 ```
 
 **Foundry Behavior:**
@@ -77,11 +94,14 @@ soliditydefend --project ./my-foundry-project --min-severity high
 ### Hardhat Projects
 
 ```bash
-# Auto-detect Hardhat from hardhat.config.js or hardhat.config.ts
+# Auto-detect directory and framework (RECOMMENDED)
+soliditydefend ./my-hardhat-project
+
+# Or use explicit project flag
 soliditydefend --project ./my-hardhat-project
 
 # Force Hardhat framework
-soliditydefend --project ./my-project --framework hardhat
+soliditydefend ./my-project --framework hardhat
 ```
 
 **Hardhat Behavior:**
@@ -103,17 +123,17 @@ soliditydefend --project ./my-project --framework plain
 ### Project Mode Examples
 
 ```bash
-# Full workflow for Foundry project
+# Full workflow for Foundry project (just pass directory!)
 cd my-foundry-project
-soliditydefend --project . --format json --output security-report.json
+soliditydefend . -f json -o security-report.json
 cat security-report.json | jq '.summary'
 
 # CI/CD integration
-soliditydefend --project . --min-severity high --format json || exit 1
+soliditydefend . --min-severity high -f json || exit 1
 
 # Compare two projects
-soliditydefend --project ./project-v1 --format json --output v1.json
-soliditydefend --project ./project-v2 --format json --output v2.json
+soliditydefend ./project-v1 -f json -o v1.json
+soliditydefend ./project-v2 -f json -o v2.json
 ```
 
 ## Basic Usage
