@@ -1,1 +1,2507 @@
-[]
+{
+  "version": "1.4.1",
+  "generated": "2025-11-28",
+  "total_detectors": 215,
+  "detectors": [
+    {
+      "id": "aa-account-takeover",
+      "name": "Account Abstraction Takeover Vulnerability",
+      "description": "Detects vulnerabilities allowing EntryPoint replacement attacks and full account takeover in ERC-4337 wallets",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-bundler-dos",
+      "name": "Account Abstraction Bundler DoS",
+      "description": "Detects verification logic in ERC-4337 validateUserOp that is susceptible to denial-of-service attacks against bundlers",
+      "severity": "medium",
+      "categories": [
+        "Logic",
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-bundler-dos-enhanced",
+      "name": "AA Bundler DOS Enhanced",
+      "description": "Enhanced bundler DOS detection covering 2024 attack patterns",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-calldata-encoding-exploit",
+      "name": "Aa Calldata Encoding Exploit",
+      "description": "Detects aa calldata encoding exploit vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-entry-point-reentrancy",
+      "name": "AA Entry Point Reentrancy",
+      "description": "Detects reentrancy in handleOps and validateUserOp functions",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "Reentrancy"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-initialization-vulnerability",
+      "name": "Account Abstraction Initialization Vulnerability",
+      "description": "Detects missing signature verification in EIP-7702 initialization and account abstraction setup that allows unauthorized initialization",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-nonce-management",
+      "name": "AA Nonce Management Vulnerabilities",
+      "description": "Detects improper nonce management causing parallel operation failures and transaction collisions",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-nonce-management-advanced",
+      "name": "Advanced Nonce Management",
+      "description": "Detects parallel nonce issues, key-specific nonce problems, and transaction replay risks",
+      "severity": "medium",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-paymaster-fund-drain",
+      "name": "AA Paymaster Fund Drain",
+      "description": "Detects paymaster sponsorship abuse that can drain paymaster funds",
+      "severity": "critical",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-session-key-vulnerabilities",
+      "name": "Session Key Vulnerabilities",
+      "description": "Detects overly permissive session keys, missing expiration, and scope limit issues",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-signature-aggregation",
+      "name": "Signature Aggregation Issues",
+      "description": "Detects missing individual signature validation and aggregation bypass vulnerabilities",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-signature-aggregation-bypass",
+      "name": "AA Signature Aggregation Bypass",
+      "description": "Detects signature aggregation vulnerabilities in batch UserOperations",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-social-recovery",
+      "name": "Social Recovery Attacks",
+      "description": "Detects insufficient guardian thresholds, missing timelock delays, and recovery manipulation risks",
+      "severity": "medium",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "aa-user-operation-replay",
+      "name": "AA User Operation Replay",
+      "description": "Detects UserOperation replay across bundlers and chains",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "ai-agent-decision-manipulation",
+      "name": "AI Agent Decision Manipulation",
+      "description": "Detects AI decision manipulation via oracle/input poisoning",
+      "severity": "high",
+      "categories": [
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "ai-agent-prompt-injection",
+      "name": "AI Agent Prompt Injection",
+      "description": "Detects prompt injection vulnerabilities in AI contracts",
+      "severity": "high",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "ai-agent-resource-exhaustion",
+      "name": "AI Agent Resource Exhaustion",
+      "description": "Detects computational DOS attacks via resource exhaustion",
+      "severity": "medium",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "allowance-toctou",
+      "name": "Allowance Toctou",
+      "description": "Detects allowance toctou vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "amm-invariant-manipulation",
+      "name": "AMM Invariant Manipulation",
+      "description": "Detects vulnerabilities in AMM invariant enforcement including K invariant violations, missing TWAP, and reserve manipulation",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "amm-k-invariant-violation",
+      "name": "AMM Constant Product Violation",
+      "description": "Detects violations of AMM invariants (x*y=k formula), including missing k validation, unsafe fee-on-transfer token handling, and inadequate reserve updates",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "amm-liquidity-manipulation",
+      "name": "AMM Liquidity Manipulation",
+      "description": "Detects vulnerabilities in AMM pools that allow liquidity manipulation attacks, including sandwich attacks and pool draining",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "array-length-mismatch",
+      "name": "Array Length Mismatch",
+      "description": "Detects array length mismatch vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "auction-timing-manipulation",
+      "name": "Auction Timing Manipulation",
+      "description": "Detects auction mechanisms with predictable timing, enabling MEV bot front-running",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "autonomous-contract-oracle-dependency",
+      "name": "Autonomous Contract Oracle Dependency",
+      "description": "Detects oracle dependency creating single point of failure",
+      "severity": "medium",
+      "categories": [
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "avs-validation-bypass",
+      "name": "AVS Validation Bypass",
+      "description": "Detects AVS registration without proper security validation, allowing malicious services to slash stakes",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "batch-transfer-overflow",
+      "name": "Batch Transfer Overflow",
+      "description": "Detects multiplication of array length with value that can overflow in batch transfers",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "block-dependency",
+      "name": "Block Dependency",
+      "description": "Dangerous dependence on block properties including timestamp manipulation for time-based calculations",
+      "severity": "medium",
+      "categories": [
+        "Timestamp",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-116"
+      ]
+    },
+    {
+      "id": "block-stuffing-vulnerable",
+      "name": "Block Stuffing Vulnerable",
+      "description": "Detects contracts vulnerable to block stuffing attacks where attackers fill blocks to prevent transaction inclusion",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "bridge-message-verification",
+      "name": "Bridge Message Verification",
+      "description": "Detects missing message verification in bridge contracts",
+      "severity": "critical",
+      "categories": [
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "bridge-token-mint-control",
+      "name": "Bridge Token Minting Control",
+      "description": "Detects unsafe token minting in bridge contracts",
+      "severity": "critical",
+      "categories": [
+        "CrossChain",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "celestia-data-availability",
+      "name": "Celestia Data Availability",
+      "description": "Detects data availability issues in modular blockchains",
+      "severity": "high",
+      "categories": [
+        "DataAvailability"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "centralization-risk",
+      "name": "Centralization Risk",
+      "description": "Detects dangerous concentration of control in single address or entity creating single points of failure",
+      "severity": "high",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "circular-dependency",
+      "name": "Circular Dependency",
+      "description": "Detects circular dependencies between contracts that can lead to deadlocks, infinite recursion, or DOS attacks",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "ExternalCalls"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "classic-reentrancy",
+      "name": "Classic Reentrancy",
+      "description": "State changes after external calls enable reentrancy attacks",
+      "severity": "high",
+      "categories": [
+        "ReentrancyAttacks"
+      ],
+      "cwe": [
+        "CWE-841"
+      ],
+      "swc": [
+        "SWC-107"
+      ]
+    },
+    {
+      "id": "create2-frontrunning",
+      "name": "CREATE2 Frontrunning Protection",
+      "description": "Detects CREATE2 usage with predictable salts or missing authorization that could enable frontrunning and address collision attacks",
+      "severity": "high",
+      "categories": [
+        "Deployment",
+        "MEV",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "cross-chain-message-ordering",
+      "name": "Cross-Chain Message Ordering",
+      "description": "Detects message ordering issues across chains",
+      "severity": "high",
+      "categories": [
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "cross-chain-replay",
+      "name": "Cross-Chain Replay Attack",
+      "description": "Detects signature/hash generation missing chain ID, enabling replay attacks across chains",
+      "severity": "critical",
+      "categories": [
+        "CrossChain",
+        "Auth"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "cross-rollup-atomicity",
+      "name": "Cross-Rollup Atomicity",
+      "description": "Detects cross-rollup atomic operation issues",
+      "severity": "critical",
+      "categories": [
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "dangerous-delegatecall",
+      "name": "Dangerous Delegatecall",
+      "description": "Detects delegatecall to user-controlled or untrusted addresses that can lead to complete contract takeover",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-112"
+      ]
+    },
+    {
+      "id": "deadline-manipulation",
+      "name": "Deadline Manipulation",
+      "description": "Detects improper deadline handling that allows validators to hold and execute transactions at unfavorable times",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "defi-jit-liquidity-attacks",
+      "name": "JIT Liquidity Attacks",
+      "description": "Detects lack of minimum liquidity lock periods and validates LP commitment to prevent sandwich attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "defi-liquidity-pool-manipulation",
+      "name": "Liquidity Pool Manipulation",
+      "description": "Detects missing K-value validation, price oracle manipulation, and flash loan attacks on AMM invariants",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "defi-yield-farming-exploits",
+      "name": "Yield Farming Exploits",
+      "description": "Detects missing deposit/withdrawal fee validation, reward calculation errors, and share price manipulation",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "delegatecall-in-constructor",
+      "name": "Delegatecall in Constructor",
+      "description": "Detects delegatecall performed during contract construction, which can lead to storage corruption and initialization issues",
+      "severity": "medium",
+      "categories": [
+        "BestPractices",
+        "Upgradeable"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "delegatecall-return-ignored",
+      "name": "Delegatecall Return Value Ignored",
+      "description": "Detects delegatecall operations without proper return value checking",
+      "severity": "high",
+      "categories": [
+        "ExternalCalls",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "delegatecall-untrusted-library",
+      "name": "Delegatecall to Untrusted Library",
+      "description": "Detects delegatecall to mutable library addresses that can be changed after deployment",
+      "severity": "high",
+      "categories": [
+        "ExternalCalls",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-829"
+      ],
+      "swc": [
+        "SWC-112"
+      ]
+    },
+    {
+      "id": "delegatecall-user-controlled",
+      "name": "Delegatecall User Controlled",
+      "description": "Detects delegatecall user controlled vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "delegation-loop",
+      "name": "Delegation Loop Vulnerability",
+      "description": "Detects governance delegation without circular delegation protection, enabling vote manipulation",
+      "severity": "high",
+      "categories": [
+        "Auth",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "deprecated-functions",
+      "name": "Deprecated Functions",
+      "description": "Detects usage of deprecated Solidity functions and patterns that should be replaced with modern alternatives",
+      "severity": "low",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-111"
+      ]
+    },
+    {
+      "id": "diamond-delegatecall-zero",
+      "name": "Diamond Delegatecall to Zero Address",
+      "description": "Detects unsafe delegatecall in Diamond fallback that fails to validate facet address existence before execution",
+      "severity": "critical",
+      "categories": [
+        "Diamond",
+        "Upgradeable",
+        "ExternalCalls"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "diamond-init-reentrancy",
+      "name": "Diamond Initialization Reentrancy",
+      "description": "Detects reentrancy vulnerabilities during Diamond initialization caused by external calls in diamondCut without reentrancy guards",
+      "severity": "high",
+      "categories": [
+        "Diamond",
+        "Upgradeable",
+        "Reentrancy"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "diamond-loupe-violation",
+      "name": "Diamond Loupe Standard Violation",
+      "description": "Detects missing or incorrect ERC-2535 Diamond Loupe functions required for introspection and facet discovery",
+      "severity": "medium",
+      "categories": [
+        "Diamond",
+        "Upgradeable",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "diamond-selector-collision",
+      "name": "Diamond Function Selector Collision",
+      "description": "Detects function selector collisions in Diamond facets caused by duplicate selectors across facets or missing validation during diamondCut operations",
+      "severity": "high",
+      "categories": [
+        "Diamond",
+        "Upgradeable"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "diamond-storage-collision",
+      "name": "Diamond Storage Collision",
+      "description": "Detects storage collision risks in Diamond facets caused by direct storage variable declarations instead of using the Diamond Storage pattern for namespace isolation",
+      "severity": "critical",
+      "categories": [
+        "Diamond",
+        "Upgradeable"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "dos-failed-transfer",
+      "name": "DoS by Failed Transfer",
+      "description": "Detects push pattern transfers that can cause DoS if recipient reverts. Use pull pattern instead.",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "dos-unbounded-operation",
+      "name": "Dos Unbounded Operation",
+      "description": "Detects dos unbounded operation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-batch-phishing",
+      "name": "Eip7702 Batch Phishing",
+      "description": "Detects eip7702 batch phishing vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-delegate-access-control",
+      "name": "EIP-7702 Delegate Access Control",
+      "description": "Detects missing authorization in delegate execution functions allowing arbitrary calls",
+      "severity": "critical",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-init-frontrun",
+      "name": "EIP-7702 Initialization Front-Running",
+      "description": "Detects unprotected initialization vulnerable to front-running attacks in EIP-7702 delegates ($1.54M August 2025 loss)",
+      "severity": "critical",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-storage-collision",
+      "name": "EIP-7702 Storage Collision",
+      "description": "Detects storage layout mismatches between EOA and delegate contracts",
+      "severity": "high",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-sweeper-detection",
+      "name": "EIP-7702 Malicious Sweeper Detection",
+      "description": "Detects sweeper contract patterns responsible for 97% of malicious EIP-7702 delegations in 2025",
+      "severity": "critical",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-txorigin-bypass",
+      "name": "EIP-7702 tx.origin Bypass",
+      "description": "Detects tx.origin authentication that fails with EIP-7702 delegation",
+      "severity": "high",
+      "categories": [
+        "Auth"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "emergency-function-abuse",
+      "name": "Emergency Function Abuse",
+      "description": "Detects emergency functions without time-locks or multi-sig protection, enabling admin abuse",
+      "severity": "medium",
+      "categories": [
+        "Auth",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "emergency-pause-centralization",
+      "name": "Governance Attacks",
+      "description": "Detects vulnerabilities in DAO governance mechanisms including flash loan attacks, delegation loops, and voting manipulation",
+      "severity": "high",
+      "categories": [
+        "FlashLoan",
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "emergency-withdrawal-abuse",
+      "name": "Emergency Withdrawal Abuse",
+      "description": "Detects emergency withdrawal functions that bypass lock periods or lose user rewards",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "enhanced-access-control",
+      "name": "Enhanced Access Control",
+      "description": "Detects role management flaws and privilege escalation ($953M impact)",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "enhanced-input-validation",
+      "name": "Enhanced Input Validation",
+      "description": "Detects missing bounds checking and array validation ($14.6M impact)",
+      "severity": "high",
+      "categories": [
+        "Validation",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc1155-batch-validation",
+      "name": "ERC-1155 Batch Validation",
+      "description": "Detects missing batch validation in ERC-1155 implementations",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc20-approve-race",
+      "name": "ERC-20 Approve Race Condition",
+      "description": "Detects ERC-20 approve functions vulnerable to front-running race conditions (SWC-114)",
+      "severity": "medium",
+      "categories": [
+        "Logic",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc20-infinite-approval",
+      "name": "Infinite Approval Risk",
+      "description": "Detects contracts that accept or encourage unlimited ERC-20 approvals",
+      "severity": "low",
+      "categories": [
+        "Logic",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc20-transfer-return-bomb",
+      "name": "ERC-20 Transfer Return Bomb",
+      "description": "Detects return data bombs in ERC-20 token interactions",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc4337-entrypoint-trust",
+      "name": "ERC-4337 Untrusted EntryPoint",
+      "description": "Detects hardcoded or untrusted EntryPoint contracts in ERC-4337 account abstraction wallets that could allow full account takeover",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc4337-gas-griefing",
+      "name": "ERC-4337 Gas Griefing Attacks",
+      "description": "Detects gas griefing vectors that can DoS bundlers",
+      "severity": "low",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc4337-paymaster-abuse",
+      "name": "ERC-4337 Paymaster Abuse",
+      "description": "Detects unlimited sponsorship, missing gas validation, and spending limit issues in paymasters",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc721-callback-reentrancy",
+      "name": "Erc721 Callback Reentrancy",
+      "description": "Detects erc721 callback reentrancy vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc721-enumeration-dos",
+      "name": "ERC-721 Enumeration DOS",
+      "description": "Detects enumeration gas bombs in ERC-721 implementations",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-cross-chain-replay",
+      "name": "Erc7683 Cross Chain Replay",
+      "description": "Detects erc7683 cross chain replay vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-crosschain-validation",
+      "name": "Erc7683 Crosschain Validation",
+      "description": "Detects erc7683 crosschain validation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-filler-frontrunning",
+      "name": "ERC-7683 Filler Front-Running",
+      "description": "Detects missing MEV protection in ERC-7683 settlements",
+      "severity": "high",
+      "categories": [
+        "CrossChain",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-oracle-dependency",
+      "name": "ERC-7683 Oracle Dependency",
+      "description": "Detects risky oracle dependencies in cross-chain settlements",
+      "severity": "high",
+      "categories": [
+        "CrossChain",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-settlement-validation",
+      "name": "Erc7683 Settlement Validation",
+      "description": "Detects erc7683 settlement validation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7683-unsafe-permit2",
+      "name": "ERC-7683 Unsafe Permit2",
+      "description": "Detects unsafe token approval patterns in ERC-7683 settlements",
+      "severity": "medium",
+      "categories": [
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc777-reentrancy-hooks",
+      "name": "ERC-777 Reentrancy Hooks",
+      "description": "Detects contracts vulnerable to reentrancy via ERC-777 tokensReceived/tokensToSend callbacks",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7821-batch-authorization",
+      "name": "Erc7821 Batch Authorization",
+      "description": "Detects erc7821 batch authorization vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7821-msg-sender-validation",
+      "name": "ERC-7821 msg.sender Validation",
+      "description": "Detects msg.sender authentication issues in batch execution context",
+      "severity": "medium",
+      "categories": [
+        "Auth"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7821-replay-protection",
+      "name": "ERC-7821 Replay Protection",
+      "description": "Detects missing nonce or replay protection in batch executors",
+      "severity": "high",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "erc7821-token-approval",
+      "name": "Erc7821 Token Approval",
+      "description": "Detects erc7821 token approval vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "excessive-gas-usage",
+      "name": "Excessive Gas Usage",
+      "description": "Detects patterns causing excessive gas consumption such as storage operations in loops, redundant storage reads, and inefficient data structures",
+      "severity": "low",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "extcodesize-bypass",
+      "name": "EXTCODESIZE Bypass Detection",
+      "description": "Detects use of EXTCODESIZE or address.code.length for EOA validation, which can be bypassed during constructor execution",
+      "severity": "medium",
+      "categories": [
+        "Validation",
+        "Logic",
+        "Deployment"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "external-calls-loop",
+      "name": "Governance Attacks",
+      "description": "Detects vulnerabilities in DAO governance mechanisms including flash loan attacks, delegation loops, and voting manipulation",
+      "severity": "high",
+      "categories": [
+        "FlashLoan",
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "fallback-delegatecall-unprotected",
+      "name": "Fallback Delegatecall Unprotected",
+      "description": "Detects fallback delegatecall unprotected vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "fallback-function-shadowing",
+      "name": "Fallback Function Shadowing",
+      "description": "Detects when proxy functions shadow implementation functions",
+      "severity": "medium",
+      "categories": [
+        "AccessControl",
+        "Upgradeable"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flash-loan-collateral-swap",
+      "name": "Flash Loan Collateral Swap",
+      "description": "Detects flash loan manipulation of collateral ratios",
+      "severity": "high",
+      "categories": [
+        "FlashLoan",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flash-loan-governance-attack",
+      "name": "Flash Loan Governance Attack",
+      "description": "Detects DAO takeover via flash-borrowed governance tokens",
+      "severity": "critical",
+      "categories": [
+        "FlashLoan",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flash-loan-price-manipulation-advanced",
+      "name": "Flash Loan Price Manipulation Advanced",
+      "description": "Detects multi-protocol price manipulation using flash loans",
+      "severity": "critical",
+      "categories": [
+        "FlashLoan",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flash-loan-reentrancy-combo",
+      "name": "Flash Loan Reentrancy Combo",
+      "description": "Detects combined flash loan + reentrancy attacks (Penpie pattern)",
+      "severity": "critical",
+      "categories": [
+        "FlashLoan",
+        "Reentrancy"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flash-loan-staking",
+      "name": "Flash Loan Staking Attack",
+      "description": "Detects staking/farming contracts vulnerable to flash loan attacks for reward extraction",
+      "severity": "critical",
+      "categories": [
+        "FlashLoanAttacks",
+        "DeFi"
+      ],
+      "cwe": [
+        "CWE-362"
+      ],
+      "swc": []
+    },
+    {
+      "id": "flashloan-callback-reentrancy",
+      "name": "Flash Loan Callback Reentrancy",
+      "description": "Detects reentrancy vulnerabilities in flash loan callbacks",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flashloan-governance-attack",
+      "name": "Flash Loan Governance Attack",
+      "description": "Detects governance systems vulnerable to flash loan voting attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flashloan-price-oracle-manipulation",
+      "name": "Flashloan Price Oracle Manipulation",
+      "description": "Detects flashloan price oracle manipulation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "flashmint-token-inflation",
+      "name": "Flashmint Token Inflation",
+      "description": "Detects flashmint token inflation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "floating-pragma",
+      "name": "Floating Pragma",
+      "description": "Detects floating pragma directives (e.g., ^0.8.0) that allow compilation with multiple compiler versions, potentially causing inconsistent behavior and security issues",
+      "severity": "low",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-103"
+      ]
+    },
+    {
+      "id": "front-running",
+      "name": "Front Running",
+      "description": "Vulnerable to front-running attacks",
+      "severity": "medium",
+      "categories": [
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "front-running-mitigation",
+      "name": "Missing Front-Running Mitigation",
+      "description": "Detects functions vulnerable to front-running attacks without proper MEV protection mechanisms",
+      "severity": "high",
+      "categories": [
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "gas-griefing",
+      "name": "Gas Griefing Attack",
+      "description": "Detects vulnerabilities where attackers can grief users by forcing high gas consumption",
+      "severity": "medium",
+      "categories": [
+        "Logic",
+        "ExternalCalls"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "gas-price-manipulation",
+      "name": "Gas Price Manipulation",
+      "description": "Detects MEV protection using tx.gasprice which can be bypassed through flashbots or other mechanisms",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "guardian-role-centralization",
+      "name": "Guardian Role Centralization",
+      "description": "Detects guardian/emergency roles with excessive power creating centralization risks",
+      "severity": "medium",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "hardware-wallet-delegation",
+      "name": "Hardware Wallet Delegation Vulnerability",
+      "description": "Detects unsafe EIP-7702 delegation patterns that can brick hardware wallets or compromise security when delegating EOA control",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "hook-reentrancy-enhanced",
+      "name": "Hook-Based Reentrancy Enhanced",
+      "description": "Detects reentrancy vulnerabilities in Uniswap V4 hooks and similar callback systems where external calls in hooks can re-enter the contract",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Reentrancy"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "inefficient-storage",
+      "name": "Inefficient Storage Usage",
+      "description": "Detects inefficient storage patterns including unpacked structs, redundant storage variables, and suboptimal storage layout that waste gas",
+      "severity": "low",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "insufficient-randomness",
+      "name": "Insufficient Randomness",
+      "description": "Detects use of weak or manipulable randomness sources like block.timestamp or blockhash",
+      "severity": "high",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
+      "swc": [
+        "SWC-120"
+      ]
+    },
+    {
+      "id": "integer-overflow",
+      "name": "Integer Overflow/Underflow",
+      "description": "Detects unchecked arithmetic operations in Solidity < 0.8.0 or within unchecked blocks that can cause overflow/underflow",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "Validation"
+      ],
+      "cwe": [
+        "CWE-190",
+        "CWE-191"
+      ],
+      "swc": [
+        "SWC-101"
+      ]
+    },
+    {
+      "id": "intent-nonce-management",
+      "name": "Intent Nonce Management",
+      "description": "Detects improper nonce management in ERC-7683 intents that could lead to replay attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "intent-settlement-validation",
+      "name": "Intent Settlement Validation",
+      "description": "Detects missing validation in ERC-7683 settlement contracts (deadlines, outputs, fill instructions)",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "intent-signature-replay",
+      "name": "Intent Signature Replay",
+      "description": "Detects missing chainId and nonce validation enabling cross-chain replay attacks in ERC-7683 intents",
+      "severity": "critical",
+      "categories": [
+        "CrossChain",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "intent-solver-manipulation",
+      "name": "Intent Solver Manipulation",
+      "description": "Detects vulnerabilities where malicious solvers can manipulate intent execution for profit",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "jit-liquidity-sandwich",
+      "name": "JIT Liquidity Sandwich",
+      "description": "Detects vulnerability to just-in-time liquidity attacks where attackers add liquidity before swaps and remove immediately after to capture fees",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "l2-bridge-message-validation",
+      "name": "L2 Bridge Message Validation",
+      "description": "Detects missing or weak validation in L2\u2194L1 bridge message processing, including missing Merkle proofs, inadequate finality checks, and replay vulnerabilities",
+      "severity": "critical",
+      "categories": [
+        "CrossChain",
+        "L2"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "l2-data-availability",
+      "name": "L2 Data Availability Failure",
+      "description": "Detects missing data publication to L1, inadequate data availability guarantees, and lack of force inclusion mechanisms that could lead to censorship or data withholding attacks",
+      "severity": "high",
+      "categories": [
+        "L2",
+        "DataAvailability"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "l2-fee-manipulation",
+      "name": "L2 Fee Manipulation",
+      "description": "Detects vulnerabilities in L2 fee mechanisms including unbounded oracle-based fees, front-runnable fee updates, and lack of fee bounds that could lead to economic attacks or denial of service",
+      "severity": "medium",
+      "categories": [
+        "L2",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "lending-borrow-bypass",
+      "name": "Lending Protocol Borrow Bypass",
+      "description": "Detects collateral and borrowing check bypasses in lending protocols, including missing health factor validation, unsafe flash loan integration, and reentrancy vulnerabilities",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "lending-liquidation-abuse",
+      "name": "Lending Liquidation Abuse",
+      "description": "Detects unfair liquidation mechanics in lending protocols that can be exploited for profit or griefing",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "liquidity-bootstrapping-abuse",
+      "name": "Liquidity Bootstrapping Pool Abuse",
+      "description": "Detects vulnerabilities in LBP implementations where weight changes can be manipulated for unfair token distribution",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "logic-error-patterns",
+      "name": "Logic Error Patterns",
+      "description": "Detects division before multiplication and faulty reward calculations",
+      "severity": "high",
+      "categories": [
+        "BestPractices",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "lrt-share-inflation",
+      "name": "LRT Share Inflation Attack",
+      "description": "Detects ERC-4626-style first depositor attacks in liquid restaking tokens where attackers can steal deposits",
+      "severity": "critical",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "metamorphic-contract",
+      "name": "Metamorphic Contract Detection",
+      "description": "Detects metamorphic contract patterns (CREATE2 + SELFDESTRUCT) that enable changing contract code at the same address",
+      "severity": "critical",
+      "categories": [
+        "Metamorphic",
+        "Deployment",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "mev-backrun-opportunities",
+      "name": "MEV Backrun Opportunities",
+      "description": "Detects backrunnable state changes creating MEV opportunities",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "mev-extractable-value",
+      "name": "MEV Extractable Value",
+      "description": "Detects contracts with extractable MEV through front-running, back-running, or transaction ordering manipulation",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "mev-priority-gas-auction",
+      "name": "MEV Priority Gas Auction",
+      "description": "Detects PGA-vulnerable functions causing gas wars",
+      "severity": "medium",
+      "categories": [
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "mev-sandwich-vulnerable-swaps",
+      "name": "MEV Sandwich Vulnerable Swaps",
+      "description": "Detects unprotected DEX swaps vulnerable to sandwich attacks",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "mev-toxic-flow-exposure",
+      "name": "MEV Toxic Flow Exposure",
+      "description": "Detects AMM toxic flow risks from informed order flow",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-chainid-validation",
+      "name": "Missing Chain-ID Validation",
+      "description": "Detects missing chain-ID validation in bridge message processing",
+      "severity": "high",
+      "categories": [
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-commit-reveal",
+      "name": "Missing Commit-Reveal Scheme",
+      "description": "Detects auctions/bidding without commit-reveal protection",
+      "severity": "medium",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-eip712-domain",
+      "name": "Missing EIP-712 Domain Separator",
+      "description": "Detects signature verification without proper EIP-712 domain separator, leading to cross-contract and cross-chain replay vulnerabilities",
+      "severity": "high",
+      "categories": [
+        "Auth",
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-input-validation",
+      "name": "Missing Input Validation",
+      "description": "Detects functions missing critical input parameter validation like zero address checks or bounds validation",
+      "severity": "medium",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-price-validation",
+      "name": "Missing Price Validation",
+      "description": "Oracle price data is used without proper validation",
+      "severity": "medium",
+      "categories": [
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-slippage-protection",
+      "name": "Missing Slippage Protection",
+      "description": "Detects DEX trades executed without minimum output amount protection, enabling sandwich attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-transaction-deadline",
+      "name": "Missing Transaction Deadline",
+      "description": "Detects missing transaction deadline vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "multi-role-confusion",
+      "name": "Multi Role Confusion",
+      "description": "Detects multi role confusion vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "multisig-bypass",
+      "name": "Multi-Signature Bypass Detection",
+      "description": "Detects multi-signature systems with flawed signature verification that allows threshold bypass, signature reuse, or owner manipulation",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Auth",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "nonce-reuse",
+      "name": "Nonce Reuse Vulnerability",
+      "description": "Detects improper nonce management that allows replay attacks or transaction reordering",
+      "severity": "medium",
+      "categories": [
+        "Auth",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "optimistic-challenge-bypass",
+      "name": "Optimistic Rollup Challenge Period Bypass",
+      "description": "Detects missing or insufficient challenge periods in optimistic rollup withdrawal finalization, allowing premature withdrawals before fraud proofs can be submitted",
+      "severity": "critical",
+      "categories": [
+        "L2",
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "optimistic-fraud-proof-timing",
+      "name": "Optimistic Fraud Proof Timing",
+      "description": "Detects fraud proof timing issues",
+      "severity": "high",
+      "categories": [
+        "L2"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "oracle-manipulation",
+      "name": "Oracle Manipulation",
+      "description": "Detects oracle manipulation vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "oracle-staleness-heartbeat",
+      "name": "Oracle Staleness Heartbeat",
+      "description": "Detects missing Chainlink heartbeat and staleness checks",
+      "severity": "medium",
+      "categories": [
+        "Oracle",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "oracle-time-window-attack",
+      "name": "Oracle Time Window Attack",
+      "description": "Detects spot price usage without TWAP protection",
+      "severity": "high",
+      "categories": [
+        "Oracle",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "permit-signature-exploit",
+      "name": "Permit Signature Exploitation",
+      "description": "Detects EIP-2612 permit() and EIP-712 signatures with insufficient validation that enable frontrunning, signature theft, and approval manipulation",
+      "severity": "high",
+      "categories": [
+        "Auth",
+        "Validation",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "plaintext-secret-storage",
+      "name": "Plaintext Secret Storage",
+      "description": "Detects unhashed secrets stored on-chain",
+      "severity": "high",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "pool-donation-enhanced",
+      "name": "Pool Donation Attack Enhanced",
+      "description": "Detects advanced pool donation attacks including ERC-4626 share inflation and first-depositor manipulation vulnerabilities",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "post-080-overflow",
+      "name": "Post-0.8.0 Overflow Detection",
+      "description": "Detects unchecked blocks and assembly arithmetic ($223M Cetus impact)",
+      "severity": "medium",
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "price-impact-manipulation",
+      "name": "Price Impact Manipulation",
+      "description": "Detects swap functions that don't protect against large trades causing excessive price impact and slippage",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "price-manipulation-frontrun",
+      "name": "Price Manipulation Frontrun",
+      "description": "Detects price manipulation frontrun vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "price-oracle-stale",
+      "name": "Stale Price Oracle Data",
+      "description": "Detects missing staleness checks on oracle price feeds that could lead to using outdated price data",
+      "severity": "critical",
+      "categories": [
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "private-variable-exposure",
+      "name": "Private Variable Exposure",
+      "description": "Detects sensitive data stored in 'private' variables (all blockchain data is public)",
+      "severity": "high",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "privilege-escalation-paths",
+      "name": "Privilege Escalation Paths",
+      "description": "Detects privilege escalation paths vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "proxy-storage-collision",
+      "name": "Proxy Storage Collision",
+      "description": "Detects proxy storage collision vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "proxy-upgrade-unprotected",
+      "name": "Proxy Upgrade Unprotected",
+      "description": "Detects proxy upgrade unprotected vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "readonly-reentrancy",
+      "name": "Read-Only Reentrancy",
+      "description": "Read-only functions may be vulnerable to view reentrancy",
+      "severity": "medium",
+      "categories": [
+        "ReentrancyAttacks"
+      ],
+      "cwe": [
+        "CWE-841"
+      ],
+      "swc": [
+        "SWC-107"
+      ]
+    },
+    {
+      "id": "redundant-checks",
+      "name": "Redundant Checks",
+      "description": "Detects redundant validation checks that unnecessarily waste gas, including duplicate require statements, unnecessary overflow checks, and redundant modifiers",
+      "severity": "low",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "restaking-delegation-manipulation",
+      "name": "Restaking Delegation Manipulation",
+      "description": "Detects improper delegation validation in restaking protocols allowing unauthorized operator changes",
+      "severity": "critical",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "restaking-rewards-manipulation",
+      "name": "Restaking Rewards Manipulation",
+      "description": "Detects reward calculation exploits, point system gaming, and unfair reward distribution",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "restaking-slashing-conditions",
+      "name": "Restaking Slashing Conditions Bypass",
+      "description": "Detects missing slashing protection, improper penalty calculation, and compound slashing risks",
+      "severity": "critical",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "restaking-withdrawal-delays",
+      "name": "Restaking Withdrawal Delays Not Enforced",
+      "description": "Detects missing withdrawal delay enforcement, queue manipulation, and liquidity lock vulnerabilities",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "reward-calculation-manipulation",
+      "name": "Reward Calculation Manipulation",
+      "description": "Detects reward calculations based on manipulable price sources or incentivizing price deviation",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "role-hierarchy-bypass",
+      "name": "Role Hierarchy Bypass",
+      "description": "Detects role hierarchy violations where lower privilege roles can execute admin functions",
+      "severity": "critical",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "sandwich-attack",
+      "name": "Sandwich Attack",
+      "description": "Vulnerable to sandwich attacks",
+      "severity": "medium",
+      "categories": [
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "sandwich-resistant-swap",
+      "name": "Missing Sandwich Attack Protection",
+      "description": "Detects swap functions lacking protection against MEV sandwich attacks through front-running and back-running",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "selfdestruct-abuse",
+      "name": "Selfdestruct Abuse",
+      "description": "Detects selfdestruct abuse vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "selfdestruct-recipient-manipulation",
+      "name": "SELFDESTRUCT Recipient Manipulation",
+      "description": "Detects unsafe SELFDESTRUCT usage with unchecked recipients that could force ether to contracts or manipulate balances",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "Metamorphic",
+        "Deployment"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "shadowing-variables",
+      "name": "Variable Shadowing",
+      "description": "Detects variable shadowing where local variables hide state variables or inherited variables causing confusion",
+      "severity": "medium",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "short-address-attack",
+      "name": "Short Address Attack",
+      "description": "Detects short address attack vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "signature-malleability",
+      "name": "Signature Malleability",
+      "description": "Detects ECDSA signatures without proper 's' value validation, enabling signature replay via malleability",
+      "severity": "high",
+      "categories": [
+        "Auth",
+        "Validation"
+      ],
+      "cwe": [
+        "CWE-347"
+      ],
+      "swc": [
+        "SWC-117",
+        "SWC-121"
+      ]
+    },
+    {
+      "id": "signature-replay",
+      "name": "Governance Attacks",
+      "description": "Detects vulnerabilities in DAO governance mechanisms including flash loan attacks, delegation loops, and voting manipulation",
+      "severity": "high",
+      "categories": [
+        "FlashLoan",
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "single-oracle-source",
+      "name": "Single Oracle Source",
+      "description": "Contract relies on a single oracle source for critical price data",
+      "severity": "high",
+      "categories": [
+        "Oracle"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "slashing-mechanism",
+      "name": "Slashing Mechanism Vulnerability",
+      "description": "Detects vulnerabilities in validator slashing mechanisms that can lead to unfair penalties or griefing attacks",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "sovereign-rollup-validation",
+      "name": "Sovereign Rollup Validation",
+      "description": "Detects sovereign rollup state validation issues",
+      "severity": "medium",
+      "categories": [
+        "L2"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "storage-collision",
+      "name": "Storage Collision Vulnerability",
+      "description": "Detects storage layout conflicts in proxy patterns and delegatecall usage that can cause data corruption",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "storage-layout-upgrade",
+      "name": "Storage Layout Upgrade Violation",
+      "description": "Detects upgradeable contracts with storage layout violations that cause state corruption during upgrades",
+      "severity": "critical",
+      "categories": [
+        "Upgradeable",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "storage-slot-predictability",
+      "name": "Storage Slot Predictability",
+      "description": "Detects predictable storage slots used for sensitive data",
+      "severity": "medium",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "test-governance",
+      "name": "Governance Attacks",
+      "description": "Detects vulnerabilities in DAO governance mechanisms including flash loan attacks, delegation loops, and voting manipulation",
+      "severity": "high",
+      "categories": [
+        "FlashLoan",
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "time-locked-admin-bypass",
+      "name": "Time-Locked Admin Bypass",
+      "description": "Detects timelock circumvention and missing delay enforcement on critical admin functions",
+      "severity": "critical",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "timestamp-manipulation",
+      "name": "Timestamp Manipulation",
+      "description": "Detects dangerous dependencies on block.timestamp that miners can manipulate within bounds",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-116"
+      ]
+    },
+    {
+      "id": "token-decimal-confusion",
+      "name": "Token Decimal Confusion",
+      "description": "Detects decimal mismatch errors in multi-token systems",
+      "severity": "high",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "token-permit-front-running",
+      "name": "Token Permit Front-Running",
+      "description": "Detects ERC-2612 permit griefing and front-running vulnerabilities",
+      "severity": "medium",
+      "categories": [
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "token-supply-manipulation",
+      "name": "Token Supply Manipulation",
+      "description": "Detects vulnerabilities in token supply management that allow unauthorized minting, burning, or supply manipulation",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "token-transfer-frontrun",
+      "name": "Token Transfer Frontrun",
+      "description": "Detects token transfer frontrun vulnerabilities",
+      "severity": "medium",
+      "categories": [],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "transient-reentrancy-guard",
+      "name": "Transient Reentrancy Guard Issues",
+      "description": "Detects transient reentrancy guards that may not protect against new EIP-1153 attack vectors",
+      "severity": "medium",
+      "categories": [
+        "Reentrancy"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "transient-storage-composability",
+      "name": "Transient Storage Composability Issues",
+      "description": "Detects multi-call and composability issues with transient storage that may break atomic operations",
+      "severity": "high",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "transient-storage-misuse",
+      "name": "Transient Storage Misuse",
+      "description": "Detects persistent data incorrectly stored in transient storage, causing state loss",
+      "severity": "medium",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "transient-storage-reentrancy",
+      "name": "Transient Storage Reentrancy",
+      "description": "Detects low-gas reentrancy via EIP-1153 transient storage breaking transfer()/send() safety assumptions",
+      "severity": "critical",
+      "categories": [
+        "Reentrancy",
+        "ReentrancyAttacks"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "transient-storage-state-leak",
+      "name": "Transient Storage State Leak",
+      "description": "Detects missing cleanup of transient storage that could poison transaction state for subsequent calls",
+      "severity": "medium",
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "tx-origin-authentication",
+      "name": "tx.origin Authentication",
+      "description": "Detects use of tx.origin for authentication/authorization which is vulnerable to phishing attacks",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-287"
+      ],
+      "swc": [
+        "SWC-115"
+      ]
+    },
+    {
+      "id": "unchecked-external-call",
+      "name": "Unchecked External Call",
+      "description": "External calls without return value checking",
+      "severity": "medium",
+      "categories": [
+        "ExternalCalls"
+      ],
+      "cwe": [
+        "CWE-252"
+      ],
+      "swc": [
+        "SWC-104"
+      ]
+    },
+    {
+      "id": "unchecked-math",
+      "name": "Unchecked Math Operations",
+      "description": "Detects arithmetic operations in unchecked blocks that can overflow or underflow without reversion",
+      "severity": "medium",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-101"
+      ]
+    },
+    {
+      "id": "uninitialized-storage",
+      "name": "Uninitialized Storage Pointer",
+      "description": "Detects uninitialized struct or array variables that point to storage slot 0, causing state corruption",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "Validation"
+      ],
+      "cwe": [
+        "CWE-456"
+      ],
+      "swc": [
+        "SWC-109"
+      ]
+    },
+    {
+      "id": "uniswapv4-hook-issues",
+      "name": "Uniswap V4 Hook Vulnerabilities",
+      "description": "Detects security issues in Uniswap V4 hook implementations including unsafe callbacks, missing validation, access control issues, and fee extraction vulnerabilities",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "ExternalCalls"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "unsafe-type-casting",
+      "name": "Unsafe Type Casting",
+      "description": "Detects unsafe type conversions that can lead to data loss, truncation, or unexpected behavior",
+      "severity": "medium",
+      "categories": [
+        "Validation"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "unused-state-variables",
+      "name": "Unused State Variables",
+      "description": "Detects state variables that are declared but never used, wasting storage slots and deployment gas",
+      "severity": "low",
+      "categories": [
+        "BestPractices",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "upgradeable-proxy-issues",
+      "name": "Upgradeable Proxy Issues",
+      "description": "Detects vulnerabilities in upgradeable proxy patterns including storage collisions, initialization issues, and unsafe upgrades",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "validator-front-running",
+      "name": "Validator Front-Running",
+      "description": "Detects vulnerabilities where validators can front-run user transactions for profit or extract MEV",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "validator-griefing",
+      "name": "Validator Griefing Attack",
+      "description": "Detects vulnerabilities where validators can be griefed through malicious actions that harm validators without benefiting attackers",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "vault-donation-attack",
+      "name": "Vault Donation Attack",
+      "description": "Detects ERC4626 vaults vulnerable to price manipulation via direct token donations",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "vault-fee-manipulation",
+      "name": "Vault Fee Manipulation",
+      "description": "Detects ERC4626 vaults vulnerable to fee parameter front-running and manipulation attacks",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "MEV"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "vault-hook-reentrancy",
+      "name": "Vault Hook Reentrancy",
+      "description": "Detects ERC4626 vaults vulnerable to reentrancy attacks via ERC-777/ERC-1363 token callback hooks",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "vault-share-inflation",
+      "name": "Vault Share Inflation Attack",
+      "description": "Detects ERC4626 vault implementations vulnerable to share price manipulation by first depositor",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "vault-withdrawal-dos",
+      "name": "Vault Withdrawal DOS",
+      "description": "Detects ERC4626 vaults vulnerable to withdrawal denial-of-service attacks via queue manipulation or liquidity locks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "weak-commit-reveal",
+      "name": "Weak Commit-Reveal Scheme",
+      "description": "Detects commit-reveal schemes with insufficient delay or weak parameters, enabling MEV attacks",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "weak-signature-validation",
+      "name": "Weak Signature Validation",
+      "description": "Detects multi-signature validation without duplicate signer checks, enabling signature reuse",
+      "severity": "high",
+      "categories": [
+        "Auth",
+        "CrossChain"
+      ],
+      "cwe": [],
+      "swc": [
+        "SWC-122"
+      ]
+    },
+    {
+      "id": "withdrawal-delay",
+      "name": "Withdrawal Delay Vulnerability",
+      "description": "Detects vulnerabilities in stake withdrawal mechanisms that can lock funds indefinitely or enable unfair delays",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "AccessControl"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "yield-farming-manipulation",
+      "name": "Yield Farming Reward Manipulation",
+      "description": "Detects vulnerabilities in yield farming reward calculations that allow attackers to manipulate TVL or claim disproportionate rewards",
+      "severity": "medium",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "zk-circuit-under-constrained",
+      "name": "ZK Circuit Under-Constrained",
+      "description": "Detects under-constrained ZK circuits with missing constraints",
+      "severity": "critical",
+      "categories": [
+        "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "zk-proof-bypass",
+      "name": "ZK Proof Verification Bypass",
+      "description": "Detects missing or incomplete ZK proof verification in rollup contracts, including proof replay vulnerabilities, public input manipulation, and batch submission without proper verification",
+      "severity": "critical",
+      "categories": [
+        "L2",
+        "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "zk-proof-malleability",
+      "name": "ZK Proof Malleability",
+      "description": "Detects proof malleability attacks in ZK systems",
+      "severity": "critical",
+      "categories": [
+        "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "zk-recursive-proof-validation",
+      "name": "ZK Recursive Proof Validation",
+      "description": "Detects recursive proof validation issues",
+      "severity": "high",
+      "categories": [
+        "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "zk-trusted-setup-bypass",
+      "name": "ZK Trusted Setup Bypass",
+      "description": "Detects compromised trusted setup validation",
+      "severity": "high",
+      "categories": [
+        "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    }
+  ]
+}
