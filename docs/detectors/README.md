@@ -1,11 +1,39 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **209 security detectors** in SolidityDefend v1.3.7.
+Complete reference for all **215 security detectors** in SolidityDefend v1.4.1.
 
-**Last Updated:** 2025-11-19
-**Version:** v1.3.7
-**Total Detectors:** 209 (in tool)
-**Categories:** 17
+**Last Updated:** 2025-11-29
+**Version:** v1.4.1
+**Total Detectors:** 215 (in tool)
+**Categories:** 22
+
+---
+
+## Detector Metadata File
+
+For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector metadata is available in JSON format:
+
+**File:** [`all_detectors.json`](all_detectors.json)
+
+**Contents:**
+- 215 detector entries with structured metadata
+- Detector ID, name, description, severity
+- Category mappings (22 categories)
+- CWE IDs (10 detectors mapped)
+- SWC IDs (16 detectors mapped)
+
+**Example entry:**
+```json
+{
+  "id": "classic-reentrancy",
+  "name": "Classic Reentrancy",
+  "description": "State changes after external calls enable reentrancy attacks",
+  "severity": "high",
+  "categories": ["ReentrancyAttacks"],
+  "cwe": ["CWE-841"],
+  "swc": ["SWC-107"]
+}
+```
 
 ---
 
@@ -120,5 +148,6 @@ soliditydefend --list-detectors
 ---
 
 **Maintained by:** Advanced Blockchain Security
-**Generated:** 2025-11-16
-**Documentation Coverage:** 209 detectors (100% of tool) 🎉
+**Generated:** 2025-11-29
+**Documentation Coverage:** 215 detectors (100% of tool) 🎉
+**Metadata File:** [all_detectors.json](all_detectors.json) - Machine-readable detector catalog
