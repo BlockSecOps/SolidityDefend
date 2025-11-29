@@ -263,6 +263,8 @@ impl Detector for SocialRecoveryDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(287) // CWE-287: Improper Authentication
+                    .with_cwe(285) // CWE-285: Improper Authorization
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

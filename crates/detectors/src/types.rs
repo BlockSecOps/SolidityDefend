@@ -467,6 +467,8 @@ pub struct Finding {
     pub secondary_locations: Vec<SourceLocation>,
     /// Common Weakness Enumeration (CWE) identifiers
     pub cwe_ids: Vec<u32>,
+    /// Smart Contract Weakness Classification (SWC) identifiers
+    pub swc_ids: Vec<String>,
     /// Additional metadata specific to the detector
     pub metadata: HashMap<String, String>,
     /// Suggested fix or mitigation
@@ -489,6 +491,7 @@ impl Finding {
             primary_location,
             secondary_locations: Vec::new(),
             cwe_ids: Vec::new(),
+            swc_ids: Vec::new(),
             metadata: HashMap::new(),
             fix_suggestion: None,
         }
@@ -503,6 +506,12 @@ impl Finding {
     /// Add a CWE identifier to this finding
     pub fn with_cwe(mut self, cwe_id: u32) -> Self {
         self.cwe_ids.push(cwe_id);
+        self
+    }
+
+    /// Add a SWC identifier to this finding (e.g., "SWC-101")
+    pub fn with_swc(mut self, swc_id: &str) -> Self {
+        self.swc_ids.push(swc_id.to_string());
         self
     }
 

@@ -76,6 +76,7 @@ impl Detector for InsufficientRandomnessDetector {
                     )
                     .with_cwe(338) // CWE-338: Use of Cryptographically Weak Pseudo-Random Number Generator
                     .with_cwe(330) // CWE-330: Use of Insufficiently Random Values
+                    .with_swc("SWC-120") // SWC-120: Weak Sources of Randomness from Chain Attributes
                     .with_fix_suggestion(format!(
                         "Use secure randomness in '{}'. \
                     Implement: (1) Chainlink VRF for verifiable randomness, \

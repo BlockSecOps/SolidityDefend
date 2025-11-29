@@ -235,6 +235,9 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(613) // CWE-613: Insufficient Session Expiration
+                    .with_cwe(269) // CWE-269: Improper Privilege Management
+                    .with_cwe(284) // CWE-284: Improper Access Control
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

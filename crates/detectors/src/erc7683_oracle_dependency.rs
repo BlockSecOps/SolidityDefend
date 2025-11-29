@@ -132,6 +132,8 @@ impl Detector for OracleDependencyDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(829) // CWE-829: Inclusion of Functionality from Untrusted Control Sphere
+                    .with_cwe(20) // CWE-20: Improper Input Validation
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

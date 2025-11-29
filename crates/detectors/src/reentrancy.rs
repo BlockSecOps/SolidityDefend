@@ -398,6 +398,7 @@ impl Detector for ClassicReentrancyDetector {
                     function.name.name.len() as u32,
                 )
                 .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                .with_swc("SWC-107") // SWC-107: Reentrancy
                 .with_fix_suggestion(format!(
                     "Apply checks-effects-interactions pattern or use a reentrancy guard in function '{}'",
                     function.name.name

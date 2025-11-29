@@ -167,6 +167,8 @@ impl Detector for PaymasterAbuseDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
+                    .with_cwe(284) // CWE-284: Improper Access Control
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

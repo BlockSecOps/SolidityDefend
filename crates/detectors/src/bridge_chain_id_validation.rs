@@ -155,6 +155,8 @@ impl Detector for ChainIdValidationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(346) // CWE-346: Origin Validation Error
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

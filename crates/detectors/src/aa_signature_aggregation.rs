@@ -196,6 +196,8 @@ impl Detector for SignatureAggregationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(347) // CWE-347: Improper Verification of Cryptographic Signature
+                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

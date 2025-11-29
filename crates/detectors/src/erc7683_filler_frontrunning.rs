@@ -129,6 +129,8 @@ impl Detector for FillerFrontrunningDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(362) // CWE-362: Concurrent Execution (race condition)
+                    .with_cwe(20) // CWE-20: Improper Input Validation
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

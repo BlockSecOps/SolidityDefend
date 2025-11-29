@@ -49,7 +49,7 @@ Found 3 issues in 1 file:
 🔥 CRITICAL: External call before state change in withdraw() function
    ├─ Location: MyContract.sol:45:9
    ├─ Detector: classic-reentrancy
-   ├─ CWE: CWE-841
+   ├─ CWE: CWE-841 | SWC: SWC-107
    └─ Fix: Update balances before external call
 
 ⚠️  HIGH: Function 'mint' should have access control
@@ -128,7 +128,7 @@ The JSON format provides structured data for programmatic processing and integra
 ```json
 {
   "$schema": "https://schema.soliditydefend.com/output/v1.0.0.json",
-  "version": "1.3.6",
+  "version": "1.4.1",
   "timestamp": "2024-01-01T12:00:00Z",
   "summary": {
     "files_analyzed": 1,
@@ -151,6 +151,8 @@ The JSON format provides structured data for programmatic processing and integra
       "severity": "critical",
       "confidence": "high",
       "category": "reentrancy",
+      "cwe": "CWE-841",
+      "swc": "SWC-107",
       "file_path": "contracts/MyToken.sol",
       "start_line": 45,
       "end_line": 45,
@@ -183,7 +185,7 @@ The JSON format provides structured data for programmatic processing and integra
   ],
   "metadata": {
     "tool_name": "SolidityDefend",
-    "tool_version": "1.3.6",
+    "tool_version": "1.4.1",
     "scan_type": "static_analysis",
     "language": "solidity",
     "rules_version": "1.3.6",
@@ -224,6 +226,8 @@ The JSON format provides structured data for programmatic processing and integra
 - `severity`: Issue severity level
 - `confidence`: Detector confidence level
 - `category`: Issue category classification
+- `cwe`: CWE (Common Weakness Enumeration) ID when available
+- `swc`: SWC (Smart Contract Weakness Classification) ID when available
 - `file_path`: Path to the file containing the issue
 - `start_line`/`end_line`: Line number range
 - `start_column`/`end_column`: Column number range

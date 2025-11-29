@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.4.0-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.4.1-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
@@ -35,6 +35,7 @@ soliditydefend -s high contract.sol
 - **Context-Aware Analysis** - Intelligently recognizes DeFi patterns (ERC-4626 Vaults, ERC-3156 Flash Loans, ERC-4337 Paymasters, AMM/DEX Pools) to reduce false positives
 - **Lightning Fast Analysis** - Built with Rust for optimal performance
 - **Project Mode** 🆕 - Analyze entire Foundry and Hardhat projects with automatic directory detection (just pass a directory path!)
+- **SWC Classification** 🆕 - Smart Contract Weakness Classification (SWC) IDs in findings for industry-standard vulnerability tracking
 - **Multiple Output Formats** - Console with syntax highlighting, JSON, SARIF for CI/CD integration
 - **URL-Based Analysis** - Analyze contracts directly from Etherscan and other blockchain explorers
 - **CI/CD Ready** - Exit codes, severity filtering, and JSON output
@@ -138,21 +139,21 @@ Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/re
 
 **Linux (x86_64)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-linux-x86_64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.1/soliditydefend-linux-x86_64
 chmod +x soliditydefend-linux-x86_64
 sudo mv soliditydefend-linux-x86_64 /usr/local/bin/soliditydefend
 ```
 
 **Linux (ARM64)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-linux-arm64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.1/soliditydefend-linux-arm64
 chmod +x soliditydefend-linux-arm64
 sudo mv soliditydefend-linux-arm64 /usr/local/bin/soliditydefend
 ```
 
 **macOS (Apple Silicon)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.0/soliditydefend-darwin-arm64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.4.1/soliditydefend-darwin-arm64
 chmod +x soliditydefend-darwin-arm64
 sudo mv soliditydefend-darwin-arm64 /usr/local/bin/soliditydefend
 ```
@@ -301,7 +302,7 @@ Found 12 issues in 1 file:
 🔥 CRITICAL: Reentrancy vulnerability detected in withdraw()
    ├─ Location: contracts/Vault.sol:45:5
    ├─ Detector: classic-reentrancy
-   ├─ CWE: CWE-841
+   ├─ CWE: CWE-841 | SWC: SWC-107
    └─ Fix: Use ReentrancyGuard or checks-effects-interactions pattern
 
 ⚠️  HIGH: Missing access control on initialize()
@@ -419,7 +420,7 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
-- **Current Version**: v1.4.0 (Production Release)
+- **Current Version**: v1.4.1 (Production Release)
 - **Detectors**: 217 security detectors
 - **Status**: Production Ready
 

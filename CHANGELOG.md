@@ -9,6 +9,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.1] - 2025-11-29
+
+### SWC (Smart Contract Weakness Classification) Support
+
+This release adds **SWC ID mappings** to findings for better vulnerability classification and integration with industry-standard security tools.
+
+#### Added
+
+##### **SWC Classification in Findings**
+Findings now include SWC (Smart Contract Weakness Classification) IDs alongside CWE mappings:
+
+```json
+{
+  "detector_id": "classic-reentrancy",
+  "cwe": "CWE-841",
+  "swc": "SWC-107",
+  "message": "Function 'withdraw' may be vulnerable to reentrancy..."
+}
+```
+
+##### **Initial SWC Mappings**
+Key detectors now include SWC IDs:
+| Detector | SWC ID | Description |
+|----------|--------|-------------|
+| classic-reentrancy | SWC-107 | Reentrancy |
+| integer-overflow | SWC-101 | Integer Overflow and Underflow |
+| tx-origin-authentication | SWC-115 | Authorization through tx.origin |
+| insufficient-randomness | SWC-120 | Weak Sources of Randomness |
+| delegatecall-untrusted-library | SWC-112 | Delegatecall to Untrusted Callee |
+
+##### **CWE Mappings Completed**
+All 130 detector files now have CWE mappings for comprehensive vulnerability classification.
+
+#### Technical Details
+- New `swc_ids` field in Finding struct
+- New `with_swc()` builder method for detectors
+- JSON output includes `swc` field when available
+- Infrastructure ready for additional SWC mappings
+
+---
+
 ## [1.4.0] - 2025-11-27
 
 ### Project Mode - Foundry & Hardhat Framework Support

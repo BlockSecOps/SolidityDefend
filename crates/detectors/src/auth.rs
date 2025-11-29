@@ -137,6 +137,7 @@ impl Detector for TxOriginDetector {
                     )
                     .with_cwe(477) // CWE-477: Use of Obsolete Function
                     .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_swc("SWC-115") // SWC-115: Authorization through tx.origin
                     .with_fix_suggestion(format!(
                         "Replace 'tx.origin' with 'msg.sender' in function '{}'. \
                     If you need to track the original sender across multiple calls, \
