@@ -83,6 +83,7 @@ impl JsonFormatter {
                 length: finding.primary_location.length as usize,
             },
             cwe: finding.cwe_ids.first().map(|c| format!("CWE-{}", c)),
+            swc: finding.swc_ids.first().cloned(),
             fix_suggestion: finding
                 .fix_suggestion
                 .as_ref()
@@ -170,6 +171,8 @@ pub struct JsonFinding {
     pub location: JsonLocation,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwe: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub swc: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fix_suggestion: Option<JsonFixSuggestion>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -398,6 +401,7 @@ mod tests {
             primary_location: SourceLocation::new("test.sol".to_string(), 42, 10, 15),
             secondary_locations: Vec::new(),
             cwe_ids: vec![123],
+            swc_ids: vec!["SWC-107".to_string()],
             metadata: HashMap::new(),
             fix_suggestion: Some("Add access control".to_string()),
         }
@@ -440,6 +444,7 @@ mod tests {
                 primary_location: SourceLocation::new("test.sol".to_string(), 1, 1, 5),
                 secondary_locations: Vec::new(),
                 cwe_ids: Vec::new(),
+                swc_ids: Vec::new(),
                 metadata: HashMap::new(),
                 fix_suggestion: None,
             },

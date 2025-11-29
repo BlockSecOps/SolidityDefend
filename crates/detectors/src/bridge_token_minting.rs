@@ -174,6 +174,8 @@ impl Detector for TokenMintingDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_cwe(269) // CWE-269: Improper Privilege Management
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

@@ -114,6 +114,8 @@ impl Detector for ReplayAttackDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
+                    .with_cwe(346) // CWE-346: Origin Validation Error
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

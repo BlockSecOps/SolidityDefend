@@ -175,6 +175,8 @@ impl Detector for MessageVerificationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(347) // CWE-347: Improper Verification of Cryptographic Signature
+                    .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

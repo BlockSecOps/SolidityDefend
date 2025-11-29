@@ -158,6 +158,8 @@ impl Detector for SettlementValidationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(20) // CWE-20: Improper Input Validation
+                    .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

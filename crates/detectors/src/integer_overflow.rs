@@ -80,6 +80,7 @@ impl Detector for IntegerOverflowDetector {
                     )
                     .with_cwe(190) // CWE-190: Integer Overflow
                     .with_cwe(191) // CWE-191: Integer Underflow
+                    .with_swc("SWC-101") // SWC-101: Integer Overflow and Underflow
                     .with_fix_suggestion(format!(
                         "Use SafeMath library in '{}' for Solidity < 0.8.0. \
                         Example: `using SafeMath for uint256;` and use `.add()`, `.sub()`, `.mul()`, `.div()` methods. \
@@ -111,6 +112,7 @@ impl Detector for IntegerOverflowDetector {
                     )
                     .with_cwe(190)
                     .with_cwe(191)
+                    .with_swc("SWC-101") // SWC-101: Integer Overflow and Underflow
                     .with_fix_suggestion(format!(
                         "Carefully review unchecked block in '{}'. \
                     Only use unchecked for proven safe operations. \

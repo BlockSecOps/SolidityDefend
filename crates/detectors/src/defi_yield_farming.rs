@@ -329,6 +329,8 @@ impl Detector for YieldFarmingDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(191) // CWE-191: Integer Underflow
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

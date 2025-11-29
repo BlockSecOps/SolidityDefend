@@ -655,6 +655,7 @@ mod tests {
             primary_location: SourceLocation::new("test.sol".to_string(), 3, 5, 15),
             secondary_locations: Vec::new(),
             cwe_ids: vec![476],
+            swc_ids: Vec::new(),
             metadata: HashMap::new(),
             fix_suggestion: Some("Fix this issue".to_string()),
         }

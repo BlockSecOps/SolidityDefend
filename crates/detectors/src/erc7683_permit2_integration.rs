@@ -137,6 +137,8 @@ impl Detector for Permit2IntegrationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(863) // CWE-863: Incorrect Authorization
+                    .with_cwe(20) // CWE-20: Improper Input Validation
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
             }

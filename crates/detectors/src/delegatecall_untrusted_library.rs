@@ -355,7 +355,8 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
                         function.name.location.start().column() as u32,
                         function.name.name.len() as u32,
                     )
-                    .with_cwe(494);
+                    .with_cwe(494)
+                    .with_swc("SWC-112"); // SWC-112: Delegatecall to Untrusted Callee
 
                 findings.push(finding);
             }

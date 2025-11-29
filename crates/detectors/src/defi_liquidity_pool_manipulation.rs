@@ -255,6 +255,8 @@ impl Detector for LiquidityPoolManipulationDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(682) // CWE-682: Incorrect Calculation
+                    .with_cwe(20) // CWE-20: Improper Input Validation
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

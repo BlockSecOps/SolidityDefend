@@ -263,6 +263,8 @@ impl Detector for JitLiquidityDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(362) // CWE-362: Concurrent Execution (race condition)
+                    .with_cwe(840) // CWE-840: Business Logic Errors
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);

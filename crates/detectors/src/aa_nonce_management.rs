@@ -232,6 +232,8 @@ impl Detector for NonceManagementDetector {
                         20,
                         severity,
                     )
+                    .with_cwe(362) // CWE-362: Concurrent Execution using Shared Resource
+                    .with_cwe(294) // CWE-294: Authentication Bypass by Capture-replay
                     .with_fix_suggestion(remediation);
 
                 findings.push(finding);
