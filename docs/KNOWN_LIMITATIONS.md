@@ -359,11 +359,27 @@ Production → External audit + ongoing monitoring
 
 See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerability-gap-remediation-plan.md) for full implementation plan.
 
-### v1.4.0+ (Future)
+### v1.4.0 (Q4 2025) - Project Mode
+
+- ✅ Project Mode for Foundry/Hardhat analysis
+- ✅ Automatic directory detection
+- ✅ SWC classification support in findings
+
+### v1.5.0 (Q1 2026) - SWC Coverage Expansion
+
+**New SWC Detectors:**
+- ✅ SWC-105: Unprotected Ether Withdrawal (`swc105-unprotected-ether-withdrawal`)
+- ✅ SWC-106: Unprotected SELFDESTRUCT (`swc106-unprotected-selfdestruct`)
+- ✅ SWC-132: Unexpected Ether Balance (`swc132-unexpected-ether-balance`)
+- ✅ SWC-133: Hash Collision Variable Args (`swc133-hash-collision-varlen`)
+
+**Total:** 221 detectors (4 new)
+
+### v1.6.0+ (Future)
 
 - Front-running pattern detectors
 - Enhanced delegatecall detection
-- Historical vulnerability support
+- L2/Rollup security detectors
 - Reduced false positive rate on DeFi detectors
 
 ---

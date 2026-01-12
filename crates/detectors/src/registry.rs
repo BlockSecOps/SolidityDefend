@@ -1071,6 +1071,20 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::defi_advanced::AmmInvariantManipulationDetector::new(),
         ));
+
+        // Phase 40: SWC Coverage Expansion (v1.5.0 - 2026)
+        self.register(Arc::new(
+            crate::swc105_unprotected_ether_withdrawal::UnprotectedEtherWithdrawalDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::swc106_unprotected_selfdestruct::UnprotectedSelfdestructDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::swc132_unexpected_ether_balance::UnexpectedEtherBalanceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::swc133_hash_collision_varlen::HashCollisionVarlenDetector::new(),
+        ));
     }
 }
 

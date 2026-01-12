@@ -212,6 +212,12 @@ pub mod owasp2025;
 // Phase 30: Advanced DeFi Patterns (v1.0 Milestone - 2025)
 pub mod defi_advanced;
 
+// Phase 40: SWC Coverage Expansion (v1.5.0 - 2026)
+pub mod swc105_unprotected_ether_withdrawal;
+pub mod swc106_unprotected_selfdestruct;
+pub mod swc132_unexpected_ether_balance;
+pub mod swc133_hash_collision_varlen;
+
 // DeFi-specific detectors
 pub mod defi;
 

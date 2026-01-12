@@ -1,7 +1,8 @@
 # SolidityDefend Detector Cross-Reference Tables
 
-**Generated:** 2025-11-19
-**Version:** v1.3.7
+**Generated:** 2026-01-11
+**Version:** v1.5.0
+**Total Detectors:** 221
 
 ---
 
@@ -11,7 +12,8 @@
 2. [Detectors by Category](#detectors-by-category)
 3. [Detectors by EIP/ERC](#detectors-by-eiperc)
 4. [CWE Mappings](#cwe-mappings)
-5. [Modern Vulnerability Coverage](#modern-vulnerability-coverage)
+5. [SWC Mappings](#swc-mappings)
+6. [Modern Vulnerability Coverage](#modern-vulnerability-coverage)
 
 ---
 
@@ -361,7 +363,85 @@ All MEV and front-running detectors:
 
 ---
 
-## Modern Vulnerability Coverage (2024-2025)
+## SWC Mappings
+
+SolidityDefend maps detectors to SWC (Smart Contract Weakness Classification) IDs for industry-standard vulnerability tracking.
+
+### SWC-101: Integer Overflow and Underflow
+
+**Detectors:** 2
+- `integer-overflow`
+- `unchecked-arithmetic`
+
+### SWC-105: Unprotected Ether Withdrawal
+
+**Detectors:** 1 (v1.5.0)
+- `swc105-unprotected-ether-withdrawal` - Critical
+
+### SWC-106: Unprotected SELFDESTRUCT
+
+**Detectors:** 2
+- `swc106-unprotected-selfdestruct` - Critical (v1.5.0)
+- `selfdestruct-abuse`
+
+### SWC-107: Reentrancy
+
+**Detectors:** 9
+- `classic-reentrancy`
+- `read-only-reentrancy`
+- `transient-storage-reentrancy`
+- `flashloan-callback-reentrancy`
+- `erc777-reentrancy-hooks`
+- Plus 4 additional reentrancy pattern detectors
+
+### SWC-112: Delegatecall to Untrusted Callee
+
+**Detectors:** 6
+- `delegatecall-untrusted-library`
+- `delegatecall-user-controlled`
+- `dangerous-delegatecall`
+- Plus proxy-related detectors
+
+### SWC-115: Authorization through tx.origin
+
+**Detectors:** 2
+- `tx-origin-authentication`
+- `eip7702-txorigin-bypass`
+
+### SWC-120: Weak Sources of Randomness
+
+**Detectors:** 1
+- `insufficient-randomness`
+
+### SWC-132: Unexpected Ether Balance
+
+**Detectors:** 1 (v1.5.0)
+- `swc132-unexpected-ether-balance` - Medium
+
+### SWC-133: Hash Collision with Variable Length Arguments
+
+**Detectors:** 1 (v1.5.0)
+- `swc133-hash-collision-varlen` - High
+
+### Coverage Summary
+
+| SWC ID | Description | Detectors |
+|--------|-------------|-----------|
+| SWC-101 | Integer Overflow/Underflow | 2 |
+| SWC-105 | Unprotected Ether Withdrawal | 1 |
+| SWC-106 | Unprotected SELFDESTRUCT | 2 |
+| SWC-107 | Reentrancy | 9 |
+| SWC-112 | Delegatecall to Untrusted Callee | 6 |
+| SWC-115 | tx.origin Authorization | 2 |
+| SWC-120 | Weak Randomness | 1 |
+| SWC-132 | Unexpected Ether Balance | 1 |
+| SWC-133 | Hash Collision Variable Args | 1 |
+
+**Total SWC IDs Mapped:** 9 (covering 25+ detectors)
+
+---
+
+## Modern Vulnerability Coverage (2024-2026)
 
 ### 2024 Vulnerabilities ✅
 
@@ -383,6 +463,13 @@ All MEV and front-running detectors:
 - [x] **Modular Blockchain** (5 detectors)
 - [x] **AI Agent Security** (4 detectors)
 - [x] **Restaking/LRT** (5 detectors)
+
+### 2026 Vulnerabilities ✅ (v1.5.0)
+
+- [x] **SWC-105 Unprotected Ether Withdrawal** (`swc105-unprotected-ether-withdrawal`) - Critical
+- [x] **SWC-106 Unprotected SELFDESTRUCT** (`swc106-unprotected-selfdestruct`) - Critical
+- [x] **SWC-132 Unexpected Ether Balance** (`swc132-unexpected-ether-balance`) - Medium
+- [x] **SWC-133 Hash Collision** (`swc133-hash-collision-varlen`) - High
 
 ### Historical Coverage ✅
 
