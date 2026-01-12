@@ -1,5 +1,5 @@
 # Multi-stage build for SolidityDefend
-FROM rust:1.75-slim as builder
+FROM rust:1.85-slim AS builder
 
 WORKDIR /app
 
@@ -13,6 +13,7 @@ RUN apt-get update && apt-get install -y \
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
 COPY crates ./crates
+COPY tests ./tests
 
 # Build dependencies (this is the cached layer)
 RUN cargo build --release --bin soliditydefend

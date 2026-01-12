@@ -1,7 +1,7 @@
 {
-  "version": "1.4.1",
-  "generated": "2025-11-28",
-  "total_detectors": 215,
+  "version": "1.5.0",
+  "generated": "2026-01-11",
+  "total_detectors": 221,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -2067,6 +2067,53 @@
       ],
       "cwe": [],
       "swc": []
+    },
+    {
+      "id": "swc105-unprotected-ether-withdrawal",
+      "name": "Unprotected Ether Withdrawal (SWC-105)",
+      "description": "Detects functions that can withdraw Ether without proper access control, allowing unauthorized users to drain contract funds",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [284, 862],
+      "swc": ["SWC-105"]
+    },
+    {
+      "id": "swc106-unprotected-selfdestruct",
+      "name": "Unprotected SELFDESTRUCT (SWC-106)",
+      "description": "Detects selfdestruct operations without proper access control, allowing unauthorized contract destruction and fund theft",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": [284, 670],
+      "swc": ["SWC-106"]
+    },
+    {
+      "id": "swc132-unexpected-ether-balance",
+      "name": "Unexpected Ether Balance (SWC-132)",
+      "description": "Detects contracts that rely on exact ether balance assumptions which can be manipulated via force-sending ether",
+      "severity": "medium",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": [670],
+      "swc": ["SWC-132"]
+    },
+    {
+      "id": "swc133-hash-collision-varlen",
+      "name": "Hash Collision with Variable Length Args (SWC-133)",
+      "description": "Detects abi.encodePacked() with multiple variable-length arguments which can produce hash collisions",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "Validation"
+      ],
+      "cwe": [328, 697],
+      "swc": ["SWC-133"]
     },
     {
       "id": "test-governance",

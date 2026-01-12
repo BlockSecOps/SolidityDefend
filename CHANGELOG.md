@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-01-11
+
+### SWC Coverage Expansion - Phase 1
+
+This release expands SWC (Smart Contract Weakness Classification) coverage with **4 new critical detectors** addressing unprotected ether operations and hash collision vulnerabilities.
+
+#### Added
+
+##### **New SWC-Aligned Detectors**
+
+| Detector ID | SWC | Severity | Description |
+|-------------|-----|----------|-------------|
+| `swc105-unprotected-ether-withdrawal` | SWC-105 | Critical | Detects withdraw functions lacking access control |
+| `swc106-unprotected-selfdestruct` | SWC-106 | Critical | Detects unprotected selfdestruct operations |
+| `swc132-unexpected-ether-balance` | SWC-132 | Medium | Detects exact ether balance assumptions |
+| `swc133-hash-collision-varlen` | SWC-133 | High | Detects abi.encodePacked() with variable-length args |
+
+##### **Detection Capabilities**
+
+**SWC-105: Unprotected Ether Withdrawal**
+- Withdrawal functions without `onlyOwner` modifier
+- Missing `require(msg.sender == owner)` checks
+- Functions using `.transfer()`, `.send()`, `.call{value:}` without authorization
+- Distinguishes between Ether and token transfers
+
+**SWC-106: Unprotected SELFDESTRUCT**
+- Public/external selfdestruct without access control
+- User-controlled beneficiary addresses
+- Both `selfdestruct()` and legacy `suicide()` syntax
+
+**SWC-132: Unexpected Ether Balance**
+- `require(address(this).balance == X)` exact checks
+- Balance assumptions vulnerable to force-send via `selfdestruct`
+
+**SWC-133: Hash Collision with Variable Length Arguments**
+- `abi.encodePacked()` with multiple variable-length arguments (string, bytes)
+- Excludes fixed-size types (bytes1-bytes32) to reduce false positives
+
+#### Changed
+
+##### **Docker Updates**
+- Updated Rust from 1.75-slim to 1.85-slim (required for newer dependencies)
+- Fixed `as` → `AS` casing for Docker best practices
+
+#### Statistics
+
+- **Total Detectors:** 221 (up from 217)
+- **New SWC Mappings:** 4 (SWC-105, SWC-106, SWC-132, SWC-133)
+- **New CWE Mappings:** 6 (CWE-284, CWE-328, CWE-670, CWE-697, CWE-862)
+
+---
+
 ## [1.4.1] - 2025-11-29
 
 ### SWC (Smart Contract Weakness Classification) Support

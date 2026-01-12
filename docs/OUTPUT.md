@@ -128,7 +128,7 @@ The JSON format provides structured data for programmatic processing and integra
 ```json
 {
   "$schema": "https://schema.soliditydefend.com/output/v1.0.0.json",
-  "version": "1.4.1",
+  "version": "1.5.0",
   "timestamp": "2024-01-01T12:00:00Z",
   "summary": {
     "files_analyzed": 1,
@@ -185,7 +185,7 @@ The JSON format provides structured data for programmatic processing and integra
   ],
   "metadata": {
     "tool_name": "SolidityDefend",
-    "tool_version": "1.4.1",
+    "tool_version": "1.5.0",
     "scan_type": "static_analysis",
     "language": "solidity",
     "rules_version": "1.3.6",
