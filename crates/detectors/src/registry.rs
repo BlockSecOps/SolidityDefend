@@ -1199,6 +1199,44 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::eip1153_guard_bypass::Eip1153GuardBypassDetector::new(),
         ));
+
+        // Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
+        self.register(Arc::new(
+            crate::sandwich_conditional_swap::SandwichConditionalSwapDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::jit_liquidity_extraction::JitLiquidityExtractionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::backrunning_opportunity::BackrunningOpportunityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::bundle_inclusion_leak::BundleInclusionLeakDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::order_flow_auction_abuse::OrderFlowAuctionAbuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::encrypted_mempool_timing::EncryptedMempoolTimingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::cross_domain_mev::CrossDomainMevDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::liquidation_mev::LiquidationMevDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_update_mev::OracleUpdateMevDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::governance_proposal_mev::GovernanceProposalMevDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::token_launch_mev::TokenLaunchMevDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::nft_mint_mev::NftMintMevDetector::new(),
+        ));
     }
 }
 

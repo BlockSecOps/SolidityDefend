@@ -1,6 +1,168 @@
 # MEV Protection Detectors
 
-**Total:** 16 detectors
+**Total:** 28 detectors (16 base + 12 Phase 44 Advanced MEV)
+
+---
+
+## Phase 44: Advanced MEV & Front-Running (v1.8.1)
+
+### Sandwich Conditional Swap
+
+**ID:** `sandwich-conditional-swap`
+**Severity:** Critical
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects conditional swap patterns vulnerable to sophisticated sandwich attacks with conditional execution. Covers weak slippage, conditional swaps, public swaps, and meaningless deadlines.
+
+**Source:** `src/sandwich_conditional_swap.rs`
+
+---
+
+### JIT Liquidity Extraction
+
+**ID:** `jit-liquidity-extraction`
+**Severity:** Critical
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects just-in-time liquidity patterns where MEV searchers can extract value through liquidity manipulation including instant add/remove, concentrated liquidity, and same-block operations.
+
+**Source:** `src/jit_liquidity_extraction.rs`
+
+---
+
+### Backrunning Opportunity
+
+**ID:** `backrunning-opportunity`
+**Severity:** High
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects state changes that can be profitably backrun by MEV searchers including price updates, liquidation triggers, reward distributions, and rebalance opportunities.
+
+**Source:** `src/backrunning_opportunity.rs`
+
+---
+
+### Bundle Inclusion Leak
+
+**ID:** `bundle-inclusion-leak`
+**Severity:** High
+**Categories:** MEV, Logic
+**CWE:** CWE-200
+
+Detects information leakage patterns that could reveal bundle contents to attackers through predictable nonces, intent leakage, leaky events, and timing leaks.
+
+**Source:** `src/bundle_inclusion_leak.rs`
+
+---
+
+### Order Flow Auction Abuse
+
+**ID:** `order-flow-auction-abuse`
+**Severity:** High
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects order flow auction patterns vulnerable to manipulation where searchers can game the auction mechanism including unprotected bids, unfair settlement, and first-price auctions.
+
+**Source:** `src/order_flow_auction_abuse.rs`
+
+---
+
+### Encrypted Mempool Timing Attack
+
+**ID:** `encrypted-mempool-timing`
+**Severity:** Medium
+**Categories:** MEV, Logic
+**CWE:** CWE-208
+
+Detects timing vulnerabilities in encrypted mempool or commit-reveal implementations where transaction timing can leak information including gas timing leaks and deadline timing attacks.
+
+**Source:** `src/encrypted_mempool_timing.rs`
+
+---
+
+### Cross-Domain MEV
+
+**ID:** `cross-domain-mev`
+**Severity:** High
+**Categories:** MEV, L2
+**CWE:** CWE-362
+
+Detects MEV extraction opportunities across L1/L2 boundaries or between different rollups where timing differences enable arbitrage including sequencer MEV and cross-rollup arbitrage.
+
+**Source:** `src/cross_domain_mev.rs`
+
+---
+
+### Liquidation MEV
+
+**ID:** `liquidation-mev`
+**Severity:** Critical
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects liquidation patterns vulnerable to MEV extraction where searchers can front-run liquidations or manipulate prices to trigger profitable liquidations including flash loan liquidations.
+
+**Source:** `src/liquidation_mev.rs`
+
+---
+
+### Oracle Update MEV
+
+**ID:** `oracle-update-mev`
+**Severity:** High
+**Categories:** MEV, Oracle
+**CWE:** CWE-362
+
+Detects oracle update patterns vulnerable to front-running where searchers can profit by trading before price updates including instant price usage and push oracle patterns.
+
+**Source:** `src/oracle_update_mev.rs`
+
+---
+
+### Governance Proposal MEV
+
+**ID:** `governance-proposal-mev`
+**Severity:** High
+**Categories:** MEV, AccessControl
+**CWE:** CWE-362
+
+Detects governance proposal patterns vulnerable to front-running where attackers can submit counter-proposals or acquire voting power before proposal execution including flash loan governance.
+
+**Source:** `src/governance_proposal_mev.rs`
+
+---
+
+### Token Launch MEV
+
+**ID:** `token-launch-mev`
+**Severity:** Critical
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects token launch patterns vulnerable to sniping where MEV bots can front-run initial liquidity to buy tokens at launch price including presale transitions and fair launch issues.
+
+**Source:** `src/token_launch_mev.rs`
+
+---
+
+### NFT Mint MEV
+
+**ID:** `nft-mint-mev`
+**Severity:** High
+**Categories:** MEV, DeFi
+**CWE:** CWE-362
+
+Detects NFT mint patterns vulnerable to front-running where MEV bots can snipe rare tokens or front-run popular mints including predictable token IDs, reveal vulnerabilities, and batch mint issues.
+
+**Source:** `src/nft_mint_mev.rs`
+
+---
+
+## Base MEV Detectors
 
 ---
 

@@ -1,6 +1,6 @@
 # Known Limitations
 
-**Version:** v1.8.0
+**Version:** v1.8.1
 **Last Updated:** 2026-01-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
@@ -9,7 +9,23 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.8.0 has **257 security detectors** including **45 proxy/upgradeable contract detectors** and **10 EIP-7702/EIP-1153 detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.8.1 has **269 security detectors** including **45 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, and **12 advanced MEV detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+
+**v1.8.1 Improvements:** Added 12 new Advanced MEV & Front-Running detectors:
+- Sandwich attacks: conditional swap, slippage, deadlines
+- JIT liquidity extraction
+- Backrunning opportunities
+- Bundle inclusion leaks
+- Order flow auction abuse
+- Encrypted mempool timing attacks
+- Cross-domain MEV (L1/L2)
+- Liquidation MEV front-running
+- Oracle update MEV
+- Governance proposal MEV
+- Token launch sniping
+- NFT mint front-running
+- MEV Detection: 45% → ~65% (+20%)
+- Total detectors: 257 → 269 (+12)
 
 **v1.8.0 Improvements:** Added 10 new detectors for emerging Ethereum standards:
 - EIP-7702 Account Delegation: 5 detectors (phishing, storage corruption, sweeper attack, auth bypass, replay)
