@@ -1,0 +1,222 @@
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Found 15 issues in 1 file:
+⚠️  HIGH: Function 'withdraw' may be vulnerable to reentrancy attacks due to state changes after external calls
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: classic-reentrancy
+   ├─ CWE: CWE-841
+   └─ Fix: Apply checks-effects-interactions pattern or use a reentrancy guard in function 'withdraw'
+
+⚠️  HIGH: Function 'withdraw' may be vulnerable to withdrawal DOS attack. Withdrawal requires successful external call. Failing calls can permanently block withdrawals. Consider using pull-over-push pattern Attacker can block withdrawals, causing funds to be locked indefinitely.
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: vault-withdrawal-dos
+   ├─ CWE: CWE-400
+   └─ Fix: Protect 'withdraw' from withdrawal DOS. Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), (4) Implement partial withdrawal support for queue processing, (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, (7) Add emergency pause mechanism for DOS situations, (8) Implement timelock for critical parameter changes.
+
+⚠️  HIGH: Function 'withdraw' has circular dependency vulnerability. External contract calls without depth limit, circular calls can cause stack overflow Circular dependencies can cause stack overflow, DOS attacks, or make contracts unupgradeable.
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: circular-dependency
+   ├─ CWE: CWE-674
+   └─ Fix: Break circular dependency in 'withdraw'. Use events instead of callbacks, implement depth limits for recursive calls, add reentrancy guards, use pull pattern instead of push, implement circuit breakers, and add visited tracking for graph traversal.
+
+📝 LOW: Function 'withdraw' contains excessive gas usage pattern. Multiple storage reads detected (4). Cache in memory variable to save gas Excessive gas usage increases transaction costs and may cause out-of-gas errors.
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: excessive-gas-usage
+   ├─ CWE: CWE-400
+   └─ Fix: Optimize gas usage in 'withdraw'. Consider: (1) Move storage operations outside loops, (2) Cache storage reads in memory, (3) Use events instead of storage for historical data, (4) Pack struct variables efficiently, (5) Use memory arrays for temporary data.
+
+⚠️  HIGH: Contract has centralization risk. Critical operations (withdraw/pause/upgrade) lack timelock delays. Malicious owner can drain funds or brick contract instantly Single point of failure can lead to fund loss, governance attacks, or complete system compromise.
+   ├─ Location: /tmp/test_reentrancy.sol:1:0
+   ├─ Detector: centralization-risk
+   ├─ CWE: CWE-269
+   └─ Fix: Implement decentralized governance. Use: (1) Multi-signature wallet (Gnosis Safe), (2) Timelock delays for critical operations, (3) DAO governance with voting mechanisms, (4) Role-based access control (OpenZeppelin AccessControl), (5) Emergency pause with multiple approvers.
+
+⚡ MEDIUM: Function 'withdraw' contains variable shadowing. Local variable 'amount' shadows state variable Shadowing can cause confusion and lead to bugs where the wrong variable is accessed.
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: shadowing-variables
+   ├─ CWE: CWE-710
+   └─ Fix: Rename shadowing variables in 'withdraw'. Use different names for local variables to avoid shadowing state variables. Consider prefixes like '_' for function parameters or descriptive names.
+
+⚡ MEDIUM: Function 'withdraw' is missing transaction deadline. Missing transaction deadline. Withdrawal operation 'withdraw' has no deadline parameter or expiration validation. Transaction can be executed at any time, potentially at unfavorable conditions This allows MEV bots to delay execution for profit, transactions to execute at stale prices, and users to lose funds due to unfavorable timing. Transactions sitting in mempool can be executed when conditions have significantly changed
+   ├─ Location: /tmp/test_reentrancy.sol:11:14
+   ├─ Detector: missing-transaction-deadline
+   ├─ CWE: CWE-682
+   └─ Fix: Add deadline to 'withdraw'. Implement: (1) Add 'deadline' parameter: function withdraw(... uint256 deadline); (2) Validate deadline: require(block.timestamp <= deadline, 'Transaction expired'); (3) For orders: Store expiration and check on execution; (4) Use reasonable deadline in frontend: block.timestamp + 15 minutes; (5) For batch operations: Apply deadline to entire batch; (6) Document deadline behavior for users
+
+📝 LOW: Floating pragma detected: pragma solidity ^0.8.0;. Using '^' allows compilation with multiple compiler versions, which may introduce unexpected behavior or security vulnerabilities. Different compiler versions may have different bugs, optimizations, or security fixes.
+   ├─ Location: /tmp/test_reentrancy.sol:2:0
+   ├─ Detector: floating-pragma
+   ├─ CWE: CWE-710
+   └─ Fix: Lock pragma to specific version: 'pragma solidity 0.8.0;'. This ensures consistent compilation across environments and prevents unexpected behavior from compiler version differences.
+
+🔥 CRITICAL: Vulnerable to transient storage reentrancy in 'withdraw' - transfer()/send() no longer safe with EIP-1153
+   ├─ Location: /tmp/test_reentrancy.sol:11:0
+   ├─ Detector: transient-storage-reentrancy
+   └─ Fix: EIP-1153 breaks transfer()/send() safety assumption:
+
+CRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within
+the 2300 gas stipend of transfer() and send().
+
+Fix 1: Use checks-effects-interactions pattern
+function withdraw() public {
+uint256 amount = balances[msg.sender];
+require(amount > 0);
+
+// ✅ Update state BEFORE external call
+balances[msg.sender] = 0;
+
+payable(msg.sender).transfer(amount);
+}
+
+Fix 2: Use ReentrancyGuard
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+
+function withdraw() public nonReentrant {
+uint256 amount = balances[msg.sender];
+require(amount > 0);
+
+balances[msg.sender] = 0;
+payable(msg.sender).transfer(amount);
+}
+
+Reference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)
+
+⚡ MEDIUM: Array access without length validation - can cause out-of-bounds access
+   ├─ Location: /tmp/test_reentrancy.sol:1:0
+   ├─ Detector: enhanced-input-validation
+   └─ Fix: ❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):
+function process(uint256[] calldata ids) external {
+for (uint256 i = 0; i < ids.length; i++) {
+// What if ids is empty? Or too large?
+}
+}
+
+✅ VALIDATE ARRAY LENGTH:
+function process(uint256[] calldata ids) external {
+// Check minimum length
+require(ids.length > 0, "Empty array");
+
+// Check maximum length (prevent DoS)
+require(ids.length <= MAX_BATCH_SIZE, "Batch too large");
+
+for (uint256 i = 0; i < ids.length; i++) {
+// Safe to access ids[i]
+}
+}
+
+✅ VALIDATE ARRAY MATCHING:
+function batchTransfer(
+address[] calldata recipients,
+uint256[] calldata amounts
+) external {
+// Arrays must match in length
+require(
+recipients.length == amounts.length,
+"Length mismatch"
+);
+require(recipients.length > 0, "Empty arrays");
+require(recipients.length <= MAX_BATCH, "Too many");
+
+for (uint256 i = 0; i < recipients.length; i++) {
+// Safe parallel access
+}
+}
+
+⚡ MEDIUM: Transfer function without zero-value check - validate non-zero amounts
+   ├─ Location: /tmp/test_reentrancy.sol:1:0
+   ├─ Detector: enhanced-input-validation
+   └─ Fix: ❌ MISSING ZERO-VALUE CHECK:
+function transfer(address to, uint256 amount) external {
+_transfer(msg.sender, to, amount);
+// What if amount is 0? Wastes gas, may break accounting
+}
+
+✅ VALIDATE NON-ZERO:
+function transfer(address to, uint256 amount) external {
+require(amount > 0, "Zero amount");
+require(to != address(0), "Zero address");
+_transfer(msg.sender, to, amount);
+}
+
+✅ COMPLETE VALIDATION:
+function deposit(uint256 amount) external payable {
+// For ERC20 deposits
+require(amount > 0, "Zero amount");
+require(amount <= MAX_DEPOSIT, "Exceeds maximum");
+
+// For native ETH deposits
+if (msg.value > 0) {
+require(msg.value == amount, "Value mismatch");
+}
+
+// Proceed with deposit
+}
+
+⚡ MEDIUM: Address parameter without zero-address validation
+   ├─ Location: /tmp/test_reentrancy.sol:1:0
+   ├─ Detector: enhanced-input-validation
+   └─ Fix: ❌ MISSING ADDRESS VALIDATION:
+function setOwner(address newOwner) external {
+owner = newOwner;  // What if newOwner is address(0)?
+}
+
+✅ VALIDATE ADDRESS:
+function setOwner(address newOwner) external onlyOwner {
+require(newOwner != address(0), "Zero address");
+require(newOwner != owner, "Same address");
+owner = newOwner;
+}
+
+✅ VALIDATE MULTIPLE ADDRESSES:
+function initialize(
+address _token,
+address _oracle,
+address _treasury
+) external {
+require(_token != address(0), "Zero token");
+require(_oracle != address(0), "Zero oracle");
+require(_treasury != address(0), "Zero treasury");
+
+// Check for duplicates if needed
+require(_token != _oracle, "Token == oracle");
+require(_token != _treasury, "Token == treasury");
+
+token = _token;
+oracle = _oracle;
+treasury = _treasury;
+}
+
+⚠️  HIGH: Liquidity removal without time-lock protection - vulnerable to JIT attacks
+   ├─ Location: /tmp/test_reentrancy.sol:1:1
+   ├─ Detector: jit-liquidity-sandwich
+   └─ Fix: Add a minimum lock time for liquidity positions (e.g., 1 block or epoch-based system) to prevent JIT liquidity attacks
+
+⚠️  HIGH: Liquidity becomes active immediately - may enable JIT sandwich attacks
+   ├─ Location: /tmp/test_reentrancy.sol:1:1
+   ├─ Detector: jit-liquidity-sandwich
+   └─ Fix: Consider delaying liquidity activation to the next epoch or block to mitigate JIT attacks
+
+⚠️  HIGH: No minimum deposit requirement - small deposits may round down to zero shares
+   ├─ Location: /tmp/test_reentrancy.sol:1:1
+   ├─ Detector: pool-donation-enhanced
+   └─ Fix: Enforce minimum deposit amount or minimum shares minted to prevent rounding attacks
+
+
+📊 Analysis Summary
+┌─────────────────┬───────┐
+│ Severity        │ Count │
+├─────────────────┼───────┤
+│ 🔥 Critical     │     1 │
+│ ⚠️  High        │     7 │
+│ ⚡ Medium       │     5 │
+│ 📝 Low          │     2 │
+│ ℹ️  Info        │     0 │
+├─────────────────┼───────┤
+│ Total Issues    │    15 │
+└─────────────────┴───────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

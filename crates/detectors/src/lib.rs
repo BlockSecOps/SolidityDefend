@@ -260,6 +260,20 @@ pub mod eip1153_callback_manipulation;
 pub mod eip1153_composability_risk;
 pub mod eip1153_guard_bypass;
 
+// Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
+pub mod sandwich_conditional_swap;
+pub mod jit_liquidity_extraction;
+pub mod backrunning_opportunity;
+pub mod bundle_inclusion_leak;
+pub mod order_flow_auction_abuse;
+pub mod encrypted_mempool_timing;
+pub mod cross_domain_mev;
+pub mod liquidation_mev;
+pub mod oracle_update_mev;
+pub mod governance_proposal_mev;
+pub mod token_launch_mev;
+pub mod nft_mint_mev;
+
 // DeFi-specific detectors
 pub mod defi;
 

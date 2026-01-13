@@ -1,7 +1,7 @@
 {
-  "version": "1.8.0",
+  "version": "1.8.1",
   "generated": "2026-01-13",
-  "total_detectors": 257,
+  "total_detectors": 269,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -2664,6 +2664,150 @@
         "Reentrancy"
       ],
       "cwe": ["CWE-667"],
+      "swc": []
+    },
+    {
+      "id": "sandwich-conditional-swap",
+      "name": "Sandwich Conditional Swap",
+      "description": "Detects conditional swap patterns vulnerable to sophisticated sandwich attacks with conditional execution",
+      "severity": "critical",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "jit-liquidity-extraction",
+      "name": "JIT Liquidity Extraction",
+      "description": "Detects just-in-time liquidity patterns where MEV searchers can extract value through liquidity manipulation",
+      "severity": "critical",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "backrunning-opportunity",
+      "name": "Backrunning Opportunity",
+      "description": "Detects state changes that can be profitably backrun by MEV searchers",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "bundle-inclusion-leak",
+      "name": "Bundle Inclusion Leak",
+      "description": "Detects information leakage patterns that could reveal bundle contents to attackers",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": ["CWE-200"],
+      "swc": []
+    },
+    {
+      "id": "order-flow-auction-abuse",
+      "name": "Order Flow Auction Abuse",
+      "description": "Detects order flow auction patterns vulnerable to manipulation where searchers can game the auction mechanism",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "encrypted-mempool-timing",
+      "name": "Encrypted Mempool Timing Attack",
+      "description": "Detects timing vulnerabilities in encrypted mempool or commit-reveal implementations where transaction timing can leak information",
+      "severity": "medium",
+      "categories": [
+        "MEV",
+        "Logic"
+      ],
+      "cwe": ["CWE-208"],
+      "swc": []
+    },
+    {
+      "id": "cross-domain-mev",
+      "name": "Cross-Domain MEV",
+      "description": "Detects MEV extraction opportunities across L1/L2 boundaries or between different rollups where timing differences enable arbitrage",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "L2"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "liquidation-mev",
+      "name": "Liquidation MEV",
+      "description": "Detects liquidation patterns vulnerable to MEV extraction where searchers can front-run liquidations or manipulate prices to trigger profitable liquidations",
+      "severity": "critical",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "oracle-update-mev",
+      "name": "Oracle Update MEV",
+      "description": "Detects oracle update patterns vulnerable to front-running where searchers can profit by trading before price updates",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "Oracle"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "governance-proposal-mev",
+      "name": "Governance Proposal MEV",
+      "description": "Detects governance proposal patterns vulnerable to front-running where attackers can submit counter-proposals or acquire voting power before proposal execution",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "AccessControl"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "token-launch-mev",
+      "name": "Token Launch MEV",
+      "description": "Detects token launch patterns vulnerable to sniping where MEV bots can front-run initial liquidity to buy tokens at launch price",
+      "severity": "critical",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "nft-mint-mev",
+      "name": "NFT Mint MEV",
+      "description": "Detects NFT mint patterns vulnerable to front-running where MEV bots can snipe rare tokens or front-run popular mints",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
       "swc": []
     }
   ]
