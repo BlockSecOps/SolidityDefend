@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.3.6
-**Last Updated:** 2025-11-16
+**Version:** v1.8.0
+**Last Updated:** 2026-01-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 
@@ -9,9 +9,20 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.3.0 achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts. This represents an **+8.7 percentage point improvement** from v1.2.0 (34.8%).
+SolidityDefend v1.8.0 has **257 security detectors** including **45 proxy/upgradeable contract detectors** and **10 EIP-7702/EIP-1153 detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
 
-**v1.3.0 Improvements:** Added 7 new/enhanced detectors addressing critical vulnerability gaps, resulting in 30 additional vulnerability detections across tx.origin authentication, weak randomness, DoS patterns, batch transfer overflow, short address attacks, and array length validation.
+**v1.8.0 Improvements:** Added 10 new detectors for emerging Ethereum standards:
+- EIP-7702 Account Delegation: 5 detectors (phishing, storage corruption, sweeper attack, auth bypass, replay)
+- EIP-1153 Transient Storage: 5 detectors (reentrancy, cross-tx assumptions, callback manipulation, composability, guard bypass)
+- Total detectors: 247 → 257 (+10)
+
+**v1.7.0 Improvements:** Added 14 new detectors targeting advanced proxy patterns and vulnerability gaps:
+- Delegatecall Issues: 38% → ~60% (+22%)
+- Front-Running: 29% → ~45% (+16%)
+- Unchecked Returns: 33% → ~50% (+17%)
+- Proxy/Upgradeable: 31 → 45 detectors (+14)
+
+**v1.6.0 Improvements:** Added 12 proxy/upgradeable detectors targeting Wormhole ($320M), Audius ($6M), and Parity ($150M) exploit patterns.
 
 ---
 

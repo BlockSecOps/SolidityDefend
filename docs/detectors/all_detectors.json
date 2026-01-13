@@ -1,7 +1,7 @@
 {
-  "version": "1.5.0",
-  "generated": "2026-01-11",
-  "total_detectors": 221,
+  "version": "1.8.0",
+  "generated": "2026-01-13",
+  "total_detectors": 257,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -2548,6 +2548,122 @@
         "ZKRollup"
       ],
       "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "eip7702-delegation-phishing",
+      "name": "EIP-7702 Delegation Phishing",
+      "description": "Detects SET_CODE authorization patterns that could lead to phishing attacks where users delegate code execution to malicious contracts",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-284"],
+      "swc": []
+    },
+    {
+      "id": "eip7702-storage-corruption",
+      "name": "EIP-7702 Storage Corruption",
+      "description": "Detects potential storage corruption when contract code is delegated to an EOA via EIP-7702. Storage slot collisions between delegated code and EOA state can corrupt critical data",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "Upgradeable"
+      ],
+      "cwe": ["CWE-119"],
+      "swc": []
+    },
+    {
+      "id": "eip7702-sweeper-attack",
+      "name": "EIP-7702 Sweeper Attack",
+      "description": "Detects sweeper contract patterns that can drain all assets from delegated EOA accounts",
+      "severity": "critical",
+      "categories": [
+        "DeFi",
+        "AccessControl"
+      ],
+      "cwe": ["CWE-306"],
+      "swc": []
+    },
+    {
+      "id": "eip7702-authorization-bypass",
+      "name": "EIP-7702 Authorization Bypass",
+      "description": "Detects missing or insufficient authorization checks in EIP-7702 delegation target contracts",
+      "severity": "high",
+      "categories": [
+        "AccessControl"
+      ],
+      "cwe": ["CWE-862"],
+      "swc": []
+    },
+    {
+      "id": "eip7702-replay-vulnerability",
+      "name": "EIP-7702 Replay Vulnerability",
+      "description": "Detects delegation signatures that can be replayed across chains or contexts due to missing chain ID, nonce, or domain separator validation",
+      "severity": "high",
+      "categories": [
+        "CrossChain",
+        "Logic"
+      ],
+      "cwe": ["CWE-294"],
+      "swc": []
+    },
+    {
+      "id": "eip1153-transient-reentrancy",
+      "name": "EIP-1153 Transient Storage Reentrancy",
+      "description": "Detects reentrancy vulnerabilities involving EIP-1153 transient storage. Transient storage (TSTORE/TLOAD) clears after each transaction",
+      "severity": "critical",
+      "categories": [
+        "Reentrancy",
+        "Logic"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "eip1153-cross-tx-assumption",
+      "name": "EIP-1153 Cross-Transaction Assumption",
+      "description": "Detects incorrect assumptions about transient storage persisting across transactions",
+      "severity": "high",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "eip1153-callback-manipulation",
+      "name": "EIP-1153 Callback Manipulation",
+      "description": "Detects transient storage state that can be manipulated during external callbacks",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "Logic"
+      ],
+      "cwe": ["CWE-367"],
+      "swc": []
+    },
+    {
+      "id": "eip1153-composability-risk",
+      "name": "EIP-1153 Composability Risk",
+      "description": "Detects transient storage slot collisions when multiple contracts use transient storage without proper namespacing",
+      "severity": "medium",
+      "categories": [
+        "Logic"
+      ],
+      "cwe": ["CWE-664"],
+      "swc": []
+    },
+    {
+      "id": "eip1153-guard-bypass",
+      "name": "EIP-1153 Guard Bypass",
+      "description": "Detects flawed implementations of reentrancy guards using transient storage that can be bypassed",
+      "severity": "high",
+      "categories": [
+        "Reentrancy"
+      ],
+      "cwe": ["CWE-667"],
       "swc": []
     }
   ]

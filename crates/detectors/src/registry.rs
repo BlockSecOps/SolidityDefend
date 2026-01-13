@@ -1123,6 +1123,82 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::eip1967_slot_compliance::Eip1967SlotComplianceDetector::new(),
         ));
+
+        // Phase 42: Advanced Proxy Security & Vulnerability Patterns (v1.7.0 - 2026)
+        self.register(Arc::new(
+            crate::reinitializer_vulnerability::ReinitializerVulnerabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::storage_layout_inheritance_shift::StorageLayoutInheritanceShiftDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::beacon_single_point_of_failure::BeaconSinglePointOfFailureDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::clones_immutable_args_bypass::ClonesImmutableArgsBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::upgrade_abi_incompatibility::UpgradeAbiIncompatibilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::diamond_facet_code_existence::DiamondFacetCodeExistenceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::proxy_context_visibility_mismatch::ProxyContextVisibilityMismatchDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::upgrade_event_missing::UpgradeEventMissingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_in_loop::DelegatecallInLoopDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::fallback_delegatecall_pattern::FallbackDelegatecallPatternDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::unchecked_send_return::UncheckedSendReturnDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transaction_ordering_dependence::TransactionOrderingDependenceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_sequencer_dependency::L2SequencerDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::cross_chain_replay_protection::CrossChainReplayProtectionDetector::new(),
+        ));
+
+        // Phase 43: EIP-7702 & EIP-1153 New Standards (v1.8.0 - 2026)
+        self.register(Arc::new(
+            crate::eip7702_delegation_phishing::Eip7702DelegationPhishingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702_storage_corruption::Eip7702StorageCorruptionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702_sweeper_attack::Eip7702SweeperAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702_authorization_bypass::Eip7702AuthorizationBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip7702_replay_vulnerability::Eip7702ReplayVulnerabilityDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1153_transient_reentrancy::Eip1153TransientReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1153_cross_tx_assumption::Eip1153CrossTxAssumptionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1153_callback_manipulation::Eip1153CallbackManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1153_composability_risk::Eip1153ComposabilityRiskDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1153_guard_bypass::Eip1153GuardBypassDetector::new(),
+        ));
     }
 }
 

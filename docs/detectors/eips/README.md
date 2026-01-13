@@ -1,6 +1,96 @@
 # EIP-Specific Detectors
 
-**Total:** 16 detectors
+**Total:** 26 detectors (EIP-7702: 11, ERC-7683: 6, ERC-7821: 5, EIP-1153: 5)
+
+**Last Updated:** 2026-01-13
+**Version:** v1.8.0
+
+---
+
+## EIP-7702 Account Delegation Security
+
+### EIP-7702 Delegation Phishing (v1.8.0)
+
+**ID:** `eip7702-delegation-phishing`
+**Severity:** Critical
+**Categories:** AccessControl, Logic
+**CWE:** CWE-284
+
+#### Description
+
+Detects SET_CODE authorization patterns that could lead to phishing attacks where users are tricked into delegating code execution to malicious contracts.
+
+#### Source
+
+`eip7702_delegation_phishing.rs`
+
+---
+
+### EIP-7702 Storage Corruption (v1.8.0)
+
+**ID:** `eip7702-storage-corruption`
+**Severity:** Critical
+**Categories:** Logic, Upgradeable
+**CWE:** CWE-119
+
+#### Description
+
+Detects potential storage corruption when contract code is delegated to an EOA via EIP-7702. Storage slot collisions between delegated code and EOA state can corrupt critical data.
+
+#### Source
+
+`eip7702_storage_corruption.rs`
+
+---
+
+### EIP-7702 Sweeper Attack (v1.8.0)
+
+**ID:** `eip7702-sweeper-attack`
+**Severity:** Critical
+**Categories:** DeFi, AccessControl
+**CWE:** CWE-306
+
+#### Description
+
+Detects sweeper contract patterns that can drain all assets from delegated EOA accounts. Responsible for 97% of malicious EIP-7702 delegations.
+
+#### Source
+
+`eip7702_sweeper_attack.rs`
+
+---
+
+### EIP-7702 Authorization Bypass (v1.8.0)
+
+**ID:** `eip7702-authorization-bypass`
+**Severity:** High
+**Categories:** AccessControl
+**CWE:** CWE-862
+
+#### Description
+
+Detects missing or insufficient authorization checks in EIP-7702 delegation target contracts that could allow unauthorized access to delegated accounts.
+
+#### Source
+
+`eip7702_authorization_bypass.rs`
+
+---
+
+### EIP-7702 Replay Vulnerability (v1.8.0)
+
+**ID:** `eip7702-replay-vulnerability`
+**Severity:** High
+**Categories:** CrossChain, Logic
+**CWE:** CWE-294
+
+#### Description
+
+Detects delegation signatures that can be replayed across chains or contexts due to missing chain ID, nonce, or domain separator validation.
+
+#### Source
+
+`eip7702_replay_vulnerability.rs`
 
 ---
 
@@ -330,6 +420,93 @@ Detects unsafe token approval patterns in batch executors, recommends Permit2
 ### Source
 
 `erc7821/token_approval.rs`
+
+---
+
+## EIP-1153 Transient Storage Security (v1.8.0)
+
+### EIP-1153 Transient Storage Reentrancy
+
+**ID:** `eip1153-transient-reentrancy`
+**Severity:** Critical
+**Categories:** Reentrancy, Logic
+**CWE:** CWE-841
+
+#### Description
+
+Detects reentrancy vulnerabilities involving EIP-1153 transient storage. Transient storage (TSTORE/TLOAD) clears after each transaction, which can lead to unexpected reentrancy if used for state that should persist.
+
+#### Source
+
+`eip1153_transient_reentrancy.rs`
+
+---
+
+### EIP-1153 Cross-Transaction Assumption
+
+**ID:** `eip1153-cross-tx-assumption`
+**Severity:** High
+**Categories:** Logic
+**CWE:** CWE-362
+
+#### Description
+
+Detects incorrect assumptions about transient storage persisting across transactions. Transient storage clears after each transaction, but contracts may incorrectly assume data persists.
+
+#### Source
+
+`eip1153_cross_tx_assumption.rs`
+
+---
+
+### EIP-1153 Callback Manipulation
+
+**ID:** `eip1153-callback-manipulation`
+**Severity:** High
+**Categories:** Reentrancy, Logic
+**CWE:** CWE-367
+
+#### Description
+
+Detects transient storage state that can be manipulated during external callbacks. When a contract stores state in transient storage and then makes an external call, the callee can manipulate that transient state.
+
+#### Source
+
+`eip1153_callback_manipulation.rs`
+
+---
+
+### EIP-1153 Composability Risk
+
+**ID:** `eip1153-composability-risk`
+**Severity:** Medium
+**Categories:** Logic
+**CWE:** CWE-664
+
+#### Description
+
+Detects transient storage slot collisions when multiple contracts use transient storage. Without proper namespacing, different contracts in a call chain may overwrite each other's transient state.
+
+#### Source
+
+`eip1153_composability_risk.rs`
+
+---
+
+### EIP-1153 Guard Bypass
+
+**ID:** `eip1153-guard-bypass`
+**Severity:** High
+**Categories:** Reentrancy
+**CWE:** CWE-667
+
+#### Description
+
+Detects flawed implementations of reentrancy guards using transient storage that can be bypassed due to incorrect check order, missing guard resets, or improper modifier patterns.
+
+#### Source
+
+`eip1153_guard_bypass.rs`
 
 ---
 
