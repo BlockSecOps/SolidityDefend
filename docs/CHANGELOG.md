@@ -9,6 +9,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.1] - 2026-01-13
+
+### Advanced MEV & Front-Running Detection - Phase 44
+
+This release adds **12 new detectors** for advanced MEV (Maximal Extractable Value) and front-running attack patterns. MEV detection rate improved from 45% to ~65%. Total detectors: **269**.
+
+#### Added
+
+##### **Critical Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `sandwich-conditional-swap` | Conditional swap patterns vulnerable to sophisticated sandwich attacks | CWE-362 |
+| `jit-liquidity-extraction` | JIT liquidity manipulation enabling MEV extraction | CWE-362 |
+| `liquidation-mev` | Liquidation front-running including flash loan liquidations | CWE-362 |
+| `token-launch-mev` | Token launch sniping targeting initial liquidity | CWE-362 |
+
+##### **High Severity Detectors (7)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `backrunning-opportunity` | State changes exploitable via backrunning | CWE-362 |
+| `bundle-inclusion-leak` | Information leakage enabling bundle prediction | CWE-200 |
+| `order-flow-auction-abuse` | Order flow auction manipulation patterns | CWE-362 |
+| `cross-domain-mev` | MEV extraction across L1/L2 boundaries | CWE-362 |
+| `oracle-update-mev` | Oracle update front-running patterns | CWE-362 |
+| `governance-proposal-mev` | Governance proposal front-running | CWE-362 |
+| `nft-mint-mev` | NFT mint front-running and sniping | CWE-362 |
+
+##### **Medium Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `encrypted-mempool-timing` | Timing attacks on encrypted transactions | CWE-208 |
+
+##### **CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-362 | Concurrent Execution Using Shared Resource with Improper Synchronization (Race Condition) | 11 detectors |
+| CWE-200 | Exposure of Sensitive Information | bundle-inclusion-leak |
+| CWE-208 | Observable Timing Discrepancy | encrypted-mempool-timing |
+
+#### Detection Rate Improvements
+
+| Category | Before | After | Improvement |
+|----------|--------|-------|-------------|
+| MEV/Front-Running | 45% | ~65% | +20% |
+| Total MEV Detectors | 16 | 28 | +12 |
+
+#### Changed
+
+- Detector count increased from 257 to 269
+- Total MEV-related detectors: 28
+
+---
+
 ## [1.8.0] - 2026-01-13
 
 ### EIP-7702 & EIP-1153 New Standards Security - Phase 43
