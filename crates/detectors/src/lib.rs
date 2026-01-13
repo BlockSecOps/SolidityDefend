@@ -232,6 +232,34 @@ pub mod transparent_proxy_admin_issues;
 pub mod uups_missing_disable_initializers;
 pub mod uups_upgrade_unsafe;
 
+// Phase 42: Advanced Proxy Security & Vulnerability Patterns (v1.7.0 - 2026)
+pub mod reinitializer_vulnerability;
+pub mod storage_layout_inheritance_shift;
+pub mod beacon_single_point_of_failure;
+pub mod clones_immutable_args_bypass;
+pub mod upgrade_abi_incompatibility;
+pub mod diamond_facet_code_existence;
+pub mod proxy_context_visibility_mismatch;
+pub mod upgrade_event_missing;
+pub mod delegatecall_in_loop;
+pub mod fallback_delegatecall_pattern;
+pub mod unchecked_send_return;
+pub mod transaction_ordering_dependence;
+pub mod l2_sequencer_dependency;
+pub mod cross_chain_replay_protection;
+
+// Phase 43: EIP-7702 & EIP-1153 New Standards (v1.8.0 - 2026)
+pub mod eip7702_delegation_phishing;
+pub mod eip7702_storage_corruption;
+pub mod eip7702_sweeper_attack;
+pub mod eip7702_authorization_bypass;
+pub mod eip7702_replay_vulnerability;
+pub mod eip1153_transient_reentrancy;
+pub mod eip1153_cross_tx_assumption;
+pub mod eip1153_callback_manipulation;
+pub mod eip1153_composability_risk;
+pub mod eip1153_guard_bypass;
+
 // DeFi-specific detectors
 pub mod defi;
 

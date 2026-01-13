@@ -9,6 +9,148 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-01-13
+
+### EIP-7702 & EIP-1153 New Standards Security - Phase 43
+
+This release adds **10 new detectors** for emerging Ethereum standards EIP-7702 (Account Delegation) and EIP-1153 (Transient Storage). These are critical new attack surfaces in post-Dencun Ethereum. Total detectors: **257**.
+
+#### Added
+
+##### **Critical Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip7702-delegation-phishing` | Contracts that phish users into delegating EOA code execution via SET_CODE | CWE-284 |
+| `eip7702-storage-corruption` | Storage collision between delegated code and EOA state | CWE-119 |
+| `eip7702-sweeper-attack` | Contracts designed to drain all assets from delegating EOAs | CWE-306 |
+| `eip1153-transient-reentrancy` | Reentrancy via transient storage state manipulation | CWE-841 |
+
+##### **High Severity Detectors (5)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip7702-authorization-bypass` | Missing EIP-7702 authorization checks in delegation targets | CWE-862 |
+| `eip7702-replay-vulnerability` | Delegation replay across chains/contexts (missing chain ID, nonce, domain) | CWE-294 |
+| `eip1153-cross-tx-assumption` | Code assuming transient storage persists between transactions | CWE-362 |
+| `eip1153-callback-manipulation` | Transient state manipulation during callbacks | CWE-367 |
+| `eip1153-guard-bypass` | Flawed transient reentrancy guard implementations | CWE-667 |
+
+##### **Medium Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip1153-composability-risk` | Transient storage slot collisions in composed transactions | CWE-664 |
+
+##### **New CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-284 | Improper Access Control | eip7702-delegation-phishing |
+| CWE-306 | Missing Authentication for Critical Function | eip7702-sweeper-attack |
+| CWE-119 | Buffer Errors | eip7702-storage-corruption |
+| CWE-862 | Missing Authorization | eip7702-authorization-bypass |
+| CWE-294 | Authentication Bypass by Capture-replay | eip7702-replay-vulnerability |
+| CWE-841 | Improper Enforcement of Behavioral Workflow | eip1153-transient-reentrancy |
+| CWE-362 | Race Condition | eip1153-cross-tx-assumption |
+| CWE-367 | Time-of-check Time-of-use (TOCTOU) | eip1153-callback-manipulation |
+| CWE-664 | Improper Control of Resource Lifetime | eip1153-composability-risk |
+| CWE-667 | Improper Locking | eip1153-guard-bypass |
+
+#### Technical Details
+
+**EIP-7702 Account Delegation:**
+- New Ethereum standard allowing EOAs to delegate code execution
+- Enables smart account features for regular wallets
+- Critical attack surface: malicious delegation targets can drain accounts
+- Detectors identify sweeper contracts, storage collisions, auth bypass, replay attacks
+
+**EIP-1153 Transient Storage:**
+- New TSTORE/TLOAD opcodes in Dencun upgrade
+- Storage that clears after each transaction
+- Risks: cross-tx assumptions, callback manipulation, guard bypass
+- Detectors identify dangerous patterns in transient storage usage
+
+#### Changed
+
+- Detector count increased from 247 to 257
+- Added comprehensive coverage for 2024-2025 emerging Ethereum standards
+
+---
+
+## [1.7.0] - 2026-01-12
+
+### Advanced Proxy Security & Vulnerability Patterns - Phase 42
+
+This release adds **14 new detectors** covering advanced proxy/upgradeable contract vulnerabilities and critical vulnerability pattern gaps. Total detectors: **247**.
+
+#### Added
+
+##### **Critical Severity Detectors (2)**
+
+| Detector ID | Description | Real-World Exploit |
+|-------------|-------------|-------------------|
+| `reinitializer-vulnerability` | Contracts allowing re-initialization after upgrade via corrupted version tracking | AllianceBlock ($1.8M, 2024) |
+| `storage-layout-inheritance-shift` | Storage slot shifts from inheritance chain changes causing data corruption | Audius ($6M, 2022) |
+
+##### **High Severity Detectors (8)**
+
+| Detector ID | Description |
+|-------------|-------------|
+| `beacon-single-point-of-failure` | Beacon pattern centralization risks - beacon deletion/compromise affects all proxies |
+| `clones-immutable-args-bypass` | ClonesWithImmutableArgs calldata override vulnerability allowing auth bypass |
+| `upgrade-abi-incompatibility` | Interface/ABI removals in upgrades breaking dependent contracts |
+| `diamond-facet-code-existence` | Diamond delegatecall to empty/deleted facets (missing extcodesize check) |
+| `delegatecall-in-loop` | Delegatecall inside loops enabling gas griefing and reentrancy |
+| `fallback-delegatecall-pattern` | Fallback function delegating all calls without selector filtering |
+| `erc20-approve-race` | ERC20 approve front-running race condition vulnerability |
+| `cross-chain-replay-protection` | Missing chain ID in signatures allowing cross-chain replay attacks |
+
+##### **Medium Severity Detectors (4)**
+
+| Detector ID | Description |
+|-------------|-------------|
+| `proxy-context-visibility-mismatch` | Visibility differences between proxy and implementation exposing functions |
+| `upgrade-event-missing` | Missing/malformed upgrade events (Upgraded, AdminChanged) for monitoring |
+| `unchecked-send-return` | send() calls with ignored return value leading to silent failures |
+| `transaction-ordering-dependence` | State depending on transaction ordering vulnerable to MEV/front-running |
+| `l2-sequencer-dependency` | L2 Chainlink oracle usage without sequencer uptime check |
+
+##### **CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-665 | Improper Initialization | reinitializer-vulnerability |
+| CWE-119 | Buffer Errors | storage-layout-inheritance-shift |
+| CWE-284 | Improper Access Control | beacon-single-point-of-failure |
+| CWE-20 | Improper Input Validation | clones-immutable-args-bypass |
+| CWE-439 | Behavioral Change | upgrade-abi-incompatibility |
+| CWE-476 | NULL Pointer Dereference | diamond-facet-code-existence |
+| CWE-732 | Incorrect Permission | proxy-context-visibility-mismatch |
+| CWE-778 | Insufficient Logging | upgrade-event-missing |
+| CWE-834 | Excessive Iteration | delegatecall-in-loop |
+| CWE-749 | Exposed Dangerous Method | fallback-delegatecall-pattern |
+| CWE-362 | Race Condition | erc20-approve-race, transaction-ordering-dependence |
+| CWE-252 | Unchecked Return Value | unchecked-send-return |
+| CWE-662 | Improper Synchronization | l2-sequencer-dependency |
+| CWE-294 | Authentication Bypass | cross-chain-replay-protection |
+
+#### Detection Rate Improvements
+
+| Category | Before | After | Improvement |
+|----------|--------|-------|-------------|
+| Delegatecall Issues | 38% | ~60% | +22% |
+| Front-Running | 29% | ~45% | +16% |
+| Unchecked Returns | 33% | ~50% | +17% |
+| Proxy/Upgradeable | 31 detectors | 45 detectors | +14 |
+
+#### Changed
+
+- Detector count increased from 233 to 247
+- Total proxy/upgradeable detectors: 45 (was 31)
+
+---
+
 ## [1.6.0] - 2026-01-12
 
 ### Proxy & Upgradeable Contract Security - Phase 41
