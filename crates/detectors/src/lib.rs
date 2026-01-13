@@ -218,6 +218,20 @@ pub mod swc106_unprotected_selfdestruct;
 pub mod swc132_unexpected_ether_balance;
 pub mod swc133_hash_collision_varlen;
 
+// Phase 41: Proxy & Upgradeable Contract Security (v1.6.0 - 2026)
+pub mod beacon_upgrade_unprotected;
+pub mod eip1967_slot_compliance;
+pub mod function_selector_clash;
+pub mod immutable_in_upgradeable;
+pub mod implementation_not_initialized;
+pub mod implementation_selfdestruct;
+pub mod initializer_reentrancy;
+pub mod minimal_proxy_clone_issues;
+pub mod missing_storage_gap;
+pub mod transparent_proxy_admin_issues;
+pub mod uups_missing_disable_initializers;
+pub mod uups_upgrade_unsafe;
+
 // DeFi-specific detectors
 pub mod defi;
 

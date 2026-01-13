@@ -375,9 +375,32 @@ See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerabi
 
 **Total:** 221 detectors (4 new)
 
-### v1.6.0+ (Future)
+### v1.6.0 (Q1 2026) - Proxy & Upgradeable Contract Security
 
-- Front-running pattern detectors
+**New Proxy/Upgradeable Detectors (12):**
+
+*Critical Severity (5):*
+- ✅ `implementation-not-initialized` - Wormhole-style attack vector
+- ✅ `uups-missing-disable-initializers` - Missing _disableInitializers()
+- ✅ `implementation-selfdestruct` - Parity-style proxy brick
+- ✅ `uups-upgrade-unsafe` - Missing _authorizeUpgrade access control
+- ✅ `beacon-upgrade-unprotected` - Unprotected beacon upgrades
+
+*High Severity (4):*
+- ✅ `function-selector-clash` - Proxy/impl selector collision
+- ✅ `transparent-proxy-admin-issues` - Admin routing problems
+- ✅ `minimal-proxy-clone-issues` - EIP-1167 clone vulnerabilities
+- ✅ `initializer-reentrancy` - Init-time reentrancy
+
+*Medium Severity (3):*
+- ✅ `missing-storage-gap` - Missing __gap arrays
+- ✅ `immutable-in-upgradeable` - Bytecode storage issues
+- ✅ `eip1967-slot-compliance` - Non-standard storage slots
+
+**Total:** 233 detectors (12 new, 31 total proxy/upgradeable)
+
+### v1.7.0+ (Future)
+
 - Enhanced delegatecall detection
 - L2/Rollup security detectors
 - Reduced false positive rate on DeFi detectors

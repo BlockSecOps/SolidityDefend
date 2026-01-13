@@ -1085,6 +1085,44 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::swc133_hash_collision_varlen::HashCollisionVarlenDetector::new(),
         ));
+
+        // Phase 41: Proxy & Upgradeable Contract Security (v1.6.0 - 2026)
+        self.register(Arc::new(
+            crate::implementation_not_initialized::ImplementationNotInitializedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::uups_missing_disable_initializers::UupsMissingDisableInitializersDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::implementation_selfdestruct::ImplementationSelfdestructDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::uups_upgrade_unsafe::UupsUpgradeUnsafeDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::beacon_upgrade_unprotected::BeaconUpgradeUnprotectedDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::function_selector_clash::FunctionSelectorClashDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::transparent_proxy_admin_issues::TransparentProxyAdminIssuesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::minimal_proxy_clone_issues::MinimalProxyCloneIssuesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::initializer_reentrancy::InitializerReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::missing_storage_gap::MissingStorageGapDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::immutable_in_upgradeable::ImmutableInUpgradeableDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip1967_slot_compliance::Eip1967SlotComplianceDetector::new(),
+        ));
     }
 }
 
