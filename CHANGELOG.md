@@ -9,6 +9,57 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-01-12
+
+### Proxy & Upgradeable Contract Security - Phase 41
+
+This release adds **12 new proxy/upgradeable contract detectors** targeting real-world exploits like Wormhole ($320M), Audius ($6M), and Parity ($150M). Total detectors: **233**.
+
+#### Added
+
+##### **Critical Severity Detectors (5)**
+
+| Detector ID | Description | Real-World Exploit |
+|-------------|-------------|-------------------|
+| `implementation-not-initialized` | Implementation contract left uninitialized, allowing attacker takeover | Wormhole ($320M) |
+| `uups-missing-disable-initializers` | UUPS implementation missing `_disableInitializers()` in constructor | Audius ($6M) |
+| `implementation-selfdestruct` | Implementation contract contains selfdestruct, can brick all proxies | Parity ($150M) |
+| `uups-upgrade-unsafe` | `_authorizeUpgrade()` missing access control | - |
+| `beacon-upgrade-unprotected` | Beacon `upgradeTo()` without access control affects all proxies | - |
+
+##### **High Severity Detectors (4)**
+
+| Detector ID | Description |
+|-------------|-------------|
+| `function-selector-clash` | Proxy/implementation function selector collision (4-byte clash) |
+| `transparent-proxy-admin-issues` | Transparent proxy admin routing problems and selector conflicts |
+| `minimal-proxy-clone-issues` | EIP-1167 clone vulnerabilities (uninitialized clones, predictable addresses) |
+| `initializer-reentrancy` | External calls before state changes in initializer functions |
+
+##### **Medium Severity Detectors (3)**
+
+| Detector ID | Description |
+|-------------|-------------|
+| `missing-storage-gap` | Upgradeable base contracts missing `__gap` storage arrays |
+| `immutable-in-upgradeable` | Immutable variables in upgradeable contracts (stored in bytecode) |
+| `eip1967-slot-compliance` | Non-standard EIP-1967 storage slots for proxy addresses |
+
+##### **CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-284 | Improper Access Control | uups-upgrade-unsafe, beacon-upgrade-unprotected, implementation-selfdestruct |
+| CWE-665 | Improper Initialization | implementation-not-initialized, uups-missing-disable-initializers |
+| CWE-436 | Interpretation Conflict | function-selector-clash, transparent-proxy-admin-issues |
+| CWE-841 | Improper Enforcement of Behavioral Workflow | initializer-reentrancy |
+| CWE-672 | Operation on Resource After Expiration | minimal-proxy-clone-issues |
+
+#### Changed
+
+- Detector count increased from 221 to 233
+
+---
+
 ## [1.5.0] - 2026-01-11
 
 ### SWC Coverage Expansion - Phase 1
