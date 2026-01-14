@@ -274,6 +274,16 @@ pub mod governance_proposal_mev;
 pub mod token_launch_mev;
 pub mod nft_mint_mev;
 
+// Phase 45: Metamorphic & CREATE2 Patterns (v1.8.2 - 2026)
+pub mod metamorphic_contract_risk;
+pub mod create2_salt_frontrunning;
+pub mod create2_address_collision;
+pub mod extcodesize_check_bypass;
+pub mod selfdestruct_recipient_control;
+pub mod contract_recreation_attack;
+pub mod constructor_reentrancy;
+pub mod initcode_injection;
+
 // DeFi-specific detectors
 pub mod defi;
 
