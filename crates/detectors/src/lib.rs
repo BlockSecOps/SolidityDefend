@@ -296,6 +296,18 @@ pub mod erc1155_callback_reentrancy;
 pub mod uniswap_v4_hook_callback;
 pub mod compound_callback_chain;
 
+// Phase 47: Governance & Access Control (v1.8.4 - 2026)
+pub mod governance_parameter_bypass;
+pub mod voting_snapshot_manipulation;
+pub mod quorum_calculation_overflow;
+pub mod proposal_frontrunning;
+pub mod governor_refund_drain;
+pub mod timelock_bypass_delegatecall;
+pub mod role_escalation_upgrade;
+pub mod accesscontrol_race_condition;
+pub mod operator_whitelist_inheritance;
+pub mod cross_contract_role_confusion;
+
 // DeFi-specific detectors
 pub mod defi;
 

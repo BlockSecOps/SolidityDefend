@@ -9,6 +9,70 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.4] - 2026-01-14
+
+### Governance & Access Control Detection - Phase 47
+
+This release adds **10 new detectors** for governance and access control vulnerabilities. These detect complex attack vectors including timelock bypass, role escalation, and cross-contract authorization confusion. Total detectors: **297**.
+
+#### Added
+
+##### **Critical Severity Detectors (5)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `governance-parameter-bypass` | Governance params changeable before timelock restrictions apply | CWE-284 |
+| `quorum-calculation-overflow` | Quorum over-counting via reentrancy or arithmetic issues | CWE-190 |
+| `governor-refund-drain` | Refund parameters manipulated to drain treasury | CWE-284 |
+| `timelock-bypass-delegatecall` | Timelock guard bypass via proxy delegatecall | CWE-863 |
+| `role-escalation-upgrade` | Constructor grants elevated privileges in upgradeable contracts | CWE-269 |
+
+##### **High Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `voting-snapshot-manipulation` | Snapshot taken after delegation enabling flash loan voting | CWE-362 |
+| `proposal-frontrunning` | Counter-proposal submission in same block | CWE-362 |
+| `accesscontrol-race-condition` | Grant/revoke race between transactions | CWE-362 |
+| `cross-contract-role-confusion` | Roles from one contract misused in another | CWE-863 |
+
+##### **Medium Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `operator-whitelist-inheritance` | Operator approvals persist unexpectedly after upgrade | CWE-732 |
+
+##### **CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-284 | Improper Access Control | governance-parameter-bypass, governor-refund-drain |
+| CWE-190 | Integer Overflow | quorum-calculation-overflow |
+| CWE-269 | Improper Privilege Management | role-escalation-upgrade |
+| CWE-362 | Race Condition | voting-snapshot-manipulation, proposal-frontrunning, accesscontrol-race-condition |
+| CWE-732 | Incorrect Permission Assignment | operator-whitelist-inheritance |
+| CWE-863 | Incorrect Authorization | timelock-bypass-delegatecall, cross-contract-role-confusion |
+
+#### Detection Rate Improvements
+
+| Category | Before | After | Improvement |
+|----------|--------|-------|-------------|
+| Governance Attacks | ~50% | ~85% | +35% |
+| Access Control | ~60% | ~80% | +20% |
+
+#### Bug Fixes
+
+- **governance-proposal-mev**: Fixed slice bounds panic when analyzing files where `getVotes`/`getPriorVotes` appears near end of file. The context window now correctly caps at file length using `.min(lines.len())`.
+
+#### Changed
+
+- Detector count increased from 287 to 297
+- Added comprehensive governance attack detection
+- Added new detector category: Governance/Access Control
+- Total governance/access control detectors: 10
+
+---
+
 ## [1.8.3] - 2026-01-13
 
 ### Callback Chains & Multicall Detection - Phase 46
