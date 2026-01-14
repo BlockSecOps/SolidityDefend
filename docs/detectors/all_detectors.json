@@ -1,7 +1,7 @@
 {
-  "version": "1.8.2",
+  "version": "1.8.3",
   "generated": "2026-01-13",
-  "total_detectors": 277,
+  "total_detectors": 287,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -2904,6 +2904,126 @@
         "Validation"
       ],
       "cwe": ["CWE-94"],
+      "swc": []
+    },
+    {
+      "id": "nested-callback-reentrancy",
+      "name": "Nested Callback Reentrancy",
+      "description": "Detects nested safe callbacks that can enable state corruption through chained reentrancy attacks",
+      "severity": "critical",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "callback-in-callback-loop",
+      "name": "Callback In Callback Loop",
+      "description": "Detects recursive callback patterns that can be exploited through looped callback invocations leading to stack exhaustion or reentrancy",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "Logic"
+      ],
+      "cwe": ["CWE-674"],
+      "swc": []
+    },
+    {
+      "id": "multicall-msgvalue-reuse",
+      "name": "Multicall msg.value Reuse",
+      "description": "Detects multicall/batch operations where msg.value can be reused across multiple calls, enabling ETH double-spending attacks",
+      "severity": "critical",
+      "categories": [
+        "Logic",
+        "DeFi"
+      ],
+      "cwe": ["CWE-837"],
+      "swc": []
+    },
+    {
+      "id": "multicall-partial-revert",
+      "name": "Multicall Partial Revert",
+      "description": "Detects multicall/batch operations where partial success can cause inconsistent state due to improper error handling",
+      "severity": "high",
+      "categories": [
+        "Logic",
+        "DeFi"
+      ],
+      "cwe": ["CWE-754"],
+      "swc": []
+    },
+    {
+      "id": "batch-cross-function-reentrancy",
+      "name": "Batch Cross-Function Reentrancy",
+      "description": "Detects reentrancy vulnerabilities between functions called within a multicall/batch operation",
+      "severity": "critical",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "flash-callback-manipulation",
+      "name": "Flash Callback Manipulation",
+      "description": "Detects flash loan callback patterns vulnerable to state manipulation through TOCTOU attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Logic"
+      ],
+      "cwe": ["CWE-367"],
+      "swc": []
+    },
+    {
+      "id": "erc721-safemint-callback",
+      "name": "ERC721 SafeMint Callback",
+      "description": "Detects ERC721 safeMint patterns vulnerable to callback exploitation through onERC721Received reentrancy attacks",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "erc1155-callback-reentrancy",
+      "name": "ERC1155 Callback Reentrancy",
+      "description": "Detects ERC1155 callback patterns vulnerable to reentrancy through onERC1155Received and onERC1155BatchReceived callbacks",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "DeFi"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "uniswap-v4-hook-callback",
+      "name": "Uniswap V4 Hook Callback",
+      "description": "Detects Uniswap V4 hook patterns vulnerable to callback exploitation, state manipulation, and reentrancy attacks",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Reentrancy"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "compound-callback-chain",
+      "name": "Compound Callback Chain",
+      "description": "Detects Compound-style lending protocol callback chain vulnerabilities through cToken interactions and market manipulation",
+      "severity": "high",
+      "categories": [
+        "DeFi",
+        "Reentrancy"
+      ],
+      "cwe": ["CWE-841"],
       "swc": []
     }
   ]
