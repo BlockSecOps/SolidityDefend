@@ -1,6 +1,6 @@
 # Known Limitations
 
-**Version:** v1.8.2
+**Version:** v1.8.3
 **Last Updated:** 2026-01-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
@@ -9,7 +9,22 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.8.2 has **277 security detectors** including **45 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, and **8 metamorphic/CREATE2 detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.8.3 has **287 security detectors** including **45 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, and **10 callback chain detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+
+**v1.8.3 Improvements:** Added 10 new Callback Chain & Multicall detectors:
+- Nested callback reentrancy (chained safe callbacks)
+- Callback-in-callback loops (recursive callback exploitation)
+- Multicall msg.value reuse (ETH double-spending)
+- Multicall partial revert (inconsistent state)
+- Batch cross-function reentrancy
+- Flash callback manipulation (TOCTOU attacks)
+- ERC721 safeMint callback exploitation
+- ERC1155 batch callback reentrancy
+- Uniswap V4 hook callback vulnerabilities
+- Compound-style callback chains
+- Callback Pattern Detection: ~40% → ~70% (+30%)
+- Multicall Detection: ~30% → ~65% (+35%)
+- Total detectors: 277 → 287 (+10)
 
 **v1.8.2 Improvements:** Added 8 new Metamorphic & CREATE2 Pattern detectors:
 - Metamorphic contract risk (CREATE2 + SELFDESTRUCT)

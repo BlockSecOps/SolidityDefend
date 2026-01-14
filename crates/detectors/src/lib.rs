@@ -284,6 +284,18 @@ pub mod contract_recreation_attack;
 pub mod constructor_reentrancy;
 pub mod initcode_injection;
 
+// Phase 46: Callback Chains & Multicall (v1.8.3 - 2026)
+pub mod nested_callback_reentrancy;
+pub mod callback_in_callback_loop;
+pub mod multicall_msgvalue_reuse;
+pub mod multicall_partial_revert;
+pub mod batch_cross_function_reentrancy;
+pub mod flash_callback_manipulation;
+pub mod erc721_safemint_callback;
+pub mod erc1155_callback_reentrancy;
+pub mod uniswap_v4_hook_callback;
+pub mod compound_callback_chain;
+
 // DeFi-specific detectors
 pub mod defi;
 

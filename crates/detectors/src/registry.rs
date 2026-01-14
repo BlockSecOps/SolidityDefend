@@ -1263,6 +1263,38 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::initcode_injection::InitcodeInjectionDetector::new(),
         ));
+
+        // Phase 46: Callback Chains & Multicall (v1.8.3 - 2026)
+        self.register(Arc::new(
+            crate::nested_callback_reentrancy::NestedCallbackReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::callback_in_callback_loop::CallbackInCallbackLoopDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::multicall_msgvalue_reuse::MulticallMsgvalueReuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::multicall_partial_revert::MulticallPartialRevertDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::batch_cross_function_reentrancy::BatchCrossFunctionReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::flash_callback_manipulation::FlashCallbackManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc721_safemint_callback::Erc721SafemintCallbackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc1155_callback_reentrancy::Erc1155CallbackReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::uniswap_v4_hook_callback::UniswapV4HookCallbackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::compound_callback_chain::CompoundCallbackChainDetector::new(),
+        ));
     }
 }
 
