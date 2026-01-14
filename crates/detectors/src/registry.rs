@@ -1295,6 +1295,38 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::compound_callback_chain::CompoundCallbackChainDetector::new(),
         ));
+
+        // Phase 47: Governance & Access Control (v1.8.4)
+        self.register(Arc::new(
+            crate::governance_parameter_bypass::GovernanceParameterBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::voting_snapshot_manipulation::VotingSnapshotManipulationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::quorum_calculation_overflow::QuorumCalculationOverflowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::proposal_frontrunning::ProposalFrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::governor_refund_drain::GovernorRefundDrainDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::timelock_bypass_delegatecall::TimelockBypassDelegatecallDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::role_escalation_upgrade::RoleEscalationUpgradeDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::accesscontrol_race_condition::AccessControlRaceConditionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::operator_whitelist_inheritance::OperatorWhitelistInheritanceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::cross_contract_role_confusion::CrossContractRoleConfusionDetector::new(),
+        ));
     }
 }
 

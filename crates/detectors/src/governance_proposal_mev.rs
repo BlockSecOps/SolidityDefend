@@ -75,7 +75,8 @@ impl GovernanceProposalMevDetector {
             // Look for voting power being used immediately
             if trimmed.contains("getVotes") || trimmed.contains("getPriorVotes") {
                 let context_start = if line_num > 10 { line_num - 10 } else { 0 };
-                let context: String = lines[context_start..line_num + 5].join("\n");
+                let context_end = (line_num + 5).min(lines.len());
+                let context: String = lines[context_start..context_end].join("\n");
 
                 // Check if snapshot is at current block (vulnerable)
                 if context.contains("block.number") && !context.contains("- 1") {

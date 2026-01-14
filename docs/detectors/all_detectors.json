@@ -1,7 +1,7 @@
 {
-  "version": "1.8.3",
-  "generated": "2026-01-13",
-  "total_detectors": 287,
+  "version": "1.8.4",
+  "generated": "2026-01-14",
+  "total_detectors": 297,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -3024,6 +3024,126 @@
         "Reentrancy"
       ],
       "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "governance-parameter-bypass",
+      "name": "Governance Parameter Bypass",
+      "description": "Detects governance parameters that can be changed before timelock restrictions apply, enabling admins to bypass governance controls",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-284"],
+      "swc": []
+    },
+    {
+      "id": "voting-snapshot-manipulation",
+      "name": "Voting Snapshot Manipulation",
+      "description": "Detects voting systems where snapshots can be taken after token acquisition or delegation, enabling flash loan voting attacks",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "DeFi"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "quorum-calculation-overflow",
+      "name": "Quorum Calculation Overflow",
+      "description": "Detects quorum calculations vulnerable to overflow or reentrancy attacks that can over-count votes and bypass quorum requirements",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-190"],
+      "swc": []
+    },
+    {
+      "id": "proposal-frontrunning",
+      "name": "Proposal Front-running",
+      "description": "Detects governance systems vulnerable to proposal front-running where attackers can submit counter-proposals in the same block",
+      "severity": "high",
+      "categories": [
+        "MEV",
+        "AccessControl"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "governor-refund-drain",
+      "name": "Governor Refund Drain",
+      "description": "Detects governance systems where refund parameters can be changed to drain the treasury through excessive gas refunds or bounties",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-284"],
+      "swc": []
+    },
+    {
+      "id": "timelock-bypass-delegatecall",
+      "name": "Timelock Bypass via Delegatecall",
+      "description": "Detects patterns where timelock restrictions can be bypassed by routing calls through proxy contracts with delegatecall",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Upgradeable"
+      ],
+      "cwe": ["CWE-863"],
+      "swc": []
+    },
+    {
+      "id": "role-escalation-upgrade",
+      "name": "Role Escalation via Upgrade",
+      "description": "Detects upgrade patterns where new implementation constructors can grant elevated privileges, bypassing access control",
+      "severity": "critical",
+      "categories": [
+        "AccessControl",
+        "Upgradeable"
+      ],
+      "cwe": ["CWE-269"],
+      "swc": []
+    },
+    {
+      "id": "accesscontrol-race-condition",
+      "name": "Access Control Race Condition",
+      "description": "Detects access control patterns vulnerable to race conditions where concurrent grant/revoke operations can lead to privilege confusion",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "operator-whitelist-inheritance",
+      "name": "Operator Whitelist Inheritance",
+      "description": "Detects upgradeable contracts where operator approvals may persist after upgrades, granting unintended access to previous operators",
+      "severity": "medium",
+      "categories": [
+        "AccessControl",
+        "Upgradeable"
+      ],
+      "cwe": ["CWE-732"],
+      "swc": []
+    },
+    {
+      "id": "cross-contract-role-confusion",
+      "name": "Cross-Contract Role Confusion",
+      "description": "Detects access control patterns where roles defined in one contract are mistakenly used for authorization in another contract",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-863"],
       "swc": []
     }
   ]

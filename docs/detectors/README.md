@@ -1,11 +1,11 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **287 security detectors** in SolidityDefend v1.8.3.
+Complete reference for all **297 security detectors** in SolidityDefend v1.8.4.
 
-**Last Updated:** 2026-01-13
-**Version:** v1.8.3
-**Total Detectors:** 287 (in tool)
-**Categories:** 25
+**Last Updated:** 2026-01-14
+**Version:** v1.8.4
+**Total Detectors:** 297 (in tool)
+**Categories:** 26
 
 ---
 
@@ -16,7 +16,7 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 **File:** [`all_detectors.json`](all_detectors.json)
 
 **Contents:**
-- 287 detector entries with structured metadata
+- 297 detector entries with structured metadata
 - Detector ID, name, description, severity
 - Category mappings (25 categories)
 - CWE IDs (80+ detectors mapped)
@@ -47,7 +47,8 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 - **[EIPs](eips/)** - 16 detectors
 - **[MEV](mev/)** - 28 detectors
 - **[Deployment](deployment/)** - 12 detectors
-- **[Callback Chain](callback-chain/)** - 10 detectors 🆕
+- **[Callback Chain](callback-chain/)** - 10 detectors
+- **[Governance & Access Control](governance-access-control/)** - 10 detectors 🆕
 - **[Input Validation](input-validation/)** - 12 detectors
 - **[Access Control](access-control/)** - 10 detectors
 - **[Tokens](tokens/)** - 10 detectors
