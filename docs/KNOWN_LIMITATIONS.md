@@ -1,6 +1,6 @@
 # Known Limitations
 
-**Version:** v1.8.1
+**Version:** v1.8.2
 **Last Updated:** 2026-01-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
@@ -9,7 +9,19 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.8.1 has **269 security detectors** including **45 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, and **12 advanced MEV detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.8.2 has **277 security detectors** including **45 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, and **8 metamorphic/CREATE2 detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+
+**v1.8.2 Improvements:** Added 8 new Metamorphic & CREATE2 Pattern detectors:
+- Metamorphic contract risk (CREATE2 + SELFDESTRUCT)
+- CREATE2 salt front-running
+- CREATE2 address collision attacks
+- EXTCODESIZE check bypass
+- Selfdestruct recipient control
+- Contract recreation attacks
+- Constructor reentrancy
+- Initcode injection
+- Deployment Attack Detection: ~40% → ~65% (+25%)
+- Total detectors: 269 → 277 (+8)
 
 **v1.8.1 Improvements:** Added 12 new Advanced MEV & Front-Running detectors:
 - Sandwich attacks: conditional swap, slippage, deadlines

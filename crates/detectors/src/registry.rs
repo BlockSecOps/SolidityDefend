@@ -1237,6 +1237,32 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::nft_mint_mev::NftMintMevDetector::new(),
         ));
+
+        // Phase 45: Metamorphic & CREATE2 Patterns (v1.8.2 - 2026)
+        self.register(Arc::new(
+            crate::metamorphic_contract_risk::MetamorphicContractRiskDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::create2_salt_frontrunning::Create2SaltFrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::create2_address_collision::Create2AddressCollisionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::extcodesize_check_bypass::ExtcodesizeCheckBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::selfdestruct_recipient_control::SelfdestructRecipientControlDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::contract_recreation_attack::ContractRecreationAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::constructor_reentrancy::ConstructorReentrancyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::initcode_injection::InitcodeInjectionDetector::new(),
+        ));
     }
 }
 

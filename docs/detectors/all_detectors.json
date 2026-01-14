@@ -1,7 +1,7 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "generated": "2026-01-13",
-  "total_detectors": 269,
+  "total_detectors": 277,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -2808,6 +2808,102 @@
         "DeFi"
       ],
       "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "metamorphic-contract-risk",
+      "name": "Metamorphic Contract Risk",
+      "description": "Detects CREATE2 + SELFDESTRUCT patterns enabling bytecode mutation at the same address",
+      "severity": "critical",
+      "categories": [
+        "Metamorphic",
+        "Deployment"
+      ],
+      "cwe": ["CWE-913"],
+      "swc": []
+    },
+    {
+      "id": "create2-salt-frontrunning",
+      "name": "CREATE2 Salt Front-running",
+      "description": "Detects predictable CREATE2 salts enabling deployment front-running attacks",
+      "severity": "high",
+      "categories": [
+        "Metamorphic",
+        "Deployment"
+      ],
+      "cwe": ["CWE-330"],
+      "swc": []
+    },
+    {
+      "id": "create2-address-collision",
+      "name": "CREATE2 Address Collision",
+      "description": "Detects intentional address reuse after destruction for code substitution attacks",
+      "severity": "critical",
+      "categories": [
+        "Metamorphic",
+        "Deployment"
+      ],
+      "cwe": ["CWE-706"],
+      "swc": []
+    },
+    {
+      "id": "extcodesize-check-bypass",
+      "name": "EXTCODESIZE Check Bypass",
+      "description": "Detects EXTCODESIZE checks that can be bypassed during contract construction when code size is 0",
+      "severity": "high",
+      "categories": [
+        "Validation",
+        "Logic"
+      ],
+      "cwe": ["CWE-670"],
+      "swc": []
+    },
+    {
+      "id": "selfdestruct-recipient-control",
+      "name": "Selfdestruct Recipient Control",
+      "description": "Detects selfdestruct operations where the recipient address can be controlled by users, enabling fund theft",
+      "severity": "high",
+      "categories": [
+        "AccessControl",
+        "Logic"
+      ],
+      "cwe": ["CWE-284"],
+      "swc": []
+    },
+    {
+      "id": "contract-recreation-attack",
+      "name": "Contract Recreation Attack",
+      "description": "Detects patterns where contracts can be recreated at the same address with different code after destruction",
+      "severity": "critical",
+      "categories": [
+        "Metamorphic",
+        "Deployment"
+      ],
+      "cwe": ["CWE-913"],
+      "swc": []
+    },
+    {
+      "id": "constructor-reentrancy",
+      "name": "Constructor Reentrancy",
+      "description": "Detects external calls in constructors that can enable reentrancy before security mechanisms are fully initialized",
+      "severity": "high",
+      "categories": [
+        "Reentrancy",
+        "Deployment"
+      ],
+      "cwe": ["CWE-841"],
+      "swc": []
+    },
+    {
+      "id": "initcode-injection",
+      "name": "Initcode Injection",
+      "description": "Detects CREATE2 deployments where initcode can be controlled or manipulated by attackers to deploy malicious contracts",
+      "severity": "critical",
+      "categories": [
+        "Deployment",
+        "Validation"
+      ],
+      "cwe": ["CWE-94"],
       "swc": []
     }
   ]

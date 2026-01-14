@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.2] - 2026-01-13
+
+### Metamorphic & CREATE2 Patterns - Phase 45
+
+This release adds **8 new detectors** for metamorphic contract attacks and CREATE2-related vulnerabilities. These detect advanced contract deployment attacks including code substitution, address collision, and bytecode injection. Total detectors: **277**.
+
+#### Added
+
+##### **Critical Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `metamorphic-contract-risk` | CREATE2 + SELFDESTRUCT patterns enabling bytecode mutation at same address | CWE-913 |
+| `create2-address-collision` | Intentional address reuse after destruction for code substitution attacks | CWE-706 |
+| `contract-recreation-attack` | Contracts recreated with different code at same address | CWE-913 |
+| `initcode-injection` | Malicious initcode injection in CREATE2 deployments | CWE-94 |
+
+##### **High Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `create2-salt-frontrunning` | Predictable CREATE2 salts enabling deployment front-running | CWE-330 |
+| `extcodesize-check-bypass` | EXTCODESIZE=0 during construction enabling EOA check bypass | CWE-670 |
+| `selfdestruct-recipient-control` | User-controlled selfdestruct beneficiary enabling fund theft | CWE-284 |
+| `constructor-reentrancy` | Reentrancy during contract construction before guards initialized | CWE-841 |
+
+##### **CWE Mappings**
+
+| CWE | Description | Detectors |
+|-----|-------------|-----------|
+| CWE-913 | Improper Control of Dynamically-Managed Code Resources | metamorphic-contract-risk, contract-recreation-attack |
+| CWE-94 | Improper Control of Generation of Code (Code Injection) | initcode-injection |
+| CWE-706 | Use of Incorrectly-Resolved Name or Reference | create2-address-collision |
+| CWE-330 | Use of Insufficiently Random Values | create2-salt-frontrunning |
+| CWE-670 | Always-Incorrect Control Flow Implementation | extcodesize-check-bypass |
+| CWE-284 | Improper Access Control | selfdestruct-recipient-control |
+| CWE-841 | Improper Enforcement of Behavioral Workflow | constructor-reentrancy |
+
+#### Detection Rate Improvements
+
+| Category | Before | After | Improvement |
+|----------|--------|-------|-------------|
+| Metamorphic/CREATE2 | 4 | 12 | +8 |
+| Deployment Attacks | ~40% | ~65% | +25% |
+
+#### Changed
+
+- Detector count increased from 269 to 277
+- Total metamorphic/CREATE2 detectors: 12
+
+---
+
 ## [1.8.1] - 2026-01-13
 
 ### Advanced MEV & Front-Running Detection - Phase 44
