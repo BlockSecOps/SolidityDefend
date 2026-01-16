@@ -98,11 +98,15 @@ impl InefficientStorageDetector {
         let lines: Vec<&str> = contract_source.lines().collect();
         let mut issues = Vec::new();
 
+        // Track boolean storage variables for Pattern 2
+        let mut bool_storage_vars: Vec<(u32, &str)> = Vec::new();
+
         // Pattern 1: Unpacked structs (mixed sizes without optimization)
         let mut in_struct = false;
         let mut struct_start_line = 0;
         let mut struct_has_uint256 = false;
         let mut struct_has_small_types = false;
+        let mut struct_small_count = 0;
 
         for (line_idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -112,6 +116,7 @@ impl InefficientStorageDetector {
                 struct_start_line = line_idx;
                 struct_has_uint256 = false;
                 struct_has_small_types = false;
+                struct_small_count = 0;
             }
 
             if in_struct {
@@ -126,11 +131,13 @@ impl InefficientStorageDetector {
                     || trimmed.contains("bool")
                 {
                     struct_has_small_types = true;
+                    struct_small_count += 1;
                 }
 
                 if trimmed == "}" {
                     in_struct = false;
-                    if struct_has_uint256 && struct_has_small_types {
+                    // Only flag if there are enough small types to make packing worthwhile
+                    if struct_has_uint256 && struct_has_small_types && struct_small_count >= 2 {
                         issues.push((
                             (struct_start_line + 1) as u32,
                             "Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings".to_string()
@@ -139,28 +146,29 @@ impl InefficientStorageDetector {
                 }
             }
 
-            // Pattern 2: Single boolean flags as storage variables
-            if trimmed.contains("bool ")
+            // Track boolean storage variables (only at contract level)
+            if !in_struct
+                && trimmed.contains("bool ")
                 && (trimmed.contains("public")
                     || trimmed.contains("private")
                     || trimmed.contains("internal"))
                 && !trimmed.contains("mapping")
-                && !in_struct
+                && !trimmed.contains("constant")
             {
-                issues.push((
-                    (line_idx + 1) as u32,
-                    "Single boolean storage variable. Consider packing multiple bools into uint256 bitmap".to_string()
-                ));
+                bool_storage_vars.push(((line_idx + 1) as u32, trimmed));
             }
 
             // Pattern 3: Small uint types as standalone storage variables
-            if (trimmed.contains("uint8 ")
-                || trimmed.contains("uint16 ")
-                || trimmed.contains("uint32 "))
+            // Only flag if it's clearly inefficient (not semantically meaningful like decimals)
+            if !in_struct
+                && (trimmed.contains("uint8 ")
+                    || trimmed.contains("uint16 "))
                 && (trimmed.contains("public")
                     || trimmed.contains("private")
                     || trimmed.contains("internal"))
-                && !in_struct
+                && !trimmed.contains("decimals") // uint8 for decimals is standard
+                && !trimmed.contains("version")  // uint8 for version is acceptable
+                && !trimmed.contains("nonce")    // small nonces are intentional
             {
                 issues.push((
                     (line_idx + 1) as u32,
@@ -169,19 +177,40 @@ impl InefficientStorageDetector {
             }
 
             // Pattern 4: Constant-like variables stored in storage
+            // Only flag if it looks like a hardcoded constant that never changes
             if trimmed.contains(" = ")
                 && (trimmed.contains("public") || trimmed.contains("private"))
                 && !trimmed.contains("constant")
                 && !trimmed.contains("immutable")
-                && (trimmed.contains("1000")
-                    || trimmed.contains("100")
-                    || trimmed.contains("10000"))
+                && !trimmed.contains("mapping")
+                && !trimmed.contains("address")  // addresses aren't constants
+                && !trimmed.contains("bool")     // bools set to false/true are state
             {
-                issues.push((
-                    (line_idx + 1) as u32,
-                    "Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable".to_string()
-                ));
+                // Check for common constant patterns (large round numbers)
+                let is_constant_like = (trimmed.contains("= 1000")
+                    || trimmed.contains("= 10000")
+                    || trimmed.contains("= 100000")
+                    || trimmed.contains("= 1e"))
+                    && !trimmed.contains("block.");
+
+                if is_constant_like {
+                    issues.push((
+                        (line_idx + 1) as u32,
+                        "Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable".to_string()
+                    ));
+                }
             }
+        }
+
+        // Pattern 2: Only flag booleans if there are 3+ that could be packed
+        if bool_storage_vars.len() >= 3 {
+            issues.push((
+                bool_storage_vars[0].0,
+                format!(
+                    "{} boolean storage variables found. Consider packing into uint256 bitmap for gas savings",
+                    bool_storage_vars.len()
+                )
+            ));
         }
 
         // Pattern 5: Redundant storage reads

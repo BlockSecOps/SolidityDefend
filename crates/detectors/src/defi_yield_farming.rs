@@ -32,6 +32,19 @@ impl YieldFarmingDetector {
                 || source.contains("stake"))
     }
 
+    /// Get function source code
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
     fn check_function(
         &self,
         function: &ast::Function<'_>,
@@ -39,15 +52,21 @@ impl YieldFarmingDetector {
     ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
-        let source = &ctx.source_code;
-        let source_lower = source.to_lowercase();
+
+        // Get function body specifically, not entire source code
+        let func_source = self.get_function_source(function, ctx);
+        let source_lower = func_source.to_lowercase();
+
+        // Also get contract-level source for things like state variable checks
+        let contract_source_lower = ctx.source_code.to_lowercase();
 
         // Check deposit functions
         if name.contains("deposit") || name.contains("stake") {
-            // Check for share inflation attack protection
+            // Check for share inflation attack protection (check function body)
             let has_min_deposit = source_lower.contains("minimum")
                 || source_lower.contains("min_deposit")
-                || (source_lower.contains("require") && source_lower.contains("amount"));
+                || (source_lower.contains("require") && source_lower.contains("amount >"))
+                || source_lower.contains("amount >= min");
 
             if !has_min_deposit {
                 issues.push((
@@ -57,11 +76,13 @@ impl YieldFarmingDetector {
                 ));
             }
 
-            // Check for first depositor protection
+            // Check for first depositor protection (in function body)
             let has_first_deposit_lock = source_lower.contains("totalsupply == 0")
-                || source_lower.contains("initialdeposit");
+                || source_lower.contains("totalsupply() == 0")
+                || source_lower.contains("initialdeposit")
+                || contract_source_lower.contains("_initialdeposit"); // contract-level check
 
-            if !has_first_deposit_lock {
+            if !has_first_deposit_lock && source_lower.contains("shares") {
                 issues.push((
                     "No first depositor protection (inflation attack on vault initialization)".to_string(),
                     Severity::Critical,
@@ -69,11 +90,12 @@ impl YieldFarmingDetector {
                 ));
             }
 
-            // Check for share calculation
+            // Check for share calculation (in function body)
             let has_share_calc = source_lower.contains("totalsupply")
                 && (source_lower.contains("totalassets") || source_lower.contains("balance"));
 
-            if source_lower.contains("shares") && !has_share_calc {
+            // Only flag if function explicitly deals with shares
+            if source_lower.contains("shares =") && !has_share_calc {
                 issues.push((
                     "Share calculation doesn't use totalSupply and totalAssets".to_string(),
                     Severity::High,
@@ -82,44 +104,34 @@ impl YieldFarmingDetector {
                 ));
             }
 
-            // Check for rounding errors
-            let has_rounding_check =
-                source_lower.contains("shares > 0") || source_lower.contains("!= 0");
+            // Check for rounding errors (only if shares are calculated in this function)
+            if source_lower.contains("shares =") {
+                let has_rounding_check =
+                    source_lower.contains("shares > 0") || source_lower.contains("require(shares");
 
-            if source_lower.contains("shares") && !has_rounding_check {
-                issues.push((
-                    "No zero-share validation (rounding error exploitation)".to_string(),
-                    Severity::High,
-                    "Validate shares: require(shares > 0, \"Shares must be non-zero\");"
-                        .to_string(),
-                ));
+                if !has_rounding_check {
+                    issues.push((
+                        "No zero-share validation (rounding error exploitation)".to_string(),
+                        Severity::High,
+                        "Validate shares: require(shares > 0, \"Shares must be non-zero\");"
+                            .to_string(),
+                    ));
+                }
             }
 
-            // Check for fee-on-transfer token support
-            let has_actual_amount = source_lower.contains("balancebefore")
-                || source_lower.contains("balanceafter")
-                || (source_lower.contains("balance") && source_lower.contains("-"));
+            // Check for fee-on-transfer token support (only for functions using transferFrom)
+            if source_lower.contains("transferfrom") {
+                let has_actual_amount = source_lower.contains("balancebefore")
+                    || source_lower.contains("balanceafter")
+                    || source_lower.contains("balance -");
 
-            if !has_actual_amount {
-                issues.push((
-                    "Doesn't handle fee-on-transfer tokens (accounting mismatch)".to_string(),
-                    Severity::Medium,
-                    "Handle fees: uint256 balanceBefore = token.balanceOf(address(this)); token.transferFrom(msg.sender, address(this), amount); uint256 actualAmount = token.balanceOf(address(this)) - balanceBefore;".to_string()
-                ));
-            }
-
-            // Check for deposit cap
-            let has_cap = source_lower.contains("maxdeposit")
-                || source_lower.contains("cap")
-                || source_lower.contains("limit");
-
-            if !has_cap {
-                issues.push((
-                    "No deposit cap (unlimited exposure risk)".to_string(),
-                    Severity::Low,
-                    "Add cap: require(totalAssets() + amount <= depositCap, \"Cap exceeded\");"
-                        .to_string(),
-                ));
+                if !has_actual_amount {
+                    issues.push((
+                        "Doesn't handle fee-on-transfer tokens (accounting mismatch)".to_string(),
+                        Severity::Medium,
+                        "Handle fees: uint256 balanceBefore = token.balanceOf(address(this)); token.transferFrom(msg.sender, address(this), amount); uint256 actualAmount = token.balanceOf(address(this)) - balanceBefore;".to_string()
+                    ));
+                }
             }
         }
 

@@ -48,14 +48,46 @@ impl Eip7702StorageCorruptionDetector {
     }
 
     /// Check if contract could be used as delegation target
+    /// Requires multiple strong signals to avoid FPs
     fn is_potential_delegation_target(&self, source: &str) -> bool {
-        // Look for patterns suggesting EIP-7702 awareness
-        source.contains("delegate")
-            || source.contains("Delegate")
-            || source.contains("AUTH")
-            || source.contains("setCode")
-            || source.contains("implementation")
-            || source.contains("logic")
+        // Count strong signals for EIP-7702 delegation
+        let mut signals = 0;
+
+        // Strong signals - EIP-7702 specific patterns
+        if source.contains("AUTH") && !source.contains("AUTHORIZATION") {
+            signals += 2;
+        }
+        if source.contains("AUTHCALL") {
+            signals += 2;
+        }
+        if source.contains("setCode") || source.contains("SET_CODE") {
+            signals += 2;
+        }
+        if source.contains("EIP7702") || source.contains("eip7702") || source.contains("EIP-7702") {
+            signals += 3;
+        }
+
+        // Medium signals - delegation patterns (only if combined with others)
+        if source.contains("delegateCode") || source.contains("executeAs") {
+            signals += 1;
+        }
+
+        // Weak signals - only count if we already have other signals
+        // These are common in many contracts, so alone they don't indicate EIP-7702
+        if signals > 0 {
+            if source.contains("Delegate") && source.contains("Target") {
+                signals += 1;
+            }
+            // "implementation" alone is too common (used in all proxy patterns)
+            // Only count if it appears with "delegate" in close proximity
+            let lower = source.to_lowercase();
+            if lower.contains("delegate") && lower.contains("implementation") {
+                signals += 1;
+            }
+        }
+
+        // Require at least 2 signals for detection
+        signals >= 2
     }
 
     /// Find state variables that could cause storage collision

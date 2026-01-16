@@ -154,18 +154,33 @@ impl ProxyStorageCollisionDetector {
     }
 
     /// Check if this is a proxy contract
+    /// Requires strong signals to avoid FPs - not just any delegatecall usage
     fn is_proxy_contract(&self, ctx: &AnalysisContext, source: &str) -> bool {
-        // Check contract name
+        // Check contract name for proxy patterns
         let name_lower = ctx.contract.name.name.to_lowercase();
-        if name_lower.contains("proxy") || name_lower.contains("upgradeable") {
-            return true;
-        }
+        let has_proxy_name = name_lower.contains("proxy")
+            || name_lower.contains("upgradeable")
+            || name_lower == "erc1967proxy"
+            || name_lower == "transparentupgradeableproxy";
 
-        // Check for proxy patterns in source
-        source.contains("delegatecall")
-            || source.contains("_implementation")
-            || source.contains("IMPLEMENTATION_SLOT")
+        // Strong proxy signals (EIP-1967 or explicit proxy patterns)
+        let has_proxy_patterns = source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("_IMPLEMENTATION_SLOT")
+            || source.contains("_ADMIN_SLOT")
             || source.contains("eip1967")
+            || source.contains("EIP1967")
+            || source.contains("_fallback")
+            || source.contains("_delegate")
+            || (source.contains("implementation()") && source.contains("delegatecall"));
+
+        // Must have both delegatecall AND proxy-specific patterns
+        // Just having delegatecall doesn't make something a proxy
+        let has_delegatecall = source.contains("delegatecall");
+
+        // A contract is a proxy if:
+        // 1. It has proxy in name AND delegatecall, OR
+        // 2. It has explicit proxy storage slots/patterns
+        (has_proxy_name && has_delegatecall) || has_proxy_patterns
     }
 
     /// Check if proxy has non-standard storage variables

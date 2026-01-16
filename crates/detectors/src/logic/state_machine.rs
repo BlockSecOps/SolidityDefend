@@ -457,11 +457,49 @@ impl StateMachineDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // Check if the function itself has validation modifiers (indicated by require at top)
+        let has_function_level_guard = self.block_has_require_or_guard(block);
+
         for stmt in &block.statements {
-            self.check_stmt_for_unchecked_modifications(stmt, state_vars, &mut findings, ctx);
+            self.check_stmt_for_unchecked_modifications(
+                stmt,
+                state_vars,
+                &mut findings,
+                ctx,
+                has_function_level_guard,
+            );
         }
 
         findings
+    }
+
+    /// Check if a block contains require/assert/revert at the start (function-level validation)
+    fn block_has_require_or_guard(&self, block: &ast::Block<'_>) -> bool {
+        for stmt in &block.statements {
+            match stmt {
+                ast::Statement::Expression(expr) => {
+                    if self.is_require_or_validation_call(expr) {
+                        return true;
+                    }
+                }
+                // If we hit a non-validation statement first, stop looking
+                ast::Statement::If { .. }
+                | ast::Statement::For { .. }
+                | ast::Statement::While { .. } => break,
+                _ => {}
+            }
+        }
+        false
+    }
+
+    /// Check if an expression is a require/assert/revert call
+    fn is_require_or_validation_call(&self, expr: &ast::Expression<'_>) -> bool {
+        if let ast::Expression::FunctionCall { function, .. } = expr {
+            if let ast::Expression::Identifier(id) = function {
+                return matches!(id.name, "require" | "assert" | "revert");
+            }
+        }
+        false
     }
 
     /// Check statement for unchecked state modifications
@@ -471,13 +509,14 @@ impl StateMachineDetector {
         state_vars: &HashSet<String>,
         findings: &mut Vec<Finding>,
         ctx: &AnalysisContext<'_>,
+        is_guarded: bool,
     ) {
         match stmt {
             ast::Statement::Expression(ast::Expression::Assignment { left, location, .. }) => {
                 if let ast::Expression::Identifier(id) = left {
                     if state_vars.contains(id.name) {
-                        // Check if this assignment is inside any conditional or validation
-                        if !self.is_assignment_properly_guarded(stmt) {
+                        // Skip if we're inside a guard context (if statement, after require, etc.)
+                        if !is_guarded {
                             let message = format!(
                                 "State variable '{}' is modified without proper validation or state checks",
                                 id.name
@@ -501,23 +540,45 @@ impl StateMachineDetector {
                     }
                 }
             }
+            // Assignments inside if statements are considered guarded
+            ast::Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                // Both branches are guarded by the condition
+                self.check_stmt_for_unchecked_modifications(
+                    then_branch,
+                    state_vars,
+                    findings,
+                    ctx,
+                    true, // guarded by condition
+                );
+                if let Some(else_stmt) = else_branch {
+                    self.check_stmt_for_unchecked_modifications(
+                        else_stmt,
+                        state_vars,
+                        findings,
+                        ctx,
+                        true, // guarded by condition
+                    );
+                }
+            }
             ast::Statement::Block(block) => {
+                // Check if this block has its own guards
+                let block_guarded = is_guarded || self.block_has_require_or_guard(block);
                 for inner_stmt in &block.statements {
                     self.check_stmt_for_unchecked_modifications(
-                        inner_stmt, state_vars, findings, ctx,
+                        inner_stmt,
+                        state_vars,
+                        findings,
+                        ctx,
+                        block_guarded,
                     );
                 }
             }
             _ => {}
         }
-    }
-
-    /// Check if an assignment is properly guarded by validation
-    fn is_assignment_properly_guarded(&self, _stmt: &ast::Statement<'_>) -> bool {
-        // Simplified check - in a real implementation, this would analyze the control flow
-        // to see if the assignment is inside require(), if statements, modifiers, etc.
-        // For now, assume most assignments need validation
-        false
     }
 
     /// Check for reentrancy issues affecting state machine
@@ -529,55 +590,121 @@ impl StateMachineDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        for stmt in &block.statements {
-            if let Some(finding) =
-                self.check_stmt_for_reentrancy_state_issues(stmt, state_vars, ctx)
-            {
-                findings.push(finding);
+        // Find external calls and check if state vars are modified AFTER them
+        let stmts = &block.statements;
+        for (idx, stmt) in stmts.iter().enumerate() {
+            if let Some((call_location, call_line)) = self.find_external_call_in_stmt(stmt) {
+                // Check subsequent statements for state modifications
+                for subsequent_stmt in stmts.iter().skip(idx + 1) {
+                    if let Some(modified_var) =
+                        self.find_state_modification_in_stmt(subsequent_stmt, state_vars)
+                    {
+                        let message = format!(
+                            "State variable '{}' modified after external call - potential reentrancy affecting state machine",
+                            modified_var
+                        );
+                        let finding = self
+                            .base
+                            .create_finding_with_severity(
+                                ctx,
+                                message,
+                                call_line,
+                                call_location.start().column() as u32,
+                                call_location.byte_length() as u32,
+                                Severity::Critical,
+                            )
+                            .with_cwe(841)
+                            .with_fix_suggestion(
+                                "Use checks-effects-interactions pattern or reentrancy guards"
+                                    .to_string(),
+                            );
+                        findings.push(finding);
+                        break; // Only one finding per external call
+                    }
+                }
             }
         }
 
         findings
     }
 
-    /// Check statement for reentrancy affecting state
-    fn check_stmt_for_reentrancy_state_issues(
+    /// Find an external call in a statement, returning its location if found
+    fn find_external_call_in_stmt(
+        &self,
+        stmt: &ast::Statement<'_>,
+    ) -> Option<(ast::SourceLocation, u32)> {
+        match stmt {
+            ast::Statement::Expression(expr) => self.find_external_call_in_expr(expr),
+            ast::Statement::VariableDeclaration {
+                initial_value: Some(expr),
+                ..
+            } => self.find_external_call_in_expr(expr),
+            _ => None,
+        }
+    }
+
+    /// Find an external call in an expression
+    fn find_external_call_in_expr(
+        &self,
+        expr: &ast::Expression<'_>,
+    ) -> Option<(ast::SourceLocation, u32)> {
+        match expr {
+            ast::Expression::FunctionCall {
+                function, location, ..
+            } => {
+                if self.is_external_call(function) {
+                    Some((location.clone(), location.start().line() as u32))
+                } else {
+                    None
+                }
+            }
+            ast::Expression::BinaryOperation { left, right, .. } => self
+                .find_external_call_in_expr(left)
+                .or_else(|| self.find_external_call_in_expr(right)),
+            ast::Expression::Assignment { right, .. } => self.find_external_call_in_expr(right),
+            _ => None,
+        }
+    }
+
+    /// Find state modification in a statement
+    fn find_state_modification_in_stmt(
         &self,
         stmt: &ast::Statement<'_>,
         state_vars: &HashSet<String>,
-        ctx: &AnalysisContext<'_>,
-    ) -> Option<Finding> {
-        if let ast::Statement::Expression(expr) = stmt {
-            if let ast::Expression::FunctionCall {
-                function, location, ..
-            } = expr
-            {
-                // Check for external calls
-                if self.is_external_call(function) {
-                    // Check if state variables are modified after external call
-                    if self.has_state_modification_after_external_call(stmt, state_vars) {
-                        let message = "State variables modified after external call - potential reentrancy affecting state machine".to_string();
-                        let finding = self
-                            .base
-                            .create_finding_with_severity(
-                                ctx,
-                                message,
-                                location.start().line() as u32,
-                                location.start().column() as u32,
-                                location.byte_length() as u32,
-                                Severity::Critical, // Reentrancy is critical
-                            )
-                            .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                            .with_fix_suggestion(
-                                "Use checks-effects-interactions pattern or reentrancy guards"
-                                    .to_string(),
-                            );
-                        return Some(finding);
+    ) -> Option<String> {
+        match stmt {
+            ast::Statement::Expression(ast::Expression::Assignment { left, .. }) => {
+                if let ast::Expression::Identifier(id) = left {
+                    if state_vars.contains(id.name) {
+                        return Some(id.name.to_string());
                     }
                 }
+                None
             }
+            ast::Statement::Block(block) => {
+                for inner_stmt in &block.statements {
+                    if let Some(var) = self.find_state_modification_in_stmt(inner_stmt, state_vars)
+                    {
+                        return Some(var);
+                    }
+                }
+                None
+            }
+            ast::Statement::If {
+                then_branch,
+                else_branch,
+                ..
+            } => {
+                if let Some(var) = self.find_state_modification_in_stmt(then_branch, state_vars) {
+                    return Some(var);
+                }
+                if let Some(else_stmt) = else_branch {
+                    return self.find_state_modification_in_stmt(else_stmt, state_vars);
+                }
+                None
+            }
+            _ => None,
         }
-        None
     }
 
     /// Check if an expression represents an external call
@@ -592,17 +719,6 @@ impl StateMachineDetector {
             }
             _ => false,
         }
-    }
-
-    /// Check if there are state modifications after external call (simplified)
-    fn has_state_modification_after_external_call(
-        &self,
-        _stmt: &ast::Statement<'_>,
-        _state_vars: &HashSet<String>,
-    ) -> bool {
-        // Simplified check - in a real implementation, this would analyze subsequent statements
-        // in the same function to see if state variables are modified after the external call
-        true // Conservative approach - assume there might be state modifications
     }
 }
 

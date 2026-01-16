@@ -221,16 +221,45 @@ impl ExcessiveGasUsageDetector {
 
     fn count_storage_reads(&self, source: &str) -> usize {
         let mut count = 0;
-        let state_var_patterns = ["balance", "owner", "totalSupply", "paused", "initialized"];
+        let lines: Vec<&str> = source.lines().collect();
 
-        for pattern in &state_var_patterns {
-            count += source.matches(pattern).count();
+        // Track locally declared variables to avoid FPs
+        let mut local_vars: Vec<&str> = Vec::new();
+        for line in &lines {
+            let trimmed = line.trim();
+            // Local variable declarations include memory/calldata or are type declarations
+            if trimmed.contains("memory") || trimmed.contains("calldata") {
+                // Extract variable name patterns
+                if let Some(eq_idx) = trimmed.find(" = ") {
+                    let before_eq = trimmed[..eq_idx].trim();
+                    if let Some(name) = before_eq.split_whitespace().last() {
+                        local_vars.push(name);
+                    }
+                }
+            }
         }
 
-        // Also check for mapping reads
-        count += source.matches("balances[").count();
-        count += source.matches("allowances[").count();
-        count += source.matches("stakes[").count();
+        // Only count storage reads that aren't locally cached
+        // Look for mapping access patterns with state variable indicators
+        for line in &lines {
+            let trimmed = line.trim();
+
+            // Skip comments and local variable declarations
+            if trimmed.starts_with("//")
+                || trimmed.contains("memory")
+                || trimmed.contains("calldata")
+            {
+                continue;
+            }
+
+            // Count mapping reads (these are definitely storage)
+            count += trimmed.matches("balances[").count();
+            count += trimmed.matches("allowances[").count();
+            count += trimmed.matches("_balances[").count();
+            count += trimmed.matches("_allowances[").count();
+            count += trimmed.matches("stakes[").count();
+            count += trimmed.matches("rewards[").count();
+        }
 
         count
     }

@@ -195,8 +195,13 @@ impl Detector for Eip7702DelegationPhishingDetector {
         let contract_name = self.get_contract_name(ctx);
 
         // Check if this could be a delegation target
-        if !self.is_delegation_target(source) {
-            // Still check for phishing-like patterns
+        // If not a delegation target, skip most checks to avoid FPs
+        let is_delegation_target = self.is_delegation_target(source);
+
+        // Only check for phishing patterns in delegation-capable contracts
+        // Regular contracts with similar patterns are legitimate
+        if !is_delegation_target {
+            return Ok(findings);
         }
 
         // Find execute-on-behalf patterns

@@ -73,6 +73,46 @@ impl TransientStorageReentrancyDetector {
         }
     }
 
+    /// Check if the pragma indicates Solidity 0.8.24+ (which supports transient storage)
+    fn has_transient_storage_pragma(&self, source_lower: &str) -> bool {
+        // Find pragma statement
+        if let Some(pragma_start) = source_lower.find("pragma solidity") {
+            let pragma_end = source_lower[pragma_start..]
+                .find(';')
+                .map(|i| pragma_start + i)
+                .unwrap_or(source_lower.len());
+            let pragma = &source_lower[pragma_start..pragma_end];
+
+            // Transient storage is only available in 0.8.24+
+            // Check for explicit version matches
+            let transient_versions = ["0.8.24", "0.8.25", "0.8.26", "0.8.27", "0.8.28", "0.8.29", "0.9"];
+
+            for version in transient_versions {
+                if pragma.contains(version) {
+                    return true;
+                }
+            }
+
+            // Check for range specifications that include 0.8.24+
+            // e.g., ">=0.8.24" or ">=0.8.24 <0.9.0"
+            if pragma.contains(">=0.8.24")
+                || pragma.contains(">0.8.23")
+                || pragma.contains(">=0.8.25")
+                || pragma.contains(">=0.8.26")
+            {
+                return true;
+            }
+
+            // ^0.8.24 or higher
+            for i in 24..=29 {
+                if pragma.contains(&format!("^0.8.{}", i)) {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
     fn check_function(
         &self,
         function: &ast::Function<'_>,
@@ -209,16 +249,14 @@ impl Detector for TransientStorageReentrancyDetector {
         // Check if contract might be affected by transient storage
         // (either using it directly or callable by contracts that do)
         let uses_transient = uses_transient_storage(ctx);
-        let source_lower = ctx.source_code.to_lowercase();
-        let pragma_version = source_lower.contains("pragma solidity")
-            && (source_lower.contains("0.8.24")
-                || source_lower.contains("0.8.25")
-                || source_lower.contains("0.8.26")
-                || source_lower.contains("^0.8")
-                || source_lower.contains(">=0.8"));
 
-        // Only check contracts compiled with Solidity 0.8.24+ or explicitly using transient storage
-        if !uses_transient && !pragma_version {
+        // Only check contracts with Solidity 0.8.24+ which supports transient storage
+        // Note: ^0.8 and >=0.8 are too broad - they include versions without transient storage
+        let source_lower = ctx.source_code.to_lowercase();
+        let has_transient_pragma = self.has_transient_storage_pragma(&source_lower);
+
+        // Only check contracts explicitly using transient storage or compiled with 0.8.24+
+        if !uses_transient && !has_transient_pragma {
             return Ok(findings);
         }
 

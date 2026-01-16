@@ -153,54 +153,79 @@ impl MissingModifiersDetector {
     }
 
     /// Check if a function name suggests it needs access control
+    /// Returns true only for truly admin-only patterns, not user-facing functions
     fn requires_access_control(&self, function_name: &str) -> bool {
-        let critical_patterns = [
-            "withdraw",
-            "transfer",
-            "send",
-            "mint",
-            "burn",
+        let name_lower = function_name.to_lowercase();
+
+        // High confidence - these are always admin functions
+        let admin_only_patterns = [
+            "selfdestruct",
             "destroy",
             "suicide",
-            "selfdestruct",
             "kill",
             "pause",
             "unpause",
-            "stop",
-            "start",
             "emergency",
-            "admin",
-            "owner",
             "upgrade",
             "migrate",
+            "setowner",
+            "setadmin",
+            "setfee",
+            "setconfig",
             "configure",
-            "set",
-            "update",
-            "change",
-            "modify",
-            "delete",
-            "remove",
-            "add",
-            "create",
-            "initialize",
-            "init",
-            "rescue",
-            "recover",
-            "claim",
-            "distribute",
-            "allocate",
-            "approve",
-            "authorize",
+            "renounceownership",
+            "transferownership",
             "grant",
             "revoke",
             "enable",
             "disable",
+            "setwhitelist",
+            "setblacklist",
         ];
 
-        let name_lower = function_name.to_lowercase();
-        critical_patterns
-            .iter()
-            .any(|pattern| name_lower.contains(pattern))
+        // These patterns are admin-only when they're the FULL name (not part of a user function)
+        let admin_exact = [
+            "withdraw", // user-facing if "withdrawFrom" or has amount param
+            "mint",     // user-facing if minting to msg.sender
+            "burn",     // user-facing if burning from msg.sender
+            "rescue",
+            "recover",
+            "distribute",
+            "allocate",
+        ];
+
+        // High-confidence: admin-only patterns that always need protection
+        if admin_only_patterns.iter().any(|p| name_lower.contains(p)) {
+            return true;
+        }
+
+        // Medium-confidence: exact match for certain patterns
+        // Skip patterns that are commonly user-facing
+        // "transfer", "approve", "send", "claim" are typically user-facing in ERC tokens
+        if admin_exact.iter().any(|p| name_lower == *p) {
+            return true;
+        }
+
+        // Skip common user-facing patterns that should NOT require access control
+        let user_facing_patterns = [
+            "transfer",     // ERC20/721 transfer
+            "approve",      // ERC20/721 approve
+            "send",         // User sends their own tokens
+            "claim",        // Users claim their rewards
+            "stake",        // Users stake their tokens
+            "unstake",      // Users unstake their tokens
+            "deposit",      // Users deposit their tokens
+            "redeem",       // Users redeem their tokens
+            "swap",         // Users swap tokens
+            "buy",          // Users buy
+            "sell",         // Users sell
+        ];
+
+        if user_facing_patterns.iter().any(|p| name_lower.contains(p)) {
+            return false; // These are user-facing, don't require owner access control
+        }
+
+        false
     }
 
     /// Check if a function has access control modifiers
@@ -684,17 +709,55 @@ impl Detector for StateVariableVisibilityDetector {
         let mut findings = Vec::new();
         let visibility_keywords = ["public", "private", "internal", "constant", "immutable"];
 
+        // Track brace depth to distinguish contract-level (state) variables from local variables
+        // Depth 0: outside contracts
+        // Depth 1: inside contract body (state variables live here)
+        // Depth 2+: inside functions/modifiers/constructors (local variables live here)
+        let mut brace_depth: i32 = 0;
+        let mut in_function_signature = false;
+
         for (line_num, line) in ctx.source_code.lines().enumerate() {
-            if !self.is_state_variable_line(line) {
+            let trimmed = line.trim();
+
+            // Strip inline comments for analysis
+            let code_part = if let Some(idx) = trimmed.find("//") {
+                trimmed[..idx].trim()
+            } else {
+                trimmed
+            };
+
+            // Track function/modifier/constructor signatures (may span multiple lines)
+            if code_part.contains("function ")
+                || code_part.contains("constructor")
+                || code_part.contains("modifier ")
+                || code_part.contains("fallback(")
+                || code_part.contains("receive(")
+            {
+                in_function_signature = true;
+            }
+
+            // Count braces to track depth
+            for ch in code_part.chars() {
+                if ch == '{' {
+                    if in_function_signature {
+                        // Function body starts
+                        in_function_signature = false;
+                    }
+                    brace_depth += 1;
+                } else if ch == '}' {
+                    brace_depth = brace_depth.saturating_sub(1);
+                }
+            }
+
+            // Only check for state variables at contract level (depth 1)
+            // Depth 2+ means we're inside a function body where local variables are valid
+            if brace_depth != 1 {
                 continue;
             }
 
-            // Strip inline comments for visibility check (avoid false negatives from comments)
-            let code_part = if let Some(idx) = line.find("//") {
-                &line[..idx]
-            } else {
-                line
-            };
+            if !self.is_state_variable_line(line) {
+                continue;
+            }
 
             // Check if any visibility keyword is present in the code (not comments)
             let has_visibility = visibility_keywords.iter().any(|kw| code_part.contains(kw));
