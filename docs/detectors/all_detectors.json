@@ -1,7 +1,7 @@
 {
-  "version": "1.8.6",
-  "generated": "2026-01-15",
-  "total_detectors": 317,
+  "version": "1.9.1+",
+  "generated": "2026-01-16",
+  "total_detectors": 333,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -1362,7 +1362,7 @@
     {
       "id": "l2-bridge-message-validation",
       "name": "L2 Bridge Message Validation",
-      "description": "Detects missing or weak validation in L2\u2194L1 bridge message processing, including missing Merkle proofs, inadequate finality checks, and replay vulnerabilities",
+      "description": "Detects missing or weak validation in L2↔L1 bridge message processing, including missing Merkle proofs, inadequate finality checks, and replay vulnerabilities",
       "severity": "critical",
       "categories": [
         "CrossChain",
@@ -2077,8 +2077,13 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": [284, 862],
-      "swc": ["SWC-105"]
+      "cwe": [
+        284,
+        862
+      ],
+      "swc": [
+        "SWC-105"
+      ]
     },
     {
       "id": "swc106-unprotected-selfdestruct",
@@ -2089,8 +2094,13 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": [284, 670],
-      "swc": ["SWC-106"]
+      "cwe": [
+        284,
+        670
+      ],
+      "swc": [
+        "SWC-106"
+      ]
     },
     {
       "id": "swc132-unexpected-ether-balance",
@@ -2100,8 +2110,12 @@
       "categories": [
         "Logic"
       ],
-      "cwe": [670],
-      "swc": ["SWC-132"]
+      "cwe": [
+        670
+      ],
+      "swc": [
+        "SWC-132"
+      ]
     },
     {
       "id": "swc133-hash-collision-varlen",
@@ -2112,8 +2126,13 @@
         "Logic",
         "Validation"
       ],
-      "cwe": [328, 697],
-      "swc": ["SWC-133"]
+      "cwe": [
+        328,
+        697
+      ],
+      "swc": [
+        "SWC-133"
+      ]
     },
     {
       "id": "test-governance",
@@ -2559,7 +2578,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-284"],
+      "cwe": [
+        "CWE-284"
+      ],
       "swc": []
     },
     {
@@ -2571,7 +2592,9 @@
         "Logic",
         "Upgradeable"
       ],
-      "cwe": ["CWE-119"],
+      "cwe": [
+        "CWE-119"
+      ],
       "swc": []
     },
     {
@@ -2583,7 +2606,9 @@
         "DeFi",
         "AccessControl"
       ],
-      "cwe": ["CWE-306"],
+      "cwe": [
+        "CWE-306"
+      ],
       "swc": []
     },
     {
@@ -2594,7 +2619,9 @@
       "categories": [
         "AccessControl"
       ],
-      "cwe": ["CWE-862"],
+      "cwe": [
+        "CWE-862"
+      ],
       "swc": []
     },
     {
@@ -2606,7 +2633,9 @@
         "CrossChain",
         "Logic"
       ],
-      "cwe": ["CWE-294"],
+      "cwe": [
+        "CWE-294"
+      ],
       "swc": []
     },
     {
@@ -2618,7 +2647,9 @@
         "Reentrancy",
         "Logic"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -2629,7 +2660,9 @@
       "categories": [
         "Logic"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2641,7 +2674,9 @@
         "Reentrancy",
         "Logic"
       ],
-      "cwe": ["CWE-367"],
+      "cwe": [
+        "CWE-367"
+      ],
       "swc": []
     },
     {
@@ -2652,7 +2687,9 @@
       "categories": [
         "Logic"
       ],
-      "cwe": ["CWE-664"],
+      "cwe": [
+        "CWE-664"
+      ],
       "swc": []
     },
     {
@@ -2663,7 +2700,9 @@
       "categories": [
         "Reentrancy"
       ],
-      "cwe": ["CWE-667"],
+      "cwe": [
+        "CWE-667"
+      ],
       "swc": []
     },
     {
@@ -2675,7 +2714,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2687,7 +2728,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2699,7 +2742,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2711,7 +2756,9 @@
         "MEV",
         "Logic"
       ],
-      "cwe": ["CWE-200"],
+      "cwe": [
+        "CWE-200"
+      ],
       "swc": []
     },
     {
@@ -2723,7 +2770,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2735,7 +2784,9 @@
         "MEV",
         "Logic"
       ],
-      "cwe": ["CWE-208"],
+      "cwe": [
+        "CWE-208"
+      ],
       "swc": []
     },
     {
@@ -2747,7 +2798,9 @@
         "MEV",
         "L2"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2759,7 +2812,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2771,7 +2826,9 @@
         "MEV",
         "Oracle"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2783,7 +2840,9 @@
         "MEV",
         "AccessControl"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2795,7 +2854,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2807,7 +2868,9 @@
         "MEV",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -2819,7 +2882,9 @@
         "Metamorphic",
         "Deployment"
       ],
-      "cwe": ["CWE-913"],
+      "cwe": [
+        "CWE-913"
+      ],
       "swc": []
     },
     {
@@ -2831,7 +2896,9 @@
         "Metamorphic",
         "Deployment"
       ],
-      "cwe": ["CWE-330"],
+      "cwe": [
+        "CWE-330"
+      ],
       "swc": []
     },
     {
@@ -2843,7 +2910,9 @@
         "Metamorphic",
         "Deployment"
       ],
-      "cwe": ["CWE-706"],
+      "cwe": [
+        "CWE-706"
+      ],
       "swc": []
     },
     {
@@ -2855,7 +2924,9 @@
         "Validation",
         "Logic"
       ],
-      "cwe": ["CWE-670"],
+      "cwe": [
+        "CWE-670"
+      ],
       "swc": []
     },
     {
@@ -2867,7 +2938,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-284"],
+      "cwe": [
+        "CWE-284"
+      ],
       "swc": []
     },
     {
@@ -2879,7 +2952,9 @@
         "Metamorphic",
         "Deployment"
       ],
-      "cwe": ["CWE-913"],
+      "cwe": [
+        "CWE-913"
+      ],
       "swc": []
     },
     {
@@ -2891,7 +2966,9 @@
         "Reentrancy",
         "Deployment"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -2903,7 +2980,9 @@
         "Deployment",
         "Validation"
       ],
-      "cwe": ["CWE-94"],
+      "cwe": [
+        "CWE-94"
+      ],
       "swc": []
     },
     {
@@ -2915,7 +2994,9 @@
         "Reentrancy",
         "DeFi"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -2927,7 +3008,9 @@
         "Reentrancy",
         "Logic"
       ],
-      "cwe": ["CWE-674"],
+      "cwe": [
+        "CWE-674"
+      ],
       "swc": []
     },
     {
@@ -2939,7 +3022,9 @@
         "Logic",
         "DeFi"
       ],
-      "cwe": ["CWE-837"],
+      "cwe": [
+        "CWE-837"
+      ],
       "swc": []
     },
     {
@@ -2951,7 +3036,9 @@
         "Logic",
         "DeFi"
       ],
-      "cwe": ["CWE-754"],
+      "cwe": [
+        "CWE-754"
+      ],
       "swc": []
     },
     {
@@ -2963,7 +3050,9 @@
         "Reentrancy",
         "DeFi"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -2975,7 +3064,9 @@
         "DeFi",
         "Logic"
       ],
-      "cwe": ["CWE-367"],
+      "cwe": [
+        "CWE-367"
+      ],
       "swc": []
     },
     {
@@ -2987,7 +3078,9 @@
         "Reentrancy",
         "DeFi"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -2999,7 +3092,9 @@
         "Reentrancy",
         "DeFi"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -3011,7 +3106,9 @@
         "DeFi",
         "Reentrancy"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -3023,7 +3120,9 @@
         "DeFi",
         "Reentrancy"
       ],
-      "cwe": ["CWE-841"],
+      "cwe": [
+        "CWE-841"
+      ],
       "swc": []
     },
     {
@@ -3035,7 +3134,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-284"],
+      "cwe": [
+        "CWE-284"
+      ],
       "swc": []
     },
     {
@@ -3047,7 +3148,9 @@
         "AccessControl",
         "DeFi"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -3059,7 +3162,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-190"],
+      "cwe": [
+        "CWE-190"
+      ],
       "swc": []
     },
     {
@@ -3071,7 +3176,9 @@
         "MEV",
         "AccessControl"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -3083,7 +3190,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-284"],
+      "cwe": [
+        "CWE-284"
+      ],
       "swc": []
     },
     {
@@ -3095,7 +3204,9 @@
         "AccessControl",
         "Upgradeable"
       ],
-      "cwe": ["CWE-863"],
+      "cwe": [
+        "CWE-863"
+      ],
       "swc": []
     },
     {
@@ -3107,7 +3218,9 @@
         "AccessControl",
         "Upgradeable"
       ],
-      "cwe": ["CWE-269"],
+      "cwe": [
+        "CWE-269"
+      ],
       "swc": []
     },
     {
@@ -3119,7 +3232,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-362"],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -3131,7 +3246,9 @@
         "AccessControl",
         "Upgradeable"
       ],
-      "cwe": ["CWE-732"],
+      "cwe": [
+        "CWE-732"
+      ],
       "swc": []
     },
     {
@@ -3143,7 +3260,9 @@
         "AccessControl",
         "Logic"
       ],
-      "cwe": ["CWE-863"],
+      "cwe": [
+        "CWE-863"
+      ],
       "swc": []
     },
     {
@@ -3151,8 +3270,13 @@
       "name": "Sequencer Fee Exploitation",
       "description": "Detects L2 sequencer fee model exploitation for MEV extraction",
       "severity": "high",
-      "categories": ["L2", "MEV"],
-      "cwe": ["CWE-400"],
+      "categories": [
+        "L2",
+        "MEV"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
       "swc": []
     },
     {
@@ -3160,8 +3284,13 @@
       "name": "Escape Hatch Dependency",
       "description": "Detects over-reliance on L1 escape mechanisms in L2 contracts",
       "severity": "high",
-      "categories": ["L2", "Logic"],
-      "cwe": ["CWE-754"],
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": [
+        "CWE-754"
+      ],
       "swc": []
     },
     {
@@ -3169,8 +3298,13 @@
       "name": "Cross-L2 Frontrunning",
       "description": "Detects race conditions between L2 finality and L1 confirmation",
       "severity": "high",
-      "categories": ["L2", "MEV"],
-      "cwe": ["CWE-362"],
+      "categories": [
+        "L2",
+        "MEV"
+      ],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -3178,8 +3312,13 @@
       "name": "Optimistic Inference Attack",
       "description": "Detects state inference from partial commits in optimistic rollups",
       "severity": "medium",
-      "categories": ["L2", "Logic"],
-      "cwe": ["CWE-200"],
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": [
+        "CWE-200"
+      ],
       "swc": []
     },
     {
@@ -3187,8 +3326,13 @@
       "name": "L2 MEV Sequencer Leak",
       "description": "Detects sequencer MEV extraction via transaction ordering on L2",
       "severity": "high",
-      "categories": ["L2", "MEV"],
-      "cwe": ["CWE-362"],
+      "categories": [
+        "L2",
+        "MEV"
+      ],
+      "cwe": [
+        "CWE-362"
+      ],
       "swc": []
     },
     {
@@ -3196,8 +3340,13 @@
       "name": "DA Sampling Attack",
       "description": "Detects data availability under-sampling vulnerabilities",
       "severity": "high",
-      "categories": ["L2", "DataAvailability"],
-      "cwe": ["CWE-20"],
+      "categories": [
+        "L2",
+        "DataAvailability"
+      ],
+      "cwe": [
+        "CWE-20"
+      ],
       "swc": []
     },
     {
@@ -3205,8 +3354,13 @@
       "name": "Bridge Merkle Bypass",
       "description": "Detects missing merkle proof validation in cross-chain bridges",
       "severity": "critical",
-      "categories": ["CrossChain", "Validation"],
-      "cwe": ["CWE-345"],
+      "categories": [
+        "CrossChain",
+        "Validation"
+      ],
+      "cwe": [
+        "CWE-345"
+      ],
       "swc": []
     },
     {
@@ -3214,8 +3368,13 @@
       "name": "Challenge Period Bypass",
       "description": "Detects premature withdrawal before challenge period expires in optimistic rollups",
       "severity": "critical",
-      "categories": ["L2", "Logic"],
-      "cwe": ["CWE-367"],
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": [
+        "CWE-367"
+      ],
       "swc": []
     },
     {
@@ -3223,8 +3382,13 @@
       "name": "Cross-Rollup State Mismatch",
       "description": "Detects state inconsistency across rollups and chains",
       "severity": "high",
-      "categories": ["L2", "CrossChain"],
-      "cwe": ["CWE-662"],
+      "categories": [
+        "L2",
+        "CrossChain"
+      ],
+      "cwe": [
+        "CWE-662"
+      ],
       "swc": []
     },
     {
@@ -3232,8 +3396,13 @@
       "name": "Blob Data Manipulation",
       "description": "Detects EIP-4844 blob data tampering without proper KZG verification",
       "severity": "high",
-      "categories": ["L2", "DataAvailability"],
-      "cwe": ["CWE-20"],
+      "categories": [
+        "L2",
+        "DataAvailability"
+      ],
+      "cwe": [
+        "CWE-20"
+      ],
       "swc": []
     },
     {
@@ -3241,35 +3410,61 @@
       "name": "Blockhash Randomness",
       "description": "Detects weak randomness patterns using block.prevrandao, blockhash, or other block variables",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-330"],
-      "swc": ["SWC-120"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
+      "swc": [
+        "SWC-120"
+      ]
     },
     {
       "id": "multi-block-randomness",
       "name": "Multi-Block Randomness",
       "description": "Detects patterns combining multiple block variables for randomness, which falsely appears more secure",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-330"],
-      "swc": ["SWC-120"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
+      "swc": [
+        "SWC-120"
+      ]
     },
     {
       "id": "modulo-block-variable",
       "name": "Modulo Block Variable",
       "description": "Detects block.timestamp % N or block.number % N patterns used for random selection",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-330"],
-      "swc": ["SWC-120"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
+      "swc": [
+        "SWC-120"
+      ]
     },
     {
       "id": "chainlink-vrf-misuse",
       "name": "Chainlink VRF Misuse",
       "description": "Detects improper Chainlink VRF integration patterns that could compromise randomness guarantees",
       "severity": "medium",
-      "categories": ["Logic", "Oracle"],
-      "cwe": ["CWE-330"],
+      "categories": [
+        "Logic",
+        "Oracle"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
       "swc": []
     },
     {
@@ -3277,8 +3472,13 @@
       "name": "Commit-Reveal Timing",
       "description": "Detects commit-reveal schemes with timing vulnerabilities such as insufficient delays or missing time bounds",
       "severity": "high",
-      "categories": ["Logic", "Timestamp"],
-      "cwe": ["CWE-330"],
+      "categories": [
+        "Logic",
+        "Timestamp"
+      ],
+      "cwe": [
+        "CWE-330"
+      ],
       "swc": []
     },
     {
@@ -3286,44 +3486,90 @@
       "name": "DoS Push Pattern",
       "description": "Detects unbounded array growth via push operations that could lead to denial of service",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-400"],
-      "swc": ["SWC-128"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
+      "swc": [
+        "SWC-128"
+      ]
     },
     {
       "id": "dos-unbounded-storage",
       "name": "DoS Unbounded Storage",
       "description": "Detects unbounded storage operations that can lead to denial of service through excessive gas costs",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-400"],
-      "swc": ["SWC-128"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
+      "swc": [
+        "SWC-128"
+      ]
     },
     {
       "id": "dos-external-call-loop",
       "name": "DoS External Call in Loop",
       "description": "Detects external calls within loops that can lead to denial of service if any recipient reverts",
       "severity": "high",
-      "categories": ["Logic", "Reentrancy"],
-      "cwe": ["CWE-400"],
-      "swc": ["SWC-113"]
+      "categories": [
+        "Logic",
+        "Reentrancy"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
+      "swc": [
+        "SWC-113"
+      ]
     },
     {
       "id": "dos-block-gas-limit",
       "name": "DoS Block Gas Limit",
       "description": "Detects operations that can exceed block gas limit, making functions impossible to execute",
       "severity": "high",
-      "categories": ["Logic", "BestPractices"],
-      "cwe": ["CWE-400"],
-      "swc": ["SWC-128"]
+      "categories": [
+        "Logic",
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
+      "swc": [
+        "SWC-128"
+      ]
     },
     {
       "id": "dos-revert-bomb",
       "name": "DoS Revert Bomb",
       "description": "Detects patterns vulnerable to revert bomb attacks where external contracts can force transaction failures",
       "severity": "high",
-      "categories": ["Logic", "Reentrancy"],
-      "cwe": ["CWE-400"],
+      "categories": [
+        "Logic",
+        "Reentrancy"
+      ],
+      "cwe": [
+        "CWE-400"
+      ],
+      "swc": []
+    },
+    {
+      "id": "missing-visibility-modifier",
+      "name": "Missing Visibility Modifier",
+      "description": "Detects state variables without explicit visibility modifiers",
+      "severity": "low",
+      "categories": [
+        "BestPractices"
+      ],
+      "cwe": [
+        "CWE-710"
+      ],
       "swc": []
     }
   ]

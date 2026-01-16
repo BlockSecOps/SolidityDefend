@@ -362,6 +362,9 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::access_control::DefaultVisibilityDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::access_control::StateVariableVisibilityDetector::new(),
+        ));
 
         // Reentrancy Detectors
         self.register(Arc::new(crate::reentrancy::ClassicReentrancyDetector::new()));
