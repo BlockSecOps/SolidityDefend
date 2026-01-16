@@ -85,6 +85,10 @@ This release adds **8 new detectors** for EIP-3074 (AUTH/AUTHCALL), EIP-4844 (Bl
 - **eip4844-blob-validation**: Require specific blob opcodes/patterns, not generic "blob" string (reduced 56%)
 - **push0-stack-assumption**: Require specific cross-chain patterns instead of generic L1/L2 references (reduced 9%)
 
+#### Test Fixes
+- **sandwich-conditional-swap**: Fixed case-sensitive price/balance condition matching (now detects `getPrice()`, `getRate()`)
+- **sandwich-conditional-swap**: Fixed meaningless deadline detection to check surrounding context instead of same-line only
+
 ### Changed
 
 #### JSON Output Enhancement
