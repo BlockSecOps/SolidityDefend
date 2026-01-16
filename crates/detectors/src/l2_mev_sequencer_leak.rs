@@ -230,6 +230,48 @@ impl L2MevSequencerLeakDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Check if contract appears to be L2-specific
+    /// Returns true if there are indicators this is an L2 contract
+    fn is_l2_context(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // L2-specific imports/interfaces
+        let has_l2_imports = lower.contains("arbitrum")
+            || lower.contains("optimism")
+            || lower.contains("zksync")
+            || lower.contains("base")
+            || lower.contains("linea")
+            || lower.contains("polygon zkevm")
+            || lower.contains("scroll")
+            || lower.contains("starknet")
+            || lower.contains("mantl")
+            || lower.contains("blast");
+
+        // L2-specific interfaces
+        let has_l2_interfaces = lower.contains("iarbsys")
+            || lower.contains("iovmgaspriceoracle")
+            || lower.contains("il2crossdomainmessenger")
+            || lower.contains("iarbitrumbridge")
+            || lower.contains("isequencer")
+            || lower.contains("sequencer");
+
+        // L2-specific addresses/contracts
+        let has_l2_contracts = source.contains("0x000000000000000000000000000000000000006E") // Arbitrum ArbSys
+            || source.contains("0x420000000000000000000000000000000000000F") // Optimism Gas Oracle
+            || lower.contains("arbsys")
+            || lower.contains("arbinfo");
+
+        // L2-specific functionality
+        let has_l2_functionality = lower.contains("l2 sequencer")
+            || lower.contains("cross-chain")
+            || lower.contains("crosschain")
+            || lower.contains("bridge")
+            || lower.contains("l1 message")
+            || lower.contains("l2 message");
+
+        has_l2_imports || has_l2_interfaces || has_l2_contracts || has_l2_functionality
+    }
 }
 
 impl Detector for L2MevSequencerLeakDetector {
@@ -261,6 +303,12 @@ impl Detector for L2MevSequencerLeakDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Only check contracts that appear to be L2-specific
+        // L2 MEV issues are not relevant for L1-only contracts
+        if !self.is_l2_context(source) {
+            return Ok(findings);
+        }
 
         for (line, func_name, issue) in self.find_ordering_vulnerabilities(source) {
             let message = format!(

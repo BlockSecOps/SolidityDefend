@@ -104,6 +104,45 @@ impl Detector for CircularDependencyDetector {
 }
 
 impl CircularDependencyDetector {
+    /// Standard ERC callback functions that are safe (reentrancy-protected by ERC design)
+    fn is_standard_callback(&self, function_name: &str) -> bool {
+        let name_lower = function_name.to_lowercase();
+
+        // ERC-721 safe transfer callbacks
+        if name_lower == "onerc721received" || name_lower == "on721received" {
+            return true;
+        }
+
+        // ERC-1155 callbacks
+        if name_lower == "onerc1155received"
+            || name_lower == "onerc1155batchreceived"
+            || name_lower == "on1155received"
+        {
+            return true;
+        }
+
+        // ERC-777 hooks
+        if name_lower == "tokensreceived" || name_lower == "tokenssent" {
+            return true;
+        }
+
+        // ERC-3156 flash loan callback
+        if name_lower == "onflashloan" {
+            return true;
+        }
+
+        // Uniswap/DEX callbacks
+        if name_lower == "uniswapv2call"
+            || name_lower == "uniswapv3swapcallback"
+            || name_lower == "pancakecall"
+            || name_lower.starts_with("uniswapv")
+        {
+            return true;
+        }
+
+        false
+    }
+
     /// Check for circular dependency vulnerabilities
     fn check_circular_dependency(
         &self,
@@ -113,6 +152,12 @@ impl CircularDependencyDetector {
         function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
+
+        // Skip standard ERC callbacks - these are designed to be called during transfers
+        // and have built-in reentrancy protections in ERC standards
+        if self.is_standard_callback(function.name.name) {
+            return None;
+        }
 
         // NEW: Skip functions that are safe from circular dependencies
         if safe_call_patterns::is_safe_from_circular_deps(function, &func_source, ctx) {

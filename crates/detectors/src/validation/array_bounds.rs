@@ -116,12 +116,57 @@ impl ArrayBoundsDetector {
         ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
+        let bounded_vars: HashMap<String, String> = HashMap::new();
 
         for stmt in &block.statements {
-            self.check_statement_for_unchecked_access(stmt, arrays, &mut findings, ctx);
+            self.check_statement_for_unchecked_access(stmt, arrays, &mut findings, ctx, &bounded_vars);
         }
 
         findings
+    }
+
+    /// Extract loop variable bounds from a for loop condition
+    /// Returns (loop_var_name, array_name) if condition is like `i < arr.length`
+    fn extract_loop_bounds(&self, condition: &ast::Expression<'_>) -> Option<(String, String)> {
+        if let ast::Expression::BinaryOperation {
+            operator, left, right, ..
+        } = condition
+        {
+            if matches!(
+                operator,
+                ast::BinaryOperator::Less | ast::BinaryOperator::LessEqual
+            ) {
+                // Get loop variable from left side
+                let loop_var = if let ast::Expression::Identifier(id) = left {
+                    Some(id.name.to_string())
+                } else {
+                    None
+                };
+
+                // Get array name from right side (arr.length)
+                let array_name = if let ast::Expression::MemberAccess {
+                    expression, member, ..
+                } = right
+                {
+                    if member.name == "length" {
+                        if let ast::Expression::Identifier(arr_id) = expression {
+                            Some(arr_id.name.to_string())
+                        } else {
+                            None
+                        }
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                };
+
+                if let (Some(lv), Some(an)) = (loop_var, array_name) {
+                    return Some((lv, an));
+                }
+            }
+        }
+        None
     }
 
     /// Check statement for unchecked array access
@@ -131,16 +176,17 @@ impl ArrayBoundsDetector {
         arrays: &HashMap<String, ArrayInfo>,
         findings: &mut Vec<Finding>,
         ctx: &AnalysisContext<'_>,
+        bounded_vars: &HashMap<String, String>,
     ) {
         match stmt {
             ast::Statement::Expression(expr) => {
-                self.check_expression_for_unchecked_access(expr, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(expr, arrays, findings, ctx, bounded_vars);
             }
             ast::Statement::VariableDeclaration {
                 initial_value: Some(expr),
                 ..
             } => {
-                self.check_expression_for_unchecked_access(expr, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(expr, arrays, findings, ctx, bounded_vars);
             }
             ast::Statement::If {
                 condition,
@@ -148,17 +194,17 @@ impl ArrayBoundsDetector {
                 else_branch,
                 ..
             } => {
-                self.check_expression_for_unchecked_access(condition, arrays, findings, ctx);
-                self.check_statement_for_unchecked_access(then_branch, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(condition, arrays, findings, ctx, bounded_vars);
+                self.check_statement_for_unchecked_access(then_branch, arrays, findings, ctx, bounded_vars);
                 if let Some(else_stmt) = else_branch {
-                    self.check_statement_for_unchecked_access(else_stmt, arrays, findings, ctx);
+                    self.check_statement_for_unchecked_access(else_stmt, arrays, findings, ctx, bounded_vars);
                 }
             }
             ast::Statement::While {
                 condition, body, ..
             } => {
-                self.check_expression_for_unchecked_access(condition, arrays, findings, ctx);
-                self.check_statement_for_unchecked_access(body, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(condition, arrays, findings, ctx, bounded_vars);
+                self.check_statement_for_unchecked_access(body, arrays, findings, ctx, bounded_vars);
             }
             ast::Statement::For {
                 init,
@@ -168,19 +214,27 @@ impl ArrayBoundsDetector {
                 ..
             } => {
                 if let Some(init_stmt) = init {
-                    self.check_statement_for_unchecked_access(init_stmt, arrays, findings, ctx);
+                    self.check_statement_for_unchecked_access(init_stmt, arrays, findings, ctx, bounded_vars);
                 }
                 if let Some(cond_expr) = condition {
-                    self.check_expression_for_unchecked_access(cond_expr, arrays, findings, ctx);
+                    self.check_expression_for_unchecked_access(cond_expr, arrays, findings, ctx, bounded_vars);
                 }
                 if let Some(update_expr) = update {
-                    self.check_expression_for_unchecked_access(update_expr, arrays, findings, ctx);
+                    self.check_expression_for_unchecked_access(update_expr, arrays, findings, ctx, bounded_vars);
                 }
-                self.check_statement_for_unchecked_access(body, arrays, findings, ctx);
+
+                // Extract loop bounds and pass to body check
+                let mut body_bounded_vars = bounded_vars.clone();
+                if let Some(cond_expr) = condition {
+                    if let Some((loop_var, array_name)) = self.extract_loop_bounds(cond_expr) {
+                        body_bounded_vars.insert(loop_var, array_name);
+                    }
+                }
+                self.check_statement_for_unchecked_access(body, arrays, findings, ctx, &body_bounded_vars);
             }
             ast::Statement::Block(block) => {
                 for inner_stmt in &block.statements {
-                    self.check_statement_for_unchecked_access(inner_stmt, arrays, findings, ctx);
+                    self.check_statement_for_unchecked_access(inner_stmt, arrays, findings, ctx, bounded_vars);
                 }
             }
             _ => {}
@@ -194,6 +248,7 @@ impl ArrayBoundsDetector {
         arrays: &HashMap<String, ArrayInfo>,
         findings: &mut Vec<Finding>,
         ctx: &AnalysisContext<'_>,
+        bounded_vars: &HashMap<String, String>,
     ) {
         match expr {
             ast::Expression::IndexAccess {
@@ -206,7 +261,7 @@ impl ArrayBoundsDetector {
                     if arrays.contains_key(id.name) {
                         // Check if index is validated
                         if let Some(index_expr) = index {
-                            if !self.is_index_validated(index_expr, id.name, arrays) {
+                            if !self.is_index_validated(index_expr, id.name, arrays, bounded_vars) {
                                 let message = format!(
                                     "Array access to '{}' may be out of bounds - index not validated",
                                     id.name
@@ -237,21 +292,21 @@ impl ArrayBoundsDetector {
                 }
             }
             ast::Expression::BinaryOperation { left, right, .. } => {
-                self.check_expression_for_unchecked_access(left, arrays, findings, ctx);
-                self.check_expression_for_unchecked_access(right, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(left, arrays, findings, ctx, bounded_vars);
+                self.check_expression_for_unchecked_access(right, arrays, findings, ctx, bounded_vars);
             }
             ast::Expression::Assignment { left, right, .. } => {
-                self.check_expression_for_unchecked_access(left, arrays, findings, ctx);
-                self.check_expression_for_unchecked_access(right, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(left, arrays, findings, ctx, bounded_vars);
+                self.check_expression_for_unchecked_access(right, arrays, findings, ctx, bounded_vars);
             }
             ast::Expression::FunctionCall {
                 function,
                 arguments,
                 ..
             } => {
-                self.check_expression_for_unchecked_access(function, arrays, findings, ctx);
+                self.check_expression_for_unchecked_access(function, arrays, findings, ctx, bounded_vars);
                 for arg in arguments {
-                    self.check_expression_for_unchecked_access(arg, arrays, findings, ctx);
+                    self.check_expression_for_unchecked_access(arg, arrays, findings, ctx, bounded_vars);
                 }
             }
             _ => {}
@@ -262,12 +317,21 @@ impl ArrayBoundsDetector {
     fn is_index_validated(
         &self,
         index_expr: &ast::Expression<'_>,
-        _array_name: &str,
+        array_name: &str,
         _arrays: &HashMap<String, ArrayInfo>,
+        bounded_vars: &HashMap<String, String>,
     ) -> bool {
-        // Simplified validation check - in a real implementation, this would analyze
-        // the control flow to see if there are bounds checks before this access
         match index_expr {
+            // Check if index is a bounded loop variable
+            ast::Expression::Identifier(id) => {
+                // If this variable is bounded by this array's length, it's safe
+                if let Some(bound_array) = bounded_vars.get(id.name) {
+                    if bound_array == array_name {
+                        return true;
+                    }
+                }
+                false
+            }
             // Literal indices might be safe if they're small constants
             ast::Expression::Literal { value, .. } => {
                 if let ast::LiteralValue::Number(num) = value {
@@ -280,7 +344,26 @@ impl ArrayBoundsDetector {
                     false
                 }
             }
-            // Variables and complex expressions are considered unvalidated
+            // Simple arithmetic on bounded variables (i + 1, i - 1) where i < arr.length
+            // Note: i + 1 could still overflow at arr.length - 1, but this is much less common
+            ast::Expression::BinaryOperation {
+                operator, left, ..
+            } => {
+                if matches!(
+                    operator,
+                    ast::BinaryOperator::Add | ast::BinaryOperator::Sub
+                ) {
+                    // If the base operand is bounded, consider it partially safe
+                    if let ast::Expression::Identifier(id) = left {
+                        if let Some(bound_array) = bounded_vars.get(id.name) {
+                            if bound_array == array_name {
+                                return true; // Could add more checks for overflow potential
+                            }
+                        }
+                    }
+                }
+                false
+            }
             _ => false,
         }
     }

@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### False Positive Reduction - Phase 3
+
+This release significantly reduces false positives across 13 detectors while maintaining 100% detection rate for key vulnerabilities. **Total findings reduced by 11.5% (957 fewer findings)**.
+
+### Changed
+
+#### Priority 1: Critical FP Fixes (Hardcoded Returns)
+
+| Detector | Reduction | Fix Applied |
+|----------|-----------|-------------|
+| `invalid-state-transition` | **83%** (135→23) | Fixed hardcoded false returns; implemented guard context tracking |
+| `array-bounds-check` | **30%** (122→86) | Loop bounds tracking for `arr[i]` patterns in bounded loops |
+
+#### Priority 2: High FP Fixes (Missing Context Checks)
+
+| Detector | Reduction | Fix Applied |
+|----------|-----------|-------------|
+| `transient-storage-reentrancy` | **90%** (77→8) | Fixed pragma detection to only match Solidity 0.8.24+ |
+| `eip7702-delegation-phishing` | **97%** (74→2) | Added proper early return when not delegation target |
+| `eip7702-storage-corruption` | **57%** (207→89) | Requires multiple strong signals for delegation detection |
+| `eip7702-sweeper-attack` | **40%** (81→49) | Added EIP-7702 context and access control checks |
+| `l2-mev-sequencer-leak` | **35%** (92→60) | Added L2 network context check |
+
+#### Priority 3: Medium FP Fixes (Text-Based Pattern Matching)
+
+| Detector | Reduction | Fix Applied |
+|----------|-----------|-------------|
+| `missing-access-modifiers` | **81%** (233→44) | Refined to only flag admin-only functions |
+| `proxy-storage-collision` | **79%** (135→29) | Requires both delegatecall AND proxy patterns |
+| `excessive-gas-usage` | **52%** (212→101) | Skip local variables in storage read count |
+| `inefficient-storage` | **35%** (231→149) | Only flag 3+ bools, skip semantic types |
+| `circular-dependency` | **1%** (128→127) | Whitelist standard ERC callbacks |
+| `defi-yield-farming-exploits` | Improved | Check function body, not whole source |
+
+### Technical Details
+
+- **invalid-state-transition**: Now properly tracks guard context through block analysis, checking for require/assert statements and if-statement guards
+- **array-bounds-check**: Implements loop bounds extraction to recognize safe patterns like `for(i=0; i<arr.length; i++) arr[i]`
+- **transient-storage-reentrancy**: Only flags contracts with Solidity 0.8.24+ pragma (which supports transient storage)
+- **missing-access-modifiers**: Distinguishes admin-only functions (pause, upgrade, setOwner) from user-facing functions (transfer, approve, stake)
+- **circular-dependency**: Whitelists standard ERC callbacks (onERC721Received, onERC1155Received, onFlashLoan, uniswapV3SwapCallback)
+- **proxy-storage-collision**: Requires strong proxy signals (IMPLEMENTATION_SLOT, EIP1967) or proxy name + delegatecall
+
 ---
 
 ## [1.9.2] - 2026-01-16

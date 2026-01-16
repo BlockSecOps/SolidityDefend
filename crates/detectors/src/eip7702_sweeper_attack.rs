@@ -254,9 +254,66 @@ impl Eip7702SweeperAttackDetector {
         self.find_function_end(lines, start)
     }
 
+    /// Find the line number of the function containing a given line
+    fn find_function_line(&self, lines: &[&str], from_line: usize) -> usize {
+        for i in (0..=from_line).rev() {
+            if i < lines.len() && lines[i].contains("function ") {
+                return i;
+            }
+        }
+        0
+    }
+
     /// Get contract name
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
+    }
+
+    /// Check if contract appears to be an EIP-7702 delegation target
+    fn is_eip7702_context(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // Strong EIP-7702 signals
+        lower.contains("eip7702")
+            || lower.contains("eip-7702")
+            || source.contains("AUTH")
+            || source.contains("AUTHCALL")
+            || source.contains("setCode")
+            || source.contains("SET_CODE")
+            || lower.contains("delegatecode")
+            || lower.contains("executeas")
+    }
+
+    /// Check if a function has access control modifiers
+    fn function_has_access_control(&self, lines: &[&str], func_line: usize) -> bool {
+        // Look at the function declaration line
+        if func_line < lines.len() {
+            let line = lines[func_line].to_lowercase();
+            // Common access control modifiers
+            if line.contains("onlyowner")
+                || line.contains("only_owner")
+                || line.contains("onlyadmin")
+                || line.contains("onlyminter")
+                || line.contains("onlyauthorized")
+                || line.contains("onlyrole")
+                || line.contains("whennotpaused")
+                || line.contains("nonreentrant")
+                || line.contains("auth")
+                || line.contains("restricted")
+            {
+                return true;
+            }
+        }
+
+        // Also check the function body for require(msg.sender == owner) patterns
+        let func_end = self.find_function_end(lines, func_line);
+        let func_body: String = lines[func_line..func_end].join("\n").to_lowercase();
+
+        func_body.contains("require(msg.sender ==")
+            || func_body.contains("require(_msgSender() ==")
+            || func_body.contains("if (msg.sender !=")
+            || func_body.contains("hasrole(")
+            || func_body.contains("onlyowner")
     }
 }
 
@@ -289,10 +346,34 @@ impl Detector for Eip7702SweeperAttackDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+        let lines: Vec<&str> = source.lines().collect();
+
+        // Only flag as high severity if contract appears to be EIP-7702 related
+        // Otherwise these are legitimate rescue/recovery functions
+        let is_7702_context = self.is_eip7702_context(source);
 
         // Find sweep function patterns
         let sweep_funcs = self.find_sweep_functions(source);
         for (line, func_name) in &sweep_funcs {
+            // Skip functions with access control - they are legitimate rescue functions
+            let func_line_idx = (*line as usize).saturating_sub(1);
+            if self.function_has_access_control(&lines, func_line_idx) {
+                continue;
+            }
+
+            // Without EIP-7702 context, skip common rescue function names that are protected
+            if !is_7702_context {
+                let lower_name = func_name.to_lowercase();
+                // Skip legitimate rescue/recovery patterns
+                if lower_name == "recover"
+                    || lower_name == "rescue"
+                    || lower_name == "emergencywithdraw"
+                    || lower_name.contains("admin")
+                {
+                    continue;
+                }
+            }
+
             let message = format!(
                 "Function '{}' in contract '{}' has sweeper-like naming and contains asset \
                  transfers. If used as an EIP-7702 delegation target, this could allow \
@@ -304,7 +385,11 @@ impl Detector for Eip7702SweeperAttackDetector {
                 .base
                 .create_finding(ctx, message, *line, 1, 50)
                 .with_cwe(306) // CWE-306: Missing Authentication for Critical Function
-                .with_confidence(Confidence::High)
+                .with_confidence(if is_7702_context {
+                    Confidence::High
+                } else {
+                    Confidence::Medium
+                })
                 .with_fix_suggestion(
                     "If this is a legitimate rescue function:\n\n\
                      1. Add strict access control (onlyOwner, multi-sig)\n\
@@ -319,87 +404,107 @@ impl Detector for Eip7702SweeperAttackDetector {
             findings.push(finding);
         }
 
-        // Find ETH sweep patterns
-        let eth_sweeps = self.find_eth_sweep(source);
-        for (line, func_name) in eth_sweeps {
-            if sweep_funcs.iter().any(|(l, _)| *l == line) {
-                continue;
+        // Find ETH sweep patterns - only report if in EIP-7702 context or no access control
+        if is_7702_context {
+            let eth_sweeps = self.find_eth_sweep(source);
+            for (line, func_name) in eth_sweeps {
+                if sweep_funcs.iter().any(|(l, _)| *l == line) {
+                    continue;
+                }
+
+                // Skip if function has access control
+                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                if self.function_has_access_control(&lines, func_line_idx) {
+                    continue;
+                }
+
+                let message = format!(
+                    "Function '{}' in contract '{}' transfers the entire ETH balance. \
+                     This pattern could be exploited in EIP-7702 delegation to drain \
+                     all ETH from a user's account.",
+                    func_name, contract_name
+                );
+
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(306)
+                    .with_confidence(Confidence::High)
+                    .with_fix_suggestion(
+                        "Avoid transferring full balance:\n\n\
+                         1. Use specific amounts instead of address(this).balance\n\
+                         2. Add withdrawal limits and rate limiting\n\
+                         3. Require multi-sig approval for large transfers"
+                            .to_string(),
+                    );
+
+                findings.push(finding);
             }
 
-            let message = format!(
-                "Function '{}' in contract '{}' transfers the entire ETH balance. \
-                 This pattern could be exploited in EIP-7702 delegation to drain \
-                 all ETH from a user's account.",
-                func_name, contract_name
-            );
+            // Find token sweep patterns
+            let token_sweeps = self.find_token_sweep(source);
+            for (line, func_name) in token_sweeps {
+                // Skip if function has access control
+                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                if self.function_has_access_control(&lines, func_line_idx) {
+                    continue;
+                }
 
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(306)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Avoid transferring full balance:\n\n\
-                     1. Use specific amounts instead of address(this).balance\n\
-                     2. Add withdrawal limits and rate limiting\n\
-                     3. Require multi-sig approval for large transfers"
-                        .to_string(),
+                let message = format!(
+                    "Function '{}' in contract '{}' transfers entire token balances. \
+                     This pattern could be exploited in EIP-7702 delegation to drain \
+                     all tokens from a user's account.",
+                    func_name, contract_name
                 );
 
-            findings.push(finding);
-        }
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(306)
+                    .with_confidence(Confidence::High)
+                    .with_fix_suggestion(
+                        "Avoid transferring full token balance:\n\n\
+                         1. Use specific amounts instead of balanceOf()\n\
+                         2. Add per-token and total limits\n\
+                         3. Implement allowlist of transferable tokens"
+                            .to_string(),
+                    );
 
-        // Find token sweep patterns
-        let token_sweeps = self.find_token_sweep(source);
-        for (line, func_name) in token_sweeps {
-            let message = format!(
-                "Function '{}' in contract '{}' transfers entire token balances. \
-                 This pattern could be exploited in EIP-7702 delegation to drain \
-                 all tokens from a user's account.",
-                func_name, contract_name
-            );
+                findings.push(finding);
+            }
 
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(306)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Avoid transferring full token balance:\n\n\
-                     1. Use specific amounts instead of balanceOf()\n\
-                     2. Add per-token and total limits\n\
-                     3. Implement allowlist of transferable tokens"
-                        .to_string(),
+            // Find batch sweep patterns
+            let batch_sweeps = self.find_batch_sweep(source);
+            for (line, func_name) in batch_sweeps {
+                // Skip if function has access control
+                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                if self.function_has_access_control(&lines, func_line_idx) {
+                    continue;
+                }
+
+                let message = format!(
+                    "Function '{}' in contract '{}' contains a loop that transfers tokens. \
+                     This batch sweep pattern is highly dangerous in EIP-7702 delegation \
+                     as it can drain multiple token types in one transaction.",
+                    func_name, contract_name
                 );
 
-            findings.push(finding);
-        }
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(306)
+                    .with_confidence(Confidence::High)
+                    .with_fix_suggestion(
+                        "Batch sweep patterns are extremely dangerous:\n\n\
+                         1. Remove batch functionality if possible\n\
+                         2. Add per-token approval requirements\n\
+                         3. Implement strict access control\n\
+                         4. Add delays between batch operations"
+                            .to_string(),
+                    );
 
-        // Find batch sweep patterns
-        let batch_sweeps = self.find_batch_sweep(source);
-        for (line, func_name) in batch_sweeps {
-            let message = format!(
-                "Function '{}' in contract '{}' contains a loop that transfers tokens. \
-                 This batch sweep pattern is highly dangerous in EIP-7702 delegation \
-                 as it can drain multiple token types in one transaction.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(306)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Batch sweep patterns are extremely dangerous:\n\n\
-                     1. Remove batch functionality if possible\n\
-                     2. Add per-token approval requirements\n\
-                     3. Implement strict access control\n\
-                     4. Add delays between batch operations"
-                        .to_string(),
-                );
-
-            findings.push(finding);
+                findings.push(finding);
+            }
         }
 
         Ok(findings)
