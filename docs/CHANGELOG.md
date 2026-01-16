@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [1.9.2] - 2026-01-16
+
+### 100% Detection Rate Achievement
+
+This release achieves **100% detection rate** (60/60) in scanner comparison tests. Total detectors: **333**.
+
 ### Added
 
 #### New Detectors (1)
