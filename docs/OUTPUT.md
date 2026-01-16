@@ -145,41 +145,19 @@ The JSON format provides structured data for programmatic processing and integra
   "findings": [
     {
       "id": "classic-reentrancy-001",
-      "detector": "classic-reentrancy",
-      "title": "Classic Reentrancy",
-      "description": "External call before state change in withdraw() function",
+      "detector_id": "classic-reentrancy",
+      "message": "External call before state change in withdraw() function",
       "severity": "critical",
-      "confidence": "high",
-      "category": "reentrancy",
+      "location": {
+        "file": "contracts/MyToken.sol",
+        "line": 45,
+        "column": 9,
+        "length": 38
+      },
       "cwe": "CWE-841",
-      "swc": "SWC-107",
-      "file_path": "contracts/MyToken.sol",
-      "start_line": 45,
-      "end_line": 45,
-      "start_column": 9,
-      "end_column": 47,
-      "code_snippet": "msg.sender.call{value: amount}(\"\");",
-      "context_before": [
-        "function withdraw() public {",
-        "    uint256 amount = balances[msg.sender];",
-        "    require(amount > 0, \"No balance\");"
-      ],
-      "context_after": [
-        "    balances[msg.sender] = 0;",
-        "}"
-      ],
-      "fix_suggestion": "Update balances before external call",
-      "fix_code": "balances[msg.sender] = 0;\nmsg.sender.call{value: amount}(\"\");",
-      "references": [
-        "https://docs.soliditydefend.com/detectors/reentrancy",
-        "https://consensys.github.io/smart-contract-best-practices/attacks/reentrancy/"
-      ],
-      "tags": ["external-call", "state-change", "reentrancy"],
-      "metadata": {
-        "function_name": "withdraw",
-        "function_visibility": "public",
-        "external_call_type": "low-level-call",
-        "state_variables_modified": ["balances"]
+      "fix_suggestion": {
+        "description": "Update balances before external call: balances[msg.sender] = 0; then call",
+        "replacements": []
       }
     }
   ],
@@ -219,25 +197,19 @@ The JSON format provides structured data for programmatic processing and integra
 - `statistics`: Statistical analysis of findings
 
 #### Finding Object
-- `id`: Unique identifier for the finding
-- `detector`: Detector that found the issue
-- `title`: Human-readable issue title
-- `description`: Detailed issue description
-- `severity`: Issue severity level
-- `confidence`: Detector confidence level
-- `category`: Issue category classification
-- `cwe`: CWE (Common Weakness Enumeration) ID when available
+- `detector_id`: Detector that found the issue
+- `message`: Detailed issue description
+- `severity`: Issue severity level (critical, high, medium, low, info)
+- `location`: Location information object
+  - `file`: Full path to the file containing the issue
+  - `line`: Line number of the issue
+  - `column`: Column number of the issue
+  - `length`: Length of the affected code
+- `cwe`: CWE (Common Weakness Enumeration) ID when available (e.g., "CWE-841")
 - `swc`: SWC (Smart Contract Weakness Classification) ID when available
-- `file_path`: Path to the file containing the issue
-- `start_line`/`end_line`: Line number range
-- `start_column`/`end_column`: Column number range
-- `code_snippet`: Exact code that triggered the finding
-- `context_before`/`context_after`: Surrounding code lines
-- `fix_suggestion`: Recommended fix description
-- `fix_code`: Suggested code replacement
-- `references`: Links to documentation and resources
-- `tags`: Machine-readable issue tags
-- `metadata`: Additional detector-specific information
+- `fix_suggestion`: Fix recommendation object
+  - `description`: Recommended fix description
+  - `replacements`: Array of code replacement suggestions
 
 #### Metadata Object
 - `tool_name`: Name of the analysis tool (SolidityDefend)
@@ -264,28 +236,32 @@ soliditydefend -f json contract.sol | jq '.findings[] | select(.severity == "cri
 
 #### Count Issues by Severity
 ```bash
-soliditydefend -f json contract.sol | jq '.summary.by_severity'
+soliditydefend -f json contract.sol | jq '.statistics.severity_counts'
 ```
 
 #### Get File Paths with Issues
 ```bash
-soliditydefend -f json contracts/ | jq -r '.findings[].file_path' | sort | uniq
+soliditydefend -f json contracts/ | jq -r '.findings[].location.file' | sort | uniq
 ```
 
 #### Filter by Detector
 ```bash
-soliditydefend -f json contract.sol | jq '.findings[] | select(.detector == "reentrancy")'
+soliditydefend -f json contract.sol | jq '.findings[] | select(.detector_id == "classic-reentrancy")'
 ```
 
 #### Generate Summary Report
 ```bash
 soliditydefend -f json contracts/ | jq '{
-  total_files: .summary.files_analyzed,
-  total_issues: .summary.total_findings,
-  critical: .summary.by_severity.critical,
-  high: .summary.by_severity.high,
-  analysis_time: .summary.analysis_time_ms
+  total_issues: .statistics.total_findings,
+  critical: .statistics.severity_counts.critical,
+  high: .statistics.severity_counts.high,
+  unique_detectors: .statistics.unique_detectors
 }'
+```
+
+#### Group Findings by File
+```bash
+soliditydefend -f json contracts/ | jq '[.findings[] | {file: .location.file, detector: .detector_id, line: .location.line}] | group_by(.file)'
 ```
 
 ## Output Comparison

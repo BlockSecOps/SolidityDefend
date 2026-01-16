@@ -78,6 +78,7 @@ impl JsonFormatter {
             message: finding.message.clone(),
             severity: JsonSeverity::from(&finding.severity),
             location: JsonLocation {
+                file: finding.primary_location.file.clone(),
                 line: finding.primary_location.line as usize,
                 column: finding.primary_location.column as usize,
                 length: finding.primary_location.length as usize,
@@ -207,6 +208,7 @@ impl From<&Severity> for JsonSeverity {
 /// Location information in JSON format
 #[derive(Debug, Serialize, Deserialize)]
 pub struct JsonLocation {
+    pub file: String,
     pub line: usize,
     pub column: usize,
     pub length: usize,
