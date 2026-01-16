@@ -308,6 +308,30 @@ pub mod accesscontrol_race_condition;
 pub mod operator_whitelist_inheritance;
 pub mod cross_contract_role_confusion;
 
+// Phase 48: L2/Rollup & Cross-Chain Advanced (v1.8.5 - 2026)
+pub mod sequencer_fee_exploitation;
+pub mod escape_hatch_dependency;
+pub mod cross_l2_frontrunning;
+pub mod optimistic_inference_attack;
+pub mod l2_mev_sequencer_leak;
+pub mod da_sampling_attack;
+pub mod bridge_merkle_bypass;
+pub mod challenge_period_bypass;
+pub mod cross_rollup_state_mismatch;
+pub mod blob_data_manipulation;
+
+// Phase 49: Weak Randomness & DoS Expansion (v1.8.6 - 2026)
+pub mod blockhash_randomness;
+pub mod multi_block_randomness;
+pub mod modulo_block_variable;
+pub mod chainlink_vrf_misuse;
+pub mod commit_reveal_timing;
+pub mod dos_push_pattern;
+pub mod dos_unbounded_storage;
+pub mod dos_external_call_loop;
+pub mod dos_block_gas_limit;
+pub mod dos_revert_bomb;
+
 // DeFi-specific detectors
 pub mod defi;
 
