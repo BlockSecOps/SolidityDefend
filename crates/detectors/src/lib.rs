@@ -332,6 +332,12 @@ pub mod dos_external_call_loop;
 pub mod dos_block_gas_limit;
 pub mod dos_revert_bomb;
 
+// Phase 50: Diamond Proxy & Advanced Upgrades (v1.9.0 - 2026)
+pub mod diamond_init_frontrunning;
+pub mod proxy_gap_underflow;
+pub mod proxy_double_initialize;
+pub mod delegatecall_to_self;
+
 // DeFi-specific detectors
 pub mod defi;
 

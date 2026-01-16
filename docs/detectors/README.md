@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **317 security detectors** in SolidityDefend v1.8.6.
+Complete reference for all **321 security detectors** in SolidityDefend v1.9.0.
 
 **Last Updated:** 2026-01-15
-**Version:** v1.8.6
-**Total Detectors:** 317 (in tool)
+**Version:** v1.9.0
+**Total Detectors:** 321 (in tool)
 **Categories:** 28
 
 ---
@@ -16,7 +16,7 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 **File:** [`all_detectors.json`](all_detectors.json)
 
 **Contents:**
-- 317 detector entries with structured metadata
+- 321 detector entries with structured metadata
 - Detector ID, name, description, severity
 - Category mappings (25 categories)
 - CWE IDs (80+ detectors mapped)
