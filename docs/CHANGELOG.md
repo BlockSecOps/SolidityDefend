@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### New Detectors (1)
+
+| Detector ID | Description | Severity | CWE |
+|-------------|-------------|----------|-----|
+| `missing-visibility-modifier` | Detects state variables without explicit visibility modifiers | Low | CWE-710 |
+
+### Fixed
+
+#### Detection Coverage Improvements
+- **mev-toxic-flow-exposure**: Added Pattern 6 to detect user-provided slippage parameters vulnerable to sandwich attacks. Now reports accurate line numbers instead of always line 1.
+- **missing-visibility-modifier**: New detector correctly handles inline comments when checking for visibility keywords.
+
+#### Scanner Comparison Results
+- Detection rate improved from **96.7%** to **100%** (60/60 expected vulnerabilities detected)
+
 ---
 
 ## [1.9.1] - 2026-01-15

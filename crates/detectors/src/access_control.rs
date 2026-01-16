@@ -586,3 +586,141 @@ impl Detector for DefaultVisibilityDetector {
         self
     }
 }
+
+/// Detector for state variables without explicit visibility modifiers
+pub struct StateVariableVisibilityDetector {
+    base: BaseDetector,
+}
+
+impl Default for StateVariableVisibilityDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StateVariableVisibilityDetector {
+    pub fn new() -> Self {
+        Self {
+            base: BaseDetector::new(
+                DetectorId::new("missing-visibility-modifier"),
+                "Missing Visibility Modifier".to_string(),
+                "Detects state variables without explicit visibility modifiers".to_string(),
+                vec![DetectorCategory::BestPractices],
+                Severity::Low,
+            ),
+        }
+    }
+
+    fn is_state_variable_line(&self, line: &str) -> bool {
+        let trimmed = line.trim();
+
+        // Skip empty lines, comments, and function signatures
+        if trimmed.is_empty()
+            || trimmed.starts_with("//")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with("*")
+            || trimmed.contains("function ")
+            || trimmed.contains("constructor")
+            || trimmed.contains("modifier ")
+            || trimmed.contains("event ")
+            || trimmed.contains("error ")
+            || trimmed.contains("returns")
+        {
+            return false;
+        }
+
+        // Strip inline comments for semicolon check
+        let code_part = if let Some(idx) = trimmed.find("//") {
+            trimmed[..idx].trim()
+        } else {
+            trimmed
+        };
+
+        // Check if line starts with a type declaration (state variable pattern)
+        let type_prefixes = [
+            "address ", "uint", "int", "bool ", "bytes", "string ",
+            "mapping(", "struct ", "enum ",
+        ];
+
+        // Must start with type and not be inside a function (no memory/calldata)
+        let starts_with_type = type_prefixes.iter().any(|prefix| trimmed.starts_with(prefix));
+
+        // Variables inside functions have memory/calldata keywords
+        let is_local_var = trimmed.contains("memory") || trimmed.contains("calldata");
+
+        // Must end with semicolon to be a declaration (check code part, not comments)
+        let is_declaration = code_part.ends_with(';');
+
+        starts_with_type && !is_local_var && is_declaration
+    }
+}
+
+impl Detector for StateVariableVisibilityDetector {
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
+
+    fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        let mut findings = Vec::new();
+        let visibility_keywords = ["public", "private", "internal", "constant", "immutable"];
+
+        for (line_num, line) in ctx.source_code.lines().enumerate() {
+            if !self.is_state_variable_line(line) {
+                continue;
+            }
+
+            // Strip inline comments for visibility check (avoid false negatives from comments)
+            let code_part = if let Some(idx) = line.find("//") {
+                &line[..idx]
+            } else {
+                line
+            };
+
+            // Check if any visibility keyword is present in the code (not comments)
+            let has_visibility = visibility_keywords.iter().any(|kw| code_part.contains(kw));
+
+            if !has_visibility {
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        "State variable declared without explicit visibility modifier".to_string(),
+                        (line_num + 1) as u32,
+                        1,
+                        line.len() as u32,
+                    )
+                    .with_cwe(710)
+                    .with_fix_suggestion(
+                        "Add explicit visibility: 'address private owner;' or 'address internal owner;'".to_string(),
+                    );
+                findings.push(finding);
+            }
+        }
+
+        Ok(findings)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}

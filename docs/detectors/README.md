@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **321 security detectors** in SolidityDefend v1.9.0.
+Complete reference for all **333 security detectors** in SolidityDefend v1.9.1+.
 
-**Last Updated:** 2026-01-15
-**Version:** v1.9.0
-**Total Detectors:** 321 (in tool)
+**Last Updated:** 2026-01-16
+**Version:** v1.9.1+
+**Total Detectors:** 333 (in tool)
 **Categories:** 28
 
 ---
@@ -41,7 +41,7 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 
 ### By Category
 
-- **[Code Quality](code-quality/)** - 33 detectors
+- **[Code Quality](code-quality/)** - 38 detectors
 - **[Account Abstraction](account-abstraction/)** - 21 detectors
 - **[DeFi](defi/)** - 19 detectors
 - **[EIPs](eips/)** - 16 detectors

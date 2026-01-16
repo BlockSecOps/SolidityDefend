@@ -189,6 +189,32 @@ impl Detector for MEVToxicFlowDetector {
             }
         }
 
+        // Pattern 6: User-provided slippage can be front-run (sandwich attack vector)
+        if lower.contains("swap") {
+            for (line_num, line) in ctx.source_code.lines().enumerate() {
+                let line_lower = line.to_lowercase();
+                // Detect require statements with min amount comparisons
+                if line_lower.contains("require")
+                    && (line_lower.contains(">=") || line_lower.contains(">"))
+                    && (line_lower.contains("min") || line_lower.contains("slippage"))
+                {
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            "Slippage protection uses user-provided minimum - visible in mempool and vulnerable to sandwich attacks".to_string(),
+                            (line_num + 1) as u32,
+                            1,
+                            line.len() as u32,
+                        )
+                        .with_fix_suggestion(
+                            "Use deadline + private mempool (Flashbots), or implement TWAP-based slippage with oracle price bounds".to_string(),
+                        );
+                    findings.push(finding);
+                }
+            }
+        }
+
         Ok(findings)
     }
 

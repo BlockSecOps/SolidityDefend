@@ -1,6 +1,45 @@
 # Code Quality Detectors
 
-**Total:** 37 detectors
+**Total:** 38 detectors
+
+---
+
+## Missing Visibility Modifier
+
+**ID:** `missing-visibility-modifier`
+**Severity:** Low
+**Categories:** BestPractices
+**CWE:** CWE-710
+
+### Description
+
+Detects state variables declared without explicit visibility modifiers (`public`, `private`, `internal`, `constant`, `immutable`). While Solidity 0.5.0+ defaults to `internal` visibility, explicit declaration improves code readability and prevents accidental exposure.
+
+### Vulnerable Patterns
+
+```solidity
+contract VulnerableVisibility {
+    address owner;        // ❌ No explicit visibility
+    uint256 secret;       // ❌ Default internal may not be intended
+    mapping(address => uint256) balances;  // ❌ Unclear visibility intent
+}
+```
+
+### Remediation
+
+Always declare visibility explicitly:
+
+```solidity
+contract SecureVisibility {
+    address private owner;           // ✅ Explicitly private
+    uint256 internal secret;         // ✅ Explicitly internal
+    mapping(address => uint256) public balances;  // ✅ Explicitly public
+}
+```
+
+### Source
+
+`src/access_control.rs`
 
 ---
 
