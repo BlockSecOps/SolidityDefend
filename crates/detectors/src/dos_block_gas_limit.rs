@@ -54,32 +54,115 @@ impl DosBlockGasLimitDetector {
                     continue;
                 }
 
+                // Skip view/pure functions - they don't run as transactions
+                // They're read-only calls that don't consume block gas limit
+                if self.is_inside_view_or_pure(&lines, line_num) {
+                    continue;
+                }
+
                 let loop_end = self.find_block_end(&lines, line_num);
                 let loop_body: String = lines[line_num..loop_end].join("\n");
+                let func_body = self.get_function_body(&lines, line_num);
 
-                // Check if there's no pagination or limit
-                if !loop_body.contains("start") && !loop_body.contains("limit")
-                    && !loop_body.contains("MAX_") && !loop_body.contains("batch")
-                {
-                    // Estimate gas cost
+                // Check if there's pagination or bounds limiting
+                let has_bounds = self.has_loop_bounds(&func_body, &loop_body);
+
+                if !has_bounds {
+                    // Estimate gas cost - only flag if gas-intensive operations
                     let gas_intensive = loop_body.contains("SSTORE")
                         || loop_body.contains("storage")
-                        || loop_body.contains("transfer(")
+                        || loop_body.contains(".transfer(")
                         || loop_body.contains(".call{")
-                        || loop_body.contains("delete ");
+                        || loop_body.contains("delete ")
+                        || loop_body.contains("emit ")  // Events cost gas
+                        || loop_body.contains("= ");    // Storage writes
 
                     if gas_intensive {
-                        let issue = "Unbounded loop with gas-intensive operations".to_string();
-                        findings.push((line_num as u32 + 1, func_name, issue));
-                    } else {
-                        let issue = "Unbounded loop over array".to_string();
+                        let issue = "Unbounded loop with gas-intensive operations (storage writes, transfers, or events)".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
                     }
+                    // Don't flag simple read loops - they're usually fine
                 }
             }
         }
 
         findings
+    }
+
+    /// Check if loop has bounds (pagination, require, or fixed limit)
+    fn has_loop_bounds(&self, func_body: &str, loop_body: &str) -> bool {
+        // Pagination parameters
+        let has_pagination = func_body.contains("start")
+            || func_body.contains("offset")
+            || func_body.contains("limit")
+            || func_body.contains("count")
+            || func_body.contains("batch")
+            || func_body.contains("pageSize");
+
+        // Explicit max limit constants
+        let has_max_limit = func_body.contains("MAX_")
+            || func_body.contains("_MAX")
+            || func_body.contains("maxItems")
+            || func_body.contains("maxLength")
+            || func_body.contains("maxSize");
+
+        // Require statement limiting array size
+        let has_require_limit = func_body.contains("require")
+            && (func_body.contains(".length")
+                && (func_body.contains("<=") || func_body.contains("<")));
+
+        // Loop has early exit conditions
+        let has_early_exit = loop_body.contains("break")
+            || loop_body.contains("return");
+
+        // Fixed iteration count (not .length)
+        let has_fixed_count = loop_body.contains("< 10")
+            || loop_body.contains("< 20")
+            || loop_body.contains("< 50")
+            || loop_body.contains("< 100")
+            || loop_body.contains("<= 10")
+            || loop_body.contains("<= 20")
+            || loop_body.contains("<= 50")
+            || loop_body.contains("<= 100");
+
+        has_pagination || has_max_limit || has_require_limit || has_early_exit || has_fixed_count
+    }
+
+    /// Check if line is inside a view or pure function
+    fn is_inside_view_or_pure(&self, lines: &[&str], line_num: usize) -> bool {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                // Check function modifiers
+                return trimmed.contains(" view")
+                    || trimmed.contains(" pure")
+                    || trimmed.contains("view ")
+                    || trimmed.contains("pure ");
+            }
+            // Stop at contract boundary
+            if trimmed.starts_with("contract ") {
+                return false;
+            }
+        }
+        false
+    }
+
+    /// Get full function body for analysis
+    fn get_function_body(&self, lines: &[&str], line_num: usize) -> String {
+        let func_start = self.find_function_start_line(lines, line_num);
+        let func_end = self.find_block_end(lines, func_start);
+        lines[func_start..func_end].join("\n")
+    }
+
+    /// Find the start line of the containing function
+    fn find_function_start_line(&self, lines: &[&str], line_num: usize) -> usize {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                return i;
+            }
+        }
+        0
     }
 
     /// Find functions without gas bounds
@@ -96,14 +179,20 @@ impl DosBlockGasLimitDetector {
 
             // Detect functions that process dynamic data
             if trimmed.contains("function ") && trimmed.contains("[]") {
+                // Skip view/pure functions - they don't consume block gas limit
+                if trimmed.contains(" view") || trimmed.contains(" pure") {
+                    continue;
+                }
+
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_block_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check if it iterates over the input array without bounds
-                if func_body.contains("for") && func_body.contains(".length")
-                    && !func_body.contains("require") && !func_body.contains("MAX_")
-                {
+                let has_loop = func_body.contains("for") && func_body.contains(".length");
+                let has_bounds = self.has_loop_bounds(&func_body, &func_body);
+
+                if has_loop && !has_bounds {
                     findings.push((line_num as u32 + 1, func_name));
                 }
             }
@@ -126,13 +215,27 @@ impl DosBlockGasLimitDetector {
 
             // Detect outer loop
             if trimmed.starts_with("for") || trimmed.starts_with("while") {
+                // Skip view/pure functions - they don't consume block gas limit
+                if self.is_inside_view_or_pure(&lines, line_num) {
+                    continue;
+                }
+
+                // Skip constructor - runs once
+                if self.is_inside_constructor(&lines, line_num) {
+                    continue;
+                }
+
                 let loop_end = self.find_block_end(&lines, line_num);
                 let loop_body: String = lines[line_num + 1..loop_end].join("\n");
 
                 // Check for nested loop
                 if loop_body.contains("for") || loop_body.contains("while") {
-                    let func_name = self.find_containing_function(&lines, line_num);
-                    findings.push((line_num as u32 + 1, func_name));
+                    // Check if both loops have bounds
+                    let func_body = self.get_function_body(&lines, line_num);
+                    if !self.has_loop_bounds(&func_body, &loop_body) {
+                        let func_name = self.find_containing_function(&lines, line_num);
+                        findings.push((line_num as u32 + 1, func_name));
+                    }
                 }
             }
         }
@@ -152,20 +255,28 @@ impl DosBlockGasLimitDetector {
                 continue;
             }
 
-            // Detect storage to memory copy of arrays
-            if trimmed.contains("memory") && trimmed.contains("=")
+            // Skip view/pure functions for storage copy warnings
+            // (they're read-only but we still warn about returning large arrays)
+            let in_view_or_pure = self.is_inside_view_or_pure(&lines, line_num);
+
+            // Detect storage to memory copy of arrays (only in state-changing functions)
+            if !in_view_or_pure && trimmed.contains("memory") && trimmed.contains("=")
                 && (trimmed.contains("[]") || trimmed.contains(".copy")
                     || trimmed.contains("abi.decode"))
             {
-                let func_name = self.find_containing_function(&lines, line_num);
-
-                // Check if it's copying from storage
-                if !trimmed.contains("new ") {
-                    findings.push((line_num as u32 + 1, func_name));
+                // Check if it's copying from storage (not creating new)
+                if !trimmed.contains("new ") && !trimmed.contains("function ") {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    // Only flag if the array could be unbounded
+                    let func_body = self.get_function_body(&lines, line_num);
+                    if !self.has_loop_bounds(&func_body, &func_body) {
+                        findings.push((line_num as u32 + 1, func_name));
+                    }
                 }
             }
 
             // Detect return of large storage arrays
+            // This is a warning for view functions too (gas-expensive to call)
             // Skip single mapping lookups like return balances[addr] or allowances[a][b]
             // Only flag when returning an actual array variable (not a mapping access)
             // Use "return " (with space) to avoid matching "returns" in function signatures
@@ -174,8 +285,13 @@ impl DosBlockGasLimitDetector {
                 // Mapping: return _balances[account]; or return _allowances[owner][spender];
                 // Array: return users; (where users is an array type)
                 if !self.is_mapping_access_return(trimmed) {
+                    // Only flag if the function returns an unbounded array type
                     let func_name = self.find_containing_function(&lines, line_num);
-                    findings.push((line_num as u32 + 1, func_name));
+                    let func_body = self.get_function_body(&lines, line_num);
+                    // Check if array is bounded
+                    if !self.has_loop_bounds(&func_body, &func_body) {
+                        findings.push((line_num as u32 + 1, func_name));
+                    }
                 }
             }
         }

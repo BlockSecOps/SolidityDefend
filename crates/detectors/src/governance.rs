@@ -203,12 +203,37 @@ impl GovernanceDetector {
     }
 
     fn is_governance_function(&self, func: &ast::Function) -> bool {
-        let governance_patterns = [
-            "propose", "vote", "castVote", "delegate", "execute", "queue",
+        let func_name = func.name.as_str().to_lowercase();
+
+        // Only flag functions that are specifically governance-related
+        // "execute" and "delegate" alone are too generic (used in proxies, wallets, etc.)
+        let governance_specific_patterns = [
+            "propose",
+            "vote",
+            "castvote",
+            "queue",
+            "cancel",
         ];
-        governance_patterns
+
+        // Check for governance-specific function names
+        if governance_specific_patterns
             .iter()
-            .any(|&pattern| func.name.as_str().to_lowercase().contains(pattern))
+            .any(|&pattern| func_name.contains(pattern))
+        {
+            return true;
+        }
+
+        // "delegate" is only governance-related if combined with voting context
+        if func_name.contains("delegate") && func_name.contains("vote") {
+            return true;
+        }
+
+        // "execute" is only governance-related if it's specifically for proposals
+        if func_name.contains("execute") && func_name.contains("proposal") {
+            return true;
+        }
+
+        false
     }
 
     fn uses_current_balance_for_voting(&self, ctx: &AnalysisContext, func: &ast::Function) -> bool {
@@ -264,18 +289,41 @@ impl GovernanceDetector {
     }
 
     fn has_governance_token_patterns(&self, ctx: &AnalysisContext) -> bool {
-        let governance_indicators = [
-            "votingToken",
-            "governanceToken",
-            "delegate",
-            "proposal",
-            "voting",
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Strong positive indicators - contract MUST have at least one of these
+        // These indicate actual governance functionality, not just ownership patterns
+        let strong_governance_indicators = [
+            "votingtoken",
+            "governancetoken",
+            "proposal",         // Proposal creation/management
+            "castVote",         // Voting functions
+            "getVotes",         // Voting power queries
+            "getPriorVotes",    // Historical voting power
+            "getPastVotes",     // Historical voting power (OZ)
+            "quorum",           // Quorum requirements
+            "proposalThreshold",// Proposal creation threshold
+            "votingPeriod",     // Voting period configuration
+            "votingDelay",      // Voting delay configuration
+            "IGovernor",        // Governor interface
         ];
-        governance_indicators.iter().any(|&indicator| {
-            ctx.source_code
-                .to_lowercase()
-                .contains(&indicator.to_lowercase())
-        })
+
+        let has_strong_indicator = strong_governance_indicators.iter().any(|&indicator| {
+            source_lower.contains(&indicator.to_lowercase())
+        });
+
+        // If no strong indicator, this is NOT a governance contract
+        // Simple wallets with "owner" or contracts with "delegate" for proxies
+        // should NOT be flagged
+        if !has_strong_indicator {
+            return false;
+        }
+
+        // Additional check: Must have voting-related state or functions
+        let has_voting_mechanism = source_lower.contains("vote")
+            && (source_lower.contains("proposal") || source_lower.contains("ballot"));
+
+        has_strong_indicator || has_voting_mechanism
     }
 
     fn has_snapshot_mechanisms(&self, ctx: &AnalysisContext) -> bool {

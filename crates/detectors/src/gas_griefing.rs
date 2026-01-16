@@ -103,37 +103,55 @@ impl GasGriefingDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
-        // Pattern 1: External call in loop without gas limit
+        // Pattern 1: External .call{} in loop without explicit gas limit
+        // Note: .transfer() is SAFE - it has built-in 2300 gas stipend and reverts on failure
+        // Note: .send() is SAFE - it has built-in 2300 gas stipend and returns false on failure
+        // Only .call{} without gas limits is vulnerable to gas griefing
         let has_loop = func_source.contains("for") || func_source.contains("while");
-        let has_external_call = func_source.contains(".call")
-            || func_source.contains(".transfer")
-            || func_source.contains(".send");
+        let has_unsafe_call = func_source.contains(".call{") || func_source.contains(".call(");
 
-        if has_loop && has_external_call && !func_source.contains("gas:") {
-            return Some(
-                "External call in loop without gas limit, \
-                attacker can grief by consuming all gas"
-                    .to_string(),
-            );
+        // .call{} without gas: specification forwards all gas - vulnerable to griefing
+        if has_loop && has_unsafe_call {
+            // Check if gas limit is specified
+            let has_gas_limit = func_source.contains("gas:")
+                || func_source.contains("gas(")
+                || func_source.contains(".call{value:") && func_source.contains("gas:");
+
+            if !has_gas_limit {
+                return Some(
+                    "External .call{} in loop without gas limit forwards all gas to recipient, \
+                    attacker can grief by consuming all gas in fallback function. \
+                    Use .call{value: amount, gas: 10000}(\"\") or .transfer() instead"
+                        .to_string(),
+                );
+            }
         }
 
-        // Pattern 2: Transfer without gas stipend
-        if has_external_call && !func_source.contains("gas(") && func_source.contains(".transfer") {
-            return Some(
-                "Transfer without gas stipend, \
-                recipient can grief by consuming gas in fallback"
-                    .to_string(),
-            );
+        // Pattern 2: Push pattern for mass ETH distribution with .call{}
+        // Only flag if using .call{} (not .transfer() which is safe)
+        // .transfer() has built-in 2300 gas limit and reverts on failure - not a griefing vector
+        if has_loop && has_unsafe_call {
+            let distributes_to_many = func_source.contains("recipients")
+                || func_source.contains("addresses")
+                || func_source.contains("payees")
+                || (func_source.contains("[") && func_source.contains("].length"));
+
+            if distributes_to_many && !func_source.contains("pull") && !func_source.contains("withdraw") {
+                return Some(
+                    "Push pattern for mass ETH distribution using .call{} in loop. \
+                    Single recipient with malicious fallback can consume excessive gas. \
+                    Consider: (1) Use pull pattern (withdrawals), (2) Add gas limits, \
+                    (3) Use .transfer() for small amounts, (4) Implement batch size limits"
+                        .to_string(),
+                );
+            }
         }
 
-        // Pattern 3: Push pattern for mass distribution
-        let distributes_to_many =
-            has_loop && (func_source.contains("transfer") || func_source.contains("balances["));
-
-        if distributes_to_many && !func_source.contains("pull") {
+        // Pattern 3: Delegatecall in loop (extremely dangerous)
+        if has_loop && func_source.contains("delegatecall") {
             return Some(
-                "Push pattern for mass distribution, \
-                single failing recipient can grief entire distribution"
+                "Delegatecall in loop is extremely dangerous. \
+                Malicious contract can consume all gas or manipulate storage"
                     .to_string(),
             );
         }

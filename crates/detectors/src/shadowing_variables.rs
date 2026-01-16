@@ -103,20 +103,47 @@ impl ShadowingVariablesDetector {
         let mut state_vars = Vec::new();
         let contract_source = ctx.source_code.as_str();
 
+        // Track brace depth to know if we're inside a function/modifier body
+        let mut brace_depth = 0;
+        let mut in_contract = false;
+
         // Simple pattern matching for state variable declarations
         for line in contract_source.lines() {
             let trimmed = line.trim();
 
-            // Skip comments and functions
-            if trimmed.starts_with("//")
-                || trimmed.starts_with("/*")
-                || trimmed.contains("function")
-                || trimmed.contains("modifier")
-            {
+            // Skip comments
+            if trimmed.starts_with("//") || trimmed.starts_with("/*") {
                 continue;
             }
 
-            // Look for state variable patterns
+            // Track if we're entering a contract
+            if trimmed.contains("contract ") || trimmed.contains("library ") || trimmed.contains("interface ") {
+                in_contract = true;
+            }
+
+            // Track brace depth to detect function/modifier bodies
+            let open_braces = trimmed.matches('{').count();
+            let close_braces = trimmed.matches('}').count();
+
+            // Skip lines that start a function or modifier body (these increase depth)
+            if trimmed.contains("function") || trimmed.contains("modifier") || trimmed.contains("constructor") {
+                brace_depth += open_braces;
+                brace_depth = brace_depth.saturating_sub(close_braces);
+                continue;
+            }
+
+            // Update brace depth
+            brace_depth += open_braces;
+            brace_depth = brace_depth.saturating_sub(close_braces);
+
+            // Only look for state variables at contract level (depth 1)
+            // depth 0 = outside contract, depth 1 = contract body, depth 2+ = function/modifier body
+            if !in_contract || brace_depth > 1 {
+                continue;
+            }
+
+            // Look for state variable patterns with visibility keywords
+            // State variables MUST have visibility keyword or be storage declarations
             if (trimmed.contains("uint")
                 || trimmed.contains("address")
                 || trimmed.contains("bool")
@@ -126,7 +153,8 @@ impl ShadowingVariablesDetector {
                 && (trimmed.contains("public")
                     || trimmed.contains("private")
                     || trimmed.contains("internal")
-                    || trimmed.ends_with(";"))
+                    || trimmed.contains("constant")
+                    || trimmed.contains("immutable"))
             {
                 // Extract variable name (simplified)
                 if let Some(var_name) = self.extract_variable_name(trimmed) {
@@ -220,21 +248,14 @@ impl ShadowingVariablesDetector {
 
         let mut issues = Vec::new();
 
-        // Check function signature for parameter shadowing (simplified)
-        let func_signature = ctx
-            .source_code
-            .lines()
-            .skip(function.location.start().line())
-            .take(3)
-            .collect::<Vec<_>>()
-            .join(" ");
-
-        for state_var in state_vars {
-            if func_signature.contains(&format!("({})", state_var))
-                || func_signature.contains(&format!("({} ", state_var))
-                || func_signature.contains(&format!(" {},", state_var))
-            {
-                issues.push(format!("Parameter '{}' shadows state variable", state_var));
+        // Check function parameters using AST - extract actual parameter names
+        for param in &function.parameters {
+            if let Some(param_name) = &param.name {
+                let name = param_name.as_str();
+                // Exact match only - parameter name must exactly match state variable
+                if state_vars.iter().any(|sv| sv == name) {
+                    issues.push(format!("Parameter '{}' shadows state variable", name));
+                }
             }
         }
 

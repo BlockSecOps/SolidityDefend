@@ -34,6 +34,9 @@ impl DosRevertBombDetector {
     }
 
     /// Find vulnerable transfer patterns
+    /// Note: .transfer() is NOT vulnerable to revert bombs - it has a 2300 gas stipend
+    /// which prevents the recipient from doing anything complex (no storage writes, no external calls)
+    /// The REAL revert bomb risk is with .call{} which forwards all gas
     fn find_vulnerable_transfers(&self, source: &str) -> Vec<(u32, String, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
@@ -47,36 +50,56 @@ impl DosRevertBombDetector {
 
             let func_name = self.find_containing_function(&lines, line_num);
 
-            // Detect transfer() calls - always reverts on failure
-            // Skip ERC20 token transfers - they're controlled by token contract, not receiver
-            if trimmed.contains(".transfer(") {
-                // Skip ERC20/token transfer patterns
-                let is_erc20_transfer = trimmed.contains("IERC20") ||
-                    trimmed.contains("token.transfer") ||
-                    trimmed.contains("asset.transfer") ||
-                    trimmed.contains("Token.transfer") ||
-                    trimmed.contains("_token.transfer") ||
-                    trimmed.contains("safeTransfer") ||
-                    // ERC20 transfer has 2 args: transfer(address, uint256)
-                    // ETH transfer has 1 arg: transfer(uint256)
-                    self.is_two_arg_transfer(trimmed);
+            // .transfer() is SAFE from revert bombs:
+            // - Limited to 2300 gas stipend
+            // - Recipient can only log an event, nothing else
+            // - Cannot do storage writes or external calls
+            // - Reverts on failure (which is predictable behavior)
+            //
+            // DO NOT flag .transfer() - it's the safe choice for simple ETH transfers
 
-                if !is_erc20_transfer {
-                    let issue = "transfer() will revert on failure".to_string();
+            // .call{} without try-catch is vulnerable - forwards all gas to recipient
+            // Recipient can consume arbitrary gas or deliberately revert
+            if (trimmed.contains(".call{value:") || trimmed.contains(".call{"))
+                && !trimmed.contains("gas:")
+            {
+                // Check if this is in a try-catch block (safe)
+                let in_try_catch = self.is_in_try_catch(&lines, line_num);
+                if !in_try_catch {
+                    let issue = ".call{} without gas limit forwards all gas - recipient can cause revert bomb".to_string();
                     findings.push((line_num as u32 + 1, func_name.clone(), issue));
                 }
             }
 
-            // Detect send() without return check
+            // Detect send() without return check - returns false on failure but doesn't revert
+            // This is a different issue (unchecked return) not a revert bomb
+            // Only flag if the return value is truly unchecked
             if trimmed.contains(".send(") && !trimmed.contains("require")
-                && !trimmed.contains("if (") && !trimmed.contains("bool ")
+                && !trimmed.contains("if (") && !trimmed.contains("if(")
+                && !trimmed.contains("bool ") && !trimmed.contains("success")
             {
-                let issue = "send() return value unchecked".to_string();
+                let issue = "send() return value unchecked - failure will be silently ignored".to_string();
                 findings.push((line_num as u32 + 1, func_name, issue));
             }
         }
 
         findings
+    }
+
+    /// Check if line is inside a try-catch block
+    fn is_in_try_catch(&self, lines: &[&str], line_num: usize) -> bool {
+        // Look backwards for try keyword
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("try ") {
+                return true;
+            }
+            // Stop at function boundary
+            if trimmed.contains("function ") {
+                return false;
+            }
+        }
+        false
     }
 
     /// Check if a line is inside an interface declaration
@@ -117,11 +140,11 @@ impl DosRevertBombDetector {
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check for patterns where external contract behavior affects outcome
-                // Use .transfer( to specifically match external ether transfers
+                // Only .call{} is vulnerable to revert bombs - .transfer() has 2300 gas limit (safe)
                 let has_external_call = func_body.contains(".call{")
-                    || func_body.contains(".transfer(")
                     || func_body.contains(".send(")
                     || self.has_interface_call(&func_body);
+                // Note: .transfer() is NOT included - it has 2300 gas stipend and is safe
 
                 let has_state_change_after = self.has_state_change_after_call(&lines, line_num, func_end);
 
@@ -278,9 +301,9 @@ impl DosRevertBombDetector {
             let trimmed = lines[i].trim();
 
             // Match external calls specifically with dot prefix
-            if trimmed.contains(".call{") || trimmed.contains(".transfer(")
-                || trimmed.contains(".send(")
-            {
+            // Note: .transfer() is NOT vulnerable to revert bombs (2300 gas limit)
+            // Only check .call{} which forwards all gas
+            if trimmed.contains(".call{") || trimmed.contains(".send(") {
                 found_call = true;
             }
 

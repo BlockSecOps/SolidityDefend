@@ -125,30 +125,66 @@ impl MissingTransactionDeadlineDetector {
         None
     }
 
-    /// Checks if operation is time-sensitive
+    /// Checks if operation is time-sensitive (requires deadline protection)
+    /// Only DEX/trading operations are truly time-sensitive
+    /// Simple withdraw/deposit/claim operations do NOT need deadlines
     fn is_time_sensitive(&self, source: &str, func_name: &str) -> bool {
-        // Function name indicates time-sensitive operation
-        let name_sensitive =
+        // DEX/Trading function names - THESE need deadlines
+        let is_trading_function =
             func_name.contains("swap") ||
             func_name.contains("trade") ||
             func_name.contains("exchange") ||
-            func_name.contains("buy") ||
-            func_name.contains("sell") ||
-            func_name.contains("execute") ||
-            func_name.contains("fill") ||
-            func_name.contains("redeem") ||
-            func_name.contains("withdraw") ||
-            func_name.contains("liquidate") ||
-            func_name.contains("claim");
+            func_name.contains("fill");  // Order fill
 
-        // Source contains time-sensitive operations
-        let source_sensitive =
-            source.contains("transferFrom") ||
-            source.contains(".swap") ||
-            source.contains(".trade") ||
-            source.contains(".exchange");
+        // Buy/sell only if price-sensitive (DEX context)
+        let is_price_sensitive_buy_sell = (func_name.contains("buy") || func_name.contains("sell"))
+            && self.has_price_calculation(source);
 
-        name_sensitive || source_sensitive
+        // Source contains DEX/trading operations
+        let source_indicates_trading =
+            source.contains(".swap(") ||
+            source.contains("IUniswap") ||
+            source.contains("IPancake") ||
+            source.contains("ICurve") ||
+            source.contains("IBalancer") ||
+            source.contains("getAmountOut") ||
+            source.contains("getAmountsOut") ||
+            source.contains("getAmountIn") ||
+            source.contains("amountOutMin") ||
+            source.contains("amountInMax") ||
+            source.contains("sqrtPriceLimit");
+
+        // Liquidation functions need deadlines (price-dependent)
+        let is_liquidation = func_name.contains("liquidat")
+            && (source.contains("price") || source.contains("collateral"));
+
+        // Execute/redeem only if they're order/swap execution, not general contract calls
+        let is_order_execution = (func_name.contains("execute") || func_name.contains("redeem"))
+            && (source.contains("order") || source.contains("swap") || source.contains("price"));
+
+        // EXPLICITLY NOT time-sensitive (no deadline needed):
+        // - Simple withdraw() - just pulls user's balance, no price exposure
+        // - Simple deposit() - just credits user's balance, no price exposure
+        // - Simple claim() - just claims rewards, no price exposure
+        // - These are user operations that don't depend on external prices
+
+        is_trading_function
+            || is_price_sensitive_buy_sell
+            || source_indicates_trading
+            || is_liquidation
+            || is_order_execution
+    }
+
+    /// Check if source contains price calculation logic (indicates DEX context)
+    fn has_price_calculation(&self, source: &str) -> bool {
+        source.contains("price")
+            || source.contains("rate")
+            || source.contains("getAmount")
+            || source.contains("reserve")
+            || source.contains("oracle")
+            || source.contains("quoter")
+            || source.contains("sqrt")
+            || source.contains("k = ")  // x * y = k AMM
     }
 
     /// Checks if function has deadline parameter

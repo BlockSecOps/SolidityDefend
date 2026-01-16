@@ -122,23 +122,67 @@ impl UncheckedCallDetector {
     }
 
     /// Check if expression is an external call
+    /// Only flags actual low-level call patterns: .call{}, .delegatecall{}, .staticcall{}, .send(), .transfer()
+    /// Does NOT flag: array.push(), mapping access, or general method calls
     fn is_external_call(&self, expr: &ast::Expression<'_>) -> bool {
         if let ast::Expression::MemberAccess {
             expression, member, ..
         } = expr
         {
-            // Common external call patterns
+            // Only flag actual external call patterns - low-level calls
             let method = member.name.to_lowercase();
-            if method == "call" || method == "send" || method == "transfer" {
-                return true;
+
+            // These are the only real external call patterns that need return value checking:
+            // - .call{value:...}() - returns (bool, bytes)
+            // - .delegatecall() - returns (bool, bytes)
+            // - .staticcall() - returns (bool, bytes)
+            // - .send() - returns bool
+            //
+            // NOT external calls (should not be flagged):
+            // - .transfer() - reverts on failure, no return value to check
+            // - array.push() - internal array operation
+            // - mapping[key] - storage access
+            // - contract.function() - handled by Solidity (reverts on failure)
+            if method == "call" || method == "delegatecall" || method == "staticcall" || method == "send" {
+                // Verify the expression is an address-like type, not an array or mapping
+                // Skip if it looks like array/internal operations
+                if !self.is_array_or_internal_operation(expression) {
+                    return true;
+                }
             }
 
-            // Check for contract interface calls
-            if let ast::Expression::Identifier(_) = expression {
-                return true;
-            }
+            // Note: .transfer() reverts on failure, so there's no return value to check
+            // It's not an unchecked call pattern - it fails loudly
         }
         false
+    }
+
+    /// Check if expression looks like an internal/array operation (not an external call target)
+    fn is_array_or_internal_operation(&self, expr: &ast::Expression<'_>) -> bool {
+        match expr {
+            // Array access like shareholders[i] or direct identifier like shareholders
+            ast::Expression::Identifier(id) => {
+                let name = id.name.to_lowercase();
+                // Common array/mapping variable names
+                name.contains("array") || name.contains("list") || name.contains("holders")
+                    || name.contains("shareholders") || name.contains("members")
+                    || name.contains("users") || name.contains("addresses")
+                    || name.contains("balances") || name.contains("allowances")
+                    || name.contains("shares") || name.contains("tokens")
+                    || name.ends_with("s") && name.len() > 3 // plurals often indicate arrays
+            }
+            // Index access like mapping[key] or array[index]
+            ast::Expression::IndexAccess { .. } => true,
+            // Member access chain - check inner expression
+            ast::Expression::MemberAccess { expression, member, .. } => {
+                // If accessing .length, it's an array
+                if member.name == "length" {
+                    return true;
+                }
+                self.is_array_or_internal_operation(expression)
+            }
+            _ => false,
+        }
     }
 
     /// Check if return value is checked (simplified heuristic)

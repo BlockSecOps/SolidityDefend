@@ -9,28 +9,33 @@ use std::collections::HashSet;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-/// Deduplicate findings based on detector_id, file, line, and message hash
+/// Deduplicate findings based on detector_id, file, and line
 ///
 /// This function removes duplicate findings that have the same:
 /// - detector_id: Same detector reported the issue
 /// - file: Same file (from primary_location)
 /// - line: Same line number (from primary_location)
-/// - message_hash: Same or very similar message content
+///
+/// Note: Message content is NOT included in the deduplication key.
+/// This ensures findings from the same detector at the same location
+/// are properly deduplicated even if they have slightly different messages
+/// (e.g., different contract names for the same vulnerability pattern).
 ///
 /// This prevents the same issue from being reported multiple times when
-/// detectors run multiple analysis passes or when string-based detectors
-/// incorrectly match the same pattern multiple times.
+/// detectors run multiple analysis passes or when pattern-based detectors
+/// match across multiple contracts in the same file.
 pub fn deduplicate_findings(findings: Vec<Finding>) -> Vec<Finding> {
     let mut seen = HashSet::new();
     let mut deduplicated = Vec::new();
 
     for finding in findings {
-        // Create a unique key: (detector_id, file, line, message_hash)
+        // Create a unique key: (detector_id, file, line)
+        // Note: message is intentionally NOT included to properly deduplicate
+        // findings that differ only by contract name in the message
         let mut hasher = DefaultHasher::new();
         finding.detector_id.0.hash(&mut hasher);
         finding.primary_location.file.hash(&mut hasher);
         finding.primary_location.line.hash(&mut hasher);
-        finding.message.hash(&mut hasher);
         let key = hasher.finish();
 
         // Only keep the finding if we haven't seen this key before

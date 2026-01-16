@@ -121,6 +121,7 @@ impl MevExtractableValueDetector {
         function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
+        let func_name_lower = function.name.name.to_lowercase();
 
         // Skip if this is an ERC-4337 paymaster/account abstraction contract
         // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
@@ -135,23 +136,54 @@ impl MevExtractableValueDetector {
             return None; // Protected - no MEV risk
         }
 
-        // Pattern 1: Public function with value transfer without protection (TIGHTENED)
+        // Skip standard ERC20/ERC721 token functions - these are NOT MEV targets by themselves
+        // MEV occurs when these are USED in price-sensitive contexts, not in the token itself
+        let is_standard_token_function = func_name_lower == "transfer"
+            || func_name_lower == "transferfrom"
+            || func_name_lower == "approve"
+            || func_name_lower == "safetransfer"
+            || func_name_lower == "safetransferfrom"
+            || func_name_lower == "mint"     // Minting to user balance
+            || func_name_lower == "burn"     // Burning user balance
+            || func_name_lower == "burnfrom"
+            || func_name_lower == "permit"   // ERC20 permit
+            || func_name_lower == "allowance"
+            || func_name_lower == "balanceof";
+
+        if is_standard_token_function {
+            return None; // Standard token operations are not MEV targets
+        }
+
+        // Skip simple deposit/withdraw functions that don't involve price calculations
+        // These are user operations that don't expose extractable MEV
+        let is_simple_deposit_withdraw = (func_name_lower == "deposit" || func_name_lower == "withdraw")
+            && !self.is_price_sensitive(&func_source);
+
+        if is_simple_deposit_withdraw {
+            return None; // Simple deposits/withdrawals without price exposure
+        }
+
+        // Pattern 1: Public DEX/trading function with value transfer without protection (TIGHTENED)
+        // Only flag if it looks like a DEX/trading operation
         let is_public = function.visibility == ast::Visibility::Public
             || function.visibility == ast::Visibility::External;
+
+        let is_trading_context = self.is_trading_context(&func_source, &func_name_lower);
 
         let has_value_transfer = func_source.contains("transfer")
             || func_source.contains("send")
             || func_source.contains("call{value:");
 
-        // NEW: Check for specific protections
+        // Only flag trading operations without protection
         let lacks_mev_protection = is_public
             && has_value_transfer
+            && is_trading_context
             && !mev_protection_patterns::has_slippage_protection(&func_source)
             && !mev_protection_patterns::has_deadline_protection(&func_source)
             && !mev_protection_patterns::is_user_operation(&func_source, function.name.name);
 
         if lacks_mev_protection {
-            return Some("Public function with value transfer lacks MEV protection (no slippage/deadline checks), \
+            return Some("DEX/trading function with value transfer lacks MEV protection (no slippage/deadline checks), \
                 enabling front-running and back-running attacks".to_string());
         }
 
@@ -326,6 +358,55 @@ impl MevExtractableValueDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Check if function is in a DEX/trading context (where MEV is a real concern)
+    fn is_trading_context(&self, func_source: &str, func_name: &str) -> bool {
+        // Function name indicates trading operation
+        let name_indicates_trading = func_name.contains("swap")
+            || func_name.contains("trade")
+            || func_name.contains("exchange")
+            || func_name.contains("buy")
+            || func_name.contains("sell")
+            || func_name.contains("liquidity")
+            || func_name.contains("addliquidity")
+            || func_name.contains("removeliquidity");
+
+        // Source code indicates trading context
+        let source_indicates_trading = func_source.contains("getAmountOut")
+            || func_source.contains("getAmountsOut")
+            || func_source.contains("getAmountIn")
+            || func_source.contains("reserve0")
+            || func_source.contains("reserve1")
+            || func_source.contains("reserves")
+            || func_source.contains("swapExact")
+            || func_source.contains("IUniswap")
+            || func_source.contains("IPancake")
+            || func_source.contains("ISushiSwap")
+            || func_source.contains("ICurve")
+            || func_source.contains("IBalancer")
+            || func_source.contains(".swap(")
+            || func_source.contains("amountOutMin")
+            || func_source.contains("amountInMax")
+            || func_source.contains("sqrtPrice")
+            || func_source.contains("tickSpacing");
+
+        name_indicates_trading || source_indicates_trading
+    }
+
+    /// Check if function involves price-sensitive operations
+    fn is_price_sensitive(&self, func_source: &str) -> bool {
+        func_source.contains("price")
+            || func_source.contains("rate")
+            || func_source.contains("getAmount")
+            || func_source.contains("calculateAmount")
+            || func_source.contains("exchange")
+            || func_source.contains("swap")
+            || func_source.contains("oracle")
+            || func_source.contains("quoter")
+            || func_source.contains("slippage")
+            || func_source.contains("minAmount")
+            || func_source.contains("maxAmount")
     }
 }
 

@@ -84,8 +84,14 @@ impl ZeroAddressDetector {
             // Extract function source code for string-based checking
             let function_source = self.extract_function_source(&ctx.source_code, function);
 
-            // Report unchecked parameters
+            // Report unchecked parameters - but ONLY for truly critical parameters
             for param in &address_params {
+                // Skip non-critical parameters entirely - no need to report them
+                // This reduces FPs for transfer destinations, spenders, etc.
+                if !param.is_critical {
+                    continue;
+                }
+
                 // Use both AST-based and string-based checking (fallback for AST parsing issues)
                 let is_checked = checked_params.contains(&param.name)
                     || crate::utils::has_zero_address_check(&function_source, &param.name);
@@ -93,7 +99,7 @@ impl ZeroAddressDetector {
                 if !is_checked {
                     let severity = self.determine_severity_for_function(function, param);
                     let message = format!(
-                        "Address parameter '{}' in function '{}' is not checked for zero address",
+                        "Critical address parameter '{}' in function '{}' is not checked for zero address",
                         param.name, function.name.name
                     );
 
@@ -162,25 +168,54 @@ impl ZeroAddressDetector {
     }
 
     /// Determine if an address parameter is critical based on naming
+    /// Critical = parameters that control contract functionality/access
+    /// NOT critical = transfer destinations (zero address often intentional for burns)
     fn is_critical_address_param(&self, param_name: &str) -> bool {
         let name_lower = param_name.to_lowercase();
 
-        // Critical address parameter patterns
-        name_lower.contains("owner")
+        // CRITICAL address parameters that MUST be checked for zero:
+        // These control contract functionality, access, or ownership
+        let is_access_control = name_lower.contains("owner")
             || name_lower.contains("admin")
             || name_lower.contains("authority")
             || name_lower.contains("controller")
             || name_lower.contains("manager")
             || name_lower.contains("governance")
-            || name_lower.contains("treasury")
-            || name_lower.contains("recipient")
-            || name_lower.contains("beneficiary")
-            || name_lower.contains("delegate")
-            || name_lower.starts_with("to")
+            || name_lower.contains("operator")
+            || name_lower.contains("minter")
+            || name_lower.contains("burner")
+            || name_lower.contains("pauser")
+            || name_lower == "newowner"
+            || name_lower == "pendingowner";
+
+        // Contract address parameters that affect functionality
+        let is_contract_address = name_lower.contains("token")
+            || name_lower.contains("factory")
+            || name_lower.contains("router")
+            || name_lower.contains("oracle")
+            || name_lower.contains("vault")
+            || name_lower.contains("implementation")
+            || name_lower.contains("beacon");
+
+        // NOT CRITICAL - transfer destinations where zero address may be intentional:
+        // - "to" / "recipient" / "beneficiary" - often zero for burn operations
+        // - "from" - checked by transferFrom, often msg.sender
+        // - "spender" - approve(address(0)) is used to revoke approvals
+        // - "target" / "destination" - may be intentionally flexible
+        // These should NOT be flagged as missing zero address checks
+        let is_transfer_destination = name_lower.starts_with("to")
+            || name_lower == "recipient"
+            || name_lower == "beneficiary"
             || name_lower.starts_with("from")
+            || name_lower == "spender"
             || name_lower == "target"
             || name_lower == "destination"
-            || name_lower == "spender"
+            || name_lower == "account"
+            || name_lower == "user";
+
+        // Only flag as critical if it's an access control or contract address parameter
+        // AND not a transfer destination
+        (is_access_control || is_contract_address) && !is_transfer_destination
     }
 
     /// Find zero address checks in function body

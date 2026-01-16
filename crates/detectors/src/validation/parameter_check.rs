@@ -336,12 +336,35 @@ impl ParameterConsistencyDetector {
             return findings;
         }
 
+        // Check for validation modifiers that likely validate addresses
+        let has_validation_modifier = function.modifiers.iter().any(|m| {
+            let mod_name = m.name.as_str().to_lowercase();
+            mod_name.contains("valid")
+                || mod_name.contains("nonzero")
+                || mod_name.contains("notzero")
+                || mod_name.contains("notEmpty")
+        });
+
+        if has_validation_modifier {
+            // Assume modifier handles validation
+            return findings;
+        }
+
         if let Some(body) = &function.body {
             let validated_params = self.find_validated_parameters(body);
+
+            // Also check source code for text-based validation patterns
+            let func_source = self.get_function_source(function, ctx);
 
             for param in params {
                 if self.parameter_needs_validation(param) && !validated_params.contains(&param.name)
                 {
+                    // Additional source-based check for validation patterns
+                    let param_validated_in_source = self.check_source_validation(&func_source, &param.name);
+                    if param_validated_in_source {
+                        continue;
+                    }
+
                     let severity = self.determine_validation_severity(param, function);
                     let message = format!(
                         "Parameter '{}' of type '{}' may need validation",
@@ -367,6 +390,50 @@ impl ParameterConsistencyDetector {
         }
 
         findings
+    }
+
+    /// Get function source code for text-based analysis
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
+    /// Check if parameter is validated in source code using text patterns
+    fn check_source_validation(&self, source: &str, param_name: &str) -> bool {
+        let source_lower = source.to_lowercase();
+        let param_lower = param_name.to_lowercase();
+
+        // Check for require statements with parameter
+        if source_lower.contains(&format!("require({}", param_lower))
+            || source_lower.contains(&format!("require( {}", param_lower))
+        {
+            return true;
+        }
+
+        // Check for if-revert patterns
+        if source_lower.contains(&format!("if ({}", param_lower))
+            && (source_lower.contains("revert") || source_lower.contains("revert("))
+        {
+            return true;
+        }
+
+        // Check for address(0) comparison with this parameter
+        if source_lower.contains(&format!("{} != address(0)", param_lower))
+            || source_lower.contains(&format!("{} == address(0)", param_lower))
+            || source_lower.contains(&format!("address(0) != {}", param_lower))
+            || source_lower.contains(&format!("address(0) == {}", param_lower))
+        {
+            return true;
+        }
+
+        false
     }
 
     /// Check if parameter needs validation
