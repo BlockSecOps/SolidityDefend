@@ -1391,6 +1391,20 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::dos_revert_bomb::DosRevertBombDetector::new(),
         ));
+
+        // Phase 50: Diamond Proxy & Advanced Upgrades (v1.9.0)
+        self.register(Arc::new(
+            crate::diamond_init_frontrunning::DiamondInitFrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::proxy_gap_underflow::ProxyGapUnderflowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::proxy_double_initialize::ProxyDoubleInitializeDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::delegatecall_to_self::DelegatecallToSelfDetector::new(),
+        ));
     }
 }
 
