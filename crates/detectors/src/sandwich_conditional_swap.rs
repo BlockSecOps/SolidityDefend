@@ -100,13 +100,14 @@ impl SandwichConditionalSwapDetector {
 
                 // Condition followed by swap
                 if context.contains("swap") || context.contains("exchange") {
-                    // Check for observable conditions
-                    let has_price_condition = trimmed.contains("price")
-                        || trimmed.contains("rate")
-                        || trimmed.contains("getAmountsOut");
+                    // Check for observable conditions (case-insensitive)
+                    let lower = trimmed.to_lowercase();
+                    let has_price_condition = lower.contains("price")
+                        || lower.contains("rate")
+                        || lower.contains("getamountsout");
 
-                    let has_balance_condition = trimmed.contains("balanceOf")
-                        || trimmed.contains("balance");
+                    let has_balance_condition = lower.contains("balanceof")
+                        || lower.contains("balance");
 
                     let has_time_condition = trimmed.contains("block.timestamp")
                         || trimmed.contains("block.number");
@@ -175,13 +176,22 @@ impl SandwichConditionalSwapDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Look for block.timestamp as deadline
-            if trimmed.contains("block.timestamp")
-                && (trimmed.contains("deadline") || trimmed.contains("swap"))
-            {
-                // Using current timestamp as deadline is meaningless
-                let func_name = self.find_containing_function(&lines, line_num);
-                findings.push((line_num as u32 + 1, func_name));
+            // Look for block.timestamp as deadline parameter
+            if trimmed.contains("block.timestamp") {
+                // Check surrounding context for swap-related calls
+                let context_start = if line_num > 5 { line_num - 5 } else { 0 };
+                let context_end = std::cmp::min(line_num + 3, lines.len());
+                let context: String = lines[context_start..context_end].join("\n");
+
+                // If block.timestamp is used near a swap function, it's likely a meaningless deadline
+                if context.contains("swap")
+                    || context.contains("Swap")
+                    || context.contains("deadline")
+                    || context.contains("router")
+                {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    findings.push((line_num as u32 + 1, func_name));
+                }
             }
 
             // Look for type(uint256).max as deadline
