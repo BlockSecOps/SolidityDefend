@@ -1,7 +1,7 @@
 {
-  "version": "1.8.4",
-  "generated": "2026-01-14",
-  "total_detectors": 297,
+  "version": "1.8.6",
+  "generated": "2026-01-15",
+  "total_detectors": 317,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -3144,6 +3144,186 @@
         "Logic"
       ],
       "cwe": ["CWE-863"],
+      "swc": []
+    },
+    {
+      "id": "sequencer-fee-exploitation",
+      "name": "Sequencer Fee Exploitation",
+      "description": "Detects L2 sequencer fee model exploitation for MEV extraction",
+      "severity": "high",
+      "categories": ["L2", "MEV"],
+      "cwe": ["CWE-400"],
+      "swc": []
+    },
+    {
+      "id": "escape-hatch-dependency",
+      "name": "Escape Hatch Dependency",
+      "description": "Detects over-reliance on L1 escape mechanisms in L2 contracts",
+      "severity": "high",
+      "categories": ["L2", "Logic"],
+      "cwe": ["CWE-754"],
+      "swc": []
+    },
+    {
+      "id": "cross-l2-frontrunning",
+      "name": "Cross-L2 Frontrunning",
+      "description": "Detects race conditions between L2 finality and L1 confirmation",
+      "severity": "high",
+      "categories": ["L2", "MEV"],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "optimistic-inference-attack",
+      "name": "Optimistic Inference Attack",
+      "description": "Detects state inference from partial commits in optimistic rollups",
+      "severity": "medium",
+      "categories": ["L2", "Logic"],
+      "cwe": ["CWE-200"],
+      "swc": []
+    },
+    {
+      "id": "l2-mev-sequencer-leak",
+      "name": "L2 MEV Sequencer Leak",
+      "description": "Detects sequencer MEV extraction via transaction ordering on L2",
+      "severity": "high",
+      "categories": ["L2", "MEV"],
+      "cwe": ["CWE-362"],
+      "swc": []
+    },
+    {
+      "id": "da-sampling-attack",
+      "name": "DA Sampling Attack",
+      "description": "Detects data availability under-sampling vulnerabilities",
+      "severity": "high",
+      "categories": ["L2", "DataAvailability"],
+      "cwe": ["CWE-20"],
+      "swc": []
+    },
+    {
+      "id": "bridge-merkle-bypass",
+      "name": "Bridge Merkle Bypass",
+      "description": "Detects missing merkle proof validation in cross-chain bridges",
+      "severity": "critical",
+      "categories": ["CrossChain", "Validation"],
+      "cwe": ["CWE-345"],
+      "swc": []
+    },
+    {
+      "id": "challenge-period-bypass",
+      "name": "Challenge Period Bypass",
+      "description": "Detects premature withdrawal before challenge period expires in optimistic rollups",
+      "severity": "critical",
+      "categories": ["L2", "Logic"],
+      "cwe": ["CWE-367"],
+      "swc": []
+    },
+    {
+      "id": "cross-rollup-state-mismatch",
+      "name": "Cross-Rollup State Mismatch",
+      "description": "Detects state inconsistency across rollups and chains",
+      "severity": "high",
+      "categories": ["L2", "CrossChain"],
+      "cwe": ["CWE-662"],
+      "swc": []
+    },
+    {
+      "id": "blob-data-manipulation",
+      "name": "Blob Data Manipulation",
+      "description": "Detects EIP-4844 blob data tampering without proper KZG verification",
+      "severity": "high",
+      "categories": ["L2", "DataAvailability"],
+      "cwe": ["CWE-20"],
+      "swc": []
+    },
+    {
+      "id": "blockhash-randomness",
+      "name": "Blockhash Randomness",
+      "description": "Detects weak randomness patterns using block.prevrandao, blockhash, or other block variables",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-330"],
+      "swc": ["SWC-120"]
+    },
+    {
+      "id": "multi-block-randomness",
+      "name": "Multi-Block Randomness",
+      "description": "Detects patterns combining multiple block variables for randomness, which falsely appears more secure",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-330"],
+      "swc": ["SWC-120"]
+    },
+    {
+      "id": "modulo-block-variable",
+      "name": "Modulo Block Variable",
+      "description": "Detects block.timestamp % N or block.number % N patterns used for random selection",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-330"],
+      "swc": ["SWC-120"]
+    },
+    {
+      "id": "chainlink-vrf-misuse",
+      "name": "Chainlink VRF Misuse",
+      "description": "Detects improper Chainlink VRF integration patterns that could compromise randomness guarantees",
+      "severity": "medium",
+      "categories": ["Logic", "Oracle"],
+      "cwe": ["CWE-330"],
+      "swc": []
+    },
+    {
+      "id": "commit-reveal-timing",
+      "name": "Commit-Reveal Timing",
+      "description": "Detects commit-reveal schemes with timing vulnerabilities such as insufficient delays or missing time bounds",
+      "severity": "high",
+      "categories": ["Logic", "Timestamp"],
+      "cwe": ["CWE-330"],
+      "swc": []
+    },
+    {
+      "id": "dos-push-pattern",
+      "name": "DoS Push Pattern",
+      "description": "Detects unbounded array growth via push operations that could lead to denial of service",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-400"],
+      "swc": ["SWC-128"]
+    },
+    {
+      "id": "dos-unbounded-storage",
+      "name": "DoS Unbounded Storage",
+      "description": "Detects unbounded storage operations that can lead to denial of service through excessive gas costs",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-400"],
+      "swc": ["SWC-128"]
+    },
+    {
+      "id": "dos-external-call-loop",
+      "name": "DoS External Call in Loop",
+      "description": "Detects external calls within loops that can lead to denial of service if any recipient reverts",
+      "severity": "high",
+      "categories": ["Logic", "Reentrancy"],
+      "cwe": ["CWE-400"],
+      "swc": ["SWC-113"]
+    },
+    {
+      "id": "dos-block-gas-limit",
+      "name": "DoS Block Gas Limit",
+      "description": "Detects operations that can exceed block gas limit, making functions impossible to execute",
+      "severity": "high",
+      "categories": ["Logic", "BestPractices"],
+      "cwe": ["CWE-400"],
+      "swc": ["SWC-128"]
+    },
+    {
+      "id": "dos-revert-bomb",
+      "name": "DoS Revert Bomb",
+      "description": "Detects patterns vulnerable to revert bomb attacks where external contracts can force transaction failures",
+      "severity": "high",
+      "categories": ["Logic", "Reentrancy"],
+      "cwe": ["CWE-400"],
       "swc": []
     }
   ]

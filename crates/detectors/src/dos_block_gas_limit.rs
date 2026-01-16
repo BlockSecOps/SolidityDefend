@@ -1,0 +1,504 @@
+use anyhow::Result;
+use std::any::Any;
+
+use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+
+/// Detector for DoS via block gas limit
+///
+/// Detects patterns where operations can exceed the block gas limit,
+/// making transactions impossible to execute.
+pub struct DosBlockGasLimitDetector {
+    base: BaseDetector,
+}
+
+impl Default for DosBlockGasLimitDetector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl DosBlockGasLimitDetector {
+    pub fn new() -> Self {
+        Self {
+            base: BaseDetector::new(
+                DetectorId::new("dos-block-gas-limit"),
+                "DoS Block Gas Limit".to_string(),
+                "Detects operations that can exceed block gas limit, making functions \
+                 impossible to execute as the data grows."
+                    .to_string(),
+                vec![DetectorCategory::Logic, DetectorCategory::BestPractices],
+                Severity::High,
+            ),
+        }
+    }
+
+    /// Find unbounded loops over storage
+    fn find_unbounded_loops(&self, source: &str) -> Vec<(u32, String, String)> {
+        let mut findings = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Detect for loops with .length
+            if trimmed.contains("for") && trimmed.contains(".length") {
+                let func_name = self.find_containing_function(&lines, line_num);
+
+                // Skip constructor loops - they run once, not a DoS risk
+                if self.is_inside_constructor(&lines, line_num) {
+                    continue;
+                }
+
+                let loop_end = self.find_block_end(&lines, line_num);
+                let loop_body: String = lines[line_num..loop_end].join("\n");
+
+                // Check if there's no pagination or limit
+                if !loop_body.contains("start") && !loop_body.contains("limit")
+                    && !loop_body.contains("MAX_") && !loop_body.contains("batch")
+                {
+                    // Estimate gas cost
+                    let gas_intensive = loop_body.contains("SSTORE")
+                        || loop_body.contains("storage")
+                        || loop_body.contains("transfer(")
+                        || loop_body.contains(".call{")
+                        || loop_body.contains("delete ");
+
+                    if gas_intensive {
+                        let issue = "Unbounded loop with gas-intensive operations".to_string();
+                        findings.push((line_num as u32 + 1, func_name, issue));
+                    } else {
+                        let issue = "Unbounded loop over array".to_string();
+                        findings.push((line_num as u32 + 1, func_name, issue));
+                    }
+                }
+            }
+        }
+
+        findings
+    }
+
+    /// Find functions without gas bounds
+    fn find_functions_without_bounds(&self, source: &str) -> Vec<(u32, String)> {
+        let mut findings = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Detect functions that process dynamic data
+            if trimmed.contains("function ") && trimmed.contains("[]") {
+                let func_name = self.extract_function_name(trimmed);
+                let func_end = self.find_block_end(&lines, line_num);
+                let func_body: String = lines[line_num..func_end].join("\n");
+
+                // Check if it iterates over the input array without bounds
+                if func_body.contains("for") && func_body.contains(".length")
+                    && !func_body.contains("require") && !func_body.contains("MAX_")
+                {
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+            }
+        }
+
+        findings
+    }
+
+    /// Find nested loops
+    fn find_nested_loops(&self, source: &str) -> Vec<(u32, String)> {
+        let mut findings = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Detect outer loop
+            if trimmed.starts_with("for") || trimmed.starts_with("while") {
+                let loop_end = self.find_block_end(&lines, line_num);
+                let loop_body: String = lines[line_num + 1..loop_end].join("\n");
+
+                // Check for nested loop
+                if loop_body.contains("for") || loop_body.contains("while") {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+            }
+        }
+
+        findings
+    }
+
+    /// Find large data copy operations
+    fn find_large_data_operations(&self, source: &str) -> Vec<(u32, String)> {
+        let mut findings = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Detect storage to memory copy of arrays
+            if trimmed.contains("memory") && trimmed.contains("=")
+                && (trimmed.contains("[]") || trimmed.contains(".copy")
+                    || trimmed.contains("abi.decode"))
+            {
+                let func_name = self.find_containing_function(&lines, line_num);
+
+                // Check if it's copying from storage
+                if !trimmed.contains("new ") {
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+            }
+
+            // Detect return of large storage arrays
+            // Skip single mapping lookups like return balances[addr] or allowances[a][b]
+            // Only flag when returning an actual array variable (not a mapping access)
+            // Use "return " (with space) to avoid matching "returns" in function signatures
+            if trimmed.contains("return ") && trimmed.contains("[") {
+                // Check if this is a mapping access (has a variable/key inside brackets)
+                // Mapping: return _balances[account]; or return _allowances[owner][spender];
+                // Array: return users; (where users is an array type)
+                if !self.is_mapping_access_return(trimmed) {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+            }
+        }
+
+        findings
+    }
+
+    /// Find unbounded string/bytes operations
+    fn find_unbounded_bytes_operations(&self, source: &str) -> Vec<(u32, String)> {
+        let mut findings = Vec::new();
+        let lines: Vec<&str> = source.lines().collect();
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Detect string/bytes concatenation in loops
+            if trimmed.contains("string.concat") || trimmed.contains("bytes.concat")
+                || trimmed.contains("abi.encodePacked")
+            {
+                // Check if we're in a loop
+                let in_loop = self.is_inside_loop(&lines, line_num);
+                if in_loop {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+            }
+        }
+
+        findings
+    }
+
+    /// Check if we're inside a constructor (loops in constructors run once, not DoS risk)
+    fn is_inside_constructor(&self, lines: &[&str], line_num: usize) -> bool {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.starts_with("constructor") || trimmed.contains("constructor(") {
+                return true;
+            }
+            // Stop if we hit a function or contract boundary
+            if trimmed.contains("function ") || trimmed.starts_with("contract ") {
+                return false;
+            }
+        }
+        false
+    }
+
+    /// Check if this return statement is a mapping access (not array return)
+    fn is_mapping_access_return(&self, line: &str) -> bool {
+        // Mapping access pattern: return something[key]; or return something[key1][key2];
+        // These have a variable/identifier inside the brackets
+
+        // Check for patterns that indicate mapping access:
+        // 1. Has content inside brackets (not empty [])
+        // 2. Doesn't end with [] which would indicate array type
+
+        if let Some(bracket_start) = line.find('[') {
+            if let Some(bracket_end) = line.rfind(']') {
+                // Check if there's content between brackets (mapping key)
+                if bracket_end > bracket_start + 1 {
+                    // Has something inside brackets - likely a mapping access
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    fn is_inside_loop(&self, lines: &[&str], line_num: usize) -> bool {
+        let mut depth = 0;
+
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+
+            for c in trimmed.chars().rev() {
+                match c {
+                    '}' => depth += 1,
+                    '{' => depth -= 1,
+                    _ => {}
+                }
+            }
+
+            if depth < 0 {
+                // We're inside a block, check if it's a loop
+                if trimmed.contains("for") || trimmed.contains("while") {
+                    return true;
+                }
+                depth = 0; // Reset for outer blocks
+            }
+
+            if trimmed.contains("function ") {
+                break;
+            }
+        }
+        false
+    }
+
+    fn find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                return self.extract_function_name(trimmed);
+            }
+        }
+        "unknown".to_string()
+    }
+
+    fn extract_function_name(&self, line: &str) -> String {
+        if let Some(func_start) = line.find("function ") {
+            let after_func = &line[func_start + 9..];
+            if let Some(paren_pos) = after_func.find('(') {
+                return after_func[..paren_pos].trim().to_string();
+            }
+        }
+        "unknown".to_string()
+    }
+
+    fn find_block_end(&self, lines: &[&str], start: usize) -> usize {
+        let mut depth = 0;
+        let mut started = false;
+
+        for (i, line) in lines.iter().enumerate().skip(start) {
+            for c in line.chars() {
+                match c {
+                    '{' => {
+                        depth += 1;
+                        started = true;
+                    }
+                    '}' => {
+                        depth -= 1;
+                        if started && depth == 0 {
+                            return i + 1;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        lines.len()
+    }
+
+    fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
+        ctx.contract.name.name.to_string()
+    }
+}
+
+impl Detector for DosBlockGasLimitDetector {
+    fn id(&self) -> DetectorId {
+        self.base.id.clone()
+    }
+
+    fn name(&self) -> &str {
+        &self.base.name
+    }
+
+    fn description(&self) -> &str {
+        &self.base.description
+    }
+
+    fn categories(&self) -> Vec<DetectorCategory> {
+        self.base.categories.clone()
+    }
+
+    fn default_severity(&self) -> Severity {
+        self.base.default_severity
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.base.enabled
+    }
+
+    fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        let mut findings = Vec::new();
+        let source = &ctx.source_code;
+        let contract_name = self.get_contract_name(ctx);
+
+        for (line, func_name, issue) in self.find_unbounded_loops(source) {
+            let message = format!(
+                "Function '{}' in contract '{}' has gas limit risk: {}. \
+                 As data grows, function may exceed block gas limit.",
+                func_name, contract_name, issue
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, message, line, 1, 50)
+                .with_cwe(400)
+                .with_confidence(Confidence::High)
+                .with_fix_suggestion(
+                    "Implement pagination for large operations:\n\n\
+                     function processItems(uint256 start, uint256 count) external {\n\
+                         uint256 end = start + count;\n\
+                         if (end > items.length) end = items.length;\n\
+                         \n\
+                         for (uint256 i = start; i < end; i++) {\n\
+                             // process items[i]\n\
+                         }\n\
+                     }"
+                        .to_string(),
+                );
+
+            findings.push(finding);
+        }
+
+        for (line, func_name) in self.find_functions_without_bounds(source) {
+            let message = format!(
+                "Function '{}' in contract '{}' accepts unbounded array input. \
+                 Large inputs can cause out-of-gas failures.",
+                func_name, contract_name
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, message, line, 1, 50)
+                .with_cwe(400)
+                .with_confidence(Confidence::Medium)
+                .with_fix_suggestion(
+                    "Limit input array size:\n\n\
+                     uint256 constant MAX_BATCH_SIZE = 100;\n\n\
+                     function processBatch(address[] calldata items) external {\n\
+                         require(\n\
+                             items.length <= MAX_BATCH_SIZE,\n\
+                             \"Batch too large\"\n\
+                         );\n\
+                         // ...\n\
+                     }"
+                        .to_string(),
+                );
+
+            findings.push(finding);
+        }
+
+        for (line, func_name) in self.find_nested_loops(source) {
+            let message = format!(
+                "Function '{}' in contract '{}' contains nested loops. \
+                 O(n*m) operations can easily exceed gas limits.",
+                func_name, contract_name
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, message, line, 1, 50)
+                .with_cwe(400)
+                .with_confidence(Confidence::High)
+                .with_fix_suggestion(
+                    "Avoid nested loops or add strict bounds:\n\n\
+                     1. Use mappings instead of nested array iteration\n\
+                     2. Pre-compute results off-chain\n\
+                     3. Split into multiple transactions\n\
+                     4. Add strict size limits on both dimensions"
+                        .to_string(),
+                );
+
+            findings.push(finding);
+        }
+
+        for (line, func_name) in self.find_large_data_operations(source) {
+            let message = format!(
+                "Function '{}' in contract '{}' copies large data from storage. \
+                 This can be extremely gas-expensive for large arrays.",
+                func_name, contract_name
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, message, line, 1, 50)
+                .with_cwe(400)
+                .with_confidence(Confidence::Low)
+                .with_fix_suggestion(
+                    "Avoid copying entire arrays from storage:\n\n\
+                     1. Return paginated results\n\
+                     2. Use events for historical data\n\
+                     3. Store array length separately\n\
+                     4. Use off-chain indexing"
+                        .to_string(),
+                );
+
+            findings.push(finding);
+        }
+
+        for (line, func_name) in self.find_unbounded_bytes_operations(source) {
+            let message = format!(
+                "Function '{}' in contract '{}' concatenates strings/bytes in a loop. \
+                 This creates O(n^2) gas complexity.",
+                func_name, contract_name
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, message, line, 1, 50)
+                .with_cwe(400)
+                .with_confidence(Confidence::Medium)
+                .with_fix_suggestion(
+                    "Avoid string concatenation in loops:\n\n\
+                     1. Pre-allocate fixed-size buffer\n\
+                     2. Build result off-chain\n\
+                     3. Use events to emit data pieces\n\
+                     4. Return array instead of single string"
+                        .to_string(),
+                );
+
+            findings.push(finding);
+        }
+
+        Ok(findings)
+    }
+
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = DosBlockGasLimitDetector::new();
+        assert_eq!(detector.name(), "DoS Block Gas Limit");
+        assert_eq!(detector.default_severity(), Severity::High);
+    }
+}

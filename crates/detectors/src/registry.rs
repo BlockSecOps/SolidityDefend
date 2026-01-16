@@ -1327,6 +1327,70 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::cross_contract_role_confusion::CrossContractRoleConfusionDetector::new(),
         ));
+
+        // Phase 48: L2/Rollup & Cross-Chain Advanced (v1.8.5)
+        self.register(Arc::new(
+            crate::sequencer_fee_exploitation::SequencerFeeExploitationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::escape_hatch_dependency::EscapeHatchDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::cross_l2_frontrunning::CrossL2FrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::optimistic_inference_attack::OptimisticInferenceAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_mev_sequencer_leak::L2MevSequencerLeakDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::da_sampling_attack::DaSamplingAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::bridge_merkle_bypass::BridgeMerkleBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::challenge_period_bypass::ChallengePeriodBypassDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::cross_rollup_state_mismatch::CrossRollupStateMismatchDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::blob_data_manipulation::BlobDataManipulationDetector::new(),
+        ));
+
+        // Phase 49: Weak Randomness & DoS Expansion (v1.8.6)
+        self.register(Arc::new(
+            crate::blockhash_randomness::BlockhashRandomnessDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::multi_block_randomness::MultiBlockRandomnessDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::modulo_block_variable::ModuloBlockVariableDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::chainlink_vrf_misuse::ChainlinkVrfMisuseDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::commit_reveal_timing::CommitRevealTimingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_push_pattern::DosPushPatternDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_unbounded_storage::DosUnboundedStorageDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_external_call_loop::DosExternalCallLoopDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_block_gas_limit::DosBlockGasLimitDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::dos_revert_bomb::DosRevertBombDetector::new(),
+        ));
     }
 }
 
