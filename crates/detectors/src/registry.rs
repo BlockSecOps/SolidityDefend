@@ -1200,6 +1200,32 @@ impl DetectorRegistry {
             crate::eip1153_guard_bypass::Eip1153GuardBypassDetector::new(),
         ));
 
+        // Phase 51: EIP-3074 & Future Standards (v1.9.1 - 2026)
+        self.register(Arc::new(
+            crate::eip3074_upgradeable_invoker::Eip3074UpgradeableInvokerDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip3074_commit_validation::Eip3074CommitValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip3074_replay_attack::Eip3074ReplayAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip3074_call_depth_griefing::Eip3074CallDepthGriefingDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip3074_invoker_authorization::Eip3074InvokerAuthorizationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip4844_blob_validation::Eip4844BlobValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::eip6780_selfdestruct_change::Eip6780SelfdestructChangeDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::push0_stack_assumption::Push0StackAssumptionDetector::new(),
+        ));
+
         // Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
         self.register(Arc::new(
             crate::sandwich_conditional_swap::SandwichConditionalSwapDetector::new(),

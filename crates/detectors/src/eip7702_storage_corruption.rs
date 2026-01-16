@@ -63,14 +63,19 @@ impl Eip7702StorageCorruptionDetector {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
         let mut in_contract = false;
+        let mut in_interface = false;
         let mut brace_depth = 0;
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Track contract scope
-            if trimmed.contains("contract ") || trimmed.contains("abstract contract ") {
+            // Track contract/interface scope
+            if trimmed.starts_with("interface ") || trimmed.contains(" interface ") {
+                in_interface = true;
+                in_contract = false;
+            } else if trimmed.contains("contract ") || trimmed.contains("abstract contract ") {
                 in_contract = true;
+                in_interface = false;
             }
 
             for c in trimmed.chars() {
@@ -80,6 +85,7 @@ impl Eip7702StorageCorruptionDetector {
                         brace_depth -= 1;
                         if brace_depth == 0 {
                             in_contract = false;
+                            in_interface = false;
                         }
                     }
                     _ => {}
@@ -87,7 +93,8 @@ impl Eip7702StorageCorruptionDetector {
             }
 
             // Look for state variable declarations at contract level (depth 1)
-            if in_contract && brace_depth == 1 {
+            // Skip interfaces - they can't have state variables
+            if in_contract && !in_interface && brace_depth == 1 {
                 // Skip function declarations and other non-state lines
                 if trimmed.starts_with("function ")
                     || trimmed.starts_with("event ")
@@ -178,9 +185,20 @@ impl Eip7702StorageCorruptionDetector {
     /// Extract variable name from declaration
     fn extract_variable_name(&self, line: &str) -> String {
         // Handle various declaration patterns
-        let parts: Vec<&str> = line.split_whitespace().collect();
+        // Variable name is typically the identifier before semicolon or equals sign
+        let trimmed = line.trim().trim_end_matches(';');
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
 
-        for (i, part) in parts.iter().enumerate() {
+        // Skip modifiers to find the actual variable name
+        // Variable name is usually the last identifier before ; or =
+        let mut candidate = String::new();
+
+        for part in parts.iter().rev() {
+            let cleaned = part
+                .trim_end_matches(';')
+                .trim_end_matches('=')
+                .trim_end_matches(')');
+
             // Skip visibility and type modifiers
             if *part == "public"
                 || *part == "private"
@@ -188,22 +206,26 @@ impl Eip7702StorageCorruptionDetector {
                 || *part == "external"
                 || *part == "constant"
                 || *part == "immutable"
+                || part.contains("(")
+                || part.contains(")")
+                || part.contains("=>")
+                || part.contains("[")
+                || part.contains("]")
+                || cleaned.is_empty()
             {
                 continue;
             }
 
-            // Variable name often follows type or visibility
-            if i > 0 && !part.contains("(") {
-                let name = part.trim_end_matches(';').trim_end_matches('=');
-                if !name.is_empty()
-                    && name.chars().next().map(|c| c.is_alphabetic()).unwrap_or(false)
-                {
-                    return name.to_string();
-                }
+            // Valid variable name: starts with letter or underscore, alphanumeric
+            if cleaned.chars().next().map(|c| c.is_alphabetic() || c == '_').unwrap_or(false)
+                && cleaned.chars().all(|c| c.is_alphanumeric() || c == '_')
+            {
+                candidate = cleaned.to_string();
+                break;
             }
         }
 
-        String::new()
+        candidate
     }
 
     /// Find containing function name

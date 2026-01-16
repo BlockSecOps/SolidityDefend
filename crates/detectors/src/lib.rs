@@ -260,6 +260,16 @@ pub mod eip1153_callback_manipulation;
 pub mod eip1153_composability_risk;
 pub mod eip1153_guard_bypass;
 
+// Phase 51: EIP-3074 & Future Standards
+pub mod eip3074_upgradeable_invoker;
+pub mod eip3074_commit_validation;
+pub mod eip3074_replay_attack;
+pub mod eip3074_call_depth_griefing;
+pub mod eip3074_invoker_authorization;
+pub mod eip4844_blob_validation;
+pub mod eip6780_selfdestruct_change;
+pub mod push0_stack_assumption;
+
 // Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
 pub mod sandwich_conditional_swap;
 pub mod jit_liquidity_extraction;

@@ -68,7 +68,8 @@ impl Create2SaltFrontrunningDetector {
 
             if trimmed.contains("create2") || trimmed.contains("CREATE2") {
                 let context_start = if line_num > 10 { line_num - 10 } else { 0 };
-                let context: String = lines[context_start..line_num + 3].join("\n");
+                let context_end = (line_num + 3).min(lines.len());
+                let context: String = lines[context_start..context_end].join("\n");
 
                 // Check if salt is derived from public data only
                 let has_secret = context.contains("secret")

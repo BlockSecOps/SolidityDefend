@@ -9,6 +9,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2026-01-15
+
+### EIP-3074 & Future Standards - Phase 51
+
+This release adds **8 new detectors** for EIP-3074 (AUTH/AUTHCALL), EIP-4844 (Blob Transactions), EIP-6780 (Selfdestruct Changes), and PUSH0 compatibility. Total detectors: **332**.
+
+#### Added
+
+##### **Critical Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-upgradeable-invoker` | Forbidden upgradeable invoker contracts in EIP-3074 | CWE-284 |
+
+##### **High Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-commit-validation` | Improper commit hash verification in AUTH | CWE-345 |
+| `eip3074-replay-attack` | Missing replay protection in AUTH signatures | CWE-294 |
+| `eip3074-invoker-authorization` | Missing invoker authorization checks | CWE-862 |
+| `eip4844-blob-validation` | Blob transaction validation issues | CWE-20 |
+
+##### **Medium Severity Detectors (2)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-call-depth-griefing` | Call depth manipulation attacks | CWE-400 |
+| `eip6780-selfdestruct-change` | Post-Cancun selfdestruct behavior changes | CWE-670 |
+
+##### **Low Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `push0-stack-assumption` | Stack alignment issues with PUSH0 opcode | CWE-682 |
+
+### Fixed
+
+#### Detector Crash Fixes
+- **dos-revert-bomb**: Fixed slice bounds panic when `func_end <= line_num` during token callback vulnerability detection
+- **create2-salt-frontrunning**: Fixed slice bounds panic when detecting CREATE2 patterns near end of file
+
+#### False Positive Reductions
+- **eip7702-storage-corruption**: Fixed false positive where function parameter types were incorrectly detected as state variable names
+- **eip7702-storage-corruption**: Added interface exclusion - no longer flags interface declarations
+- **dos-revert-bomb**: Added interface exclusion - no longer flags interface function declarations
+
+#### Phase 51 False Positive Fixes
+- **eip3074-replay-attack**: Added `is_eip3074_contract()` check to prevent matching "authorization", "authenticate" (eliminated 404 false positives)
+- **eip3074-commit-validation**: Added same EIP-3074 specific detection (eliminated 38 false positives)
+- **eip4844-blob-validation**: Require specific blob opcodes/patterns, not generic "blob" string (reduced 56%)
+- **push0-stack-assumption**: Require specific cross-chain patterns instead of generic L1/L2 references (reduced 9%)
+
+### Changed
+
+#### JSON Output Enhancement
+- Added `file` field to JSON location object for complete file path information
+
+---
+
 ## [1.9.0] - 2026-01-15
 
 ### Diamond Proxy & Advanced Upgrades - Phase 50

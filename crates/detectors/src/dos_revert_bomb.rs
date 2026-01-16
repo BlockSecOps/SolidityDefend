@@ -79,6 +79,20 @@ impl DosRevertBombDetector {
         findings
     }
 
+    /// Check if a line is inside an interface declaration
+    fn is_in_interface(&self, lines: &[&str], line_num: usize) -> bool {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.starts_with("interface ") {
+                return true;
+            }
+            if trimmed.starts_with("contract ") || trimmed.starts_with("abstract contract ") {
+                return false;
+            }
+        }
+        false
+    }
+
     /// Find callback-dependent patterns
     fn find_callback_vulnerabilities(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
@@ -88,6 +102,11 @@ impl DosRevertBombDetector {
             let trimmed = line.trim();
 
             if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Skip interface functions - they have no implementation
+            if self.is_in_interface(&lines, line_num) {
                 continue;
             }
 
@@ -173,6 +192,11 @@ impl DosRevertBombDetector {
                 // Check if there are state changes that depend on the transfer success
                 let func_start = self.find_function_start(&lines, line_num);
                 let func_end = self.find_block_end(&lines, func_start);
+
+                // Ensure valid slice bounds - func_end must be > line_num
+                if func_end <= line_num {
+                    continue;
+                }
 
                 // Check for critical state after safe transfer
                 let lines_after_transfer: String = lines[line_num..func_end].join("\n");

@@ -9,6 +9,89 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2026-01-15
+
+### EIP-3074 & Future Standards - Phase 51
+
+This release adds **8 new detectors** for EIP-3074 (AUTH/AUTHCALL), EIP-4844 (Blob Transactions), EIP-6780 (Selfdestruct Changes), and PUSH0 compatibility. Total detectors: **332**.
+
+#### Added
+
+##### **Critical Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-upgradeable-invoker` | Forbidden upgradeable invoker contracts in EIP-3074 | CWE-284 |
+
+##### **High Severity Detectors (4)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-commit-validation` | Improper commit hash verification in AUTH | CWE-345 |
+| `eip3074-replay-attack` | Missing replay protection in AUTH signatures | CWE-294 |
+| `eip3074-invoker-authorization` | Missing invoker authorization checks | CWE-862 |
+| `eip4844-blob-validation` | Blob transaction validation issues | CWE-20 |
+
+##### **Medium Severity Detectors (2)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `eip3074-call-depth-griefing` | Call depth manipulation attacks | CWE-400 |
+| `eip6780-selfdestruct-change` | Post-Cancun selfdestruct behavior changes | CWE-670 |
+
+##### **Low Severity Detectors (1)**
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `push0-stack-assumption` | Stack alignment issues with PUSH0 opcode | CWE-682 |
+
+#### Technical Details
+
+**EIP-3074 Account Abstraction:**
+- AUTH and AUTHCALL opcodes for delegated execution
+- Critical: Invokers MUST NOT be upgradeable
+- Commit hash must include all transaction parameters
+- Nonce, chainId, and deadline required for replay protection
+
+**EIP-4844 Blob Transactions:**
+- Proto-Danksharding for L2 data availability
+- Versioned hash validation (0x01 prefix)
+- KZG proof verification required
+
+**EIP-6780 Selfdestruct Changes:**
+- Post-Cancun: Code only deleted if same TX as creation
+- Metamorphic contract patterns broken
+- ETH transfer still works
+
+**PUSH0 Compatibility:**
+- Available post-Shanghai (March 2023)
+- Solidity >=0.8.20 generates PUSH0
+- Cross-chain deployment considerations
+
+### Fixed
+
+#### Detector Crash Fixes
+- **dos-revert-bomb**: Fixed slice bounds panic when `func_end <= line_num`
+- **create2-salt-frontrunning**: Fixed slice bounds panic near end of file
+
+#### False Positive Reductions
+- **eip7702-storage-corruption**: Fixed variable name extraction from mapping declarations
+- **eip7702-storage-corruption**: Added interface exclusion
+- **dos-revert-bomb**: Added interface exclusion for IERC20 functions
+
+#### Phase 51 False Positive Fixes
+- **eip3074-replay-attack**: Added `is_eip3074_contract()` check to prevent matching "authorization", "authenticate" (eliminated 404 false positives)
+- **eip3074-commit-validation**: Added same EIP-3074 specific detection (eliminated 38 false positives)
+- **eip4844-blob-validation**: Require specific blob opcodes/patterns, not generic "blob" string (reduced 56%)
+- **push0-stack-assumption**: Require specific cross-chain patterns instead of generic L1/L2 references (reduced 9%)
+
+### Changed
+
+#### JSON Output Enhancement
+- Added `file` field to JSON location object for complete file path
+
+---
+
 ## [1.8.0] - 2026-01-13
 
 ### EIP-7702 & EIP-1153 New Standards Security - Phase 43
