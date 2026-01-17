@@ -143,6 +143,26 @@ impl CircularDependencyDetector {
         false
     }
 
+    /// Phase 6: Check if function is a standard ERC transfer (not circular)
+    fn is_standard_transfer(&self, function_name: &str) -> bool {
+        let name_lower = function_name.to_lowercase();
+        name_lower == "transfer"
+            || name_lower == "transferfrom"
+            || name_lower == "safetransfer"
+            || name_lower == "safetransferfrom"
+            || name_lower == "_transfer"
+            || name_lower == "_safetransfer"
+            || name_lower == "approve"
+    }
+
+    /// Phase 6: Check if function uses OpenZeppelin access control (safe patterns)
+    fn has_oz_access_control(&self, func_source: &str) -> bool {
+        func_source.contains("onlyRole")
+            || func_source.contains("hasRole")
+            || func_source.contains("AccessControl")
+            || func_source.contains("_checkRole")
+    }
+
     /// Check for circular dependency vulnerabilities
     fn check_circular_dependency(
         &self,
@@ -156,6 +176,16 @@ impl CircularDependencyDetector {
         // Skip standard ERC callbacks - these are designed to be called during transfers
         // and have built-in reentrancy protections in ERC standards
         if self.is_standard_callback(function.name.name) {
+            return None;
+        }
+
+        // Phase 6: Skip standard ERC transfers - these follow well-defined patterns
+        if self.is_standard_transfer(function.name.name) {
+            return None;
+        }
+
+        // Phase 6: Skip functions with OpenZeppelin access control
+        if self.has_oz_access_control(&func_source) {
             return None;
         }
 

@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::contract_classification;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 /// Detector for patterns causing excessive gas consumption
@@ -57,7 +58,21 @@ impl Detector for ExcessiveGasUsageDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Skip test contracts - gas optimization is less critical for tests
+        if contract_classification::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
+            // Skip view/pure functions - no state changes = no gas concern for users
+            // (they only consume gas when called internally, which is acceptable)
+            if matches!(
+                function.mutability,
+                ast::StateMutability::View | ast::StateMutability::Pure
+            ) {
+                continue;
+            }
+
             if let Some(gas_issues) = self.check_excessive_gas(function, ctx) {
                 for issue_desc in gas_issues {
                     let message = format!(
@@ -131,9 +146,9 @@ impl ExcessiveGasUsageDetector {
             }
         }
 
-        // Pattern 2: Redundant storage reads
+        // Pattern 2: Redundant storage reads (raised threshold from 3 to 5)
         let storage_reads = self.count_storage_reads(&func_source);
-        if storage_reads > 3 {
+        if storage_reads >= 5 {
             issues.push(format!(
                 "Multiple storage reads detected ({}). Cache in memory variable to save gas",
                 storage_reads
@@ -148,10 +163,13 @@ impl ExcessiveGasUsageDetector {
         }
 
         // Pattern 4: Dynamic array length in loop condition
+        // Only flag if it's a storage array (indicated by lack of memory/calldata keywords nearby)
         if func_source.contains("for")
             && func_source.contains(".length")
             && !func_source.contains("uint len =")
             && !func_source.contains("uint256 len =")
+            && !func_source.contains("length =")
+            && self.is_storage_array_loop(&func_source)
         {
             issues.push(
                 "Array length read in every loop iteration. Cache length in local variable"
@@ -159,8 +177,12 @@ impl ExcessiveGasUsageDetector {
             );
         }
 
-        // Pattern 5: Emitting events in loops
-        if self.has_loop(&func_source) && func_source.contains("emit ") {
+        // Pattern 5: Emitting events in loops - only flag if potentially unbounded
+        // Small bounded loops (e.g., <= 10 iterations) are acceptable
+        if self.has_loop(&func_source)
+            && func_source.contains("emit ")
+            && self.is_potentially_unbounded_loop(&func_source)
+        {
             issues.push(
                 "Event emission inside loop. Can cause excessive gas costs for large arrays"
                     .to_string(),
@@ -274,6 +296,49 @@ impl ExcessiveGasUsageDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Check if loop iterates over storage array (not memory/calldata)
+    fn is_storage_array_loop(&self, source: &str) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+        for line in &lines {
+            let trimmed = line.trim();
+            // Check for loop with .length
+            if (trimmed.contains("for") || trimmed.contains("while")) && trimmed.contains(".length")
+            {
+                // Skip if it's clearly a memory or calldata array
+                if trimmed.contains("memory") || trimmed.contains("calldata") {
+                    continue;
+                }
+                // Check if array is a function parameter (likely memory/calldata)
+                // Simple heuristic: storage arrays usually have state variable names
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if loop is potentially unbounded (could iterate many times)
+    fn is_potentially_unbounded_loop(&self, source: &str) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+        for line in &lines {
+            let trimmed = line.trim();
+            if trimmed.contains("for") || trimmed.contains("while") {
+                // Check for small bounded loops (explicit small limit)
+                // e.g., for (uint i = 0; i < 10; i++) is bounded
+                for bound in ["< 10", "< 5", "< 3", "<= 10", "<= 5", "<= 3", "< 2", "<= 2"] {
+                    if trimmed.contains(bound) {
+                        return false; // Small bounded loop is OK
+                    }
+                }
+                // If it's bounded by .length, it could be large
+                if trimmed.contains(".length") {
+                    return true;
+                }
+            }
+        }
+        // Default: not clearly unbounded
+        false
     }
 }
 
