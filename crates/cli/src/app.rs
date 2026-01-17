@@ -178,7 +178,7 @@ impl CliApp {
             .arg(
                 Arg::new("files")
                     .help("Solidity files to analyze")
-                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config", "from-url", "setup-api-keys", "project"])
+                    .required_unless_present_any(["list-detectors", "version-info", "lsp", "init-config", "from-url", "setup-api-keys", "project", "validate"])
                     .num_args(1..)
                     .value_name("FILE"),
             )
@@ -314,6 +314,42 @@ impl CliApp {
                     .help("Interactive setup for blockchain API keys")
                     .action(ArgAction::SetTrue),
             )
+            .arg(
+                Arg::new("validate")
+                    .long("validate")
+                    .help("Validate detector accuracy against ground truth dataset")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("ground-truth")
+                    .long("ground-truth")
+                    .help("Path to ground truth JSON file for validation")
+                    .value_name("FILE")
+                    .requires("validate"),
+            )
+            .arg(
+                Arg::new("fail-on-regression")
+                    .long("fail-on-regression")
+                    .help("Exit with error if any regression is detected")
+                    .action(ArgAction::SetTrue)
+                    .requires("validate"),
+            )
+            .arg(
+                Arg::new("min-precision")
+                    .long("min-precision")
+                    .help("Minimum precision threshold (0.0-1.0)")
+                    .value_parser(clap::value_parser!(f64))
+                    .value_name("THRESHOLD")
+                    .requires("validate"),
+            )
+            .arg(
+                Arg::new("min-recall")
+                    .long("min-recall")
+                    .help("Minimum recall threshold (0.0-1.0)")
+                    .value_parser(clap::value_parser!(f64))
+                    .value_name("THRESHOLD")
+                    .requires("validate"),
+            )
             .try_get_matches_from(args)?;
 
         // Handle configuration initialization first (doesn't need config loading)
@@ -324,6 +360,24 @@ impl CliApp {
         // Handle API key setup
         if matches.get_flag("setup-api-keys") {
             return Self::handle_setup_api_keys();
+        }
+
+        // Handle validation command
+        if matches.get_flag("validate") {
+            let ground_truth_path = matches
+                .get_one::<String>("ground-truth")
+                .map(|s| s.as_str())
+                .unwrap_or("tests/validation/ground_truth.json");
+            let fail_on_regression = matches.get_flag("fail-on-regression");
+            let min_precision = matches.get_one::<f64>("min-precision").copied();
+            let min_recall = matches.get_one::<f64>("min-recall").copied();
+
+            return Self::handle_validate(
+                ground_truth_path,
+                fail_on_regression,
+                min_precision,
+                min_recall,
+            );
         }
 
         // Get config file path if specified
@@ -1465,6 +1519,319 @@ impl CliApp {
 
         println!("\n🚀 Test your setup:");
         println!("   soliditydefend --from-url https://etherscan.io/tx/0x1234...");
+
+        Ok(())
+    }
+
+    /// Handle the validate command
+    fn handle_validate(
+        ground_truth_path: &str,
+        fail_on_regression: bool,
+        min_precision: Option<f64>,
+        min_recall: Option<f64>,
+    ) -> Result<()> {
+        use serde::{Deserialize, Serialize};
+        use std::collections::HashMap as StdHashMap;
+
+        Self::display_banner();
+        println!("Running detector validation...\n");
+
+        // Load ground truth dataset
+        #[derive(Debug, Deserialize)]
+        struct GroundTruthDataset {
+            version: String,
+            contracts: StdHashMap<String, ContractGroundTruth>,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct ContractGroundTruth {
+            contract_name: String,
+            expected_findings: Vec<ExpectedFinding>,
+            #[serde(default)]
+            known_false_positives: Vec<KnownFP>,
+        }
+
+        #[derive(Debug, Clone, Deserialize)]
+        struct ExpectedFinding {
+            detector_id: String,
+            line_range: [u32; 2],
+            severity: String,
+            description: String,
+            #[serde(default)]
+            vulnerability_type: String,
+        }
+
+        #[derive(Debug, Deserialize)]
+        struct KnownFP {
+            detector_id: String,
+            line: u32,
+        }
+
+        #[derive(Debug, Clone, Serialize)]
+        struct ActualFinding {
+            detector_id: String,
+            line: u32,
+            severity: String,
+            message: String,
+        }
+
+        let ground_truth_content = std::fs::read_to_string(ground_truth_path)
+            .map_err(|e| anyhow!("Failed to read ground truth file {}: {}", ground_truth_path, e))?;
+
+        let ground_truth: GroundTruthDataset = serde_json::from_str(&ground_truth_content)
+            .map_err(|e| anyhow!("Failed to parse ground truth JSON: {}", e))?;
+
+        println!("Loaded ground truth v{} with {} contracts\n", ground_truth.version, ground_truth.contracts.len());
+
+        // Create analyzer
+        let config = SolidityDefendConfig::load_from_defaults_and_file(None)?;
+        let registry_config = config.to_registry_config();
+        let registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
+        let parser = Parser::new();
+
+        let mut total_expected = 0;
+        let mut total_actual = 0;
+        let mut true_positives = 0;
+        let mut false_positives = 0;
+        let mut false_negatives = 0;
+        let mut detector_stats: StdHashMap<String, (usize, usize, usize)> = StdHashMap::new(); // (tp, fp, fn)
+        let mut missed_vulns: Vec<(String, ExpectedFinding)> = Vec::new();
+        let mut files_analyzed = 0;
+        let mut files_failed = 0;
+
+        // Analyze each contract in ground truth
+        for (file_path, gt) in &ground_truth.contracts {
+            total_expected += gt.expected_findings.len();
+
+            // Check if file exists
+            if !std::path::Path::new(file_path).exists() {
+                eprintln!("Warning: Contract file not found: {}", file_path);
+                files_failed += 1;
+                // Count all expected findings as false negatives
+                false_negatives += gt.expected_findings.len();
+                for ef in &gt.expected_findings {
+                    missed_vulns.push((file_path.clone(), ef.clone()));
+                    let stats = detector_stats.entry(ef.detector_id.clone()).or_insert((0, 0, 0));
+                    stats.2 += 1; // fn
+                }
+                continue;
+            }
+
+            // Read and parse the contract
+            let content = match std::fs::read_to_string(file_path) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("Warning: Failed to read {}: {}", file_path, e);
+                    files_failed += 1;
+                    continue;
+                }
+            };
+
+            let arena = AstArena::new();
+            let source_file = match parser.parse(&arena, &content, file_path) {
+                Ok(sf) => sf,
+                Err(e) => {
+                    eprintln!("Warning: Failed to parse {}: {:?}", file_path, e);
+                    files_failed += 1;
+                    continue;
+                }
+            };
+
+            files_analyzed += 1;
+
+            // Run detectors on each contract
+            let mut file_findings: Vec<ActualFinding> = Vec::new();
+
+            for contract in &source_file.contracts {
+                let dummy_symbols = SymbolTable::new();
+                let ctx = AnalysisContext::new(
+                    contract,
+                    dummy_symbols,
+                    content.clone(),
+                    file_path.to_string(),
+                );
+
+                if let Ok(result) = registry.run_analysis(&ctx) {
+                    for finding in result.findings {
+                        file_findings.push(ActualFinding {
+                            detector_id: finding.detector_id.to_string(),
+                            line: finding.primary_location.line,
+                            severity: finding.severity.to_string(),
+                            message: finding.message.clone(),
+                        });
+                    }
+                }
+            }
+
+            total_actual += file_findings.len();
+
+            // Match findings to expected
+            let mut matched_expected = vec![false; gt.expected_findings.len()];
+            let mut matched_actual = vec![false; file_findings.len()];
+            let line_tolerance: i32 = 5;
+
+            for (ai, actual) in file_findings.iter().enumerate() {
+                for (ei, expected) in gt.expected_findings.iter().enumerate() {
+                    if matched_expected[ei] {
+                        continue;
+                    }
+
+                    if actual.detector_id == expected.detector_id {
+                        let line = actual.line as i32;
+                        let start = expected.line_range[0] as i32 - line_tolerance;
+                        let end = expected.line_range[1] as i32 + line_tolerance;
+
+                        if line >= start && line <= end {
+                            matched_expected[ei] = true;
+                            matched_actual[ai] = true;
+                            true_positives += 1;
+
+                            let stats = detector_stats.entry(expected.detector_id.clone()).or_insert((0, 0, 0));
+                            stats.0 += 1; // tp
+                            break;
+                        }
+                    }
+                }
+            }
+
+            // Count false negatives (missed expected findings)
+            for (ei, &matched) in matched_expected.iter().enumerate() {
+                if !matched {
+                    false_negatives += 1;
+                    let ef = &gt.expected_findings[ei];
+                    missed_vulns.push((file_path.clone(), ef.clone()));
+                    let stats = detector_stats.entry(ef.detector_id.clone()).or_insert((0, 0, 0));
+                    stats.2 += 1; // fn
+                }
+            }
+
+            // Count false positives (unmatched actual findings)
+            for (ai, &matched) in matched_actual.iter().enumerate() {
+                if !matched {
+                    let actual = &file_findings[ai];
+                    // Check if it's a known false positive
+                    let is_known_fp = gt.known_false_positives.iter().any(|kfp| {
+                        kfp.detector_id == actual.detector_id &&
+                        (actual.line as i32 - kfp.line as i32).abs() <= line_tolerance
+                    });
+
+                    if !is_known_fp {
+                        false_positives += 1;
+                        let stats = detector_stats.entry(actual.detector_id.clone()).or_insert((0, 0, 0));
+                        stats.1 += 1; // fp
+                    }
+                }
+            }
+        }
+
+        // Calculate metrics
+        let precision = if true_positives + false_positives > 0 {
+            true_positives as f64 / (true_positives + false_positives) as f64
+        } else {
+            0.0
+        };
+
+        let recall = if true_positives + false_negatives > 0 {
+            true_positives as f64 / (true_positives + false_negatives) as f64
+        } else {
+            0.0
+        };
+
+        let f1_score = if precision + recall > 0.0 {
+            2.0 * (precision * recall) / (precision + recall)
+        } else {
+            0.0
+        };
+
+        // Print results
+        println!("╔══════════════════════════════════════════════════════════════╗");
+        println!("║              DETECTOR VALIDATION RESULTS                     ║");
+        println!("╚══════════════════════════════════════════════════════════════╝\n");
+
+        println!("FILES ANALYZED: {} (failed: {})\n", files_analyzed, files_failed);
+
+        println!("OVERALL METRICS");
+        println!("═══════════════");
+        println!("  True Positives:  {:>4} / {} ({:.1}%)",
+            true_positives, total_expected,
+            if total_expected > 0 { true_positives as f64 / total_expected as f64 * 100.0 } else { 0.0 }
+        );
+        println!("  False Negatives: {:>4} / {} ({:.1}%)  <- Missed real vulnerabilities",
+            false_negatives, total_expected,
+            if total_expected > 0 { false_negatives as f64 / total_expected as f64 * 100.0 } else { 0.0 }
+        );
+        println!("  False Positives: {:>4} / {} ({:.1}%)",
+            false_positives, total_actual,
+            if total_actual > 0 { false_positives as f64 / total_actual as f64 * 100.0 } else { 0.0 }
+        );
+        println!();
+        println!("  Precision: {:.1}%", precision * 100.0);
+        println!("  Recall:    {:.1}%", recall * 100.0);
+        println!("  F1 Score:  {:.3}", f1_score);
+
+        // Per-detector metrics
+        if !detector_stats.is_empty() {
+            println!("\n\nPER-DETECTOR METRICS");
+            println!("════════════════════");
+            println!("  Detector                    TP    FP    FN   Prec   Recall   F1");
+            println!("  ─────────────────────────────────────────────────────────────────");
+
+            let mut sorted_detectors: Vec<_> = detector_stats.iter().collect();
+            sorted_detectors.sort_by(|a, b| b.1.0.cmp(&a.1.0)); // Sort by TP
+
+            for (detector, (tp, fp, fn_)) in sorted_detectors {
+                let d_precision = if *tp + *fp > 0 { *tp as f64 / (*tp + *fp) as f64 } else { 0.0 };
+                let d_recall = if *tp + *fn_ > 0 { *tp as f64 / (*tp + *fn_) as f64 } else { 0.0 };
+                let d_f1 = if d_precision + d_recall > 0.0 {
+                    2.0 * (d_precision * d_recall) / (d_precision + d_recall)
+                } else {
+                    0.0
+                };
+                println!("  {:<25} {:>4}  {:>4}  {:>4}  {:>5.1}%  {:>5.1}%  {:.3}",
+                    detector, tp, fp, fn_, d_precision * 100.0, d_recall * 100.0, d_f1);
+            }
+        }
+
+        // Missed vulnerabilities (regressions)
+        if !missed_vulns.is_empty() {
+            println!("\n\nMISSED VULNERABILITIES ({} total)", missed_vulns.len());
+            println!("══════════════════════════════════════");
+            for (i, (path, ef)) in missed_vulns.iter().take(15).enumerate() {
+                println!("  {}. [{}] {}", i + 1, ef.detector_id, ef.description);
+                println!("     File: {}:{}-{}", path, ef.line_range[0], ef.line_range[1]);
+            }
+            if missed_vulns.len() > 15 {
+                println!("  ... and {} more", missed_vulns.len() - 15);
+            }
+        }
+
+        println!();
+
+        // Check thresholds and exit code
+        let mut should_fail = false;
+
+        if let Some(min_p) = min_precision {
+            if precision < min_p {
+                println!("FAIL: Precision {:.1}% is below threshold {:.1}%", precision * 100.0, min_p * 100.0);
+                should_fail = true;
+            }
+        }
+
+        if let Some(min_r) = min_recall {
+            if recall < min_r {
+                println!("FAIL: Recall {:.1}% is below threshold {:.1}%", recall * 100.0, min_r * 100.0);
+                should_fail = true;
+            }
+        }
+
+        if fail_on_regression && !missed_vulns.is_empty() {
+            println!("FAIL: {} vulnerabilities not detected (regressions)", missed_vulns.len());
+            should_fail = true;
+        }
+
+        if should_fail {
+            std::process::exit(1);
+        }
 
         Ok(())
     }
