@@ -97,6 +97,11 @@ impl Detector for TimestampManipulationDetector {
 }
 
 impl TimestampManipulationDetector {
+    /// Phase 5 FP Reduction: Check if function is a constructor
+    fn is_constructor(&self, function: &ast::Function<'_>) -> bool {
+        matches!(function.function_type, ast::FunctionType::Constructor)
+    }
+
     /// Check for timestamp manipulation vulnerabilities
     fn check_timestamp_manipulation(
         &self,
@@ -105,6 +110,11 @@ impl TimestampManipulationDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        // Phase 5 FP Reduction: Skip constructors - one-time initialization with timestamp is safe
+        if self.is_constructor(function) {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx);
 
         // Check for block.timestamp usage
@@ -112,6 +122,20 @@ impl TimestampManipulationDetector {
 
         if !uses_timestamp {
             return None;
+        }
+
+        // Phase 5 FP Reduction: Exempt safe vesting/unlock patterns
+        // Vesting/unlock using `>=` is the CORRECT pattern - it checks if unlock time has passed
+        // This is not vulnerable to meaningful manipulation (~15 sec window is negligible for vesting)
+        let is_safe_vesting_pattern = (func_source.contains("vest")
+            || func_source.contains("unlock")
+            || func_source.contains("release")
+            || func_source.contains("cliff")
+            || func_source.contains("vested"))
+            && (func_source.contains("block.timestamp >=") || func_source.contains(">= block.timestamp"));
+
+        if is_safe_vesting_pattern {
+            return None; // This is the safe pattern for vesting/unlock
         }
 
         // Check more specific patterns first before generic ones
@@ -184,11 +208,10 @@ impl TimestampManipulationDetector {
         }
 
         // Pattern 3: Critical state changes based on timestamp
-        let has_critical_logic = func_source.contains("transfer")
-            || func_source.contains("mint")
-            || func_source.contains("burn")
-            || func_source.contains("withdraw")
-            || func_source.contains("claim");
+        // Phase 5 FP Reduction: Tighten this pattern to be more specific
+        let has_critical_logic = func_source.contains(".transfer(")
+            || (func_source.contains("mint") && func_source.contains("("))
+            || func_source.contains("burn(");
 
         let timestamp_controls_critical = uses_timestamp
             && has_critical_logic
@@ -197,21 +220,24 @@ impl TimestampManipulationDetector {
 
         if timestamp_controls_critical {
             return Some(
-                "Critical operations (transfer/mint/burn/withdraw) controlled by timestamp, \
+                "Critical operations (transfer/mint/burn) controlled by timestamp, \
                 enabling miners to manipulate timing for advantage"
                     .to_string(),
             );
         }
 
         // Pattern 4: Timestamp used for deadline without block.number fallback
+        // Phase 5 FP Reduction: Only flag if deadline affects critical operations
         let has_deadline = func_source.contains("deadline")
             || func_source.contains("expiry")
             || func_source.contains("expires");
 
-        let lacks_block_number =
-            has_deadline && uses_timestamp && !func_source.contains("block.number");
+        let has_critical_deadline_use = has_deadline
+            && uses_timestamp
+            && !func_source.contains("block.number")
+            && (func_source.contains("transfer") || func_source.contains("swap"));
 
-        if lacks_block_number {
+        if has_critical_deadline_use {
             return Some(
                 "Uses timestamp-based deadline without block.number as fallback, \
                 vulnerable to timestamp manipulation for deadline extensions"
@@ -219,21 +245,9 @@ impl TimestampManipulationDetector {
             );
         }
 
-        // Pattern 5: Timestamp arithmetic without safety checks
-        let has_timestamp_math = (func_source.contains("block.timestamp +")
-            || func_source.contains("block.timestamp -")
-            || func_source.contains("now +")
-            || func_source.contains("now -"))
-            && !func_source.contains("SafeMath")
-            && !func_source.contains("checked");
-
-        if has_timestamp_math {
-            return Some(
-                "Performs arithmetic on block.timestamp without overflow protection, \
-                potentially manipulable by miners within bounds"
-                    .to_string(),
-            );
-        }
+        // Pattern 5: Timestamp arithmetic - only flag for overflow-prone cases
+        // Skip this pattern - modern Solidity (0.8+) has overflow protection by default
+        // and this generates many false positives
 
         // Pattern 6: Auction or time-sensitive mechanism
         let is_auction = func_source.contains("auction")
@@ -253,22 +267,7 @@ impl TimestampManipulationDetector {
             );
         }
 
-        // Pattern 7: Vesting or unlock schedules
-        let is_vesting = func_source.contains("vest")
-            || func_source.contains("unlock")
-            || func_source.contains("release");
-
-        let timestamp_controls_vesting = is_vesting
-            && uses_timestamp
-            && (func_source.contains(">=") || func_source.contains("<="));
-
-        if timestamp_controls_vesting {
-            return Some(
-                "Vesting or unlock schedule controlled by timestamp, \
-                allowing miners to manipulate release timing"
-                    .to_string(),
-            );
-        }
+        // Pattern 7: Removed - vesting/unlock with >= is now considered safe (see above)
 
         // Pattern 8: Explicit vulnerability marker
         if func_source.contains("VULNERABILITY")

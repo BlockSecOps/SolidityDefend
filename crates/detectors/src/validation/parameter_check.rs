@@ -881,6 +881,19 @@ impl Detector for ParameterConsistencyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 5 FP Reduction: Skip test contracts entirely
+        // Contracts with "Vulnerable", "Test", "Mock" in the name are test fixtures
+        let contract_name = ctx.contract.name.name.to_string();
+        let contract_name_lower = contract_name.to_lowercase();
+        if contract_name_lower.contains("vulnerable")
+            || contract_name_lower.contains("test")
+            || contract_name_lower.contains("mock")
+            || contract_name_lower.contains("example")
+            || contract_name_lower.contains("demo")
+        {
+            return Ok(findings);
+        }
+
         // Skip analysis for standard protocols - they follow established patterns
         // ERC20, ERC721, ERC4626, etc. have well-defined interfaces with specific behaviors
         let source_lower = ctx.source_code.to_lowercase();
@@ -901,8 +914,12 @@ impl Detector for ParameterConsistencyDetector {
             return Ok(findings);
         }
 
-        // Analyze all functions in the contract
+        // Analyze all functions in the contract (skip constructors - one-time init is safe)
         for function in ctx.get_functions() {
+            // Phase 5 FP Reduction: Skip constructors - one-time initialization is safe
+            if matches!(function.function_type, ast::FunctionType::Constructor) {
+                continue;
+            }
             findings.extend(self.analyze_function(function, ctx)?);
         }
 

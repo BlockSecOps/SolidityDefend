@@ -49,8 +49,57 @@ impl JitLiquidityExtractionDetector {
         }
     }
 
+    /// Phase 5 FP Reduction: Check if contract is actually an AMM pool
+    /// JIT attacks only apply to AMM pools, not simple wallets/vaults
+    fn is_amm_pool(&self, source: &str) -> bool {
+        // Must have reserve tracking indicators
+        let has_reserves = source.contains("reserve0")
+            || source.contains("reserve1")
+            || source.contains("getReserves")
+            || source.contains("_reserve0")
+            || source.contains("_reserve1");
+
+        // Must have swap functionality or LP token mechanics
+        let has_swap_or_lp = source.contains("swap(")
+            || source.contains("function swap")
+            || source.contains("IUniswapV2Pair")
+            || source.contains("IPair")
+            || source.contains("liquidity")
+            || source.contains("kLast")
+            || source.contains("priceCumulative")
+            || source.contains("sqrtPrice")
+            || source.contains("tickSpacing");
+
+        // Both indicators required for AMM context
+        has_reserves && has_swap_or_lp
+    }
+
+    /// Phase 5 FP Reduction: Check if this is a simple wallet/vault pattern
+    fn is_simple_wallet_pattern(&self, source: &str) -> bool {
+        let source_lower = source.to_lowercase();
+
+        // Simple wallets have deposit/withdraw but no trading mechanics
+        let has_simple_deposit_withdraw = (source_lower.contains("function deposit")
+            || source_lower.contains("function withdraw"))
+            && !source_lower.contains("swap")
+            && !source_lower.contains("liquidity")
+            && !source_lower.contains("reserve");
+
+        // ERC4626 vaults are not JIT targets
+        let is_erc4626 = source.contains("ERC4626")
+            || source.contains("IERC4626")
+            || (source.contains("totalAssets") && source.contains("totalSupply"));
+
+        has_simple_deposit_withdraw || is_erc4626
+    }
+
     /// Find liquidity functions without time locks
     fn find_instant_liquidity(&self, source: &str) -> Vec<(u32, String)> {
+        // Phase 5 FP Reduction: Early exit for non-AMM contracts
+        if !self.is_amm_pool(source) || self.is_simple_wallet_pattern(source) {
+            return Vec::new();
+        }
+
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
@@ -62,11 +111,9 @@ impl JitLiquidityExtractionDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Check for add liquidity functions
+            // Check for add liquidity functions (more specific patterns)
             if trimmed.contains("function ")
-                && (trimmed.contains("addLiquidity")
-                    || trimmed.contains("deposit")
-                    || trimmed.contains("mint"))
+                && (trimmed.contains("addLiquidity") || trimmed.contains("mint"))
                 && (trimmed.contains("external") || trimmed.contains("public"))
             {
                 has_add_liquidity = true;
@@ -85,12 +132,10 @@ impl JitLiquidityExtractionDetector {
                 }
             }
 
-            // Check for remove liquidity functions
+            // Check for remove liquidity functions (more specific patterns)
             if trimmed.contains("function ")
-                && (trimmed.contains("removeLiquidity")
-                    || trimmed.contains("withdraw")
-                    || trimmed.contains("burn")
-                    || trimmed.contains("redeem"))
+                && (trimmed.contains("removeLiquidity") || trimmed.contains("burn"))
+                && (trimmed.contains("external") || trimmed.contains("public"))
             {
                 has_remove_liquidity = true;
 
@@ -117,6 +162,11 @@ impl JitLiquidityExtractionDetector {
 
     /// Find concentrated liquidity without JIT protection
     fn find_concentrated_liquidity_vuln(&self, source: &str) -> Vec<(u32, String)> {
+        // Phase 5 FP Reduction: Only check actual AMM pools
+        if !self.is_amm_pool(source) || self.is_simple_wallet_pattern(source) {
+            return Vec::new();
+        }
+
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
@@ -134,7 +184,6 @@ impl JitLiquidityExtractionDetector {
                 // Check for tick range parameters (concentrated liquidity)
                 let is_concentrated = func_body.contains("tickLower")
                     || func_body.contains("tickUpper")
-                    || func_body.contains("tick")
                     || func_body.contains("sqrtPrice");
 
                 // Check for JIT protection
@@ -154,17 +203,21 @@ impl JitLiquidityExtractionDetector {
 
     /// Find same-block liquidity operations
     fn find_same_block_operations(&self, source: &str) -> Vec<(u32, String)> {
+        // Phase 5 FP Reduction: Only check actual AMM pools
+        if !self.is_amm_pool(source) || self.is_simple_wallet_pattern(source) {
+            return Vec::new();
+        }
+
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Look for liquidity removal functions
+            // Look for liquidity removal functions (more specific to AMM context)
             if trimmed.contains("function ")
-                && (trimmed.contains("removeLiquidity")
-                    || trimmed.contains("withdraw")
-                    || trimmed.contains("decreaseLiquidity"))
+                && (trimmed.contains("removeLiquidity") || trimmed.contains("decreaseLiquidity"))
+                && (trimmed.contains("external") || trimmed.contains("public"))
             {
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
@@ -188,13 +241,17 @@ impl JitLiquidityExtractionDetector {
 
     /// Find flash loan compatible liquidity
     fn find_flash_liquidity(&self, source: &str) -> Vec<(u32, String)> {
+        // Phase 5 FP Reduction: Only check actual AMM pools
+        if !self.is_amm_pool(source) {
+            return Vec::new();
+        }
+
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
         // Check if contract has both flash loan and liquidity features
-        let has_flash = source.contains("flash") || source.contains("Flash");
-        let has_liquidity =
-            source.contains("Liquidity") || source.contains("addLiquidity");
+        let has_flash = source.contains("flashLoan") || source.contains("flash(");
+        let has_liquidity = source.contains("addLiquidity") || source.contains("removeLiquidity");
 
         if has_flash && has_liquidity {
             for (line_num, line) in lines.iter().enumerate() {
@@ -431,8 +488,16 @@ mod tests {
     fn test_instant_liquidity() {
         let detector = JitLiquidityExtractionDetector::new();
 
+        // Test requires AMM context (reserves + liquidity functions) for JIT detection
         let vulnerable = r#"
             contract Pool {
+                uint256 public reserve0;
+                uint256 public reserve1;
+
+                function swap(uint256 amountIn) external {
+                    // swap logic using reserves
+                }
+
                 function addLiquidity(uint256 amount) external {
                     _mint(msg.sender, shares);
                 }
@@ -450,9 +515,16 @@ mod tests {
     fn test_safe_liquidity() {
         let detector = JitLiquidityExtractionDetector::new();
 
+        // Safe AMM pool with time lock - should not flag
         let safe = r#"
             contract Pool {
+                uint256 public reserve0;
+                uint256 public reserve1;
                 mapping(address => uint256) public lockTime;
+
+                function swap(uint256 amountIn) external {
+                    // swap logic
+                }
 
                 function addLiquidity(uint256 amount) external {
                     lockTime[msg.sender] = block.timestamp + 1 hours;
