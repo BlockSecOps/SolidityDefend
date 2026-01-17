@@ -112,173 +112,101 @@ impl ValidatorFrontRunningDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
-        // Check if function involves value-extractable operations
-        let is_value_operation = func_source.contains("stake")
-            || func_source.contains("reward")
-            || func_source.contains("withdraw")
-            || func_source.contains("claim")
-            || func_source.contains("swap");
+        // Skip functions with access control - not vulnerable to public front-running
+        let has_access_control = func_source.contains("onlyOwner")
+            || func_source.contains("onlyAdmin")
+            || func_source.contains("onlyGovernance")
+            || func_source.contains("onlyValidator")
+            || func_source.contains("require(msg.sender ==");
 
-        if !is_value_operation {
+        if has_access_control {
             return None;
         }
 
-        // Pattern 1: Validator selection visible before execution
-        let selects_validator = func_source.contains("selectValidator")
-            || func_source.contains("chooseValidator")
-            || func_source.contains("assignValidator");
-
-        let no_commitment = selects_validator
-            && !func_source.contains("commit")
-            && !func_source.contains("hash")
-            && !func_source.contains("reveal");
-
-        if no_commitment {
-            return Some(
-                "Validator selection visible in mempool without commitment, \
-                validators can selectively include/exclude transactions"
-                    .to_string(),
-            );
+        // Skip internal/private functions - not callable by validators
+        if function.visibility != ast::Visibility::External
+            && function.visibility != ast::Visibility::Public
+        {
+            return None;
         }
 
-        // Pattern 2: Reward distribution without anti-frontrun protection
-        let distributes_rewards = func_source.contains("distribute")
-            || func_source.contains("reward")
-            || function.name.name.to_lowercase().contains("reward");
-
-        let no_protection = distributes_rewards
-            && !func_source.contains("commit")
-            && !func_source.contains("private")
-            && !func_source.contains("encrypted");
-
-        if no_protection {
-            return Some(
-                "Reward distribution visible in mempool, \
-                validators can front-run to claim rewards first"
-                    .to_string(),
-            );
+        // Skip view/pure functions - no state changes to front-run
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return None;
         }
 
-        // Pattern 3: Staking without validator rotation
-        let is_staking =
-            func_source.contains("stake") || function.name.name.to_lowercase().contains("stake");
+        // Skip time-locked or commit-reveal protected operations
+        let has_timing_protection = func_source.contains("timelock")
+            || func_source.contains("delay")
+            || func_source.contains("commit")
+            || func_source.contains("reveal")
+            || func_source.contains("deadline");
 
-        let no_rotation = is_staking
-            && !func_source.contains("rotate")
-            && !func_source.contains("shuffle")
-            && !func_source.contains("random");
-
-        if no_rotation {
-            return Some(
-                "Validator assignment without rotation, \
-                same validators can repeatedly front-run same users"
-                    .to_string(),
-            );
+        if has_timing_protection {
+            return None;
         }
 
-        // Pattern 4: Price-sensitive operations without sequencing
-        let is_price_sensitive = func_source.contains("price")
-            || func_source.contains("amount")
-            || func_source.contains("slippage");
-
-        let no_fair_sequencing = is_price_sensitive
-            && is_value_operation
-            && !func_source.contains("batch")
-            && !func_source.contains("auction");
-
-        if no_fair_sequencing {
-            return Some(
-                "Price-sensitive operations without fair sequencing, \
-                validators can reorder transactions for MEV extraction"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 5: Validator can observe withdrawal amounts
-        let is_withdrawal = func_source.contains("withdraw")
-            || function.name.name.to_lowercase().contains("withdraw");
-
-        let withdrawal_visible = is_withdrawal
-            && func_source.contains("amount")
-            && !func_source.contains("private")
-            && !func_source.contains("encrypted");
-
-        if withdrawal_visible {
-            return Some(
-                "Withdrawal amounts visible to validators before execution, \
-                enables targeted front-running of large withdrawals"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 6: No MEV redistribution mechanism
-        let generates_mev = func_source.contains("liquidat")
+        // Only flag high-risk MEV patterns
+        let is_high_risk_mev = func_source.contains("liquidat")
             || func_source.contains("arbitrage")
-            || func_source.contains("swap");
+            || (func_source.contains("claim") && func_source.contains("first"))
+            || func_source.contains("frontrun");
 
-        let no_mev_sharing = generates_mev
-            && !func_source.contains("redistribute")
-            && !func_source.contains("share")
-            && !func_source.contains("burn");
+        if !is_high_risk_mev {
+            return None;
+        }
 
-        if no_mev_sharing {
+        // Pattern 1: Liquidation without MEV protection
+        if func_source.contains("liquidat") {
+            let no_protection = !func_source.contains("batch")
+                && !func_source.contains("auction")
+                && !func_source.contains("redistribute");
+
+            if no_protection {
+                return Some(
+                    "Liquidation function without MEV protection, \
+                    validators can front-run liquidations for profit"
+                        .to_string(),
+                );
+            }
+        }
+
+        // Pattern 2: Arbitrage function exposed publicly
+        if func_source.contains("arbitrage") {
             return Some(
-                "MEV-generating operations without redistribution, \
-                validators capture full MEV without sharing with users"
+                "Arbitrage function exposed publicly, \
+                validators can extract arbitrage MEV by front-running"
                     .to_string(),
             );
         }
 
-        // Pattern 7: Validator can see claim intentions
-        let is_claim =
-            func_source.contains("claim") || function.name.name.to_lowercase().contains("claim");
+        // Pattern 3: First-come-first-serve claim without protection
+        if func_source.contains("claim") && func_source.contains("first") {
+            let no_commit_reveal = !func_source.contains("commit")
+                && !func_source.contains("reveal")
+                && !func_source.contains("signature");
 
-        let claim_visible =
-            is_claim && !func_source.contains("commit") && !func_source.contains("signature");
+            if no_commit_reveal {
+                return Some(
+                    "First-come-first-serve claim without commit-reveal, \
+                    validators can front-run claims"
+                        .to_string(),
+                );
+            }
+        }
 
-        if claim_visible {
+        // Pattern 4: Explicit front-run vulnerable pattern
+        if func_source.contains("frontrun") {
             return Some(
-                "Claim operations visible in mempool, \
-                validators can front-run to claim before users"
+                "Function explicitly marked as front-run vulnerable, \
+                requires MEV protection mechanisms"
                     .to_string(),
             );
         }
 
-        // Pattern 8: Continuous trading instead of batch auctions
-        let is_trading = func_source.contains("trade")
-            || func_source.contains("swap")
-            || func_source.contains("exchange");
-
-        let continuous_trading = is_trading
-            && !func_source.contains("batch")
-            && !func_source.contains("auction")
-            && !func_source.contains("round");
-
-        if continuous_trading {
-            return Some(
-                "Continuous trading model without batching, \
-                validators have information advantage for every trade"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 9: No transaction ordering constraints
-        let has_ordering_constraint = func_source.contains("sequence")
-            || func_source.contains("order")
-            || func_source.contains("nonce");
-
-        let no_ordering =
-            is_value_operation && !has_ordering_constraint && func_source.contains("public");
-
-        if no_ordering {
-            return Some(
-                "No transaction ordering constraints, \
-                validators can reorder transactions arbitrarily for profit"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 10: Validator priority in queue
+        // Pattern 5: Validator priority in queue
         let has_queue = func_source.contains("queue") || func_source.contains("Queue");
 
         let validator_priority = has_queue

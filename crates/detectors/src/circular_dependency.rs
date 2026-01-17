@@ -193,22 +193,36 @@ impl CircularDependencyDetector {
             );
         }
 
-        // Pattern 2: Mutual contract calls without depth limit
-        let calls_external =
-            func_source.contains(".") && (func_source.contains("()") || func_source.contains("("));
+        // Pattern 2: Recursive or self-calling patterns without depth limit
+        // Only flag when there's actual evidence of recursive/circular patterns
+        let has_self_call = func_source.contains("address(this)")
+            && (func_source.contains(".call(") || func_source.contains("delegatecall"));
 
-        let no_depth_limit = calls_external
+        let has_recursive_name = function.name.name.to_lowercase().contains("recursive")
+            || function.name.name.to_lowercase().contains("traverse")
+            || function.name.name.to_lowercase().contains("walk");
+
+        let calls_same_function = func_source.contains(&format!("{}(", function.name.name));
+
+        let is_recursive_pattern = has_self_call || has_recursive_name || calls_same_function;
+
+        let no_depth_limit = is_recursive_pattern
             && !func_source.contains("depth")
             && !func_source.contains("level")
-            && !func_source.contains("count");
+            && !func_source.contains("maxRecursion")
+            && !func_source.contains("visited");
 
-        if no_depth_limit && makes_external_call {
+        if no_depth_limit && is_recursive_pattern {
             return Some(
-                "External contract calls without depth limit, \
+                "Recursive pattern without depth limit, \
                 circular calls can cause stack overflow"
                     .to_string(),
             );
         }
+
+        // Define calls_external for use in later patterns
+        let calls_external =
+            func_source.contains(".") && (func_source.contains("()") || func_source.contains("("));
 
         // Pattern 3: Observer pattern with notification loops
         let notifies_observers = func_source.contains("notify")

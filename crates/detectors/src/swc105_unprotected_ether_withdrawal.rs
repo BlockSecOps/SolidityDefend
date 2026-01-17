@@ -215,14 +215,32 @@ impl Detector for UnprotectedEtherWithdrawalDetector {
                 continue;
             }
 
+            // Skip standard ERC20/721/1155 functions - these are token transfers, not ETH
+            let func_name_lower = function.name.name.to_lowercase();
+            if func_name_lower == "transfer"
+                || func_name_lower == "transferfrom"
+                || func_name_lower == "safetransfer"
+                || func_name_lower == "safetransferfrom"
+                || func_name_lower == "approve"
+                || func_name_lower == "mint"
+                || func_name_lower == "burn"
+            {
+                continue;
+            }
+
             let func_source = self.get_function_source(function, ctx);
 
             // Check if this looks like a withdrawal function
             let is_withdrawal_by_name = self.is_withdrawal_function(function.name.name);
             let has_ether_transfer = self.has_ether_transfer(&func_source);
 
-            // Only analyze functions that either have withdrawal-like names or contain ether transfers
-            if !is_withdrawal_by_name && !has_ether_transfer {
+            // TIGHTENED: Require BOTH withdrawal-like name AND ether transfer
+            // OR explicit direct ether send (.call{value:} without other patterns)
+            let has_explicit_eth_send = func_source.contains(".call{value:")
+                || func_source.contains("msg.sender.transfer(")
+                || (func_source.contains("payable(") && func_source.contains(".transfer("));
+
+            if !(is_withdrawal_by_name && has_ether_transfer) && !has_explicit_eth_send {
                 continue;
             }
 
@@ -236,13 +254,15 @@ impl Detector for UnprotectedEtherWithdrawalDetector {
                 continue;
             }
 
-            // Determine confidence based on patterns found
-            let confidence = if is_withdrawal_by_name && has_ether_transfer {
-                Confidence::High
+            // Determine confidence and severity based on patterns found
+            let (confidence, severity) = if is_withdrawal_by_name && has_ether_transfer {
+                (Confidence::High, Severity::Critical)
+            } else if has_explicit_eth_send && is_withdrawal_by_name {
+                (Confidence::High, Severity::Critical)
             } else if has_ether_transfer {
-                Confidence::Medium
+                (Confidence::Medium, Severity::High)
             } else {
-                Confidence::Low
+                (Confidence::Low, Severity::Medium)
             };
 
             let message = format!(
@@ -253,12 +273,13 @@ impl Detector for UnprotectedEtherWithdrawalDetector {
 
             let finding = self
                 .base
-                .create_finding(
+                .create_finding_with_severity(
                     ctx,
                     message,
                     function.name.location.start().line() as u32,
                     function.name.location.start().column() as u32,
                     function.name.name.len() as u32,
+                    severity,
                 )
                 .with_swc("SWC-105")
                 .with_cwe(284) // CWE-284: Improper Access Control

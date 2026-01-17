@@ -357,7 +357,7 @@ impl ParameterConsistencyDetector {
             let func_source = self.get_function_source(function, ctx);
 
             for param in params {
-                if self.parameter_needs_validation(param) && !validated_params.contains(&param.name)
+                if self.parameter_needs_validation(param, &func_source, function) && !validated_params.contains(&param.name)
                 {
                     // Additional source-based check for validation patterns
                     let param_validated_in_source = self.check_source_validation(&func_source, &param.name);
@@ -436,10 +436,25 @@ impl ParameterConsistencyDetector {
         false
     }
 
-    /// Check if parameter needs validation
-    fn parameter_needs_validation(&self, param: &ParameterInfo) -> bool {
+    /// Check if parameter needs validation (context-aware)
+    fn parameter_needs_validation(&self, param: &ParameterInfo, func_source: &str, function: &ast::Function<'_>) -> bool {
         match param.type_info {
-            ParameterType::Address => true,
+            ParameterType::Address => {
+                // Skip standard ERC20/721/1155 parameter names - these follow established patterns
+                let param_lower = param.name.to_lowercase();
+                if param_lower == "to" || param_lower == "from" || param_lower == "spender"
+                    || param_lower == "operator" || param_lower == "recipient"
+                    || param_lower == "sender" || param_lower == "account" {
+                    // Only flag if used in privileged operations
+                    let func_name_lower = function.name.name.to_lowercase();
+                    if !func_name_lower.contains("owner") && !func_name_lower.contains("admin")
+                        && !func_name_lower.contains("upgrade") && !func_name_lower.contains("set") {
+                        return false;
+                    }
+                }
+                // Only flag addresses used in risky operations
+                self.is_address_used_in_risky_operation(&param.name, func_source)
+            }
             ParameterType::Uint | ParameterType::Int => {
                 // Numeric parameters often need range validation
                 param.name.to_lowercase().contains("amount")
@@ -451,6 +466,41 @@ impl ParameterConsistencyDetector {
             ParameterType::Array => true,
             _ => false,
         }
+    }
+
+    /// Check if address parameter is used in risky operations
+    fn is_address_used_in_risky_operation(&self, param_name: &str, func_source: &str) -> bool {
+        let source_lower = func_source.to_lowercase();
+        let param_lower = param_name.to_lowercase();
+
+        // Check for transfer/call operations with this address
+        if source_lower.contains(&format!("{}.transfer(", param_lower))
+            || source_lower.contains(&format!("{}.call", param_lower))
+            || source_lower.contains(&format!("{}.delegatecall", param_lower))
+            || source_lower.contains(&format!("{}.send(", param_lower)) {
+            return true;
+        }
+
+        // Check for storage writes (assignments to storage mappings/arrays)
+        if source_lower.contains(&format!("[{}]", param_lower))
+            && (source_lower.contains(" = ") || source_lower.contains("=")) {
+            // Likely a storage operation - check if param is used as key
+            return true;
+        }
+
+        // Check for ownership/admin assignments
+        if (source_lower.contains("owner =") || source_lower.contains("admin ="))
+            && source_lower.contains(&param_lower) {
+            return true;
+        }
+
+        // Check for safeTransfer calls
+        if source_lower.contains("safetransfer") && source_lower.contains(&param_lower) {
+            return true;
+        }
+
+        // Not used in risky operations
+        false
     }
 
     /// Determine severity for missing validation

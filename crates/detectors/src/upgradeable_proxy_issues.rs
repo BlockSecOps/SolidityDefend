@@ -97,6 +97,26 @@ impl Detector for UpgradeableProxyIssuesDetector {
 }
 
 impl UpgradeableProxyIssuesDetector {
+    /// Check if contract is actually a proxy contract
+    fn is_proxy_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Strong proxy signals
+        let has_implementation_slot = source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("_IMPLEMENTATION_SLOT")
+            || source.contains("EIP1967");
+
+        let has_proxy_inheritance = source.contains("Proxy")
+            || source.contains("UUPSUpgradeable")
+            || source.contains("TransparentUpgradeableProxy")
+            || source.contains("ERC1967");
+
+        let has_delegatecall_pattern = source.contains("delegatecall")
+            && (source.contains("implementation") || source.contains("_implementation"));
+
+        has_implementation_slot || has_proxy_inheritance || has_delegatecall_pattern
+    }
+
     /// Check for upgradeable proxy vulnerabilities
     fn check_upgradeable_proxy_issues(
         &self,
@@ -104,6 +124,11 @@ impl UpgradeableProxyIssuesDetector {
         ctx: &AnalysisContext,
     ) -> Option<String> {
         function.body.as_ref()?;
+
+        // First check if this is actually a proxy contract
+        if !self.is_proxy_contract(ctx) {
+            return None;
+        }
 
         let func_source = self.get_function_source(function, ctx);
 

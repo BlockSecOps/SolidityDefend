@@ -5,6 +5,40 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.4] - 2025-01-16
+
+### Security Fix
+
+- **Fixed Dependabot vulnerability**: Updated `lru` crate from 0.12.5 to 0.16.3
+  - Resolves Stacked Borrows violation in `IterMut` that could invalidate internal pointers
+  - Severity: Low
+
+### False Positive Reduction - Phase 4
+
+This release continues reducing false positives across 10 detectors. **Target: ~12% reduction (~900 fewer findings)**.
+
+### Changed
+
+#### Priority 1: High-Impact Fixes
+
+| Detector | Fix Applied |
+|----------|-------------|
+| `parameter-consistency` | Context-aware validation - only flag addresses used in risky operations (transfer, call, delegatecall, storage writes). Skip standard ERC function parameters. |
+| `circular-dependency` | Replaced generic "external call without depth limit" with specific recursive pattern detection (self-calls, address(this) delegatecall). |
+| `validator-front-running` | Multi-level filtering - skip access-controlled, internal/private, view/pure functions. Only flag liquidation/arbitrage/competitive claim patterns. |
+| `amm-k-invariant-violation` | Tightened AMM detection to require strong signals (reserve0/reserve1, IUniswapV2Pair) or 3+ medium indicators. |
+
+#### Priority 2: Medium-Impact Fixes
+
+| Detector | Fix Applied |
+|----------|-------------|
+| `swc105-unprotected-ether-withdrawal` | Skip standard ERC functions. Require BOTH withdrawal-like name AND ether transfer. Context-based severity. |
+| `upgradeable-proxy-issues` | Added `is_proxy_contract()` check requiring IMPLEMENTATION_SLOT, proxy inheritance, or delegatecall+implementation. |
+| `initcode-injection` | Skip trusted bytecode sources (type().creationCode, clone patterns). High severity for medium confidence. |
+| `inefficient-storage` | Increased struct threshold to 3+ small types. Added semantic exclusions (status, state, index, count, id, type). Require 4+ reads for redundant storage warning. |
+| `defi-yield-farming-exploits` | Tightened vault detection to require strong signals or 2+ indicators. Skip internal/private/view/pure. Removed design-choice flags (fees). |
+| `delegatecall-in-loop` | Added comment tracking (single-line, multiline, inline). Require actual `.delegatecall(` syntax. |
+
 ## [Unreleased]
 
 ### False Positive Reduction - Phase 3

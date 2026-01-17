@@ -68,6 +68,16 @@ impl InitcodeInjectionDetector {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
+        // Skip if using trusted bytecode sources
+        let has_trusted_source = source.contains("type(")
+            && source.contains(").creationCode")
+            || source.contains("clone")
+            || source.contains("Clone");
+
+        if has_trusted_source {
+            return findings;
+        }
+
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
@@ -119,6 +129,16 @@ impl InitcodeInjectionDetector {
     fn find_assembly_create(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
+
+        // Skip if using trusted bytecode sources
+        let has_trusted_source = source.contains("type(")
+            && source.contains(").creationCode")
+            || source.contains("clone")
+            || source.contains("Clone");
+
+        if has_trusted_source {
+            return findings;
+        }
 
         let mut in_assembly = false;
 
@@ -260,7 +280,7 @@ impl Detector for InitcodeInjectionDetector {
 
             let finding = self
                 .base
-                .create_finding(ctx, message, line, 1, 50)
+                .create_finding_with_severity(ctx, message, line, 1, 50, Severity::High)
                 .with_cwe(94)
                 .with_confidence(Confidence::Medium)
                 .with_fix_suggestion(
@@ -311,7 +331,7 @@ impl Detector for InitcodeInjectionDetector {
 
             let finding = self
                 .base
-                .create_finding(ctx, message, line, 1, 50)
+                .create_finding_with_severity(ctx, message, line, 1, 50, Severity::High)
                 .with_cwe(94)
                 .with_confidence(Confidence::Medium)
                 .with_fix_suggestion(

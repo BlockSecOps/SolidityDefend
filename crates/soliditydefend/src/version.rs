@@ -287,11 +287,11 @@ mod tests {
     #[test]
     fn test_api_compatibility() {
         let version = VersionInfo::current();
-        // Current version is 1.4.0, so 1.4.x should be compatible
-        assert!(version.is_api_compatible("1.4.0"));
-        assert!(version.is_api_compatible("1.4.1"));
-        // But 1.3.x and 1.5.x should not be compatible (different minor version)
-        assert!(!version.is_api_compatible("1.3.0"));
-        assert!(!version.is_api_compatible("1.5.0"));
+        // Current version is 1.9.4, so 1.9.x should be compatible
+        assert!(version.is_api_compatible("1.9.0"));
+        assert!(version.is_api_compatible("1.9.4"));
+        // But 1.8.x and 1.10.x should not be compatible (different minor version)
+        assert!(!version.is_api_compatible("1.8.0"));
+        assert!(!version.is_api_compatible("1.10.0"));
     }
 }

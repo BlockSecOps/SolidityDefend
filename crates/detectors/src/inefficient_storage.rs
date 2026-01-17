@@ -136,8 +136,8 @@ impl InefficientStorageDetector {
 
                 if trimmed == "}" {
                     in_struct = false;
-                    // Only flag if there are enough small types to make packing worthwhile
-                    if struct_has_uint256 && struct_has_small_types && struct_small_count >= 2 {
+                    // Only flag if there are enough small types to make packing worthwhile (3+)
+                    if struct_has_uint256 && struct_has_small_types && struct_small_count >= 3 {
                         issues.push((
                             (struct_start_line + 1) as u32,
                             "Struct contains mixed uint256 and smaller types. Pack smaller types together for gas savings".to_string()
@@ -159,7 +159,7 @@ impl InefficientStorageDetector {
             }
 
             // Pattern 3: Small uint types as standalone storage variables
-            // Only flag if it's clearly inefficient (not semantically meaningful like decimals)
+            // Only flag if it's clearly inefficient (not semantically meaningful)
             if !in_struct
                 && (trimmed.contains("uint8 ")
                     || trimmed.contains("uint16 "))
@@ -169,6 +169,12 @@ impl InefficientStorageDetector {
                 && !trimmed.contains("decimals") // uint8 for decimals is standard
                 && !trimmed.contains("version")  // uint8 for version is acceptable
                 && !trimmed.contains("nonce")    // small nonces are intentional
+                && !trimmed.contains("status")   // status codes are often uint8
+                && !trimmed.contains("state")    // state enums are often uint8
+                && !trimmed.contains("index")    // indices can be intentionally small
+                && !trimmed.contains("count")    // counts can be intentionally bounded
+                && !trimmed.contains("id")       // IDs can be intentionally small
+                && !trimmed.contains("type")     // type codes are often uint8
             {
                 issues.push((
                     (line_idx + 1) as u32,
@@ -280,8 +286,22 @@ impl InefficientStorageDetector {
     fn has_redundant_storage_reads(&self, source: &str) -> bool {
         let state_vars = ["owner", "totalSupply", "paused", "balance"];
 
+        // Remove comments to avoid false positives
+        let source_no_comments: String = source
+            .lines()
+            .filter(|line| {
+                let trimmed = line.trim();
+                !trimmed.starts_with("//") && !trimmed.starts_with("*") && !trimmed.starts_with("/*")
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
         for var in &state_vars {
-            if source.matches(var).count() > 2 && !source.contains(&format!("uint256 {} =", var)) {
+            // Require 4+ usages to flag (increased from 2)
+            if source_no_comments.matches(var).count() > 3
+                && !source_no_comments.contains(&format!("uint256 {} =", var))
+                && !source_no_comments.contains(&format!("{} memory", var))
+            {
                 return true;
             }
         }
