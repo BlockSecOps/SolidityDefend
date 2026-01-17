@@ -86,6 +86,18 @@ pub fn is_amm_contract(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;
     let source_lower = source.to_lowercase();
 
+    // STRONG SIGNALS - any of these is definitive
+    // reserve0/reserve1 is the hallmark of Uniswap-style AMMs
+    if source.contains("reserve0") && source.contains("reserve1") {
+        return true;
+    }
+
+    // Explicit Uniswap interfaces
+    if source.contains("IUniswapV2Pair") || source.contains("IUniswapV3Pool") {
+        return true;
+    }
+
+    // Count medium-strength indicators
     let mut indicator_count = 0;
 
     // Core AMM functions
@@ -102,10 +114,6 @@ pub fn is_amm_contract(ctx: &AnalysisContext) -> bool {
     }
 
     // AMM state variables
-    if source.contains("reserve0") && source.contains("reserve1") {
-        indicator_count += 2; // Strong signal
-    }
-
     if source.contains("token0") && source.contains("token1") {
         indicator_count += 1;
     }
@@ -127,21 +135,24 @@ pub fn is_amm_contract(ctx: &AnalysisContext) -> bool {
         indicator_count += 1;
     }
 
-    // Contract name
-    if ctx.contract.name.name.to_lowercase().contains("pair")
-        || ctx.contract.name.name.to_lowercase().contains("pool")
-        || ctx.contract.name.name.to_lowercase().contains("swap")
+    // Contract name containing AMM-specific terms
+    let contract_name_lower = ctx.contract.name.name.to_lowercase();
+    if contract_name_lower.contains("pair")
+        || contract_name_lower.contains("pool")
+        || contract_name_lower.contains("swap")
+        || contract_name_lower.contains("amm")
     {
         indicator_count += 1;
     }
 
-    // Uniswap-specific
+    // Generic Uniswap interface (weaker signal)
     if source.contains("IUniswapV2") || source.contains("IUniswapV3") {
-        indicator_count += 2;
+        indicator_count += 1;
     }
 
-    // Need at least 2 indicators to classify as AMM
-    indicator_count >= 2
+    // Require 3+ indicators for medium-strength signals
+    // This prevents false positives on contracts that just have "swap" in the name
+    indicator_count >= 3
 }
 
 /// Detect if contract is a ZK rollup

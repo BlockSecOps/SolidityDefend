@@ -55,12 +55,37 @@ impl DelegatecallInLoopDetector {
         let mut loop_start_line = 0u32;
         let mut brace_depth = 0;
         let mut loop_brace_depth = 0;
+        let mut in_multiline_comment = false;
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
+            // Skip single-line comments
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Track multiline comments
+            if trimmed.contains("/*") {
+                in_multiline_comment = true;
+            }
+            if trimmed.contains("*/") {
+                in_multiline_comment = false;
+                continue;
+            }
+            if in_multiline_comment {
+                continue;
+            }
+
+            // Remove inline comments for checking
+            let code_part = if let Some(pos) = trimmed.find("//") {
+                &trimmed[..pos]
+            } else {
+                trimmed
+            };
+
             // Track brace depth
-            for c in trimmed.chars() {
+            for c in code_part.chars() {
                 match c {
                     '{' => brace_depth += 1,
                     '}' => brace_depth -= 1,
@@ -69,14 +94,14 @@ impl DelegatecallInLoopDetector {
             }
 
             // Check for loop start
-            if trimmed.starts_with("for ")
-                || trimmed.starts_with("for(")
-                || trimmed.starts_with("while ")
-                || trimmed.starts_with("while(")
-                || trimmed.contains(" for ")
-                || trimmed.contains(" for(")
-                || trimmed.contains(" while ")
-                || trimmed.contains(" while(")
+            if code_part.starts_with("for ")
+                || code_part.starts_with("for(")
+                || code_part.starts_with("while ")
+                || code_part.starts_with("while(")
+                || code_part.contains(" for ")
+                || code_part.contains(" for(")
+                || code_part.contains(" while ")
+                || code_part.contains(" while(")
             {
                 if !in_loop {
                     in_loop = true;
@@ -86,8 +111,8 @@ impl DelegatecallInLoopDetector {
                 loop_depth += 1;
             }
 
-            // Check for delegatecall inside loop
-            if in_loop && trimmed.contains("delegatecall") {
+            // Check for delegatecall inside loop - require actual method call syntax
+            if in_loop && code_part.contains(".delegatecall(") {
                 let loop_type = if source[..source.lines().take(line_num + 1).collect::<Vec<_>>().join("\n").len()]
                     .rfind("for")
                     > source[..source.lines().take(line_num + 1).collect::<Vec<_>>().join("\n").len()]
@@ -127,7 +152,7 @@ impl DelegatecallInLoopDetector {
                 let loop_end = self.find_loop_end(&lines, line_num);
                 let loop_body: String = lines[line_num..loop_end].join("\n");
 
-                if loop_body.contains("delegatecall") {
+                if loop_body.contains(".delegatecall(") {
                     // Check for any bounds check
                     if !loop_body.contains("require(")
                         && !loop_body.contains("< MAX")

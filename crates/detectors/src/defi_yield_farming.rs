@@ -25,11 +25,41 @@ impl YieldFarmingDetector {
 
     fn is_yield_vault(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code.to_lowercase();
-        (source.contains("deposit") || source.contains("withdraw"))
-            && (source.contains("reward")
-                || source.contains("yield")
-                || source.contains("shares")
-                || source.contains("stake"))
+
+        // Strong signals - any of these is definitive
+        if source.contains("erc4626") || source.contains("vault") && source.contains("shares") {
+            return true;
+        }
+
+        if source.contains("staking") && source.contains("reward") {
+            return true;
+        }
+
+        // Count medium-strength indicators
+        let mut indicator_count = 0;
+
+        if source.contains("deposit") && source.contains("shares") {
+            indicator_count += 1;
+        }
+
+        if source.contains("withdraw") && source.contains("shares") {
+            indicator_count += 1;
+        }
+
+        if source.contains("totalassets") {
+            indicator_count += 1;
+        }
+
+        if source.contains("rewardpertoken") || source.contains("rewardrate") {
+            indicator_count += 1;
+        }
+
+        if source.contains("stake") && source.contains("unstake") {
+            indicator_count += 1;
+        }
+
+        // Require 2+ medium-strength indicators
+        indicator_count >= 2
     }
 
     /// Get function source code
@@ -137,18 +167,8 @@ impl YieldFarmingDetector {
 
         // Check withdraw functions
         if name.contains("withdraw") || name.contains("unstake") || name.contains("redeem") {
-            // Check for withdrawal fee validation
-            let has_fee_calc = source_lower.contains("withdrawalfee")
-                || source_lower.contains("exitfee")
-                || (source_lower.contains("fee") && source_lower.contains("withdraw"));
-
-            if !has_fee_calc {
-                issues.push((
-                    "No withdrawal fee accounting (fee bypass risk)".to_string(),
-                    Severity::Medium,
-                    "Calculate fee: uint256 fee = (amount * withdrawalFee) / FEE_DENOMINATOR; uint256 amountAfterFee = amount - fee;".to_string()
-                ));
-            }
+            // NOTE: Withdrawal fees are a design choice, not a vulnerability
+            // Removed the withdrawal fee check as it created false positives
 
             // Check for asset calculation
             let has_asset_calc = source_lower.contains("shares")
@@ -257,18 +277,8 @@ impl YieldFarmingDetector {
                 ));
             }
 
-            // Check for performance fee
-            let has_perf_fee = source_lower.contains("performancefee")
-                || (source_lower.contains("fee") && source_lower.contains("harvest"));
-
-            if !has_perf_fee {
-                issues.push((
-                    "No performance fee on harvest (governance revenue loss)".to_string(),
-                    Severity::Low,
-                    "Add fee: uint256 fee = (harvestedAmount * performanceFee) / FEE_DENOMINATOR;"
-                        .to_string(),
-                ));
-            }
+            // NOTE: Performance fees are a design choice, not a vulnerability
+            // Removed the performance fee check as it created false positives
         }
 
         // Check updateReward modifier or function
@@ -329,6 +339,31 @@ impl Detector for YieldFarmingDetector {
         }
 
         for function in ctx.get_functions() {
+            // Skip internal/private functions
+            if function.visibility == ast::Visibility::Internal
+                || function.visibility == ast::Visibility::Private
+            {
+                continue;
+            }
+
+            // Skip view/pure functions - they don't modify state
+            if function.mutability == ast::StateMutability::View
+                || function.mutability == ast::StateMutability::Pure
+            {
+                continue;
+            }
+
+            // Skip standard token functions that aren't yield-specific
+            let func_name_lower = function.name.name.to_lowercase();
+            if func_name_lower == "transfer"
+                || func_name_lower == "transferfrom"
+                || func_name_lower == "approve"
+                || func_name_lower == "allowance"
+                || func_name_lower == "balanceof"
+            {
+                continue;
+            }
+
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
                 let finding = self
