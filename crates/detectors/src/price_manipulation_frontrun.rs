@@ -81,6 +81,28 @@ impl PriceManipulationFrontrunDetector {
             return None;
         }
 
+        // Phase 5 FP Reduction: Skip validation/verify functions
+        // These are typically oracle validators, not consumers
+        if func_name_lower.starts_with("validate")
+            || func_name_lower.starts_with("verify")
+            || func_name_lower.starts_with("check")
+            || func_name_lower.starts_with("is")
+            || func_name_lower.starts_with("has")
+        {
+            return None;
+        }
+
+        // Phase 5 FP Reduction: Skip oracle implementation functions
+        // If contract IS an oracle (provides prices), not a consumer
+        let is_oracle_implementation = ctx.source_code.contains("function latestRoundData")
+            || ctx.source_code.contains("function getLatestPrice")
+            || ctx.source_code.contains("function updateAnswer")
+            || ctx.source_code.contains("interface AggregatorV3Interface");
+
+        if is_oracle_implementation && !self.is_trading_context(&func_source, &func_name_lower) {
+            return None;
+        }
+
         // Check for price-dependent operations
         let is_price_dependent = self.is_price_dependent(&func_source, &func_name_lower);
         if !is_price_dependent {
@@ -88,10 +110,13 @@ impl PriceManipulationFrontrunDetector {
         }
 
         // Pattern 1: Spot price from AMM without TWAP or alternative protections
+        // Phase 5 FP Reduction: Require actual trading context for spot price warnings
+        let is_trading = self.is_trading_context(&func_source, &func_name_lower);
         if self.uses_spot_price(&func_source) &&
            !self.has_twap_protection(&func_source) &&
            !self.has_price_bounds(&func_source) &&
-           !self.has_circuit_breaker(&func_source) {
+           !self.has_circuit_breaker(&func_source) &&
+           is_trading {
             return Some(format!(
                 "Uses manipulable spot price from AMM. Function '{}' relies on spot price \
                 (getAmountOut, getReserves) without TWAP protection. \
@@ -272,6 +297,30 @@ impl PriceManipulationFrontrunDetector {
         (source.contains("minPrice") && source.contains("maxPrice")) ||
         (source.contains("min") && source.contains("max") && source.contains("price")) ||
         (source.contains("minAmountOut") || source.contains("amountOutMin"))
+    }
+
+    /// Phase 5 FP Reduction: Check if function is in trading context
+    fn is_trading_context(&self, func_source: &str, func_name: &str) -> bool {
+        // Function name indicates trading operation
+        let name_indicates_trading = func_name.contains("swap")
+            || func_name.contains("trade")
+            || func_name.contains("exchange")
+            || func_name.contains("buy")
+            || func_name.contains("sell")
+            || func_name.contains("liquidate")
+            || func_name.contains("borrow")
+            || func_name.contains("repay");
+
+        // Source code indicates trading context
+        let source_indicates_trading = func_source.contains("getAmountOut")
+            || func_source.contains("getAmountsOut")
+            || func_source.contains("getAmountIn")
+            || func_source.contains(".swap(")
+            || func_source.contains("swapExact")
+            || func_source.contains("amountOutMin")
+            || func_source.contains("amountInMax");
+
+        name_indicates_trading || source_indicates_trading
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

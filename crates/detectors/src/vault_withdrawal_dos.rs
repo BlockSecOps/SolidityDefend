@@ -62,6 +62,12 @@ impl Detector for VaultWithdrawalDosDetector {
         // Check if this is an ERC-4626 vault
         let is_vault = utils::is_erc4626_vault(ctx);
 
+        // Phase 5 FP Reduction: Only analyze actual vault/queue patterns
+        // Skip simple wallet contracts that don't have vault-like mechanics
+        if !is_vault && !self.has_vault_context(ctx) {
+            return Ok(findings);
+        }
+
         // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
 
         // Level 1: Strong restaking protocol protections (return early)
@@ -111,28 +117,40 @@ impl Detector for VaultWithdrawalDosDetector {
                 );
 
                 // Phase 2: Dynamic confidence scoring based on detected patterns
+                // Phase 5: Reduce confidence for non-vaults
                 let confidence = if protection_score == 0 {
-                    // No mitigations - very vulnerable
-                    Confidence::High
+                    if is_vault {
+                        Confidence::High
+                    } else {
+                        Confidence::Medium // Lower confidence for non-vault contracts
+                    }
                 } else if protection_score <= 2 {
                     // Minimal protection
                     Confidence::Medium
                 } else if protection_score <= 4 {
                     // Some protections
-                    Confidence::Medium
+                    Confidence::Low
                 } else {
                     // Multiple strong protections - likely safe
                     Confidence::Low
                 };
 
+                // Phase 5: Use Medium severity for non-vault contracts
+                let severity = if is_vault {
+                    Severity::High
+                } else {
+                    Severity::Medium
+                };
+
                 let finding = self
                     .base
-                    .create_finding(
+                    .create_finding_with_severity(
                         ctx,
                         message,
                         function.name.location.start().line() as u32,
                         function.name.location.start().column() as u32,
                         function.name.name.len() as u32,
+                        severity,
                     )
                     .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
                     .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
@@ -163,6 +181,30 @@ impl Detector for VaultWithdrawalDosDetector {
 }
 
 impl VaultWithdrawalDosDetector {
+    /// Phase 5 FP Reduction: Check if contract has vault-like context
+    /// Requires withdrawal queue patterns or vault mechanics
+    fn has_vault_context(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Withdrawal queue patterns
+        let has_queue = source.contains("withdrawalQueue")
+            || source.contains("WithdrawalQueue")
+            || source.contains("pendingWithdrawals")
+            || source.contains("withdrawRequests")
+            || source.contains("queuedWithdrawals");
+
+        // Vault share mechanics
+        let has_share_mechanics = (source.contains("totalAssets") && source.contains("totalSupply"))
+            || source.contains("convertToShares")
+            || source.contains("convertToAssets");
+
+        // Staking/unstaking patterns with queues
+        let has_staking_queue = (source.contains("stake") || source.contains("unstake"))
+            && (source.contains("queue") || source.contains("pending") || source.contains("cooldown"));
+
+        has_queue || has_share_mechanics || has_staking_queue
+    }
+
     /// Check for withdrawal DOS vulnerabilities
     fn check_withdrawal_dos(
         &self,

@@ -5,6 +5,46 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+#### Phase 5 False Positive Reduction
+
+Targeted reduction of false positives across 7 high-FP detectors, reducing total findings from 6,831 to 6,243 (-8.6%) while maintaining 100% recall on ground truth.
+
+**parameter-consistency** (-296 findings, -85%)
+- Skip test contracts (Vulnerable, Test, Mock, Example, Demo in name)
+- Skip constructor parameter checks (one-time initialization is safe)
+
+**aa-initialization-vulnerability** (-72 findings, -80%)
+- Require AA-specific indicators: `validateUserOp`, `IAccount`, `EntryPoint`, `ERC-4337`
+- Exempt OpenZeppelin Initializable imports
+- Skip constructor assignments in owner validation
+
+**jit-liquidity-extraction** (-80 findings, -95%)
+- Require AMM context: reserve tracking AND swap/LP mechanics
+- Exempt simple wallet patterns and ERC-4626 vaults
+- Use specific liquidity function names (addLiquidity/removeLiquidity)
+
+**vault-withdrawal-dos** (-65 findings, -81%)
+- Require vault context: withdrawal queues OR share mechanics
+- Reduce severity to Medium for non-vault contracts
+
+**timestamp-manipulation** (-45 findings, -54%)
+- Exempt safe vesting/unlock patterns using `>=` comparison
+- Skip constructors
+- Remove redundant timestamp arithmetic check (Solidity 0.8+ handles)
+
+**price-manipulation-frontrun** (-7 findings, -8%)
+- Exempt validation/verify functions
+- Exempt oracle implementations
+- Require trading context for spot price warnings
+
+**mev-extractable-value** (-23 findings, -28%)
+- Exempt user-specific claims (`balances[msg.sender]`)
+- Require global reward pool for distribution warnings
+
 ## [1.10.1] - 2025-01-17
 
 ### Added

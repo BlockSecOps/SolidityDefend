@@ -163,6 +163,19 @@ impl MevExtractableValueDetector {
             return None; // Simple deposits/withdrawals without price exposure
         }
 
+        // Phase 5 FP Reduction: Skip user-specific claim operations
+        // Operations on msg.sender's own balance are not MEV targets
+        let is_user_specific_operation = func_name_lower == "claim"
+            || func_name_lower == "claimrewards"
+            || func_name_lower == "harvest";
+
+        let operates_on_user_balance = func_source.contains("[msg.sender]")
+            && (func_source.contains("balance") || func_source.contains("reward") || func_source.contains("earned"));
+
+        if is_user_specific_operation && operates_on_user_balance {
+            return None; // User claiming their own rewards is not MEV-vulnerable
+        }
+
         // Pattern 1: Public DEX/trading function with value transfer without protection (TIGHTENED)
         // Only flag if it looks like a DEX/trading operation
         let is_public = function.visibility == ast::Visibility::Public
@@ -252,21 +265,38 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 5: Reward distribution without commit-reveal
+        // Phase 5 FP Reduction: Exempt user-specific claims (balances[msg.sender])
+        // These are user-specific operations that don't expose third-party MEV
         let distributes_rewards = func_source.contains("reward")
             || func_source.contains("distribute")
             || func_source.contains("claim");
 
+        let is_user_specific_claim = func_source.contains("[msg.sender]")
+            || func_source.contains("balanceOf[msg.sender]")
+            || func_source.contains("rewards[msg.sender]")
+            || func_source.contains("claimable[msg.sender]")
+            || func_source.contains("earned[msg.sender]");
+
         let no_commit_reveal = distributes_rewards
             && !func_source.contains("commit")
             && !func_source.contains("reveal")
-            && !func_source.contains("hash");
+            && !func_source.contains("hash")
+            && !is_user_specific_claim; // Phase 5: Exempt user-specific claims
 
         if no_commit_reveal {
-            return Some(
-                "Reward distribution without commit-reveal, \
-                enables front-running of reward claims"
-                    .to_string(),
-            );
+            // Phase 5 FP Reduction: Require global reward pool (not user-specific)
+            let has_global_pool = func_source.contains("totalRewards")
+                || func_source.contains("rewardPool")
+                || func_source.contains("distributeToAll")
+                || (func_source.contains("for") && func_source.contains("reward"));
+
+            if has_global_pool {
+                return Some(
+                    "Reward distribution from global pool without commit-reveal, \
+                    enables front-running of reward claims"
+                        .to_string(),
+                );
+            }
         }
 
         // Pattern 6: First-come-first-served with high value
