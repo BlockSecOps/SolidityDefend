@@ -5,6 +5,44 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] - 2025-01-16
+
+### Added
+
+#### Detector Validation Framework
+
+A comprehensive validation framework to ensure detector changes don't introduce regressions or reduce accuracy.
+
+**New Components:**
+- `tests/validation/ground_truth.json` - Labeled dataset with 17 contracts and 45+ verified findings
+- `tests/validation/ground_truth.rs` - Validation module for comparing detector output against ground truth
+- `tests/validation/regression_tests.rs` - Must-detect tests for 13 critical vulnerability patterns
+- `scripts/validate_detector_change.sh` - Pre-change validation script for detector modifications
+- `.github/workflows/validate.yml` - CI workflow that runs on PRs modifying detectors
+- `docs/VALIDATION.md` - Complete documentation
+
+**New CLI Options:**
+- `--validate` - Run validation against ground truth dataset
+- `--ground-truth <FILE>` - Specify custom ground truth file
+- `--fail-on-regression` - Exit with error if any expected finding is missed
+- `--min-precision <0.0-1.0>` - Minimum precision threshold
+- `--min-recall <0.0-1.0>` - Minimum recall threshold
+
+**Metrics Tracked:**
+- Precision: Of findings reported, % that are real vulnerabilities
+- Recall: Of known vulnerabilities, % that were detected
+- Regressions: Previously detected vulnerabilities now missed
+
+**Covered Vulnerability Patterns:**
+- Classic reentrancy (TheDAO pattern)
+- Access control issues
+- Oracle manipulation (Euler Finance pattern)
+- Share inflation (Cetus DEX pattern)
+- Flash loan governance (Beanstalk pattern)
+- Cross-chain replay attacks
+- Signature replay vulnerabilities
+- And more...
+
 ## [1.9.4] - 2025-01-16
 
 ### Security Fix
