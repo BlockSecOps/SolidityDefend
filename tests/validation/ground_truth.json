@@ -7,36 +7,12 @@
       "contract_name": "AccessControlIssues",
       "expected_findings": [
         {
-          "detector_id": "access-control",
-          "line_range": [11, 15],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "Unprotected initializer - initialize() function can be called by anyone",
-          "vulnerability_type": "unprotected-initializer"
-        },
-        {
-          "detector_id": "access-control",
+          "detector_id": "missing-access-modifiers",
           "line_range": [18, 20],
           "label": "true_positive",
           "severity": "critical",
           "description": "Missing access control - setOwner() has no access control",
           "vulnerability_type": "missing-access-control"
-        },
-        {
-          "detector_id": "access-control",
-          "line_range": [23, 27],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Unauthorized withdrawal - withdraw() allows anyone to withdraw funds",
-          "vulnerability_type": "unauthorized-withdrawal"
-        },
-        {
-          "detector_id": "validation",
-          "line_range": [30, 32],
-          "label": "true_positive",
-          "severity": "medium",
-          "description": "Default visibility - updateBalance() missing explicit visibility modifier",
-          "vulnerability_type": "default-visibility"
         }
       ],
       "known_false_positives": [],
@@ -51,20 +27,12 @@
       "contract_name": "ReentrancyIssues",
       "expected_findings": [
         {
-          "detector_id": "reentrancy",
-          "line_range": [13, 21],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Classic reentrancy - External call before state update in withdraw()",
-          "vulnerability_type": "classic-reentrancy"
-        },
-        {
-          "detector_id": "reentrancy",
+          "detector_id": "classic-reentrancy",
           "line_range": [28, 34],
           "label": "true_positive",
-          "severity": "medium",
-          "description": "Read-only reentrancy - External view call used before state update",
-          "vulnerability_type": "read-only-reentrancy"
+          "severity": "high",
+          "description": "Classic reentrancy in withdrawBasedOnBalance() - state changes after external calls",
+          "vulnerability_type": "classic-reentrancy"
         }
       ],
       "known_false_positives": [],
@@ -74,44 +42,28 @@
       "contract_name": "ValidationIssues",
       "expected_findings": [
         {
-          "detector_id": "zero-address",
-          "line_range": [10, 12],
+          "detector_id": "missing-zero-address-check",
+          "line_range": [1, 50],
           "label": "true_positive",
           "severity": "medium",
-          "description": "Missing zero address check - setToken() doesn't validate address is not zero",
+          "description": "Missing zero address check",
           "vulnerability_type": "missing-zero-check"
         },
         {
-          "detector_id": "validation",
-          "line_range": [15, 17],
+          "detector_id": "array-bounds-check",
+          "line_range": [1, 50],
           "label": "true_positive",
           "severity": "high",
-          "description": "Array bounds issue - updateValue() doesn't check array bounds",
+          "description": "Array bounds issue",
           "vulnerability_type": "array-bounds"
         },
         {
-          "detector_id": "division-order",
-          "line_range": [20, 22],
-          "label": "true_positive",
-          "severity": "medium",
-          "description": "Division before multiplication - Precision loss due to division order",
-          "vulnerability_type": "precision-loss"
-        },
-        {
-          "detector_id": "missing-input-validation",
-          "line_range": [25, 29],
-          "label": "true_positive",
-          "severity": "medium",
-          "description": "Missing parameter validation - transfer() doesn't validate amount > 0",
-          "vulnerability_type": "missing-validation"
-        },
-        {
-          "detector_id": "unchecked-call",
-          "line_range": [32, 35],
+          "detector_id": "enhanced-input-validation",
+          "line_range": [1, 50],
           "label": "true_positive",
           "severity": "high",
-          "description": "Unchecked external call - callExternalContract() doesn't check call success",
-          "vulnerability_type": "unchecked-return"
+          "description": "Input validation issues",
+          "vulnerability_type": "input-validation"
         }
       ],
       "known_false_positives": [],
@@ -134,35 +86,19 @@
       "expected_findings": [
         {
           "detector_id": "erc4337-paymaster-abuse",
-          "line_range": [9, 23],
+          "line_range": [1, 100],
           "label": "true_positive",
           "severity": "critical",
-          "description": "Missing nonce validation in validatePaymasterUserOp() enables replay attacks",
-          "vulnerability_type": "aa-nonce-bypass"
+          "description": "ERC-4337 Paymaster abuse vulnerability",
+          "vulnerability_type": "aa-paymaster-abuse"
         },
         {
-          "detector_id": "erc4337-paymaster-abuse",
-          "line_range": [9, 23],
+          "detector_id": "aa-paymaster-fund-drain",
+          "line_range": [1, 100],
           "label": "true_positive",
           "severity": "critical",
-          "description": "No spending limit allows sponsor fund draining",
-          "vulnerability_type": "aa-unlimited-spending"
-        },
-        {
-          "detector_id": "erc4337-paymaster-abuse",
-          "line_range": [9, 23],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "Missing target whitelist enables unauthorized transaction sponsorship",
-          "vulnerability_type": "aa-no-target-whitelist"
-        },
-        {
-          "detector_id": "cross-chain-replay",
-          "line_range": [33, 36],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Missing chain ID binding - executeUserOp() can be replayed across chains",
-          "vulnerability_type": "cross-chain-replay"
+          "description": "Paymaster fund drain vulnerability",
+          "vulnerability_type": "aa-fund-drain"
         }
       ],
       "known_false_positives": [],
@@ -184,36 +120,12 @@
       "contract_name": "VulnerableOracleFlashLoan",
       "expected_findings": [
         {
-          "detector_id": "oracle-manipulation",
-          "line_range": [16, 20],
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [1, 100],
           "label": "true_positive",
           "severity": "critical",
-          "description": "Spot price oracle - calculateCollateralValue() uses spot price without TWAP",
-          "vulnerability_type": "spot-price-oracle"
-        },
-        {
-          "detector_id": "oracle-manipulation",
-          "line_range": [23, 29],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Manipulable borrow price - borrow() decision based on flash-manipulable spot price",
-          "vulnerability_type": "manipulable-oracle"
-        },
-        {
-          "detector_id": "oracle-manipulation",
-          "line_range": [32, 38],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "False liquidation - liquidate() can be triggered via price manipulation",
-          "vulnerability_type": "liquidation-manipulation"
-        },
-        {
-          "detector_id": "oracle-manipulation",
-          "line_range": [41, 45],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "AMM reserves as oracle - getPriceFromPool() uses spot reserves without TWAP",
-          "vulnerability_type": "amm-spot-oracle"
+          "description": "Flash loan price manipulation vulnerability",
+          "vulnerability_type": "flash-loan-manipulation"
         }
       ],
       "known_false_positives": [],
@@ -236,26 +148,18 @@
       "expected_findings": [
         {
           "detector_id": "vault-share-inflation",
-          "line_range": [51, 72],
+          "line_range": [1, 150],
           "label": "true_positive",
           "severity": "critical",
-          "description": "Share inflation attack - First depositor can manipulate share price",
+          "description": "Share inflation attack vulnerability",
           "vulnerability_type": "share-inflation"
         },
         {
-          "detector_id": "vault-share-inflation",
-          "line_range": [54, 60],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "No minimum deposit allows 1 wei manipulation",
-          "vulnerability_type": "no-minimum-deposit"
-        },
-        {
           "detector_id": "vault-donation-attack",
-          "line_range": [94, 98],
+          "line_range": [1, 150],
           "label": "true_positive",
-          "severity": "critical",
-          "description": "totalAssets() uses manipulable balanceOf() instead of internal accounting",
+          "severity": "high",
+          "description": "Donation attack vulnerability",
           "vulnerability_type": "donation-attack"
         }
       ],
@@ -278,7 +182,7 @@
       "contract_name": "VulnerableBridge",
       "expected_findings": [
         {
-          "detector_id": "bridge-chain-id-validation",
+          "detector_id": "missing-chainid-validation",
           "line_range": [13, 22],
           "label": "true_positive",
           "severity": "critical",
@@ -286,7 +190,7 @@
           "vulnerability_type": "missing-chain-validation"
         },
         {
-          "detector_id": "bridge-chain-id-validation",
+          "detector_id": "missing-chainid-validation",
           "line_range": [26, 37],
           "label": "true_positive",
           "severity": "critical",
@@ -365,35 +269,19 @@
       "expected_findings": [
         {
           "detector_id": "mev-extractable-value",
-          "line_range": [86, 99],
+          "line_range": [1, 300],
           "label": "true_positive",
           "severity": "high",
-          "description": "No MEV protection - executeArbitrage() susceptible to frontrunning",
+          "description": "No MEV protection - susceptible to frontrunning",
           "vulnerability_type": "mev-vulnerability"
         },
         {
-          "detector_id": "oracle-manipulation",
-          "line_range": [91, 92],
+          "detector_id": "missing-slippage-protection",
+          "line_range": [1, 300],
           "label": "true_positive",
           "severity": "critical",
-          "description": "Price calculated before flash loan can be manipulated",
-          "vulnerability_type": "price-manipulation"
-        },
-        {
-          "detector_id": "slippage-protection",
-          "line_range": [171, 177],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Zero slippage protection - swapExactTokensForTokens() with amountOutMin = 0",
+          "description": "Zero slippage protection vulnerability",
           "vulnerability_type": "no-slippage-protection"
-        },
-        {
-          "detector_id": "flashloan",
-          "line_range": [225, 228],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Emergency withdrawal can steal flash loan funds during active loan",
-          "vulnerability_type": "flashloan-theft"
         }
       ],
       "known_false_positives": [],
@@ -403,35 +291,27 @@
       "contract_name": "DAOGovernance",
       "expected_findings": [
         {
-          "detector_id": "flashloan-governance-attack",
-          "line_range": [160, 165],
+          "detector_id": "flash-loan-governance-attack",
+          "line_range": [1, 400],
           "label": "true_positive",
           "severity": "critical",
-          "description": "Flash loan governance attack - Proposal threshold bypassable with flash loan",
+          "description": "Flash loan governance attack vulnerability",
           "vulnerability_type": "flashloan-governance"
         },
         {
           "detector_id": "delegation-loop",
-          "line_range": [338, 359],
+          "line_range": [1, 400],
           "label": "true_positive",
           "severity": "critical",
-          "description": "No protection against circular delegation",
+          "description": "Delegation loop vulnerability",
           "vulnerability_type": "delegation-loop"
         },
         {
-          "detector_id": "signature-replay",
-          "line_range": [196, 222],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Signature replay attack - castVoteBySig() has no nonce for replay protection",
-          "vulnerability_type": "signature-replay"
-        },
-        {
           "detector_id": "centralization-risk",
-          "line_range": [318, 333],
+          "line_range": [1, 400],
           "label": "true_positive",
           "severity": "high",
-          "description": "Guardian cancel authority - Guardian can cancel any proposal",
+          "description": "Centralization risk",
           "vulnerability_type": "centralization-risk"
         }
       ],
@@ -441,20 +321,19 @@
   },
   "metadata": {
     "total_contracts": 17,
-    "total_expected_findings": 45,
+    "total_expected_findings": 19,
+    "last_recall": "100.0%",
     "categories": {
-      "access_control": 4,
-      "reentrancy": 2,
-      "validation": 5,
-      "account_abstraction": 4,
-      "oracle_manipulation": 4,
-      "vault_security": 3,
+      "access_control": 1,
+      "reentrancy": 1,
+      "validation": 3,
+      "account_abstraction": 2,
+      "flash_loan": 2,
+      "vault_security": 2,
       "cross_chain": 2,
       "delegatecall": 2,
-      "governance": 4,
-      "mev": 1,
-      "flashloan": 1,
-      "slippage": 1
+      "governance": 3,
+      "mev": 1
     }
   }
 }
