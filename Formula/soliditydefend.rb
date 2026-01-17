@@ -2,21 +2,21 @@
 class Soliditydefend < Formula
   desc "High-performance static analysis security tool for Solidity smart contracts"
   homepage "https://github.com/BlockSecOps/SolidityDefend"
-  version "1.10.2"
+  version "1.10.3"
   license "MIT OR Apache-2.0"
 
   on_macos do
     if Hardware::CPU.arm?
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.2/soliditydefend-v1.10.2-aarch64-apple-darwin.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_ARM64"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.3/soliditydefend-v1.10.3-darwin-arm64.tar.gz"
+      sha256 "7070a5668e017708bb25558a94e91279f6e5ace78557b4c5902539fcfc8ae213"
     else
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.2/soliditydefend-v1.10.2-x86_64-apple-darwin.tar.gz"
-      sha256 "974b9d0e65eb051102cc2c0dba9cee0ad592bcdbcf79a6b740626eb111e55bb4"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.3/soliditydefend-v1.10.3-darwin-x86_64.tar.gz"
+      sha256 "REPLACE_WITH_ACTUAL_SHA256_X86_64"
     end
   end
 
   on_linux do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.2/soliditydefend-v1.10.2-x86_64-unknown-linux-gnu.tar.gz"
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.3/soliditydefend-v1.10.3-linux-x86_64.tar.gz"
     sha256 "REPLACE_WITH_ACTUAL_SHA256_LINUX"
   end
 
@@ -42,7 +42,7 @@ class Soliditydefend < Formula
 
   test do
     # Test that the binary runs and shows version
-    assert_match "soliditydefend 1.10.2", shell_output("#{bin}/soliditydefend --version")
+    assert_match "soliditydefend 1.10.3", shell_output("#{bin}/soliditydefend --version")
 
     # Test help command
     assert_match "USAGE:", shell_output("#{bin}/soliditydefend --help")
