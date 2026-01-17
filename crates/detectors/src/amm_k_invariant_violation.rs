@@ -308,9 +308,42 @@ impl Detector for AmmKInvariantViolationDetector {
             return Ok(findings); // Not an AMM - skip analysis
         }
 
+        // Phase 6: Tighten AMM detection - require strong AMM signals
+        let source = &ctx.source_code;
+        let has_strong_amm_signals = (source.contains("reserve0") && source.contains("reserve1"))
+            || source.contains("IUniswapV2Pair")
+            || source.contains("IUniswapV3Pool")
+            || source.contains("getReserves")
+            || (source.contains("token0") && source.contains("token1"));
+
+        if !has_strong_amm_signals {
+            return Ok(findings); // Not a strong enough AMM signal
+        }
+
         for function in ctx.get_functions() {
+            // Phase 6: Skip view/pure functions - can't violate invariant without state changes
+            if matches!(
+                function.mutability,
+                ast::StateMutability::View | ast::StateMutability::Pure
+            ) {
+                continue;
+            }
+
             let func_source = self.get_function_source(function, ctx);
             let func_name = &function.name.name;
+
+            // Phase 6: Skip functions that don't modify reserves
+            let func_name_lower = func_name.to_lowercase();
+            if func_name_lower == "getreserves"
+                || func_name_lower == "quote"
+                || func_name_lower == "getamountin"
+                || func_name_lower == "getamountout"
+                || func_name_lower == "factory"
+                || func_name_lower == "token0"
+                || func_name_lower == "token1"
+            {
+                continue;
+            }
 
             let is_swap = self.is_swap_function(func_name, &func_source);
 

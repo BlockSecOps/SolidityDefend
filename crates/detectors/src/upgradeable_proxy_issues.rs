@@ -97,24 +97,40 @@ impl Detector for UpgradeableProxyIssuesDetector {
 }
 
 impl UpgradeableProxyIssuesDetector {
-    /// Check if contract is actually a proxy contract
+    /// Check if contract is actually a proxy contract (Phase 6: Tightened)
     fn is_proxy_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code;
 
-        // Strong proxy signals
-        let has_implementation_slot = source.contains("IMPLEMENTATION_SLOT")
+        // Strong proxy signals - require EIP-1967 slots OR explicit proxy inheritance
+        let has_eip1967_slots = source.contains("IMPLEMENTATION_SLOT")
             || source.contains("_IMPLEMENTATION_SLOT")
-            || source.contains("EIP1967");
+            || source.contains("EIP1967")
+            || source.contains("ERC1967")
+            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076");
 
-        let has_proxy_inheritance = source.contains("Proxy")
+        let has_explicit_proxy_inheritance = source.contains("TransparentUpgradeableProxy")
             || source.contains("UUPSUpgradeable")
-            || source.contains("TransparentUpgradeableProxy")
-            || source.contains("ERC1967");
+            || source.contains("BeaconProxy")
+            || source.contains("ERC1967Proxy");
 
+        // Delegatecall with implementation is strong signal
         let has_delegatecall_pattern = source.contains("delegatecall")
             && (source.contains("implementation") || source.contains("_implementation"));
 
-        has_implementation_slot || has_proxy_inheritance || has_delegatecall_pattern
+        // Phase 6: Require at least one strong signal
+        // Skip generic "upgradeable" patterns without delegatecall
+        has_eip1967_slots || has_explicit_proxy_inheritance || has_delegatecall_pattern
+    }
+
+    /// Check if function has admin protection
+    fn has_admin_protection(&self, func_source: &str) -> bool {
+        func_source.contains("onlyOwner")
+            || func_source.contains("onlyAdmin")
+            || func_source.contains("onlyProxyAdmin")
+            || func_source.contains("require(msg.sender == admin")
+            || func_source.contains("require(msg.sender == owner")
+            || func_source.contains("_checkAdmin")
+            || func_source.contains("_checkOwner")
     }
 
     /// Check for upgradeable proxy vulnerabilities
@@ -214,11 +230,14 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 5: No upgrade delay/timelock
+        // Phase 6: Skip if function has admin protection (admin-gated upgrades are acceptable)
         let has_timelock = func_source.contains("timelock")
             || func_source.contains("delay")
-            || func_source.contains("timestamp");
+            || func_source.contains("timestamp")
+            || func_source.contains("pendingImplementation");
 
-        let immediate_upgrade = is_upgrade_function && !has_timelock;
+        let immediate_upgrade =
+            is_upgrade_function && !has_timelock && !self.has_admin_protection(&func_source);
 
         if immediate_upgrade {
             return Some(
@@ -244,20 +263,25 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         // Pattern 7: Selfdestruct in implementation
+        // Phase 6: Only flag if selfdestruct is actually callable (in public/external function)
         let has_selfdestruct = func_source.contains("selfdestruct");
 
-        if has_selfdestruct && is_proxy_related {
+        let is_callable = function.visibility == ast::Visibility::Public
+            || function.visibility == ast::Visibility::External;
+
+        if has_selfdestruct && is_proxy_related && is_callable {
             return Some(
-                "Implementation contract contains selfdestruct, \
+                "Implementation contract contains selfdestruct in callable function, \
                 can destroy implementation leaving proxy pointing to empty address"
                     .to_string(),
             );
         }
 
         // Pattern 8: No upgrade event emission
+        // Phase 6: Skip for internal/private functions (they're helper functions)
         let emits_event = func_source.contains("emit");
 
-        let no_upgrade_event = is_upgrade_function && !emits_event;
+        let no_upgrade_event = is_upgrade_function && !emits_event && is_callable;
 
         if no_upgrade_event {
             return Some(

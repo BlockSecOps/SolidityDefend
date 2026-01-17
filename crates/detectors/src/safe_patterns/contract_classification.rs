@@ -241,6 +241,52 @@ pub fn is_vault_contract(ctx: &AnalysisContext) -> bool {
     has_vault_functions && has_vault_name
 }
 
+/// Detect if contract is a test contract (Phase 6)
+///
+/// Test contracts should be skipped for gas optimization checks
+/// since they are not deployed to production.
+///
+/// Indicators:
+/// - File path contains "test", "mock", "stub"
+/// - Contract name contains "Test", "Mock", "Stub"
+/// - Inherits from testing frameworks (forge-std, hardhat)
+pub fn is_test_contract(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+    let contract_name_lower = ctx.contract.name.name.to_lowercase();
+
+    // Contract name patterns
+    if contract_name_lower.starts_with("test")
+        || contract_name_lower.ends_with("test")
+        || contract_name_lower.contains("test_")
+        || contract_name_lower.contains("_test")
+        || contract_name_lower.starts_with("mock")
+        || contract_name_lower.ends_with("mock")
+        || contract_name_lower.contains("stub")
+        || contract_name_lower.contains("fake")
+    {
+        return true;
+    }
+
+    // Testing framework imports
+    if source.contains("forge-std")
+        || source.contains("Test.sol")
+        || source.contains("DSTest")
+        || source.contains("hardhat/console")
+    {
+        return true;
+    }
+
+    // Testing framework inheritance
+    if source.contains("is Test")
+        || source.contains("is DSTest")
+        || source.contains("is BaseTest")
+    {
+        return true;
+    }
+
+    false
+}
+
 /// Detect if contract is a token
 pub fn is_token_contract(ctx: &AnalysisContext) -> bool {
     let source = &ctx.source_code;

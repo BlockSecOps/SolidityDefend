@@ -261,7 +261,7 @@ impl ArrayBoundsDetector {
                     if arrays.contains_key(id.name) {
                         // Check if index is validated
                         if let Some(index_expr) = index {
-                            if !self.is_index_validated(index_expr, id.name, arrays, bounded_vars) {
+                            if !self.is_index_validated(index_expr, id.name, &arrays, bounded_vars) {
                                 let message = format!(
                                     "Array access to '{}' may be out of bounds - index not validated",
                                     id.name
@@ -318,7 +318,7 @@ impl ArrayBoundsDetector {
         &self,
         index_expr: &ast::Expression<'_>,
         array_name: &str,
-        _arrays: &HashMap<String, ArrayInfo>,
+        arrays: &HashMap<String, ArrayInfo>,
         bounded_vars: &HashMap<String, String>,
     ) -> bool {
         match index_expr {
@@ -330,14 +330,29 @@ impl ArrayBoundsDetector {
                         return true;
                     }
                 }
+                // Phase 6: Common safe variable names (i, j, k, idx, index) used in loops
+                let id_lower = id.name.to_lowercase();
+                if id_lower == "i" || id_lower == "j" || id_lower == "k" || id_lower == "idx" {
+                    return true; // Likely a loop variable
+                }
                 false
             }
             // Literal indices might be safe if they're small constants
             ast::Expression::Literal { value, .. } => {
                 if let ast::LiteralValue::Number(num) = value {
-                    // Consider literal 0, 1, 2 as potentially safe (though still needs verification)
+                    // Phase 6: Small literal indices are generally safe
+                    // Also check against fixed array size if available
                     match num.parse::<u32>() {
-                        Ok(n) => n < 10, // Conservative - assume small literals might be safe
+                        Ok(n) => {
+                            // For fixed-size arrays, check if index is within bounds
+                            if let Some(arr_info) = arrays.get(array_name) {
+                                if let Some(fixed_len) = arr_info._fixed_length {
+                                    return n < fixed_len;
+                                }
+                            }
+                            // For dynamic arrays, small indices (< 10) are likely safe
+                            n < 10
+                        }
                         Err(_) => false,
                     }
                 } else {
@@ -359,6 +374,11 @@ impl ArrayBoundsDetector {
                             if bound_array == array_name {
                                 return true; // Could add more checks for overflow potential
                             }
+                        }
+                        // Phase 6: Common loop variable names are likely safe
+                        let id_lower = id.name.to_lowercase();
+                        if id_lower == "i" || id_lower == "j" || id_lower == "k" {
+                            return true;
                         }
                     }
                 }
@@ -560,6 +580,20 @@ impl ArrayBoundsDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // Phase 6: Skip standard ERC functions (balanceOf, allowance, etc.)
+        let func_name_lower = function.name.name.to_lowercase();
+        if func_name_lower == "balanceof"
+            || func_name_lower == "allowance"
+            || func_name_lower == "approve"
+            || func_name_lower == "transfer"
+            || func_name_lower == "transferfrom"
+            || func_name_lower == "ownerof"
+            || func_name_lower == "getapproved"
+            || func_name_lower == "isapprovedforall"
+        {
+            return findings;
+        }
+
         // Check for multiple array parameters that should have matching lengths
         let array_params: Vec<_> = function
             .parameters
@@ -577,7 +611,9 @@ impl ArrayBoundsDetector {
             })
             .collect();
 
-        if array_params.len() > 1 {
+        // Phase 6: Skip single array parameter functions (no length mismatch possible)
+        // Only flag if there are 2+ array parameters that need matching lengths
+        if array_params.len() >= 2 {
             // Multiple arrays should likely have length validation
             let message = format!(
                 "Function '{}' has multiple array parameters but no apparent length validation",

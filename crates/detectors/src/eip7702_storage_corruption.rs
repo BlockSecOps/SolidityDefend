@@ -86,8 +86,61 @@ impl Eip7702StorageCorruptionDetector {
             }
         }
 
-        // Require at least 2 signals for detection
-        signals >= 2
+        // Phase 6: Require at least 3 signals for detection (raised from 2)
+        signals >= 3
+    }
+
+    /// Check if contract is a standard ERC token (not a delegation target)
+    fn is_standard_token(&self, source: &str) -> bool {
+        // ERC-20/721/1155 tokens are typically not EIP-7702 delegation targets
+        let is_erc20 = source.contains("IERC20")
+            || (source.contains("transfer(")
+                && source.contains("balanceOf")
+                && source.contains("totalSupply"));
+
+        let is_erc721 =
+            source.contains("IERC721") || source.contains("ERC721") || source.contains("ownerOf");
+
+        let is_erc1155 = source.contains("IERC1155")
+            || source.contains("ERC1155")
+            || source.contains("balanceOfBatch");
+
+        is_erc20 || is_erc721 || is_erc1155
+    }
+
+    /// Check if contract uses OpenZeppelin upgradeable patterns (already safe)
+    fn is_oz_upgradeable(&self, source: &str) -> bool {
+        source.contains("@openzeppelin/contracts-upgradeable")
+            || source.contains("Initializable")
+            || source.contains("UUPSUpgradeable")
+            || source.contains("TransparentUpgradeableProxy")
+    }
+
+    /// Check if contract only has immutable/constant state (safe for delegation)
+    fn has_only_safe_storage(&self, source: &str) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+        let mut has_mutable_state = false;
+
+        for line in lines {
+            let trimmed = line.trim();
+            // Skip comments
+            if trimmed.starts_with("//") || trimmed.starts_with("/*") {
+                continue;
+            }
+            // Check for state variable declarations (not in functions)
+            let storage_types = ["address", "uint", "int", "bool", "bytes", "string", "mapping"];
+            for stype in &storage_types {
+                if trimmed.starts_with(stype) || trimmed.contains(&format!(" {}", stype)) {
+                    // Only safe if immutable or constant
+                    if !trimmed.contains("immutable") && !trimmed.contains("constant") {
+                        has_mutable_state = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        !has_mutable_state
     }
 
     /// Find state variables that could cause storage collision
@@ -311,6 +364,21 @@ impl Detector for Eip7702StorageCorruptionDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Phase 6: Skip standard ERC tokens (not delegation targets)
+        if self.is_standard_token(source) {
+            return Ok(findings);
+        }
+
+        // Phase 6: Skip OpenZeppelin upgradeable contracts (already designed for safe storage)
+        if self.is_oz_upgradeable(source) {
+            return Ok(findings);
+        }
+
+        // Phase 6: Skip contracts with only immutable/constant storage (safe)
+        if self.has_only_safe_storage(source) {
+            return Ok(findings);
+        }
 
         // Check if this could be a delegation target
         let is_delegation_target = self.is_potential_delegation_target(source);

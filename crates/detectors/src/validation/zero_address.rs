@@ -46,6 +46,12 @@ impl ZeroAddressDetector {
             return findings;
         }
 
+        // Phase 6: Skip constructors - they set initial state safely
+        // Constructor address parameters are typically set once at deployment
+        if matches!(function.function_type, ast::FunctionType::Constructor) {
+            return findings;
+        }
+
         // Skip internal/private functions - they're called by trusted code
         if function.visibility != ast::Visibility::Public
             && function.visibility != ast::Visibility::External
@@ -64,7 +70,9 @@ impl ZeroAddressDetector {
             || func_name_lower == "safetransfer"
             || func_name_lower == "safetransferfrom"
             || func_name_lower == "burn"  // Burn explicitly sends to zero
-            || func_name_lower == "burnfrom";
+            || func_name_lower == "burnfrom"
+            || func_name_lower == "mint"  // Mint often allows flexible recipient
+            || func_name_lower == "mintto";
 
         if is_standard_token_function {
             return findings;
@@ -202,6 +210,9 @@ impl ZeroAddressDetector {
         // - "from" - checked by transferFrom, often msg.sender
         // - "spender" - approve(address(0)) is used to revoke approvals
         // - "target" / "destination" - may be intentionally flexible
+        // Phase 6: Added more non-critical patterns
+        // - "sender", "origin", "caller" - already validated by EVM
+        // - "_receiver", "_beneficiary" - commonly flexible parameters
         // These should NOT be flagged as missing zero address checks
         let is_transfer_destination = name_lower.starts_with("to")
             || name_lower == "recipient"
@@ -211,7 +222,16 @@ impl ZeroAddressDetector {
             || name_lower == "target"
             || name_lower == "destination"
             || name_lower == "account"
-            || name_lower == "user";
+            || name_lower == "user"
+            || name_lower == "sender"      // Phase 6
+            || name_lower == "origin"      // Phase 6
+            || name_lower == "caller"      // Phase 6
+            || name_lower == "_receiver"   // Phase 6
+            || name_lower == "_beneficiary" // Phase 6
+            || name_lower == "_to"         // Phase 6
+            || name_lower == "_from"       // Phase 6
+            || name_lower == "_recipient"  // Phase 6
+            || name_lower.contains("receiver"); // Phase 6
 
         // Only flag as critical if it's an access control or contract address parameter
         // AND not a transfer destination

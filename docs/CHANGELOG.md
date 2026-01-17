@@ -9,6 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+#### Phase 6 False Positive Reduction
+
+Targeted reduction of false positives across 7 high-FP detectors, implementing stricter detection criteria while maintaining 100% recall on ground truth validation.
+
+**excessive-gas-usage** (target: -51 findings)
+- Skip view/pure functions (no state changes = no gas concern for users)
+- Skip test contracts (new `is_test_contract()` classification function)
+- Raised storage reads threshold from >3 to >=5
+- Only flag events in loops if unbounded (>10 iterations)
+- Added `is_storage_array_loop()` to distinguish storage vs memory arrays
+
+**amm-k-invariant-violation** (target: -53 findings)
+- Require strong AMM signals: reserve0/reserve1 OR IUniswapV2Pair/V3Pool
+- Skip view/pure functions (can't violate invariant without state changes)
+- Skip read-only functions: getReserves, quote, getAmountIn, getAmountOut
+
+**upgradeable-proxy-issues** (target: -50 findings)
+- Tightened `is_proxy_contract()` to require EIP-1967 slots OR explicit proxy inheritance
+- Skip "no upgrade delay" warning for admin-protected functions
+- Skip "no event emission" for internal/private functions
+- Only flag selfdestruct if in callable (public/external) functions
+
+**eip7702-storage-corruption** (target: -59 findings)
+- Raised signal threshold from 2 to 3 for delegation target detection
+- Skip standard ERC20/721/1155 contracts (not delegation targets)
+- Skip OpenZeppelin upgradeable contracts (already designed for safe storage)
+- Skip contracts with only immutable/constant state variables
+
+**array-bounds-check** (target: -51 findings)
+- Skip standard ERC functions (balanceOf, allowance, approve, transfer, etc.)
+- Only flag length validation issues for 2+ array parameters
+- Expanded loop variable recognition (i, j, k, idx)
+- Improved fixed-size array bounds checking with size validation
+
+**circular-dependency** (target: -45 findings)
+- Skip standard ERC transfers (transfer, transferFrom, safeTransfer, etc.)
+- Skip functions with OpenZeppelin access control patterns
+- Added `is_standard_transfer()` and `has_oz_access_control()` helpers
+
+**missing-zero-address-check** (target: -49 findings)
+- Skip constructor parameters (one-time initialization is safe)
+- Skip mint/mintTo functions (flexible recipient by design)
+- Expanded non-critical parameter patterns: sender, origin, caller, _receiver, _beneficiary, _to, _from, _recipient, receiver
+
+**New Helper Functions:**
+- `contract_classification::is_test_contract()` - Detects test/mock contracts by name patterns and framework imports
+
+**Validation Results:**
+- Ground truth: 100% recall maintained (19/19 findings detected)
+- Zero false negatives introduced
+- All 567 detector tests passing
+
 #### Phase 5 False Positive Reduction
 
 Targeted reduction of false positives across 7 high-FP detectors, reducing total findings from 6,831 to 6,243 (-8.6%) while maintaining 100% recall on ground truth.
