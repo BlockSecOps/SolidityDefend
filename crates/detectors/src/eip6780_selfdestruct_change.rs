@@ -79,7 +79,12 @@ impl Eip6780SelfdestructChangeDetector {
                 };
 
                 let func_end = self.find_function_end(&lines, func_start);
-                let func_body: String = lines[func_start..func_end].join("\n");
+                // Guard against invalid slice range
+                let func_body: String = if func_start < func_end {
+                    lines[func_start..func_end].join("\n")
+                } else {
+                    String::new()
+                };
 
                 // Check for metamorphic pattern (CREATE2 + selfdestruct)
                 if uses_create2 {
@@ -105,7 +110,12 @@ impl Eip6780SelfdestructChangeDetector {
                 }
 
                 // Check if there's code after selfdestruct that assumes deletion
-                let lines_after: String = lines[line_num..func_end].join("\n");
+                // Guard against invalid slice range (line_num must be < func_end)
+                let lines_after: String = if line_num < func_end {
+                    lines[line_num..func_end].join("\n")
+                } else {
+                    String::new()
+                };
                 if lines_after.contains("// code will be deleted")
                     || lines_after.contains("// contract destroyed")
                     || source.contains("extcodesize") // Checking if code exists
