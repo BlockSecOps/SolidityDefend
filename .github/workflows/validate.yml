@@ -1,0 +1,220 @@
+name: Detector Validation
+
+on:
+  pull_request:
+    paths:
+      - 'crates/detectors/**'
+      - 'tests/validation/**'
+      - 'tests/contracts/**'
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/detectors/**'
+      - 'tests/validation/**'
+  workflow_dispatch:
+    inputs:
+      fail_on_regression:
+        description: 'Fail if regressions are detected'
+        required: false
+        default: 'true'
+        type: boolean
+      min_precision:
+        description: 'Minimum precision threshold (0.0-1.0)'
+        required: false
+        default: '0.80'
+        type: string
+      min_recall:
+        description: 'Minimum recall threshold (0.0-1.0)'
+        required: false
+        default: '0.70'
+        type: string
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  validate:
+    name: Validate Detectors
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
+      - name: Build release
+        run: cargo build --release
+
+      - name: Run detector validation
+        id: validation
+        run: |
+          # Set default values for manual dispatch or automatic triggers
+          FAIL_ON_REGRESSION="${{ github.event.inputs.fail_on_regression || 'true' }}"
+          MIN_PRECISION="${{ github.event.inputs.min_precision || '0.80' }}"
+          MIN_RECALL="${{ github.event.inputs.min_recall || '0.70' }}"
+
+          echo "Configuration:"
+          echo "  Fail on regression: $FAIL_ON_REGRESSION"
+          echo "  Min precision: $MIN_PRECISION"
+          echo "  Min recall: $MIN_RECALL"
+          echo ""
+
+          # Build validation command
+          VALIDATE_CMD="./target/release/soliditydefend --validate --ground-truth tests/validation/ground_truth.json"
+
+          if [ "$FAIL_ON_REGRESSION" = "true" ]; then
+            VALIDATE_CMD="$VALIDATE_CMD --fail-on-regression"
+          fi
+
+          VALIDATE_CMD="$VALIDATE_CMD --min-precision $MIN_PRECISION --min-recall $MIN_RECALL"
+
+          echo "Running: $VALIDATE_CMD"
+          echo ""
+
+          # Run validation and capture output
+          $VALIDATE_CMD 2>&1 | tee validation_output.txt
+          VALIDATION_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract metrics for summary
+          PRECISION=$(grep "Precision:" validation_output.txt | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo "N/A")
+          RECALL=$(grep "Recall:" validation_output.txt | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo "N/A")
+          F1_SCORE=$(grep "F1 Score:" validation_output.txt | grep -oE '[0-9]+\.[0-9]+' | head -1 || echo "N/A")
+          TRUE_POSITIVES=$(grep "True Positives:" validation_output.txt | grep -oE '[0-9]+' | head -1 || echo "N/A")
+          FALSE_NEGATIVES=$(grep "False Negatives:" validation_output.txt | grep -oE '[0-9]+' | head -1 || echo "N/A")
+
+          # Set outputs for summary
+          echo "precision=$PRECISION" >> $GITHUB_OUTPUT
+          echo "recall=$RECALL" >> $GITHUB_OUTPUT
+          echo "f1_score=$F1_SCORE" >> $GITHUB_OUTPUT
+          echo "true_positives=$TRUE_POSITIVES" >> $GITHUB_OUTPUT
+          echo "false_negatives=$FALSE_NEGATIVES" >> $GITHUB_OUTPUT
+          echo "exit_code=$VALIDATION_EXIT_CODE" >> $GITHUB_OUTPUT
+
+          exit $VALIDATION_EXIT_CODE
+
+      - name: Upload validation report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: validation-report
+          path: validation_output.txt
+          retention-days: 30
+
+      - name: Create job summary
+        if: always()
+        run: |
+          echo "## Detector Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ steps.validation.outputs.exit_code }}" = "0" ]; then
+            echo ":white_check_mark: **Validation Passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo ":x: **Validation Failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Metrics" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Precision | ${{ steps.validation.outputs.precision }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| Recall | ${{ steps.validation.outputs.recall }}% |" >> $GITHUB_STEP_SUMMARY
+          echo "| F1 Score | ${{ steps.validation.outputs.f1_score }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| True Positives | ${{ steps.validation.outputs.true_positives }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| False Negatives | ${{ steps.validation.outputs.false_negatives }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Comment on PR
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const exitCode = '${{ steps.validation.outputs.exit_code }}';
+            const precision = '${{ steps.validation.outputs.precision }}';
+            const recall = '${{ steps.validation.outputs.recall }}';
+            const f1Score = '${{ steps.validation.outputs.f1_score }}';
+            const truePositives = '${{ steps.validation.outputs.true_positives }}';
+            const falseNegatives = '${{ steps.validation.outputs.false_negatives }}';
+
+            const status = exitCode === '0' ? ':white_check_mark: **Passed**' : ':x: **Failed**';
+
+            const body = `## Detector Validation Results
+
+            ${status}
+
+            | Metric | Value |
+            |--------|-------|
+            | Precision | ${precision}% |
+            | Recall | ${recall}% |
+            | F1 Score | ${f1Score} |
+            | True Positives | ${truePositives} |
+            | False Negatives (Missed) | ${falseNegatives} |
+
+            <details>
+            <summary>What do these metrics mean?</summary>
+
+            - **Precision**: Of all findings reported, what percentage are real vulnerabilities
+            - **Recall**: Of all known vulnerabilities, what percentage were detected
+            - **F1 Score**: Harmonic mean of precision and recall (higher is better)
+            - **True Positives**: Correctly detected vulnerabilities
+            - **False Negatives**: Missed vulnerabilities (regressions)
+
+            </details>
+
+            ---
+            *This comment is automatically generated by the detector validation workflow.*
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+  regression-tests:
+    name: Regression Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-action@stable
+        with:
+          toolchain: stable
+
+      - name: Cache Cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Run regression tests
+        run: |
+          cargo test -p soliditydefend --test validation -- --nocapture
