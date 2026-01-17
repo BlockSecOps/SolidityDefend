@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.3] - 2025-01-17
+
 ### Changed
 
 #### Phase 6 False Positive Reduction
