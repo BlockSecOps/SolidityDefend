@@ -37,6 +37,14 @@ repos:
         types: [rust]
         pass_filenames: false
 
+      - id: detector-validation
+        name: detector validation
+        entry: ./scripts/pre-commit-validate.sh
+        language: script
+        files: ^crates/detectors/
+        pass_filenames: false
+        stages: [commit]
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
     hooks:

@@ -128,17 +128,48 @@ Contains must-detect test cases for critical vulnerabilities:
 
 These tests ensure critical exploit patterns are always detected.
 
-### 5. CI Integration
+### 5. Pre-Commit Hook (Primary)
+
+**Location**: `.pre-commit-config.yaml` / `scripts/pre-commit-validate.sh`
+
+**This is the primary validation checkpoint.** When you modify detector files and attempt to commit:
+
+1. The hook automatically detects staged changes in `crates/detectors/`
+2. Runs regression tests to ensure critical vulnerabilities are still detected
+3. Validates against ground truth with `--fail-on-regression`
+4. **Blocks the commit if validation fails**
+
+```
+$ git commit -m "Tighten reentrancy detector"
+Detector files modified - running validation...
+  crates/detectors/src/reentrancy.rs
+
+Running regression tests...
+✓ Regression tests passed
+
+Validating against ground truth...
+✓ Ground truth validation passed
+
+✓ All validation checks passed
+[main abc1234] Tighten reentrancy detector
+```
+
+**To bypass (not recommended)**:
+```bash
+git commit --no-verify
+```
+
+### 6. CI Integration (Safety Net)
 
 **Location**: `.github/workflows/validate.yml`
 
-Runs automatically on:
+Secondary validation that runs on:
 - PRs modifying `crates/detectors/**`
 - PRs modifying `tests/validation/**`
 - PRs modifying `tests/contracts/**`
 - Pushes to main
 
-Posts validation metrics as PR comments.
+Posts validation metrics as PR comments. Catches issues if pre-commit was bypassed.
 
 ## Metrics Explained
 
@@ -154,39 +185,43 @@ Posts validation metrics as PR comments.
 
 ## Workflow: Modifying a Detector
 
-### Before You Start
+### Step 1: Capture Baseline (Before Changes)
 
-1. **Run baseline validation**:
-   ```bash
-   ./scripts/validate_detector_change.sh <detector_id>
-   ```
+```bash
+./scripts/validate_detector_change.sh <detector_id>
+```
 
-2. **Note current metrics** for the detector you're modifying
+This saves current findings for comparison after your changes.
 
-### After Making Changes
+### Step 2: Make Your Changes
 
-1. **Compare findings**:
-   ```bash
-   ./scripts/validate_detector_change.sh --compare <detector_id>
-   ```
+Edit the detector code in `crates/detectors/src/`.
 
-2. **Review removed findings** - Each one should be a confirmed false positive
+### Step 3: Compare Results
 
-3. **Run full validation**:
-   ```bash
-   ./target/release/soliditydefend --validate --fail-on-regression
-   ```
+```bash
+./scripts/validate_detector_change.sh --compare <detector_id>
+```
 
-4. **If recall dropped**: You may have introduced a regression. Review the missed vulnerabilities.
+**Review all removed findings** - Each one must be a confirmed false positive.
 
-### Before Committing
+### Step 4: Commit
 
-1. **Ensure validation passes**:
-   ```bash
-   ./target/release/soliditydefend --validate --min-precision 0.80 --min-recall 0.80
-   ```
+```bash
+git add .
+git commit -m "Tighten <detector_id> to reduce false positives"
+```
 
-2. **Update ground truth** if you identified new true/false positives during your review
+**The pre-commit hook automatically:**
+- Runs regression tests
+- Validates against ground truth
+- Blocks commit if validation fails
+
+If the commit is blocked, review the error output and fix any regressions before retrying.
+
+### Step 5: Update Ground Truth (If Needed)
+
+If you confirmed new true/false positives during your review, update `tests/validation/ground_truth.json` and commit the update.
 
 ## Adding to Ground Truth
 
