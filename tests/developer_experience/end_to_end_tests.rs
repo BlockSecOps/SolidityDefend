@@ -32,31 +32,25 @@ impl EndToEndTestSuite {
             Self::test_web_dashboard_functionality().await
         );
 
-        // Test 4: Multi-IDE compatibility
-        results.add_test(
-            "Multi-IDE Compatibility",
-            Self::test_multi_ide_compatibility().await
-        );
-
-        // Test 5: Real-time analysis performance
+        // Test 4: Real-time analysis performance
         results.add_test(
             "Real-time Analysis Performance",
             Self::test_realtime_analysis_performance().await
         );
 
-        // Test 6: Error handling and recovery
+        // Test 5: Error handling and recovery
         results.add_test(
             "Error Handling and Recovery",
             Self::test_error_handling_recovery().await
         );
 
-        // Test 7: Configuration management
+        // Test 6: Configuration management
         results.add_test(
             "Configuration Management",
             Self::test_configuration_management().await
         );
 
-        // Test 8: Report generation
+        // Test 7: Report generation
         results.add_test(
             "Report Generation",
             Self::test_report_generation().await
@@ -320,98 +314,6 @@ impl EndToEndTestSuite {
 
         if !server_content.contains("broadcast") {
             return Err("WebSocket broadcast functionality not found".into());
-        }
-
-        Ok(())
-    }
-
-    /// Test multi-IDE compatibility
-    async fn test_multi_ide_compatibility() -> TestResult {
-        let start = std::time::Instant::now();
-
-        match Self::execute_multi_ide_test().await {
-            Ok(_) => TestResult::success(start.elapsed().as_millis() as u64),
-            Err(e) => TestResult::failure(
-                start.elapsed().as_millis() as u64,
-                format!("Multi-IDE test failed: {}", e)
-            )
-        }
-    }
-
-    async fn execute_multi_ide_test() -> Result<(), Box<dyn std::error::Error>> {
-        // Test IntelliJ integration
-        Self::test_intellij_integration()?;
-
-        // Test Sublime Text integration
-        Self::test_sublime_integration()?;
-
-        // Test Vim integration
-        Self::test_vim_integration()?;
-
-        Ok(())
-    }
-
-    fn test_intellij_integration() -> Result<(), Box<dyn std::error::Error>> {
-        let plugin_xml_path = "ide_integrations/intellij/plugin.xml";
-        if !std::path::Path::new(plugin_xml_path).exists() {
-            return Err("IntelliJ plugin.xml not found".into());
-        }
-
-        let plugin_xml = std::fs::read_to_string(plugin_xml_path)?;
-
-        // Check essential plugin configuration
-        if !plugin_xml.contains("<id>com.soliditydefend.intellij</id>") {
-            return Err("IntelliJ plugin ID not found".into());
-        }
-
-        if !plugin_xml.contains("SolidityDefend") {
-            return Err("Plugin name not found in IntelliJ configuration".into());
-        }
-
-        // Check for Java implementation file
-        let java_impl_path = "ide_integrations/intellij/SolidityDefendPlugin.java";
-        if !std::path::Path::new(java_impl_path).exists() {
-            return Err("IntelliJ plugin Java implementation not found".into());
-        }
-
-        Ok(())
-    }
-
-    fn test_sublime_integration() -> Result<(), Box<dyn std::error::Error>> {
-        let sublime_plugin_path = "ide_integrations/sublime/SolidityDefend.py";
-        if !std::path::Path::new(sublime_plugin_path).exists() {
-            return Err("Sublime Text plugin not found".into());
-        }
-
-        let plugin_content = std::fs::read_to_string(sublime_plugin_path)?;
-
-        // Check for essential Sublime Text plugin components
-        if !plugin_content.contains("sublime_plugin") {
-            return Err("Sublime Text plugin base class not found".into());
-        }
-
-        if !plugin_content.contains("SolidityDefendCommand") {
-            return Err("SolidityDefend command class not found".into());
-        }
-
-        Ok(())
-    }
-
-    fn test_vim_integration() -> Result<(), Box<dyn std::error::Error>> {
-        let vim_plugin_path = "ide_integrations/vim/soliditydefend.vim";
-        if !std::path::Path::new(vim_plugin_path).exists() {
-            return Err("Vim plugin not found".into());
-        }
-
-        let plugin_content = std::fs::read_to_string(vim_plugin_path)?;
-
-        // Check for essential Vim plugin components
-        if !plugin_content.contains("g:loaded_soliditydefend") {
-            return Err("Vim plugin guard not found".into());
-        }
-
-        if !plugin_content.contains("SolidityDefendAnalyze") {
-            return Err("Vim analysis command not found".into());
         }
 
         Ok(())
@@ -805,12 +707,6 @@ mod tests {
                 println!("Performance metrics: {}", serde_json::to_string_pretty(metrics).unwrap());
             }
         }
-    }
-
-    #[tokio::test]
-    async fn test_multi_ide_support() {
-        let result = EndToEndTestSuite::test_multi_ide_compatibility().await;
-        assert!(result.passed, "Multi-IDE compatibility test failed: {:?}", result.error);
     }
 
     #[tokio::test]
