@@ -1,11 +1,13 @@
 pub mod vscode_extension_tests;
 pub mod lsp_server_tests;
 pub mod web_dashboard_tests;
+pub mod ide_integration_tests;
 pub mod end_to_end_tests;
 
 pub use vscode_extension_tests::*;
 pub use lsp_server_tests::*;
 pub use web_dashboard_tests::*;
+pub use ide_integration_tests::*;
 pub use end_to_end_tests::*;
 
 use std::collections::HashMap;
@@ -81,6 +83,22 @@ impl DeveloperExperienceTestSuite {
 
         // Test real-time updates
         results.add_test("Real-time Updates", test_dashboard_realtime_updates().await);
+
+        Ok(results)
+    }
+
+    /// Test IDE integrations
+    pub async fn test_ide_integrations() -> Result<TestResults, Box<dyn std::error::Error>> {
+        let mut results = TestResults::new("IDE Integrations");
+
+        // Test IntelliJ plugin
+        results.add_test("IntelliJ Plugin", test_intellij_plugin().await);
+
+        // Test Sublime Text plugin
+        results.add_test("Sublime Text Plugin", test_sublime_plugin().await);
+
+        // Test Vim plugin
+        results.add_test("Vim Plugin", test_vim_plugin().await);
 
         Ok(results)
     }
@@ -492,9 +510,63 @@ async fn test_dashboard_realtime_updates() -> TestResult {
     TestResult::success(start.elapsed().as_millis() as u64)
 }
 
+async fn test_intellij_plugin() -> TestResult {
+    let start = std::time::Instant::now();
+
+    // Check if IntelliJ plugin files exist
+    let plugin_xml = "ide_integrations/intellij/plugin.xml";
+
+    if std::path::Path::new(plugin_xml).exists() {
+        TestResult::success(start.elapsed().as_millis() as u64)
+    } else {
+        TestResult::failure(
+            start.elapsed().as_millis() as u64,
+            "IntelliJ plugin.xml not found".to_string()
+        )
+    }
+}
+
+async fn test_sublime_plugin() -> TestResult {
+    let start = std::time::Instant::now();
+
+    // Check if Sublime Text plugin files exist
+    let plugin_py = "ide_integrations/sublime/SolidityDefend.py";
+
+    if std::path::Path::new(plugin_py).exists() {
+        TestResult::success(start.elapsed().as_millis() as u64)
+    } else {
+        TestResult::failure(
+            start.elapsed().as_millis() as u64,
+            "Sublime Text plugin not found".to_string()
+        )
+    }
+}
+
+async fn test_vim_plugin() -> TestResult {
+    let start = std::time::Instant::now();
+
+    // Check if Vim plugin files exist
+    let plugin_vim = "ide_integrations/vim/soliditydefend.vim";
+
+    if std::path::Path::new(plugin_vim).exists() {
+        TestResult::success(start.elapsed().as_millis() as u64)
+    } else {
+        TestResult::failure(
+            start.elapsed().as_millis() as u64,
+            "Vim plugin not found".to_string()
+        )
+    }
+}
+
 async fn test_complete_workflow() -> TestResult {
     let start = std::time::Instant::now();
     // Placeholder for complete workflow test
+    TestResult::success(start.elapsed().as_millis() as u64)
+}
+
+async fn test_multi_ide_scenario() -> TestResult {
+    let start = std::time::Instant::now();
+    // Placeholder for multi-IDE test
     TestResult::success(start.elapsed().as_millis() as u64)
 }
 

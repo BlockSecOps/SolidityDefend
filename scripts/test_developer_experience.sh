@@ -209,6 +209,61 @@ test_web_dashboard() {
     run_test_with_timeout "Dashboard server compilation check" "cargo check --features web-dashboard" 120
 }
 
+# Test IDE Integrations
+test_ide_integrations() {
+    echo
+    echo "Testing IDE Integrations..."
+    echo "=========================="
+
+    # Test IntelliJ plugin
+    if [ -f "ide_integrations/intellij/plugin.xml" ]; then
+        print_status "PASS" "IntelliJ plugin.xml found"
+
+        # Validate plugin.xml structure
+        if grep -q "SolidityDefend" "ide_integrations/intellij/plugin.xml"; then
+            print_status "PASS" "IntelliJ plugin.xml contains SolidityDefend"
+        else
+            print_status "FAIL" "IntelliJ plugin.xml missing SolidityDefend"
+        fi
+
+        if [ -f "ide_integrations/intellij/SolidityDefendPlugin.java" ]; then
+            print_status "PASS" "IntelliJ Java implementation found"
+        else
+            print_status "FAIL" "IntelliJ Java implementation not found"
+        fi
+    else
+        print_status "FAIL" "IntelliJ plugin configuration not found"
+    fi
+
+    # Test Sublime Text plugin
+    if [ -f "ide_integrations/sublime/SolidityDefend.py" ]; then
+        print_status "PASS" "Sublime Text plugin found"
+
+        # Basic Python syntax check
+        if command -v python3 &> /dev/null; then
+            run_test_with_timeout "Sublime plugin syntax check" "python3 -m py_compile ide_integrations/sublime/SolidityDefend.py" 30
+        else
+            print_status "SKIP" "Sublime plugin syntax check (Python not available)"
+        fi
+    else
+        print_status "FAIL" "Sublime Text plugin not found"
+    fi
+
+    # Test Vim plugin
+    if [ -f "ide_integrations/vim/soliditydefend.vim" ]; then
+        print_status "PASS" "Vim plugin found"
+
+        # Basic Vim script validation
+        if grep -q "SolidityDefend" "ide_integrations/vim/soliditydefend.vim"; then
+            print_status "PASS" "Vim plugin contains SolidityDefend"
+        else
+            print_status "FAIL" "Vim plugin missing SolidityDefend"
+        fi
+    else
+        print_status "FAIL" "Vim plugin not found"
+    fi
+}
+
 # Test Analysis Integration
 test_analysis_integration() {
     echo
@@ -392,6 +447,11 @@ generate_html_report() {
     </div>
 
     <div class="test-section">
+        <h2>IDE Integrations</h2>
+        <p>Tests for IntelliJ IDEA, Sublime Text, and Vim integrations.</p>
+    </div>
+
+    <div class="test-section">
         <h2>Performance Testing</h2>
         <p>Performance benchmarks and load testing results.</p>
     </div>
@@ -431,6 +491,7 @@ main() {
     test_vscode_extension
     test_lsp_server
     test_web_dashboard
+    test_ide_integrations
     test_analysis_integration
     test_performance
     test_rust_components
