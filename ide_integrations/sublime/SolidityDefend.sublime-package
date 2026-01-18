@@ -1,0 +1,15 @@
+{
+    "name": "SolidityDefend",
+    "description": "Advanced security analysis for Solidity smart contracts",
+    "version": "1.0.0",
+    "author": "SolidityDefend Team",
+    "homepage": "https://soliditydefend.dev",
+    "license": "MIT",
+    "keywords": ["solidity", "security", "smart contracts", "blockchain", "vulnerability"],
+    "platforms": {
+        "*": "*"
+    },
+    "sublime_text": ">=4000",
+    "dependencies": [],
+    "python_interpreter": "3.8"
+}
