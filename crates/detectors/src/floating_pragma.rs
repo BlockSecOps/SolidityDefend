@@ -2,7 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for floating pragma directives that can cause inconsistent compiler behavior
 pub struct FloatingPragmaDetector {
@@ -59,39 +59,61 @@ impl Detector for FloatingPragmaDetector {
         let source = ctx.source_code.as_str();
         let lines: Vec<&str> = source.lines().collect();
 
+        // Phase 9 FP Reduction: Skip library/interface files (lower risk)
+        let is_lib_or_interface = self.is_library_or_interface(source);
+
         for (line_idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
             // Check for pragma solidity declarations
             if trimmed.starts_with("pragma solidity") {
                 let pragma_statement = trimmed;
+                let version = self.extract_version(pragma_statement);
+                let is_080_plus = self.is_080_or_higher(&version);
+
+                // Phase 9 FP Reduction: Skip library/interface files for non-critical versions
+                if is_lib_or_interface && is_080_plus {
+                    continue;
+                }
 
                 // Pattern 1: Caret operator (^) - floating pragma
                 if pragma_statement.contains('^') {
-                    let version = self.extract_version(pragma_statement);
-                    let message = format!(
-                        "Floating pragma detected: {}. \
-                        Using '^' allows compilation with multiple compiler versions, \
-                        which may introduce unexpected behavior or security vulnerabilities. \
-                        Different compiler versions may have different bugs, optimizations, \
-                        or security fixes.",
-                        pragma_statement
-                    );
+                    // Phase 9 FP Reduction: Lower severity for 0.8.x (has overflow checks)
+                    let severity = if is_080_plus {
+                        Severity::Info
+                    } else {
+                        Severity::Low
+                    };
+
+                    let message = if is_080_plus {
+                        format!(
+                            "Floating pragma detected: {}. \
+                            While 0.8+ has built-in overflow checks, locking the version ensures \
+                            consistent compilation across environments.",
+                            pragma_statement
+                        )
+                    } else {
+                        format!(
+                            "Floating pragma detected: {}. \
+                            Using '^' with pre-0.8 Solidity is higher risk as these versions \
+                            lack built-in overflow protection. Lock to a specific version.",
+                            pragma_statement
+                        )
+                    };
 
                     let finding = self
                         .base
-                        .create_finding(
+                        .create_finding_with_severity(
                             ctx,
                             message,
                             (line_idx + 1) as u32,
                             0,
                             pragma_statement.len() as u32,
+                            severity,
                         )
-                        .with_cwe(710) // CWE-710: Improper Adherence to Coding Standards
+                        .with_cwe(710)
                         .with_fix_suggestion(format!(
-                            "Lock pragma to specific version: 'pragma solidity {};'. \
-                            This ensures consistent compilation across environments and prevents \
-                            unexpected behavior from compiler version differences.",
+                            "Lock pragma to specific version: 'pragma solidity {};'",
                             version.trim_start_matches('^')
                         ));
 
@@ -99,50 +121,93 @@ impl Detector for FloatingPragmaDetector {
                 }
                 // Pattern 2: Range operator (>=) - floating pragma
                 else if pragma_statement.contains(">=") || pragma_statement.contains('>') {
-                    let message = format!(
-                        "Floating pragma detected: {}. \
-                        Using '>=' or '>' allows compilation with any future compiler version, \
-                        including versions with breaking changes or unknown security issues.",
-                        pragma_statement
-                    );
+                    let is_bounded = pragma_statement.contains(">=")
+                        && pragma_statement.contains('<')
+                        && !pragma_statement.contains("||");
 
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            (line_idx + 1) as u32,
-                            0,
-                            pragma_statement.len() as u32,
-                        )
-                        .with_cwe(710) // CWE-710: Improper Adherence to Coding Standards
-                        .with_fix_suggestion(
-                            "Lock pragma to specific version range with both lower and upper bounds: \
-                            'pragma solidity =0.8.19;' or use exact version 'pragma solidity 0.8.19;'"
-                                .to_string(),
+                    if is_bounded {
+                        // Phase 9 FP Reduction: Skip bounded ranges for 0.8+ (very low risk)
+                        if is_080_plus {
+                            continue;
+                        }
+
+                        let message = format!(
+                            "Bounded pragma range detected: {}. \
+                            Consider locking to a specific version for maximum reproducibility.",
+                            pragma_statement
                         );
 
-                    findings.push(finding);
+                        let finding = self
+                            .base
+                            .create_finding_with_severity(
+                                ctx,
+                                message,
+                                (line_idx + 1) as u32,
+                                0,
+                                pragma_statement.len() as u32,
+                                Severity::Info,
+                            )
+                            .with_cwe(710)
+                            .with_confidence(Confidence::Low)
+                            .with_fix_suggestion(
+                                "Consider locking to specific version for deployment: \
+                                'pragma solidity 0.8.19;'"
+                                    .to_string(),
+                            );
+
+                        findings.push(finding);
+                    } else {
+                        // Unbounded range - severity depends on version
+                        let severity = if is_080_plus {
+                            Severity::Low
+                        } else {
+                            Severity::Medium
+                        };
+
+                        let message = format!(
+                            "Floating pragma detected: {}. \
+                            Using '>=' or '>' allows compilation with any future compiler version.",
+                            pragma_statement
+                        );
+
+                        let finding = self
+                            .base
+                            .create_finding_with_severity(
+                                ctx,
+                                message,
+                                (line_idx + 1) as u32,
+                                0,
+                                pragma_statement.len() as u32,
+                                severity,
+                            )
+                            .with_cwe(710)
+                            .with_fix_suggestion(
+                                "Lock pragma to specific version: 'pragma solidity 0.8.19;'"
+                                    .to_string(),
+                            );
+
+                        findings.push(finding);
+                    }
                 }
                 // Pattern 3: Multiple versions or complex ranges
                 else if pragma_statement.matches("||").count() > 0 {
                     let message = format!(
                         "Complex pragma range detected: {}. \
-                        Multiple version ranges make it difficult to ensure consistent behavior \
-                        and security properties across deployments.",
+                        Multiple version ranges make it difficult to ensure consistent behavior.",
                         pragma_statement
                     );
 
                     let finding = self
                         .base
-                        .create_finding(
+                        .create_finding_with_severity(
                             ctx,
                             message,
                             (line_idx + 1) as u32,
                             0,
                             pragma_statement.len() as u32,
+                            Severity::Low,
                         )
-                        .with_cwe(710) // CWE-710: Improper Adherence to Coding Standards
+                        .with_cwe(710)
                         .with_fix_suggestion(
                             "Use a single, specific compiler version: 'pragma solidity 0.8.19;'"
                                 .to_string(),
@@ -154,8 +219,7 @@ impl Detector for FloatingPragmaDetector {
                 else if pragma_statement.contains('*') {
                     let message = format!(
                         "Wildcard pragma detected: {}. \
-                        Wildcard versions allow any compiler version to be used, \
-                        which is extremely dangerous and unpredictable.",
+                        Wildcard versions allow any compiler version to be used.",
                         pragma_statement
                     );
 
@@ -168,7 +232,7 @@ impl Detector for FloatingPragmaDetector {
                             0,
                             pragma_statement.len() as u32,
                         )
-                        .with_cwe(710) // CWE-710: Improper Adherence to Coding Standards
+                        .with_cwe(710)
                         .with_fix_suggestion(
                             "Use a specific compiler version: 'pragma solidity 0.8.19;'"
                                 .to_string(),
@@ -197,6 +261,50 @@ impl FloatingPragmaDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Check if the version is 0.8.x or higher (has built-in overflow checks)
+    /// These are safer and lower priority for floating pragma warnings
+    fn is_080_or_higher(&self, version: &str) -> bool {
+        // Extract the minor version number
+        // Version formats: ^0.8.0, >=0.8.0 <0.9.0, 0.8.19, etc.
+        let version_clean = version
+            .trim_start_matches('^')
+            .trim_start_matches('>')
+            .trim_start_matches('=')
+            .trim();
+
+        // Check for 0.8+ or 0.9+ or 1.x (future major version)
+        if version_clean.starts_with("0.8")
+            || version_clean.starts_with("0.9")
+            || version_clean.starts_with("1.")
+        {
+            return true;
+        }
+
+        // Check for ranges like >=0.8.0
+        if version.contains("0.8") || version.contains("0.9") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if this is a library or interface file (lower risk for floating pragma)
+    fn is_library_or_interface(&self, source: &str) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+        for line in lines {
+            let trimmed = line.trim();
+            // Check for library or interface declarations
+            if trimmed.starts_with("library ") || trimmed.starts_with("interface ") {
+                return true;
+            }
+            // Check for abstract contracts (also lower risk)
+            if trimmed.starts_with("abstract contract ") {
+                return true;
+            }
+        }
+        false
     }
 }
 

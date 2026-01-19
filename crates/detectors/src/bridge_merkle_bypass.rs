@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_bridge_contract, is_standard_token};
 
 /// Detector for bridge merkle proof bypass vulnerabilities
 ///
@@ -57,21 +58,33 @@ impl BridgeMerkleBypassDetector {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
+                let func_lower = func_body.to_lowercase();
 
-                // Check for merkle proof verification
-                if !func_body.contains("merkle")
-                    && !func_body.contains("Merkle")
-                    && !func_body.contains("proof")
-                    && !func_body.contains("verify")
-                {
-                    let issue = "Bridge function without merkle proof verification".to_string();
+                // Check for valid authentication: merkle proofs OR signatures
+                let has_merkle = func_lower.contains("merkle")
+                    || func_lower.contains("proof")
+                    || func_lower.contains("verify");
+
+                let has_signature = func_lower.contains("ecrecover")
+                    || func_lower.contains("ecdsa.recover")
+                    || func_lower.contains("signaturechecker")
+                    || func_lower.contains("isvalidsignature")
+                    || func_lower.contains("_verifysignature")
+                    || func_lower.contains("signature");
+
+                // Only flag if neither merkle nor signature authentication is present
+                if !has_merkle && !has_signature {
+                    let issue = "Bridge function without merkle proof or signature verification".to_string();
                     findings.push((line_num as u32 + 1, func_name.clone(), issue));
                 }
 
-                // Check for root validation
-                if !func_body.contains("root") && !func_body.contains("Root") {
-                    let issue = "Bridge function without root validation".to_string();
-                    findings.push((line_num as u32 + 1, func_name, issue));
+                // Check for root validation (still important for merkle-based bridges)
+                // But skip if using signature-based authentication
+                if has_merkle && !has_signature {
+                    if !func_lower.contains("root") {
+                        let issue = "Bridge function without root validation".to_string();
+                        findings.push((line_num as u32 + 1, func_name, issue));
+                    }
                 }
             }
 
@@ -83,9 +96,19 @@ impl BridgeMerkleBypassDetector {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
+                let func_lower = func_body.to_lowercase();
 
-                if !func_body.contains("proof") && !func_body.contains("signature") {
-                    let issue = "Message relay without cryptographic proof".to_string();
+                // Accept proof, signature, or verified sender as valid authentication
+                let has_auth = func_lower.contains("proof")
+                    || func_lower.contains("signature")
+                    || func_lower.contains("ecrecover")
+                    || func_lower.contains("ecdsa")
+                    || func_lower.contains("onlymessenger")
+                    || func_lower.contains("onlybridge")
+                    || func_lower.contains("require(msg.sender");
+
+                if !has_auth {
+                    let issue = "Message relay without cryptographic proof or sender validation".to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
                 }
             }
@@ -270,6 +293,23 @@ impl Detector for BridgeMerkleBypassDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Phase 9 FP Reduction: Skip test contracts entirely
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard token contracts
+        // ERC20/ERC721/ERC1155/ERC4626 are tokens, not bridges
+        if is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Strict bridge context gate
+        // Only fire if contract is actually a bridge/cross-chain contract
+        if !is_bridge_contract(ctx) {
+            return Ok(findings);
+        }
 
         for (line, func_name, issue) in self.find_missing_proof_validation(source) {
             let message = format!(

@@ -142,7 +142,9 @@ impl OracleManipulationDetector {
             return false;
         }
 
-        let func_source = source_lines[func_start..=func_end].join("\n");
+        let raw_source = source_lines[func_start..=func_end].join("\n");
+        // Clean source to avoid FPs from comments/strings
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Check if function uses price oracles
         let price_query_patterns = [

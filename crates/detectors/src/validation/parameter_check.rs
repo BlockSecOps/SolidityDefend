@@ -5,6 +5,7 @@ use std::collections::HashSet;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_standard_token};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -469,37 +470,57 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if address parameter is used in risky operations
+    /// Only flag truly risky patterns to reduce FPs
     fn is_address_used_in_risky_operation(&self, param_name: &str, func_source: &str) -> bool {
         let source_lower = func_source.to_lowercase();
         let param_lower = param_name.to_lowercase();
 
-        // Check for transfer/call operations with this address
-        if source_lower.contains(&format!("{}.transfer(", param_lower))
-            || source_lower.contains(&format!("{}.call", param_lower))
+        // High risk: External calls that forward value or execute code
+        // These are the most dangerous patterns
+        if source_lower.contains(&format!("{}.call", param_lower))
             || source_lower.contains(&format!("{}.delegatecall", param_lower))
-            || source_lower.contains(&format!("{}.send(", param_lower)) {
+            || source_lower.contains(&format!("call{{value:")) && source_lower.contains(&param_lower)
+        {
             return true;
         }
 
-        // Check for storage writes (assignments to storage mappings/arrays)
-        if source_lower.contains(&format!("[{}]", param_lower))
-            && (source_lower.contains(" = ") || source_lower.contains("=")) {
-            // Likely a storage operation - check if param is used as key
+        // High risk: Critical storage writes - ownership, admin, roles
+        let critical_storage_patterns = [
+            "owner", "admin", "operator", "minter", "burner", "pauser",
+            "guardian", "controller", "manager", "governance", "role",
+            "allowance", "approve", "whitelist", "blacklist", "banned",
+        ];
+
+        for pattern in &critical_storage_patterns {
+            // Check if critical storage is being assigned with our param
+            if source_lower.contains(pattern)
+                && source_lower.contains(&format!("[{}]", param_lower))
+                && source_lower.contains(" = ")
+            {
+                return true;
+            }
+            // Check for direct assignment: owner = param
+            if source_lower.contains(&format!("{} = {}", pattern, param_lower))
+                || source_lower.contains(&format!("{}={}", pattern, param_lower))
+            {
+                return true;
+            }
+        }
+
+        // Medium risk: safeTransferFrom where param is recipient
+        // Only flag if param is explicitly the "to" address
+        if source_lower.contains("safetransferfrom")
+            && (source_lower.contains(&format!(", {}, ", param_lower))
+                || source_lower.contains(&format!(", {})", param_lower)))
+        {
             return true;
         }
 
-        // Check for ownership/admin assignments
-        if (source_lower.contains("owner =") || source_lower.contains("admin ="))
-            && source_lower.contains(&param_lower) {
-            return true;
-        }
+        // Low priority: Regular transfers - these are common and usually intentional
+        // Skip .transfer() and .send() as they have limited gas and are relatively safe
+        // Skip regular safeTransfer as it's a common, audited pattern
 
-        // Check for safeTransfer calls
-        if source_lower.contains("safetransfer") && source_lower.contains(&param_lower) {
-            return true;
-        }
-
-        // Not used in risky operations
+        // Not used in high-risk operations
         false
     }
 
@@ -881,30 +902,14 @@ impl Detector for ParameterConsistencyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // Phase 5 FP Reduction: Skip test contracts entirely
-        // Contracts with "Vulnerable", "Test", "Mock" in the name are test fixtures
-        let contract_name = ctx.contract.name.name.to_string();
-        let contract_name_lower = contract_name.to_lowercase();
-        if contract_name_lower.contains("vulnerable")
-            || contract_name_lower.contains("test")
-            || contract_name_lower.contains("mock")
-            || contract_name_lower.contains("example")
-            || contract_name_lower.contains("demo")
-        {
+        // Phase 9 FP Reduction: Use centralized test contract detection
+        if is_test_contract(ctx) {
             return Ok(findings);
         }
 
-        // Skip analysis for standard protocols - they follow established patterns
-        // ERC20, ERC721, ERC4626, etc. have well-defined interfaces with specific behaviors
-        let source_lower = ctx.source_code.to_lowercase();
-        let is_standard_token = (source_lower.contains("function transfer(address")
-            || source_lower.contains("function transferfrom("))
-            && source_lower.contains("balanceof")
-            && source_lower.contains("erc20")
-            || source_lower.contains("erc721")
-            || source_lower.contains("erc1155");
-
-        if is_standard_token {
+        // Phase 9 FP Reduction: Skip standard token contracts
+        // ERC20, ERC721, ERC1155, ERC4626 follow established patterns
+        if is_standard_token(ctx) {
             // Only check array length consistency for standard tokens
             // Skip pedantic parameter validation checks
             for function in ctx.get_functions() {
@@ -916,10 +921,29 @@ impl Detector for ParameterConsistencyDetector {
 
         // Analyze all functions in the contract (skip constructors - one-time init is safe)
         for function in ctx.get_functions() {
-            // Phase 5 FP Reduction: Skip constructors - one-time initialization is safe
+            // Skip constructors - one-time initialization is safe
             if matches!(function.function_type, ast::FunctionType::Constructor) {
                 continue;
             }
+
+            // Phase 9 FP Reduction: Skip functions with < 3 parameters
+            // Functions with 1-2 params rarely have parameter consistency issues
+            let params = self.extract_parameter_info(function);
+            if params.len() < 3 {
+                // Only check critical address parameters for small functions
+                let critical_params: Vec<_> = params
+                    .iter()
+                    .filter(|p| {
+                        matches!(p.type_info, ParameterType::Address)
+                            && (p.name.to_lowercase().contains("owner")
+                                || p.name.to_lowercase().contains("admin"))
+                    })
+                    .collect();
+                if critical_params.is_empty() {
+                    continue;
+                }
+            }
+
             findings.extend(self.analyze_function(function, ctx)?);
         }
 

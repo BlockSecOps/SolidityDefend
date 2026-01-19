@@ -58,7 +58,9 @@ pub struct GeneralConfig {
 impl Default for GeneralConfig {
     fn default() -> Self {
         Self {
-            min_severity: Severity::Info,
+            // Phase 9 FP Reduction: Default to Medium severity to reduce noise
+            // Users can opt-in to lower severities with --min-severity info
+            min_severity: Severity::Medium,
             verbose: false,
             quiet: false,
             include_patterns: vec!["**/*.sol".to_string()],
@@ -104,7 +106,9 @@ pub struct DetectorConfig {
 impl Default for DetectorConfig {
     fn default() -> Self {
         Self {
-            min_severity: Severity::Info,
+            // Phase 9 FP Reduction: Default to Medium severity to reduce noise
+            // Users can opt-in to lower severities with --min-severity info
+            min_severity: Severity::Medium,
             min_confidence: Confidence::Low,
             enabled_categories: Vec::new(),
             disabled_detectors: Vec::new(),
@@ -402,7 +406,8 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = SolidityDefendConfig::default();
-        assert_eq!(config.general.min_severity, Severity::Info);
+        // Phase 9: Default changed to Medium for FP reduction
+        assert_eq!(config.general.min_severity, Severity::Medium);
         assert!(config.cache.enabled);
         assert_eq!(config.output.format, OutputFormatSetting::Console);
     }

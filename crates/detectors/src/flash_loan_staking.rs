@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for flash loan staking attack vulnerabilities
 pub struct FlashLoanStakingDetector {
@@ -122,7 +123,7 @@ impl FlashLoanStakingDetector {
             return false;
         }
 
-        // Get function source code
+        // Get function source code (cleaned to avoid FPs from comments/strings)
         let func_start = function.location.start().line();
         let func_end = function.location.end().line();
 
@@ -131,7 +132,8 @@ impl FlashLoanStakingDetector {
             return false;
         }
 
-        let func_source = source_lines[func_start..=func_end].join("\n");
+        let raw_source = source_lines[func_start..=func_end].join("\n");
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Check if this is a staking/farming contract
         let has_staking_context = func_source.contains("amount")

@@ -20,7 +20,9 @@ impl PrivateVariableExposureDetector {
                 "Private Variable Exposure".to_string(),
                 "Detects sensitive data stored in 'private' variables (all blockchain data is public)".to_string(),
                 vec![DetectorCategory::BestPractices],
-                Severity::High,
+                // Phase 6 FP Reduction: Reduced from High to Medium.
+                // This is educational - developers may not understand private visibility.
+                Severity::Medium,
             ),
         }
     }
@@ -62,16 +64,21 @@ impl Detector for PrivateVariableExposureDetector {
         let source = &ctx.source_code;
         let lines: Vec<&str> = source.lines().collect();
 
+        // Phase 6 FP Reduction: Removed overly broad keywords that match normal code:
+        // - "private" - matches Solidity visibility modifier
+        // - "key" - matches mapping keys, API keys variables, etc.
+        // - "token" - matches all DeFi token contracts
+        // - "seed" - removed, too broad
+        // Only flag clearly sensitive naming patterns
         let sensitive_keywords = [
             "password",
             "secret",
-            "key",
-            "seed",
-            "private",
             "credential",
-            "token",
             "passphrase",
             "pin",
+            "apikey",      // More specific than "key"
+            "privatekey",  // More specific than "private" or "key"
+            "secretkey",   // More specific than "secret" or "key"
         ];
 
         for (line_num, line) in lines.iter().enumerate() {
@@ -87,7 +94,8 @@ impl Detector for PrivateVariableExposureDetector {
                             (line_num + 1) as u32,
                             0,
                             20,
-                            Severity::High,
+                            // Phase 6: Reduced from High to Medium
+                            Severity::Medium,
                         ).with_fix_suggestion(
                             "CRITICAL: 'private' visibility does NOT encrypt data!\n\
                              \n\

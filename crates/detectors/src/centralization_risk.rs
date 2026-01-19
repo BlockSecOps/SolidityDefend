@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for dangerous centralization of control
 pub struct CentralizationRiskDetector {
@@ -121,7 +122,8 @@ impl Detector for CentralizationRiskDetector {
 
 impl CentralizationRiskDetector {
     fn check_contract_centralization(&self, ctx: &AnalysisContext) -> Option<String> {
-        let contract_source = ctx.source_code.as_str();
+        // Clean source to avoid FPs from comments/strings
+        let contract_source = utils::clean_source_for_search(ctx.source_code.as_str());
 
         // Pattern 1: Single owner with no multi-sig
         let has_owner = contract_source.contains("address public owner")
@@ -141,9 +143,10 @@ impl CentralizationRiskDetector {
         }
 
         // Pattern 2: Critical functions without timelock
-        let has_critical_ops = contract_source.contains("withdraw")
-            || contract_source.contains("pause")
-            || contract_source.contains("upgrade");
+        // Be more specific to avoid FPs: look for actual function definitions
+        let has_critical_ops = contract_source.contains("function withdraw")
+            || contract_source.contains("function pause")
+            || contract_source.contains("function upgrade");
 
         let has_timelock = contract_source.contains("timelock")
             || contract_source.contains("delay")
@@ -221,7 +224,8 @@ impl CentralizationRiskDetector {
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

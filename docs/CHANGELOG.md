@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.4] - 2025-01-19
+
+### Changed
+
+#### Phase 9 False Positive Reduction - Aggressive FP Reduction (Slither Parity)
+
+Comprehensive false positive reduction across multiple detector categories, implementing context-aware analysis and stricter gating while maintaining 94.7% ground truth recall.
+
+**Default Configuration Changes**
+- Changed default `min_severity` from `Info` to `Medium` (~425 Low/Info findings filtered by default)
+- Users can opt-in to lower severities with `--min-severity info`
+
+**New Utility Functions in `utils.rs`**
+- `is_test_contract()` - Centralized test/mock contract detection (name patterns: test, mock, vulnerable, example, demo, stub, fake, helper; path patterns: /test/, .t.sol, /mocks/)
+- `is_erc20_token()` - ERC-20 token detection (4+ of 6 core functions)
+- `is_erc721_token()` - ERC-721 NFT detection
+- `is_erc1155_token()` - ERC-1155 multi-token detection
+- `is_standard_token()` - Any standard token (ERC20/721/1155/4626)
+- `is_factory_contract()` - Factory/deployer pattern detection
+- `is_bridge_contract()` - Bridge/cross-chain contract detection
+- `is_eip7702_context()` - EIP-7702 delegation context (requires 2+ indicators)
+- `is_oracle_implementation()` - Oracle provider detection
+
+**parameter-consistency Improvements**
+- Uses centralized `is_test_contract()` and `is_standard_token()`
+- Skip functions with < 3 parameters (except critical owner/admin addresses)
+
+**contract-recreation-attack Context Gate**
+- Requires factory pattern detection (`is_factory_contract()`)
+- Only flags if contract has selfdestruct capability
+- Skips test contracts entirely
+
+**bridge-merkle-bypass Strict Context**
+- Only fires for actual bridge contracts (`is_bridge_contract()`)
+- Skips ERC20/721/1155/4626 standard token contracts
+
+**floating-pragma Version Awareness**
+- `is_080_or_higher()` - Detects 0.8.x+ versions with built-in overflow checks
+- `is_library_or_interface()` - Lower risk files
+- Reduced severity for 0.8.x floating pragmas (Info instead of Low)
+- Skip bounded ranges for 0.8.x (very low risk)
+
+**EIP-7702 Detectors (5 detectors)**
+- Shared `is_eip7702_context()` requiring 2+ indicators (AUTH, AUTHCALL, setCode, 7702 marker, AA patterns)
+- All detectors now skip test contracts
+- Files: `eip7702_replay_vulnerability.rs`, `eip7702_storage_corruption.rs`, `eip7702_sweeper_attack.rs`, `eip7702_authorization_bypass.rs`, `eip7702_delegation_phishing.rs`
+
+**MEV Detectors**
+- Added test contract skipping
+- Added AMM pool detection (`is_amm_pool()`)
+- Added standard token skipping (`is_standard_token()`)
+- Files: `mev.rs` (SandwichAttackDetector, FrontRunningDetector), `mev_extractable_value.rs`
+
+**DeFi Protocol Detectors**
+- Added test contract skipping to `pool_donation_enhanced.rs`
+
+**unsafe-type-casting Improvements**
+- `is_in_unchecked_block()` - Skip casts inside `unchecked {}` blocks
+- `has_type_max_check()` - Recognize `type(uintX).max` bounds checks
+- Skip internal pure/view functions (less critical)
+
+**single-oracle-source Improvements**
+- `is_using_chainlink()` - Recognize Chainlink oracle patterns (AggregatorV3Interface, latestRoundData)
+- `is_using_twap()` - Recognize TWAP oracle patterns (consult, observe, priceCumulativeLast)
+- Skip contracts that ARE oracle implementations
+- Skip test contracts
+
+**Enhanced Deduplication**
+- `deduplicate_findings_enhanced()` - Function-scope deduplication for MEV/validation detectors
+- Keeps highest severity when same location flagged by multiple detectors
+- Groups findings within ±10 lines for function-scope analysis
+
+**Validation Results**
+- Ground truth recall: 94.7% maintained (18/19 findings detected)
+- All 586 detector tests passing
+- Improved precision through context-aware filtering
+
 ## [1.10.3] - 2025-01-17
 
 ### Changed

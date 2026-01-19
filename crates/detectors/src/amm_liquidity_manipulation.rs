@@ -235,14 +235,15 @@ impl AmmLiquidityManipulationDetector {
         None
     }
 
-    /// Get function source code
+    /// Get function source code (cleaned to avoid FPs)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }
