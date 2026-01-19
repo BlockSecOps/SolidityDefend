@@ -17,6 +17,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::is_test_contract;
 
 pub struct PoolDonationEnhancedDetector {
     base: BaseDetector,
@@ -69,7 +70,26 @@ impl Detector for PoolDonationEnhancedDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
-        let lower = ctx.source_code.to_lowercase();
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Check for OpenZeppelin ERC4626 implementation which has built-in protection
+        // OZ uses _decimalsOffset for virtual shares/assets protection
+        let is_oz_erc4626 = source.contains("@openzeppelin")
+            || source.contains("openzeppelin-contracts")
+            || lower.contains("_decimalsoffset")
+            || lower.contains("erc4626upgradeable")
+            || (lower.contains("openzeppelin") && lower.contains("erc4626"));
+
+        // If using OpenZeppelin's ERC4626, it has built-in protection
+        if is_oz_erc4626 {
+            return Ok(findings); // OZ implementation is battle-tested
+        }
 
         // Check if contract uses balance for calculations (used in multiple checks)
         let uses_balance = lower.contains("balanceof(address(this))")
@@ -87,7 +107,9 @@ impl Detector for PoolDonationEnhancedDetector {
             let has_initial_shares = lower.contains("initial_shares")
                 || lower.contains("minimum_shares")
                 || lower.contains("dead_shares")
-                || lower.contains("virtual_shares");
+                || lower.contains("virtual_shares")
+                || lower.contains("virtual_assets")
+                || lower.contains("_decimalsoffset"); // OZ pattern
 
             if !has_initial_shares {
                 let finding = self.base.create_finding(
@@ -98,7 +120,7 @@ impl Detector for PoolDonationEnhancedDetector {
                     ctx.source_code.len() as u32,
                 )
                 .with_fix_suggestion(
-                    "Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation".to_string()
+                    "Mint initial dead shares or use virtual shares/assets in share calculation to prevent first-depositor manipulation. Consider using OpenZeppelin's ERC4626 which has built-in protection.".to_string()
                 );
 
                 findings.push(finding);

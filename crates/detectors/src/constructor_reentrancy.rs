@@ -45,11 +45,11 @@ impl ConstructorReentrancyDetector {
                 let func_end = self.find_function_end(&lines, line_num);
                 let constructor_body: String = lines[line_num..func_end].join("\n");
 
-                // Check for external calls
-                if constructor_body.contains(".call")
-                    || constructor_body.contains(".delegatecall")
-                    || constructor_body.contains(".transfer")
-                    || constructor_body.contains(".send")
+                // Check for external calls that can cause reentrancy
+                // Note: .transfer and .send have 2300 gas stipend - cannot reenter
+                if constructor_body.contains(".call(")
+                    || constructor_body.contains(".call{")
+                    || constructor_body.contains(".delegatecall(")
                 {
                     findings.push((line_num as u32 + 1, "constructor".to_string()));
                 }
@@ -101,8 +101,12 @@ impl ConstructorReentrancyDetector {
                 let mut call_line = 0;
 
                 for (i, cline) in constructor_lines.iter().enumerate() {
-                    if cline.contains(".call")
-                        || cline.contains("transfer")
+                    // Only flag calls that can cause reentrancy
+                    // .transfer/.send have 2300 gas limit - cannot reenter
+                    // safeTransfer CAN cause reentrancy via onERC721Received etc.
+                    if cline.contains(".call(")
+                        || cline.contains(".call{")
+                        || cline.contains(".delegatecall(")
                         || cline.contains("safeTransfer")
                     {
                         found_call = true;

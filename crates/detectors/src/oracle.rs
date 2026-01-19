@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_oracle_implementation};
 
 /// Detector for single oracle source dependencies
 pub struct SingleSourceDetector {
@@ -31,6 +32,49 @@ impl SingleSourceDetector {
                 Severity::High,
             ),
         }
+    }
+
+    /// Check if function has slippage protection which mitigates oracle manipulation risk
+    fn has_slippage_protection(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+        lower.contains("minoutput")
+            || lower.contains("minamount")
+            || lower.contains("minreturn")
+            || lower.contains("maxslippage")
+            || lower.contains("amountoutmin")
+            || lower.contains("amountinmax")
+            || lower.contains("min_output")
+            || lower.contains("min_amount")
+            || lower.contains("slippage")
+            || lower.contains("deadline")
+            // Check for explicit bound checks on amounts
+            || (lower.contains("require") && (lower.contains(">= min") || lower.contains("<= max")))
+    }
+
+    /// Phase 9 FP Reduction: Check if using Chainlink oracle pattern
+    /// Chainlink is a well-established, reliable oracle infrastructure
+    fn is_using_chainlink(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+        lower.contains("aggregatorv3interface")
+            || lower.contains("aggregatorinterface")
+            || lower.contains("latestrounddata")
+            || lower.contains("getlatestprice")
+            || lower.contains("pricefeed")
+            || lower.contains("chainlink")
+            || lower.contains("datafeedstore")
+    }
+
+    /// Phase 9 FP Reduction: Check if using TWAP oracle pattern
+    /// TWAP oracles are resistant to flash loan manipulation
+    fn is_using_twap(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+        lower.contains("twap")
+            || lower.contains("timewightedaverage")
+            || lower.contains("pricecumulativelast")
+            || lower.contains("observe(")
+            || lower.contains("consult(")
+            || lower.contains("oraclecumulative")
+            || lower.contains("gettwap")
     }
 
     fn _is_oracle_call(&self, expr: &ast::Expression<'_>) -> bool {
@@ -91,6 +135,18 @@ impl SingleSourceDetector {
             }
         }
     }
+
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
 }
 
 impl Detector for SingleSourceDetector {
@@ -120,10 +176,40 @@ impl Detector for SingleSourceDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip contracts that ARE oracle implementations
+        // Oracle contracts providing data don't need multiple oracle sources themselves
+        if is_oracle_implementation(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip if using Chainlink (trusted decentralized oracle)
+        if self.is_using_chainlink(source) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip if using TWAP (manipulation resistant)
+        if self.is_using_twap(source) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             let oracle_count = self.count_oracle_sources(function);
             if oracle_count == 1 {
+                // Get function source to check for slippage protection
+                let func_source = self.get_function_source(function, ctx);
+
+                // Skip if function has slippage protection - mitigates oracle manipulation
+                if self.has_slippage_protection(&func_source) {
+                    continue;
+                }
+
                 let message = format!(
                     "Function '{}' relies on a single oracle source, creating centralization risk",
                     function.name.name

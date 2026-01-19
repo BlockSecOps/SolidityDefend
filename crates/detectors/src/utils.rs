@@ -1006,12 +1006,892 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
     indicator_count >= 3
 }
 
+// ===========================================================================
+// PHASE 9 FP REDUCTION: TEST CONTRACT AND ERC INTERFACE DETECTION
+// ===========================================================================
+
+/// Detects if the contract is a test, mock, or example contract
+///
+/// Test contracts should generally be skipped by detectors as they:
+/// - Often intentionally contain vulnerable patterns for testing
+/// - Are not deployed to production
+/// - Clutter results with non-actionable findings
+///
+/// Detection based on:
+/// - Contract name patterns (Test, Mock, Vulnerable, Example, Demo)
+/// - File path patterns (/test/, /tests/, .t.sol)
+/// - Common test framework indicators
+pub fn is_test_contract(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+    let file = ctx.file_path.to_lowercase();
+
+    // Contract name patterns indicating test/mock
+    let is_test_name = name.contains("test")
+        || name.contains("mock")
+        || name.contains("vulnerable")
+        || name.contains("example")
+        || name.contains("demo")
+        || name.contains("stub")
+        || name.contains("fake")
+        || name.contains("helper")
+        || name.starts_with("t_")
+        || name.ends_with("_test");
+
+    // File path patterns indicating test directory
+    let is_test_file = file.contains("/test/")
+        || file.contains("/tests/")
+        || file.contains("/testing/")
+        || file.contains(".t.sol")
+        || file.contains("_test.sol")
+        || file.contains("/mocks/")
+        || file.contains("/mock/");
+
+    is_test_name || is_test_file
+}
+
+/// Detects if the contract is an ERC-20 compliant token
+///
+/// ERC-20 tokens follow a standardized interface:
+/// - transfer(address, uint256)
+/// - transferFrom(address, address, uint256)
+/// - approve(address, uint256)
+/// - balanceOf(address)
+/// - totalSupply()
+/// - allowance(address, address)
+pub fn is_erc20_token(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for ERC20 interface indicator or explicit marker
+    if lower.contains("ierc20") || lower.contains("erc20") || lower.contains("erc-20") {
+        return true;
+    }
+
+    // Check for core ERC20 function signatures
+    let has_transfer = lower.contains("function transfer(address")
+        && lower.contains("uint256")
+        && lower.contains("returns (bool");
+    let has_transfer_from = lower.contains("function transferfrom(address");
+    let has_approve = lower.contains("function approve(address");
+    let has_balance_of = lower.contains("function balanceof(address");
+    let has_total_supply = lower.contains("function totalsupply(");
+    let has_allowance = lower.contains("function allowance(address");
+
+    // Must have at least 4 of the 6 core functions
+    let function_count = [
+        has_transfer,
+        has_transfer_from,
+        has_approve,
+        has_balance_of,
+        has_total_supply,
+        has_allowance,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    function_count >= 4
+}
+
+/// Detects if the contract is an ERC-721 compliant NFT
+///
+/// ERC-721 NFTs follow a standardized interface:
+/// - ownerOf(uint256)
+/// - balanceOf(address)
+/// - transferFrom(address, address, uint256)
+/// - safeTransferFrom(address, address, uint256)
+/// - approve(address, uint256)
+/// - setApprovalForAll(address, bool)
+pub fn is_erc721_token(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for ERC721 interface indicator
+    if lower.contains("ierc721") || lower.contains("erc721") || lower.contains("erc-721") {
+        return true;
+    }
+
+    // Check for core ERC721 function signatures
+    let has_owner_of = lower.contains("function ownerof(uint256");
+    let has_balance_of = lower.contains("function balanceof(address");
+    let has_safe_transfer = lower.contains("function safetransferfrom(");
+    let has_approval_for_all = lower.contains("function setapprovalforall(");
+    let has_get_approved = lower.contains("function getapproved(uint256");
+
+    // Check for NFT-specific patterns
+    let has_token_uri = lower.contains("function tokenuri(") || lower.contains("function tokenof(");
+
+    // Must have at least 3 core functions + token-specific patterns
+    let function_count = [
+        has_owner_of,
+        has_balance_of,
+        has_safe_transfer,
+        has_approval_for_all,
+        has_get_approved,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    function_count >= 3 || (function_count >= 2 && has_token_uri)
+}
+
+/// Detects if the contract is an ERC-1155 multi-token
+///
+/// ERC-1155 multi-tokens support batch operations:
+/// - balanceOf(address, uint256)
+/// - balanceOfBatch(address[], uint256[])
+/// - safeTransferFrom(address, address, uint256, uint256, bytes)
+/// - safeBatchTransferFrom(...)
+/// - setApprovalForAll(address, bool)
+pub fn is_erc1155_token(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for ERC1155 interface indicator
+    if lower.contains("ierc1155") || lower.contains("erc1155") || lower.contains("erc-1155") {
+        return true;
+    }
+
+    // Check for ERC1155-specific batch operations
+    let has_balance_of_batch = lower.contains("function balanceofbatch(");
+    let has_safe_batch_transfer = lower.contains("function safebatchtransferfrom(");
+
+    // Must have batch operations (these are unique to ERC1155)
+    has_balance_of_batch || has_safe_batch_transfer
+}
+
+/// Detects if the contract implements any standard ERC token interface
+pub fn is_standard_token(ctx: &AnalysisContext) -> bool {
+    is_erc20_token(ctx) || is_erc721_token(ctx) || is_erc1155_token(ctx) || is_erc4626_vault(ctx)
+}
+
+/// Detects if the contract is a factory pattern
+///
+/// Factory contracts create other contracts:
+/// - Name contains "Factory", "Deployer", "Registry"
+/// - Has create/deploy functions
+/// - Uses CREATE or CREATE2 opcode patterns
+pub fn is_factory_contract(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Factory naming patterns
+    let has_factory_name = name.contains("factory")
+        || name.contains("deployer")
+        || name.contains("creator")
+        || name.contains("registry");
+
+    // Factory function patterns
+    let has_create_function = lower.contains("function create(")
+        || lower.contains("function deploy(")
+        || lower.contains("function createpair(")
+        || lower.contains("function createpool(")
+        || lower.contains("function createtoken(");
+
+    // CREATE2 usage (deployment with deterministic address)
+    let has_create2 = lower.contains("create2(") || lower.contains("new ") && lower.contains("salt");
+
+    has_factory_name || (has_create_function && has_create2)
+}
+
+/// Detects if the contract is a bridge or cross-chain contract
+///
+/// Bridge contracts handle cross-chain communication:
+/// - Name contains "Bridge", "Relay", "CrossChain", "Gateway"
+/// - Has message relay functions
+/// - Has merkle proof verification
+pub fn is_bridge_contract(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Bridge naming patterns
+    let has_bridge_name = name.contains("bridge")
+        || name.contains("relay")
+        || name.contains("crosschain")
+        || name.contains("cross_chain")
+        || name.contains("gateway")
+        || name.contains("messenger");
+
+    // Bridge function patterns
+    let has_bridge_functions = (lower.contains("function relay")
+        || lower.contains("function finalize")
+        || lower.contains("function receivemessage")
+        || lower.contains("function sendmessage"))
+        && (lower.contains("proof") || lower.contains("merkle") || lower.contains("message"));
+
+    // L2/rollup specific patterns
+    let has_l2_patterns = lower.contains("l1") && lower.contains("l2")
+        || lower.contains("rollup")
+        || lower.contains("optimism")
+        || lower.contains("arbitrum");
+
+    has_bridge_name || has_bridge_functions || has_l2_patterns
+}
+
+/// Detects if the contract is an EIP-7702 delegation context
+///
+/// EIP-7702 contracts handle account delegation:
+/// - AUTH/AUTHCALL opcodes
+/// - setCode patterns
+/// - Delegation-related naming
+pub fn is_eip7702_context(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // EIP-7702 specific patterns (require 2+ indicators)
+    let has_auth = lower.contains("auth") && !lower.contains("authorize"); // AUTH opcode, not authorization
+    let has_authcall = lower.contains("authcall");
+    let has_setcode = lower.contains("setcode") || lower.contains("set_code");
+    let has_7702_marker = lower.contains("7702") || lower.contains("eip7702") || lower.contains("eip-7702");
+
+    // Account abstraction patterns
+    let has_aa_patterns = lower.contains("validateuserop")
+        || lower.contains("entrypoint")
+        || lower.contains("eip4337")
+        || lower.contains("useroperaction");
+
+    // Delegation naming
+    let has_delegation_name = name.contains("delegate")
+        || name.contains("delegation")
+        || name.contains("account")
+        || name.contains("wallet")
+        || name.contains("proxy");
+
+    // Count indicators
+    let indicator_count = [
+        has_auth,
+        has_authcall,
+        has_setcode,
+        has_7702_marker,
+        has_aa_patterns,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    // Require 2+ EIP-7702 specific indicators OR delegation context with AA patterns
+    indicator_count >= 2 || (has_delegation_name && has_aa_patterns)
+}
+
+/// Detects if the contract is an oracle implementation
+///
+/// Oracle contracts provide price/data feeds:
+/// - Chainlink AggregatorV3Interface patterns
+/// - TWAP oracle patterns
+/// - Custom price feed implementations
+pub fn is_oracle_implementation(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Oracle naming patterns
+    let has_oracle_name = name.contains("oracle")
+        || name.contains("pricefeed")
+        || name.contains("price_feed")
+        || name.contains("aggregator");
+
+    // Chainlink oracle patterns
+    let has_chainlink = lower.contains("aggregatorv3interface")
+        || lower.contains("latestrounddata")
+        || lower.contains("getlatestprice")
+        || lower.contains("pricefeed");
+
+    // TWAP oracle patterns
+    let has_twap = lower.contains("twap")
+        || lower.contains("pricecumulativelast")
+        || lower.contains("observe(")
+        || lower.contains("consult(");
+
+    // Must have oracle name AND implementation patterns
+    has_oracle_name && (has_chainlink || has_twap)
+}
+
+// ===========================================================================
+// TEXT PROCESSING UTILITIES FOR FALSE POSITIVE REDUCTION
+// ===========================================================================
+
+/// Remove single-line and multi-line comments from Solidity source code.
+/// This prevents pattern matching from triggering on comments or documentation.
+///
+/// Handles:
+/// - // single-line comments
+/// - /* multi-line comments */
+/// - /** NatSpec documentation */
+///
+/// Returns the source with all comments replaced by whitespace (preserving line numbers).
+pub fn remove_comments(source: &str) -> String {
+    let mut result = String::with_capacity(source.len());
+    let chars: Vec<char> = source.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+    let mut in_string = false;
+    let mut string_char = '"';
+
+    while i < len {
+        // Track string literals to avoid removing "comment-like" content inside strings
+        if !in_string && (chars[i] == '"' || chars[i] == '\'') {
+            in_string = true;
+            string_char = chars[i];
+            result.push(chars[i]);
+            i += 1;
+            continue;
+        }
+
+        if in_string {
+            // Check for escape sequence
+            if chars[i] == '\\' && i + 1 < len {
+                result.push(chars[i]);
+                result.push(chars[i + 1]);
+                i += 2;
+                continue;
+            }
+            // Check for end of string
+            if chars[i] == string_char {
+                in_string = false;
+            }
+            result.push(chars[i]);
+            i += 1;
+            continue;
+        }
+
+        // Check for single-line comment
+        if i + 1 < len && chars[i] == '/' && chars[i + 1] == '/' {
+            // Skip until end of line, preserving the newline
+            while i < len && chars[i] != '\n' {
+                result.push(' '); // Replace with space to preserve positions
+                i += 1;
+            }
+            continue;
+        }
+
+        // Check for multi-line comment
+        if i + 1 < len && chars[i] == '/' && chars[i + 1] == '*' {
+            // Skip until closing */
+            result.push(' ');
+            result.push(' ');
+            i += 2;
+            while i + 1 < len && !(chars[i] == '*' && chars[i + 1] == '/') {
+                if chars[i] == '\n' {
+                    result.push('\n'); // Preserve line breaks
+                } else {
+                    result.push(' ');
+                }
+                i += 1;
+            }
+            if i + 1 < len {
+                result.push(' ');
+                result.push(' ');
+                i += 2; // Skip the closing */
+            }
+            continue;
+        }
+
+        result.push(chars[i]);
+        i += 1;
+    }
+
+    result
+}
+
+/// Remove string literals from Solidity source code.
+/// This prevents pattern matching from triggering on strings like "send(" or "delegatecall".
+///
+/// Handles:
+/// - "double-quoted strings"
+/// - 'single-quoted strings'
+/// - hex"..." and hex'...' strings
+/// - Escape sequences within strings
+///
+/// Returns the source with all string literals replaced by empty quotes.
+pub fn remove_string_literals(source: &str) -> String {
+    let mut result = String::with_capacity(source.len());
+    let chars: Vec<char> = source.chars().collect();
+    let len = chars.len();
+    let mut i = 0;
+
+    while i < len {
+        // Check for hex string: hex"..." or hex'...'
+        if i + 4 < len
+            && chars[i] == 'h'
+            && chars[i + 1] == 'e'
+            && chars[i + 2] == 'x'
+            && (chars[i + 3] == '"' || chars[i + 3] == '\'')
+        {
+            let quote_char = chars[i + 3];
+            result.push_str("hex");
+            result.push(quote_char);
+            i += 4;
+            // Skip until closing quote
+            while i < len && chars[i] != quote_char {
+                if chars[i] == '\\' && i + 1 < len {
+                    i += 2; // Skip escape sequence
+                } else {
+                    i += 1;
+                }
+            }
+            if i < len {
+                result.push(quote_char);
+                i += 1;
+            }
+            continue;
+        }
+
+        // Check for regular string
+        if chars[i] == '"' || chars[i] == '\'' {
+            let quote_char = chars[i];
+            result.push(quote_char);
+            i += 1;
+            // Skip until closing quote
+            while i < len && chars[i] != quote_char {
+                if chars[i] == '\\' && i + 1 < len {
+                    i += 2; // Skip escape sequence
+                } else if chars[i] == '\n' {
+                    // Preserve newlines for line number accuracy
+                    result.push('\n');
+                    i += 1;
+                } else {
+                    i += 1;
+                }
+            }
+            if i < len {
+                result.push(quote_char);
+                i += 1;
+            }
+            continue;
+        }
+
+        result.push(chars[i]);
+        i += 1;
+    }
+
+    result
+}
+
+/// Clean source code by removing both comments and string literals.
+/// This is the primary function to call before keyword searching.
+///
+/// Use this before any `contains()` or regex matching to ensure
+/// patterns are found only in actual code, not comments or strings.
+pub fn clean_source_for_search(source: &str) -> String {
+    remove_string_literals(&remove_comments(source))
+}
+
+/// Find the actual line number(s) where a pattern appears in the source.
+/// Returns a vector of (line_number, line_content) tuples.
+///
+/// This should be used after detecting a pattern to report the correct
+/// line number instead of always reporting line 1.
+pub fn find_pattern_lines(source: &str, pattern: &str) -> Vec<(u32, String)> {
+    let mut results = Vec::new();
+    let cleaned = clean_source_for_search(source);
+
+    for (line_num, line) in cleaned.lines().enumerate() {
+        if line.contains(pattern) {
+            // Return the original line content (with comments/strings intact) for display
+            if let Some(original_line) = source.lines().nth(line_num) {
+                results.push(((line_num + 1) as u32, original_line.to_string()));
+            }
+        }
+    }
+
+    results
+}
+
+/// Find the first occurrence of a pattern and return its line number.
+/// Returns None if the pattern is not found in actual code.
+pub fn find_pattern_line(source: &str, pattern: &str) -> Option<u32> {
+    find_pattern_lines(source, pattern)
+        .first()
+        .map(|(line, _)| *line)
+}
+
+/// Check if a pattern exists in actual code (not in comments or strings).
+/// This is a safer replacement for `source.contains(pattern)`.
+pub fn contains_in_code(source: &str, pattern: &str) -> bool {
+    clean_source_for_search(source).contains(pattern)
+}
+
+/// Find function blocks that contain a specific pattern.
+/// Returns a vector of (start_line, end_line, function_source) tuples.
+///
+/// This allows for function-scoped analysis when checking patterns.
+pub fn find_function_blocks_with_pattern(
+    source: &str,
+    pattern: &str,
+) -> Vec<(u32, u32, String)> {
+    let mut results = Vec::new();
+    let lines: Vec<&str> = source.lines().collect();
+    let mut i = 0;
+
+    while i < lines.len() {
+        let line = lines[i].trim();
+
+        // Look for function definitions
+        if line.contains("function ")
+            || line.starts_with("constructor")
+            || line.starts_with("fallback")
+            || line.starts_with("receive")
+        {
+            let func_start = i;
+            let mut brace_count = 0;
+            let mut found_open_brace = false;
+            let mut func_end = i;
+
+            // Find the function body bounds
+            for j in i..lines.len() {
+                for ch in lines[j].chars() {
+                    if ch == '{' {
+                        brace_count += 1;
+                        found_open_brace = true;
+                    } else if ch == '}' {
+                        brace_count -= 1;
+                    }
+                }
+
+                if found_open_brace && brace_count == 0 {
+                    func_end = j;
+                    break;
+                }
+            }
+
+            // Extract the function source
+            let func_source = lines[func_start..=func_end].join("\n");
+
+            // Check if the pattern exists in this function (in actual code)
+            if contains_in_code(&func_source, pattern) {
+                results.push((
+                    (func_start + 1) as u32,
+                    (func_end + 1) as u32,
+                    func_source,
+                ));
+            }
+
+            i = func_end + 1;
+        } else {
+            i += 1;
+        }
+    }
+
+    results
+}
+
+/// Extract the function source code containing a specific line number.
+/// Returns (function_name, start_line, end_line, function_source) or None.
+pub fn get_containing_function(source: &str, target_line: u32) -> Option<(String, u32, u32, String)> {
+    let lines: Vec<&str> = source.lines().collect();
+    let target_idx = (target_line - 1) as usize;
+
+    if target_idx >= lines.len() {
+        return None;
+    }
+
+    // Walk backwards to find function start
+    let mut func_start: Option<usize> = None;
+    let mut func_name = String::new();
+
+    for i in (0..=target_idx).rev() {
+        let line = lines[i].trim();
+        if line.contains("function ") {
+            func_start = Some(i);
+            // Extract function name
+            if let Some(start) = line.find("function ") {
+                let after_func = &line[start + 9..];
+                if let Some(end) = after_func.find('(') {
+                    func_name = after_func[..end].trim().to_string();
+                }
+            }
+            break;
+        } else if line.starts_with("constructor") {
+            func_start = Some(i);
+            func_name = "constructor".to_string();
+            break;
+        } else if line.starts_with("fallback") {
+            func_start = Some(i);
+            func_name = "fallback".to_string();
+            break;
+        } else if line.starts_with("receive") {
+            func_start = Some(i);
+            func_name = "receive".to_string();
+            break;
+        }
+    }
+
+    // Return None if no function definition was found
+    let func_start = func_start?;
+
+    // Walk forward from function start to find function end
+    let mut brace_count = 0;
+    let mut found_open_brace = false;
+    let mut func_end = func_start;
+
+    for j in func_start..lines.len() {
+        for ch in lines[j].chars() {
+            if ch == '{' {
+                brace_count += 1;
+                found_open_brace = true;
+            } else if ch == '}' {
+                brace_count -= 1;
+            }
+        }
+
+        if found_open_brace && brace_count == 0 {
+            func_end = j;
+            break;
+        }
+    }
+
+    // Verify target line is within function bounds
+    if target_idx < func_start || target_idx > func_end {
+        return None;
+    }
+
+    let func_source = lines[func_start..=func_end].join("\n");
+    Some((
+        func_name,
+        (func_start + 1) as u32,
+        (func_end + 1) as u32,
+        func_source,
+    ))
+}
+
+/// Check if a line is inside a function body (not at contract level).
+/// Useful for distinguishing state variables from local variables.
+pub fn is_in_function_scope(source: &str, target_line: u32) -> bool {
+    get_containing_function(source, target_line).is_some()
+}
+
+/// Parse function signature and extract parameters.
+/// Returns a vector of (param_type, param_name) tuples.
+pub fn parse_function_params(func_signature: &str) -> Vec<(String, String)> {
+    let mut params = Vec::new();
+
+    // Find the parameter list
+    if let Some(start) = func_signature.find('(') {
+        if let Some(end) = func_signature.find(')') {
+            let param_str = &func_signature[start + 1..end];
+
+            for param in param_str.split(',') {
+                let param = param.trim();
+                if param.is_empty() {
+                    continue;
+                }
+
+                // Split by whitespace to get type and name
+                let parts: Vec<&str> = param.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    // Last part is the name, first part(s) are the type
+                    let name = parts.last().unwrap().to_string();
+                    let type_name = parts[..parts.len() - 1].join(" ");
+                    params.push((type_name, name));
+                } else if parts.len() == 1 {
+                    // Type only (interface definition)
+                    params.push((parts[0].to_string(), String::new()));
+                }
+            }
+        }
+    }
+
+    params
+}
+
+/// Check if a function has a specific modifier by name.
+pub fn has_modifier(func_source: &str, modifier_name: &str) -> bool {
+    // Look for the modifier in the function signature (before the opening brace)
+    if let Some(brace_pos) = func_source.find('{') {
+        let signature = &func_source[..brace_pos];
+        signature.contains(modifier_name)
+    } else {
+        false
+    }
+}
+
+/// Check if a function has any access control modifier.
+/// Looks for common patterns like onlyOwner, onlyAdmin, etc.
+pub fn has_access_control_modifier(func_source: &str) -> bool {
+    let access_modifiers = [
+        "onlyOwner",
+        "onlyAdmin",
+        "onlyAuthorized",
+        "onlyRole",
+        "onlyGovernance",
+        "onlyMinter",
+        "onlyBurner",
+        "restricted",
+        "authorized",
+        "whenNotPaused",
+    ];
+
+    access_modifiers
+        .iter()
+        .any(|&modifier| has_modifier(func_source, modifier))
+}
+
+/// Check if source code has explicit reentrancy protection.
+/// Looks for nonReentrant modifier, lock patterns, or ReentrancyGuard.
+pub fn has_reentrancy_protection(func_source: &str, contract_source: &str) -> bool {
+    // Check function-level protection
+    if has_modifier(func_source, "nonReentrant")
+        || has_modifier(func_source, "lock")
+        || func_source.contains("_reentrancyGuard")
+    {
+        return true;
+    }
+
+    // Check contract-level ReentrancyGuard inheritance
+    if contract_source.contains("ReentrancyGuard")
+        || contract_source.contains("reentrancy guard")
+    {
+        return true;
+    }
+
+    // Check for Uniswap V2 style lock pattern
+    if contract_source.contains("uint private unlocked")
+        && contract_source.contains("unlocked == 1")
+    {
+        return true;
+    }
+
+    // Check for transient storage reentrancy guard (EIP-1153)
+    if contract_source.contains("tstore") && contract_source.contains("tload") {
+        return true;
+    }
+
+    false
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn test_erc4626_detection() {
         // This would need a proper AnalysisContext mock
         // Placeholder for future tests
+    }
+
+    #[test]
+    fn test_remove_comments_single_line() {
+        let source = r#"
+contract Test {
+    // This is a comment with send( and delegatecall
+    uint public x;
+    function foo() public {
+        x = 1; // inline comment
+    }
+}
+"#;
+        let cleaned = remove_comments(source);
+        assert!(!cleaned.contains("This is a comment"));
+        assert!(!cleaned.contains("inline comment"));
+        assert!(cleaned.contains("uint public x"));
+        assert!(cleaned.contains("function foo()"));
+    }
+
+    #[test]
+    fn test_remove_comments_multiline() {
+        let source = r#"
+contract Test {
+    /* Multi-line comment
+       with send( and delegatecall
+       patterns */
+    uint public x;
+    /** NatSpec
+     * @notice Also removed
+     */
+    function foo() public {}
+}
+"#;
+        let cleaned = remove_comments(source);
+        assert!(!cleaned.contains("Multi-line"));
+        assert!(!cleaned.contains("NatSpec"));
+        assert!(cleaned.contains("uint public x"));
+    }
+
+    #[test]
+    fn test_remove_string_literals() {
+        let source = r#"
+contract Test {
+    string public name = "This has send( in it";
+    function foo() public {
+        require(true, "Error with delegatecall");
+    }
+}
+"#;
+        let cleaned = remove_string_literals(source);
+        assert!(!cleaned.contains("This has send"));
+        assert!(!cleaned.contains("Error with delegatecall"));
+        assert!(cleaned.contains("string public name"));
+    }
+
+    #[test]
+    fn test_contains_in_code() {
+        let source = r#"
+contract Test {
+    // send( in comment - should NOT match
+    /* delegatecall in block comment - should NOT match */
+    string s = "send( in string - should NOT match";
+
+    function foo() public {
+        address(this).send(100); // actual send - SHOULD match
+    }
+}
+"#;
+        assert!(contains_in_code(source, ".send("));
+        // The pattern "send(" appears multiple times, but only one is in actual code
+        let pattern_lines = find_pattern_lines(source, ".send(");
+        assert_eq!(pattern_lines.len(), 1);
+    }
+
+    #[test]
+    fn test_find_pattern_line() {
+        let source = r#"line1
+line2
+function test() {
+    send(value); // line 4
+}
+line6
+"#;
+        let line = find_pattern_line(source, "send(");
+        assert_eq!(line, Some(4));
+    }
+
+    #[test]
+    fn test_get_containing_function() {
+        let source = r#"
+contract Test {
+    uint public x;
+
+    function foo() public {
+        x = 1;
+        bar();
+    }
+
+    function bar() internal {
+        x = 2;
+    }
+}
+"#;
+        // Line 7 is inside foo()
+        let result = get_containing_function(source, 7);
+        assert!(result.is_some());
+        let (name, _, _, _) = result.unwrap();
+        assert_eq!(name, "foo");
+
+        // Line 3 (uint public x) is at contract level, not in a function
+        let result = get_containing_function(source, 3);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_has_access_control_modifier() {
+        let func_with_modifier = "function withdraw() external onlyOwner { }";
+        let func_without = "function withdraw() external { }";
+
+        assert!(has_access_control_modifier(func_with_modifier));
+        assert!(!has_access_control_modifier(func_without));
     }
 }

@@ -59,10 +59,21 @@ impl Detector for MevExtractableValueDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 9 FP Reduction: Skip test contracts
+        if utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Skip if this is an AMM pool - AMM pools INTENTIONALLY expose MEV
         // MEV extraction (arbitrage, liquidations) is how AMM pools maintain efficient pricing.
         // This detector should focus on contracts that CONSUME AMM data unsafely.
         if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard token contracts
+        // ERC20/ERC721 tokens themselves are not MEV targets
+        if utils::is_standard_token(ctx) {
             return Ok(findings);
         }
 
@@ -377,14 +388,16 @@ impl MevExtractableValueDetector {
         }
     }
 
-    /// Get function source code
+    /// Get function source code (cleaned to avoid FPs from comments/strings)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            // Clean source to avoid FPs from comments/strings
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

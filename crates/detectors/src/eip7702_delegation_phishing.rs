@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_eip7702_context};
 
 /// Detector for EIP-7702 delegation phishing vulnerabilities
 ///
@@ -194,12 +195,19 @@ impl Detector for Eip7702DelegationPhishingDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
-        // Check if this could be a delegation target
-        // If not a delegation target, skip most checks to avoid FPs
-        let is_delegation_target = self.is_delegation_target(source);
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
 
-        // Only check for phishing patterns in delegation-capable contracts
+        // Phase 9 FP Reduction: Use shared EIP-7702 context detection (requires 2+ indicators)
         // Regular contracts with similar patterns are legitimate
+        if !is_eip7702_context(ctx) {
+            return Ok(findings);
+        }
+
+        // Additional local check for delegation target patterns
+        let is_delegation_target = self.is_delegation_target(source);
         if !is_delegation_target {
             return Ok(findings);
         }

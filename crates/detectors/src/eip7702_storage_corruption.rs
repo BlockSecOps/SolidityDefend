@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_eip7702_context, is_standard_token};
 
 /// Detector for EIP-7702 storage corruption vulnerabilities
 ///
@@ -86,8 +87,9 @@ impl Eip7702StorageCorruptionDetector {
             }
         }
 
-        // Phase 6: Require at least 3 signals for detection (raised from 2)
-        signals >= 3
+        // Phase 6.1: Require at least 4 signals for detection (raised from 3)
+        // This reduces FPs by requiring stronger evidence of EIP-7702 context
+        signals >= 4
     }
 
     /// Check if contract is a standard ERC token (not a delegation target)
@@ -365,8 +367,18 @@ impl Detector for Eip7702StorageCorruptionDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Use shared EIP-7702 context detection (requires 2+ indicators)
+        if !is_eip7702_context(ctx) {
+            return Ok(findings);
+        }
+
         // Phase 6: Skip standard ERC tokens (not delegation targets)
-        if self.is_standard_token(source) {
+        if is_standard_token(ctx) || self.is_standard_token(source) {
             return Ok(findings);
         }
 
@@ -380,7 +392,7 @@ impl Detector for Eip7702StorageCorruptionDetector {
             return Ok(findings);
         }
 
-        // Check if this could be a delegation target
+        // Check if this could be a delegation target (additional local check)
         let is_delegation_target = self.is_potential_delegation_target(source);
         let uses_safe_slots = self.uses_eip1967_slots(source);
         let has_gap = self.has_storage_gap(source);
@@ -425,7 +437,8 @@ impl Detector for Eip7702StorageCorruptionDetector {
         }
 
         // Check for storage writes without safe patterns
-        if !uses_safe_slots && !has_gap {
+        // Phase 6.1: Only flag if this appears to be an EIP-7702 delegation target
+        if is_delegation_target && !uses_safe_slots && !has_gap {
             let writes = self.find_storage_writes(source);
             for (line, func_name) in writes.iter().take(2) {
                 let message = format!(

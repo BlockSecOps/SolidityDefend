@@ -55,6 +55,11 @@ impl Detector for ShadowingVariablesDetector {
     }
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
+        // Skip test/mock files where shadowing is often intentional
+        if self.should_skip_file(&ctx.file_path) {
+            return Ok(vec![]);
+        }
+
         let mut findings = Vec::new();
 
         // Collect state variable names
@@ -99,6 +104,21 @@ impl Detector for ShadowingVariablesDetector {
 }
 
 impl ShadowingVariablesDetector {
+    /// Check if this is a test or mock file where shadowing is intentional
+    fn should_skip_file(&self, file_path: &str) -> bool {
+        let path_lower = file_path.to_lowercase();
+        path_lower.contains("/test/")
+            || path_lower.contains("/tests/")
+            || path_lower.contains("/mock/")
+            || path_lower.contains("/mocks/")
+            || path_lower.contains("test.sol")
+            || path_lower.contains("mock.sol")
+            || path_lower.contains("_test.sol")
+            || path_lower.contains(".t.sol")  // Foundry test convention
+            || path_lower.contains("testhelper")
+            || path_lower.contains("mockcontract")
+    }
+
     fn collect_state_variables(&self, ctx: &AnalysisContext) -> Vec<String> {
         let mut state_vars = Vec::new();
         let contract_source = ctx.source_code.as_str();

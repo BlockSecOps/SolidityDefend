@@ -102,7 +102,8 @@ impl OrderFlowAuctionAbuseDetector {
             // Look for highest bid wins pattern
             if trimmed.contains("highestBid") || trimmed.contains("winningBid") {
                 let context_start = if line_num > 10 { line_num - 10 } else { 0 };
-                let context: String = lines[context_start..line_num + 5].join("\n");
+                let context_end = std::cmp::min(line_num + 5, lines.len());
+                let context: String = lines[context_start..context_end].join("\n");
 
                 // First-price auction without sealed bids
                 if !context.contains("sealed") && !context.contains("commit") {
