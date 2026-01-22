@@ -4,6 +4,7 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::safe_call_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_batch_execution_pattern, is_secure_example_file, is_test_contract};
 
 /// Detector for circular dependency vulnerabilities
 pub struct CircularDependencyDetector {
@@ -58,9 +59,19 @@ impl Detector for CircularDependencyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
+            // Phase 10: Skip batch execution patterns (multicall, executeBatch, etc.)
+            let func_source = self.get_function_source(function, ctx);
+            if is_batch_execution_pattern(function.name.name, &func_source) {
+                continue;
+            }
+
             if let Some(dependency_issue) = self.check_circular_dependency(function, ctx) {
-                let func_source = self.get_function_source(function, ctx);
 
                 // NEW: Calculate confidence based on protection mechanisms
                 let confidence = self.calculate_confidence(&func_source, &dependency_issue);

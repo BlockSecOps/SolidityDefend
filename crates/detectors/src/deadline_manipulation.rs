@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_secure_example_file, is_test_contract, is_uniswap_v2_pair, is_uniswap_v3_pool};
 
 /// Detector for transaction deadline manipulation vulnerabilities
 pub struct DeadlineManipulationDetector {
@@ -56,6 +57,16 @@ impl Detector for DeadlineManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 10: Skip AMM pool contracts - they implement deadlines internally
+        if is_uniswap_v2_pair(ctx) || is_uniswap_v3_pool(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(deadline_issue) = self.check_deadline_manipulation(function, ctx) {

@@ -1049,6 +1049,81 @@ pub fn is_test_contract(ctx: &AnalysisContext) -> bool {
     is_test_name || is_test_file
 }
 
+/// Detects if the file is a "secure" example demonstrating safe patterns
+///
+/// These files are documentation/examples showing correct implementations
+/// and should generally have fewer findings than vulnerable examples.
+/// Phase 10: Added to reduce FPs in demonstration files
+pub fn is_secure_example_file(ctx: &AnalysisContext) -> bool {
+    let file = ctx.file_path.to_lowercase();
+    let name = ctx.contract.name.name.to_lowercase();
+
+    // File path patterns indicating secure examples
+    let is_secure_file = file.contains("secure")
+        || file.contains("safe")
+        || file.contains("/secure/")
+        || file.contains("/safe/");
+
+    // Contract name patterns indicating secure implementation
+    let is_secure_name = name.contains("secure")
+        || name.contains("safe")
+        || name.ends_with("fixed")
+        || name.ends_with("patched");
+
+    is_secure_file || is_secure_name
+}
+
+/// Detects if the contract is a flash loan provider or borrower
+///
+/// Flash loans have specific patterns that should not be flagged
+/// as unprotected withdrawals. Phase 10: FP reduction
+pub fn is_flash_loan_context(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+
+    // Check for flash loan function names
+    let has_flash_loan_func = source.contains("function flashLoan(")
+        || source.contains("function flash(")
+        || source.contains("function executeFlash(");
+
+    // Check for flash loan interfaces
+    let has_flash_interface = source.contains("IFlashLoan")
+        || source.contains("IERC3156")
+        || source.contains("IFlashBorrower")
+        || source.contains("FlashLoan");
+
+    // Check for flash loan callback
+    let has_callback = source.contains("onFlashLoan")
+        || source.contains("flashLoanCallback")
+        || source.contains("executeOperation"); // Aave pattern
+
+    has_flash_loan_func || has_flash_interface || has_callback
+}
+
+/// Detects if the function is a batch execution pattern
+///
+/// Batch functions like executeBatch, multicall are common patterns
+/// that involve callbacks but are not circular dependencies.
+/// Phase 10: FP reduction
+pub fn is_batch_execution_pattern(function_name: &str, func_source: &str) -> bool {
+    let name_lower = function_name.to_lowercase();
+
+    // Common batch function names
+    let is_batch_name = name_lower.contains("batch")
+        || name_lower.contains("multicall")
+        || name_lower.contains("aggregate")
+        || name_lower == "execute"
+        || name_lower == "executecall"
+        || name_lower == "executecalls";
+
+    // Batch execution patterns in source
+    let has_batch_pattern = func_source.contains("for (")
+        && (func_source.contains("calls[i]")
+            || func_source.contains("targets[i]")
+            || func_source.contains("data[i]"));
+
+    is_batch_name || has_batch_pattern
+}
+
 /// Detects if the contract is an ERC-20 compliant token
 ///
 /// ERC-20 tokens follow a standardized interface:

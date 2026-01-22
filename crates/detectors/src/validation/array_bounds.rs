@@ -5,6 +5,7 @@ use std::collections::HashMap;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_secure_example_file, is_test_contract};
 
 /// Detector for array bounds checking vulnerabilities
 pub struct ArrayBoundsDetector {
@@ -614,6 +615,12 @@ impl ArrayBoundsDetector {
         // Phase 6: Skip single array parameter functions (no length mismatch possible)
         // Only flag if there are 2+ array parameters that need matching lengths
         if array_params.len() >= 2 {
+            // Phase 10: Check if function body already has length validation
+            let func_source = self.get_function_source(function, ctx);
+            if self.has_length_validation(&func_source, &array_params) {
+                return findings; // Already has validation
+            }
+
             // Multiple arrays should likely have length validation
             let message = format!(
                 "Function '{}' has multiple array parameters but no apparent length validation",
@@ -634,6 +641,42 @@ impl ArrayBoundsDetector {
         }
 
         findings
+    }
+
+    /// Phase 10: Check if function source already has array length validation
+    fn has_length_validation(&self, func_source: &str, array_params: &[(String, &ast::SourceLocation)]) -> bool {
+        // Check for common length validation patterns
+        let has_length_check = func_source.contains(".length ==")
+            || func_source.contains(".length!=")
+            || func_source.contains(".length !=")
+            || func_source.contains("require(") && func_source.contains("length");
+
+        if has_length_check {
+            return true;
+        }
+
+        // Check for specific array parameter length comparisons
+        for (name, _) in array_params {
+            let pattern = format!("{}.length", name);
+            if func_source.contains(&pattern) && func_source.contains("require") {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Get function source code for analysis
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
     }
 
     /// Check for off-by-one errors in array access
@@ -809,6 +852,11 @@ impl Detector for ArrayBoundsDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {

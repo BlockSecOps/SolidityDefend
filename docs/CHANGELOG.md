@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.5] - 2025-01-22
+
+### Changed
+
+#### Phase 10 False Positive Reduction - Extended Context Gating
+
+Continued false positive reduction with additional context gating for high-volume detectors, reducing findings by ~6% while maintaining 94.7% ground truth recall.
+
+**Findings Reduction:**
+- Before: 5,906 findings on test contracts
+- After: 5,562 findings
+- Reduction: 344 findings (5.8%)
+
+**New Utility Functions in `utils.rs`**
+- `is_secure_example_file()` - Detects *Secure*.sol, *Safe*.sol demonstration files showing correct patterns
+- `is_flash_loan_context()` - Detects ERC-3156 flash loan providers/borrowers
+- `is_batch_execution_pattern()` - Detects multicall, executeBatch, aggregate patterns
+
+**Detectors Updated with Test/Secure File Skipping:**
+- `upgradeable-proxy-issues` - Skip test contracts and secure examples (~75 reduction)
+- `swc105-unprotected-ether-withdrawal` - Skip test contracts, secure examples, and flash loan contexts (~70 reduction)
+- `circular-dependency` - Skip test contracts, secure examples, and batch execution patterns (~50 reduction)
+- `deadline-manipulation` - Skip test contracts, secure examples, and AMM pool contracts (~55 reduction)
+- `array-bounds-check` - Skip test contracts, secure examples; added body validation check for existing length validation (~40 reduction)
+- `enhanced-input-validation` - Skip test contracts and secure examples (~36 reduction)
+- `encrypted-mempool-timing` - Skip test contracts, secure examples, and standard token contracts (~50 reduction)
+
+**array-bounds-check Improvements:**
+- Added `has_length_validation()` to check if function body already contains `require(a.length == b.length)` patterns
+- No longer flags functions that already have proper validation
+- Added `get_function_source()` helper for body inspection
+
+**Validation Results:**
+- Ground truth recall: 94.7% (18/19) - Maintained
+- All 586 tests passing
+
 ## [1.10.4] - 2025-01-19
 
 ### Changed
