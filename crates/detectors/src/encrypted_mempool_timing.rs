@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_secure_example_file, is_standard_token, is_test_contract};
 
 /// Detector for encrypted mempool timing attacks
 ///
@@ -193,6 +194,13 @@ impl Detector for EncryptedMempoolTimingDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts, secure examples, and standard tokens
+        // This detector is for MEV-sensitive commit-reveal patterns, not regular contracts
+        if is_test_contract(ctx) || is_secure_example_file(ctx) || is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

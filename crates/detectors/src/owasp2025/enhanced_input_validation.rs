@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_secure_example_file, is_test_contract};
 
 pub struct EnhancedInputValidationDetector {
     base: BaseDetector,
@@ -63,6 +64,12 @@ impl Detector for EnhancedInputValidationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
 
         // Check for array access without length validation

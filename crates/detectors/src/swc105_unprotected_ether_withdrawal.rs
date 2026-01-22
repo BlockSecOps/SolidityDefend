@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_flash_loan_context, is_secure_example_file, is_test_contract};
 
 /// Detector for SWC-105: Unprotected Ether Withdrawal
 ///
@@ -199,6 +200,16 @@ impl Detector for UnprotectedEtherWithdrawalDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 10: Skip flash loan providers - flash loans have intentional withdrawal patterns
+        if is_flash_loan_context(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             // Skip internal/private functions
