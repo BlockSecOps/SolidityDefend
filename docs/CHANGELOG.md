@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.8] - 2026-01-23
+
+### Fixed
+
+#### Phase 12 False Positive Reduction - Additional Context Gating
+
+Additional FP reduction for 7 detectors through improved context detection and OpenZeppelin pattern recognition.
+
+**access_control.rs (UnprotectedInitializerDetector)**
+- Recognize OpenZeppelin's `initializer`, `reinitializer`, and `onlyInitializing` modifiers as proper protection
+
+**guardian_role_centralization.rs**
+- Require actual guardian role infrastructure (state var + modifier/setter)
+- No longer flags contracts with just `emergencyWithdraw()` function names
+
+**nft_mint_mev.rs**
+- Added `is_nft_contract()` helper function
+- Only flags NFT contracts (ERC721/ERC1155), not ERC20 tokens
+
+**token_supply_manipulation.rs**
+- Skip access control management functions (addMinter, removeMinter, grantRole, etc.)
+- Only flag if function actually contains `_mint()` or `_burn()` calls
+
+**vault_share_inflation.rs**
+- Only analyze ERC4626 vaults, not simple ERC20 tokens
+
+**utils.rs**
+- Improved `is_erc4626_vault()` with 3-path detection
+
+**centralization_risk.rs, priority_gas_auction.rs, upgradeable_proxy_issues.rs**
+- Additional context gating improvements
+
+All 604 detector tests pass.
+
 ## [1.10.7] - 2026-01-23
 
 ### Changed
