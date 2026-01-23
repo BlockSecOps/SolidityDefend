@@ -11,7 +11,7 @@ class Soliditydefend < Formula
       sha256 "07e458f4268cc8aec7c95a6a9e6a68c2b0a5927f5e8fcc6e8e0c04ec6574fe98"
     else
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.5/soliditydefend-v1.10.5-darwin-x86_64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_X86_64"
+      sha256 "1808f1fbeb0e9dc8b67529f294f30a85fe12eeda84e50b1f8ce9ef9644a42537"
     end
   end
 
