@@ -171,7 +171,22 @@ impl UpgradeableProxyIssuesDetector {
             || func_source.contains("implementation")
             || function.name.name.to_lowercase().contains("upgrade");
 
+        // CRITICAL FP FIX: Check for OpenZeppelin modifiers on the function
+        let has_oz_access_control = function.modifiers.iter().any(|m| {
+            let name = m.name.name.to_lowercase();
+            name.contains("owner")
+                || name.contains("admin")
+                || name.contains("role")
+                || name.contains("authorized")
+        });
+
+        // Check for UUPS pattern where _authorizeUpgrade is internal with onlyOwner
+        let is_uups_authorize = function.name.name == "_authorizeUpgrade"
+            || function.name.name.to_lowercase().contains("authorizeupgrade");
+
         let lacks_access_control = is_upgrade_function
+            && !is_uups_authorize  // UUPS _authorizeUpgrade is called internally
+            && !has_oz_access_control
             && !func_source.contains("onlyOwner")
             && !func_source.contains("onlyAdmin")
             && !func_source.contains("require(msg.sender");
@@ -188,10 +203,22 @@ impl UpgradeableProxyIssuesDetector {
         let is_initialize = func_source.contains("initialize")
             || function.name.name.to_lowercase().contains("initialize");
 
-        let no_initialization_guard = is_initialize
-            && !func_source.contains("initializer")
-            && !func_source.contains("initialized")
-            && !func_source.contains("require(!initialized");
+        // CRITICAL FP FIX: Check for OpenZeppelin's initializer modifier on the function
+        // The modifier is recognized by checking both the function source AND the modifier list
+        let has_oz_initializer_modifier = function.modifiers.iter().any(|m| {
+            let name = m.name.name.to_lowercase();
+            name == "initializer" || name.contains("reinitializer")
+        });
+
+        // Also check for contract-level initialization protection
+        let contract_source = ctx.source_code.as_str();
+        let has_initialization_protection = has_oz_initializer_modifier
+            || func_source.contains("initialized = true")
+            || func_source.contains("_initialized")
+            || func_source.contains("require(!initialized")
+            || (contract_source.contains("Initializable") && func_source.contains("initializer"));
+
+        let no_initialization_guard = is_initialize && !has_initialization_protection;
 
         if no_initialization_guard {
             return Some(

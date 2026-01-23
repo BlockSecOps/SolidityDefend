@@ -4,6 +4,7 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for vault share inflation attacks (first depositor attack)
 pub struct VaultShareInflationDetector {
@@ -57,6 +58,18 @@ impl Detector for VaultShareInflationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // CRITICAL FP FIX: Only analyze ERC4626 vaults, not simple ERC20 tokens
+        // Vault share inflation is specific to ERC4626 vaults with share/asset conversion.
+        // A simple ERC20 with mint() is NOT a vault.
+        if !utils::is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
+        // Also skip simple tokens that might have some vault-like functions
+        if utils::is_simple_token(ctx) {
+            return Ok(findings);
+        }
 
         // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
 

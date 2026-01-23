@@ -135,6 +135,27 @@ impl TokenSupplyManipulationDetector {
             return None;
         }
 
+        // P1 FP FIX: Skip access control management functions
+        // These functions manage WHO can mint, not the actual minting itself
+        // Examples: addMinter, removeMinter, grantMinterRole, revokeMinterRole, setMinter
+        let is_access_control_management = func_name_lower.starts_with("add")
+            || func_name_lower.starts_with("remove")
+            || func_name_lower.starts_with("grant")
+            || func_name_lower.starts_with("revoke")
+            || func_name_lower.starts_with("set")
+            || func_name_lower.starts_with("update")
+            || func_name_lower.contains("role")
+            || func_name_lower == "renounceminter"
+            || func_name_lower == "transfermintership";
+
+        if is_access_control_management {
+            // Double-check: access control functions shouldn't contain _mint() calls
+            // If they do, they're actually minting functions disguised as admin functions
+            if !func_source.contains("_mint(") && !func_source.contains("_burn(") {
+                return None;
+            }
+        }
+
         // Check if function affects token supply
         let affects_supply = func_source.contains("mint")
             || func_source.contains("burn")

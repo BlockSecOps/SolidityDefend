@@ -22,9 +22,11 @@ impl CentralizationRiskDetector {
             base: BaseDetector::new(
                 DetectorId("centralization-risk".to_string()),
                 "Centralization Risk".to_string(),
-                "Detects dangerous concentration of control in single address or entity creating single points of failure".to_string(),
+                "Detects concentration of control that may create single points of failure".to_string(),
                 vec![DetectorCategory::AccessControl],
-                Severity::High,
+                // P1 FIX: Default to Medium - severity is calibrated per finding
+                // Simple Ownable patterns are INFO, dangerous patterns are HIGH
+                Severity::Medium,
             ),
         }
     }
@@ -125,39 +127,64 @@ impl CentralizationRiskDetector {
         // Clean source to avoid FPs from comments/strings
         let contract_source = utils::clean_source_for_search(ctx.source_code.as_str());
 
-        // Pattern 1: Single owner with no multi-sig
-        let has_owner = contract_source.contains("address public owner")
-            || contract_source.contains("address private owner");
+        // P1 FP FIX: Recognize OpenZeppelin Ownable as standard accepted pattern
+        // This is the most common access control pattern in production contracts
+        let uses_oz_ownable = ctx.source_code.contains("Ownable")
+            || ctx.source_code.contains("import \"@openzeppelin")
+            || ctx.source_code.contains("import '@openzeppelin");
+
+        // P1 FP FIX: Only flag truly dangerous centralization
+        // Standard Ownable without extra risk factors is just a design choice
+
+        // Check for dangerous combinations that warrant HIGH severity
+        let has_selfdestruct = contract_source.contains("selfdestruct")
+            || contract_source.contains("suicide");
+
+        let has_arbitrary_token_transfer = contract_source.contains("transferFrom(address(this)")
+            || contract_source.contains(".transfer(owner")
+            || contract_source.contains(".transfer(msg.sender")
+            && contract_source.contains("onlyOwner");
+
+        // If using OZ Ownable without dangerous patterns, skip entirely
+        // This is a standard, well-audited pattern
+        if uses_oz_ownable && !has_selfdestruct && !has_arbitrary_token_transfer {
+            return None;
+        }
 
         let has_multisig = contract_source.contains("multisig")
             || contract_source.contains("MultiSig")
             || contract_source.contains("Gnosis")
             || contract_source.contains("threshold");
 
-        if has_owner && !has_multisig {
+        // Pattern 1: Dangerous centralization - selfdestruct controlled by single owner
+        if has_selfdestruct && !has_multisig {
             return Some(
-                "Contract uses single owner without multi-signature protection. \
-                Single private key compromise leads to total contract control"
+                "Contract has selfdestruct controllable by single address. \
+                Owner can permanently destroy contract and steal funds"
                     .to_string(),
             );
         }
 
-        // Pattern 2: Critical functions without timelock
-        // Be more specific to avoid FPs: look for actual function definitions
-        let has_critical_ops = contract_source.contains("function withdraw")
-            || contract_source.contains("function pause")
-            || contract_source.contains("function upgrade");
-
-        let has_timelock = contract_source.contains("timelock")
-            || contract_source.contains("delay")
-            || contract_source.contains("TimeLock");
-
-        if has_critical_ops && !has_timelock && !has_multisig {
+        // Pattern 2: Owner can drain arbitrary tokens without restriction
+        if has_arbitrary_token_transfer && !has_multisig {
             return Some(
-                "Critical operations (withdraw/pause/upgrade) lack timelock delays. \
-                Malicious owner can drain funds or brick contract instantly"
+                "Owner can transfer arbitrary tokens from contract without timelock. \
+                Single key compromise enables immediate fund extraction"
                     .to_string(),
             );
+        }
+
+        // Skip basic Ownable warnings - they're design choices, not vulnerabilities
+        // Pattern 3: Only flag non-OZ owner patterns as info
+        let has_custom_owner = (contract_source.contains("address public owner")
+            || contract_source.contains("address private owner"))
+            && !uses_oz_ownable;
+
+        if has_custom_owner && !has_multisig {
+            // This is INFO-level - a design consideration, not a vulnerability
+            // Return None to skip, or could return with reduced severity
+            // For now, skip to reduce noise
+            return None;
         }
 
         None
@@ -173,43 +200,57 @@ impl CentralizationRiskDetector {
         let func_source = self.get_function_source(function, ctx);
         let func_name = &function.name.name;
 
-        // Pattern 1: Owner-only critical functions
+        // P1 FP FIX: Recognize OpenZeppelin patterns as standard and accepted
+        let uses_oz_patterns = ctx.source_code.contains("Ownable")
+            || ctx.source_code.contains("@openzeppelin")
+            || ctx.source_code.contains("AccessControl");
+
+        // Pattern 1: Only flag DANGEROUS critical functions, not standard admin
         let is_owner_check =
             func_source.contains("msg.sender == owner") || func_source.contains("onlyOwner");
 
-        let is_critical_function = func_name.contains("withdraw")
-            || func_name.contains("pause")
-            || func_name.contains("unpause")
-            || func_name.contains("upgrade")
-            || func_name.contains("setOwner")
-            || func_name.contains("destroy")
-            || func_name.contains("kill");
+        // P1 FP FIX: Separate truly dangerous functions from standard admin
+        // Standard admin: pause, unpause, setFee, updateConfig - these are expected
+        // Dangerous: destroy, kill, selfdestruct, drain, rugpull
+        let is_dangerous_function = func_name.to_lowercase().contains("destroy")
+            || func_name.to_lowercase().contains("kill")
+            || func_name.to_lowercase().contains("selfdestruct")
+            || func_name.to_lowercase().contains("drain")
+            || func_source.contains("selfdestruct");
 
-        if is_owner_check && is_critical_function {
+        // Only flag truly dangerous functions
+        if is_owner_check && is_dangerous_function {
             let has_decentralization = func_source.contains("require(multisig")
                 || func_source.contains("timelock")
                 || func_source.contains("governance");
 
             if !has_decentralization {
                 return Some(format!(
-                    "Critical '{}' function restricted to single owner without multi-sig or timelock. \
-                    Single point of failure for critical operation",
+                    "Dangerous '{}' function controlled by single owner. \
+                    This function can cause irreversible damage or fund loss",
                     func_name
                 ));
             }
         }
 
-        // Pattern 2: Emergency functions without safeguards
-        if func_name.contains("emergency") || func_name.contains("Emergency") {
+        // Pattern 2: Emergency functions - only flag if they can drain funds
+        // Standard emergency pause is acceptable, emergency withdraw needs scrutiny
+        if func_name.to_lowercase().contains("emergency") {
+            // Check if this emergency function can move funds
+            let can_move_funds = func_source.contains("transfer(")
+                || func_source.contains("call{value:")
+                || func_source.contains("safeTransfer(");
+
             let has_safeguards = func_source.contains("multisig")
                 || func_source.contains("timelock")
                 || func_source.contains("governance")
                 || func_source.contains("threshold");
 
-            if !has_safeguards {
+            // Only flag fund-moving emergency functions without safeguards
+            if can_move_funds && !has_safeguards && !uses_oz_patterns {
                 return Some(format!(
-                    "Emergency function '{}' lacks multi-party approval. \
-                    Can be abused by single compromised key",
+                    "Emergency function '{}' can move funds without multi-party approval. \
+                    Consider adding timelock or multisig requirement",
                     func_name
                 ));
             }
@@ -240,7 +281,8 @@ mod tests {
     fn test_detector_properties() {
         let detector = CentralizationRiskDetector::new();
         assert_eq!(detector.name(), "Centralization Risk");
-        assert_eq!(detector.default_severity(), Severity::High);
+        // P1 FIX: Default severity changed to Medium (calibrated per finding)
+        assert_eq!(detector.default_severity(), Severity::Medium);
         assert!(detector.is_enabled());
     }
 }

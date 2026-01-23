@@ -1,16 +1,30 @@
 /// Shared utility functions for context detection and pattern recognition
 use crate::types::AnalysisContext;
 
-/// Detects if the contract is an ERC-4626 compliant vault
+/// Detects if the contract is an ERC-4626 compliant vault or vault-like contract
 ///
-/// ERC-4626 vaults have specific characteristics:
+/// ERC-4626 vaults and vault-like contracts have specific characteristics:
 /// - Mint/burn shares (not tokens) - shares don't need max supply caps
-/// - Must have deposit/withdraw/redeem functions
+/// - May have deposit/withdraw/redeem functions
+/// - Use share/asset conversion calculations
 /// - Transfers underlying assets via external calls (normal behavior)
+///
+/// This check is intentionally inclusive to catch vault-like patterns that
+/// may be vulnerable to share inflation attacks, while excluding simple tokens.
 pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
 
-    // Check for ERC-4626 interface functions
+    // Path 1: Strict ERC-4626 compliance (explicit interface)
+    let has_erc4626_explicit = source.contains("ERC4626")
+        || source.contains("IERC4626")
+        || source.contains("ERC-4626");
+
+    if has_erc4626_explicit {
+        return true;
+    }
+
+    // Path 2: Standard ERC-4626 function signatures
     let has_deposit = source.contains("function deposit(");
     let has_withdraw = source.contains("function withdraw(");
     let has_redeem = source.contains("function redeem(");
@@ -21,13 +35,55 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     let has_shares = source.contains("shares") || source.contains("_shares");
     let has_assets = source.contains("asset") || source.contains("_asset");
 
-    // Must have at least 3 of the 4 core functions + share/asset mentions
+    // Strict ERC4626: at least 3 of the 4 core functions + share/asset mentions
     let function_count = [has_deposit, has_withdraw, has_redeem, has_total_assets]
         .iter()
         .filter(|&&x| x)
         .count();
 
-    function_count >= 3 && has_shares && has_assets
+    if function_count >= 3 && has_shares && has_assets {
+        return true;
+    }
+
+    // Path 3: Vault-LIKE contracts with share calculation patterns
+    // These are contracts that have share-based accounting even if not strict ERC4626
+    // This is important for detecting share inflation vulnerabilities
+
+    // Must have deposit OR mint function
+    let has_deposit_or_mint = has_deposit || source.contains("function mint(");
+
+    // Must have totalAssets or totalSupply (for share calculation)
+    let has_total_supply = lower.contains("totalsupply");
+    let has_share_calculation = has_total_assets || has_total_supply;
+
+    // Must have shares variable or return type
+    let has_share_returns = has_shares
+        || lower.contains("returns (uint256 shares)")
+        || lower.contains("return shares");
+
+    // Must have share-to-asset conversion patterns (the core of vault logic)
+    let has_conversion = lower.contains("converttoshares")
+        || lower.contains("converttoassets")
+        || lower.contains("* totalsupply")
+        || lower.contains("/ totalassets")
+        || lower.contains("shares =");
+
+    // Vault-like: has deposit/mint + share calculation + share returns + conversion
+    let is_vault_like =
+        has_deposit_or_mint && has_share_calculation && has_share_returns && has_conversion;
+
+    // Exclude simple ERC20 tokens without vault mechanics
+    if is_vault_like {
+        // Simple ERC20 check: has transfer but NO conversion/totalAssets
+        let is_simple_erc20 = (source.contains("ERC20") || source.contains("IERC20"))
+            && !has_total_assets
+            && !lower.contains("converttoshares")
+            && !lower.contains("converttoassets");
+
+        return !is_simple_erc20;
+    }
+
+    false
 }
 
 /// Detects if the contract is an ERC-3156 flash loan provider
