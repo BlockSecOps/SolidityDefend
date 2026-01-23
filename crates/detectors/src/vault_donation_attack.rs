@@ -59,6 +59,14 @@ impl Detector for VaultDonationAttackDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Context gate: Only analyze actual ERC-4626 vaults
+        // This detector is specifically for vault donation attacks, which only apply
+        // to ERC-4626 share-based vaults. Simple ERC20 tokens or other contracts
+        // should not be analyzed.
+        if !utils::is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
         // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
 
         // Level 1: Strong protections (return early - no findings)

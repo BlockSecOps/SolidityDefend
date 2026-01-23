@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.9] - 2026-01-23
+
+### Fixed
+
+#### Phase 13 False Positive Reduction - Medium Priority Detectors
+
+Comprehensive FP reduction for 3 medium priority detectors through stricter context gating.
+
+**token-decimal-confusion (131 FPs reduced)**
+- Added `is_decimal_sensitive_contract()` - requires actual multi-token infrastructure
+- Added `handles_decimals_properly()` - recognizes proper decimal handling patterns
+- Added `has_cross_token_arithmetic()` - only flags actual cross-token calculations
+- Added `has_price_oracle_pattern()` - requires actual oracle infrastructure (not just "price" keyword)
+- No longer flags simple ERC20 tokens or contracts without cross-token arithmetic
+
+**lending-borrow-bypass (90 FPs reduced)**
+- Added `is_lending_implementation()` context gate
+- Requires actual lending infrastructure (borrowed state, collateral tracking)
+- Must have at least one lending indicator (healthFactor, liquidation, repay, etc.)
+- No longer flags Oracle contracts, helper contracts, or vault withdrawal functions
+
+**vault-donation-attack (55 FPs reduced)**
+- Added ERC-4626 vault check at contract level using `is_erc4626_vault()`
+- Only analyzes actual ERC-4626 vaults, not simple ERC20 tokens
+- Existing function-level checks now only run after contract-level gating passes
+
+All 604 detector tests pass.
+
 ## [1.10.8] - 2026-01-23
 
 ### Fixed
