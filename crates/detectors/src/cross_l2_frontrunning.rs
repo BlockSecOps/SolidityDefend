@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for cross-L2 frontrunning vulnerabilities
 ///
@@ -266,6 +267,14 @@ impl Detector for CrossL2FrontrunningDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
+        // This detector should NOT flag simple L1 contracts with regular withdraw functions.
+        // Cross-L2 frontrunning only applies to contracts with actual cross-chain functionality.
+        if !utils::is_l2_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

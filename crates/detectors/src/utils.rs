@@ -1838,6 +1838,307 @@ pub fn has_reentrancy_protection(func_source: &str, contract_source: &str) -> bo
     false
 }
 
+// ===========================================================================
+// PHASE 10 FP REDUCTION: CONTRACT TYPE DETECTION FOR DOMAIN-SPECIFIC DETECTORS
+// ===========================================================================
+
+/// Detects if the contract is an L2 or cross-chain contract
+///
+/// L2/cross-chain contracts have specific characteristics:
+/// - Bridge interfaces (IL1Bridge, IL2Bridge, ICrossChainMessenger)
+/// - Cross-domain messaging functions
+/// - L1/L2 specific terminology
+/// - Rollup-specific patterns (sequencer, batch, proof)
+///
+/// Used to prevent L2-specific detectors from flagging simple L1 contracts.
+pub fn is_l2_contract(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for L2/bridge imports and interfaces
+    let has_bridge_imports = source.contains("IL1Bridge")
+        || source.contains("IL2Bridge")
+        || source.contains("ICrossChainMessenger")
+        || source.contains("ICrossDomainMessenger")
+        || source.contains("IMailbox")
+        || source.contains("IOutbox")
+        || source.contains("IInbox")
+        || source.contains("IArbSys")
+        || source.contains("IScrollMessenger")
+        || source.contains("IZkSync");
+
+    // Check for L2-specific terminology
+    let has_l2_terminology = lower.contains("l1bridge")
+        || lower.contains("l2bridge")
+        || lower.contains("l1messenger")
+        || lower.contains("l2messenger")
+        || lower.contains("crossdomainmessenger")
+        || lower.contains("arbitrum")
+        || lower.contains("optimism")
+        || lower.contains("zksync")
+        || lower.contains("scroll")
+        || lower.contains("starknet")
+        || lower.contains("polygon")
+        || lower.contains("rollup");
+
+    // Check for cross-chain messaging functions
+    let has_messaging_functions = lower.contains("sendmessage")
+        || lower.contains("relaymessage")
+        || lower.contains("onmessage")
+        || lower.contains("receivemessage")
+        || lower.contains("sendcrossdomainmessage")
+        || lower.contains("xdomainmessagesender")
+        || lower.contains("deposittransaction")
+        || lower.contains("createretryableticket");
+
+    // Check for sequencer/batch patterns (rollup-specific)
+    let has_rollup_patterns = lower.contains("sequencer")
+        || lower.contains("batchposter")
+        || lower.contains("forceinclusion")
+        || lower.contains("finalizationperiod")
+        || lower.contains("withdrawalproof")
+        || lower.contains("stateroot");
+
+    // Check for L1/L2 block references
+    let has_l1_l2_refs = (lower.contains("l1blocknumber") || lower.contains("l1block"))
+        && !lower.contains("// l1");  // Exclude comments
+
+    // Must have at least 2 strong indicators
+    let indicator_count = [
+        has_bridge_imports,
+        has_l2_terminology,
+        has_messaging_functions,
+        has_rollup_patterns,
+        has_l1_l2_refs,
+    ]
+    .iter()
+    .filter(|&&x| x)
+    .count();
+
+    indicator_count >= 2
+}
+
+/// Detects if the contract is a simple token (ERC20/ERC721/ERC1155)
+/// without DeFi protocol complexity.
+///
+/// Simple tokens have:
+/// - Standard token transfer functions
+/// - Balance tracking
+/// - Optional minting/burning
+/// - NO: swap, liquidity, lending, staking, or other DeFi patterns
+///
+/// Used to prevent DeFi-specific detectors from flagging standard tokens.
+pub fn is_simple_token(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for ERC20/ERC721/ERC1155 patterns
+    let has_token_interface = source.contains("IERC20")
+        || source.contains("ERC20")
+        || source.contains("IERC721")
+        || source.contains("ERC721")
+        || source.contains("IERC1155")
+        || source.contains("ERC1155");
+
+    // Check for standard token functions
+    let has_transfer = lower.contains("function transfer(")
+        || lower.contains("function transferfrom(")
+        || lower.contains("function safetransfer(")
+        || lower.contains("function safetransferfrom(");
+
+    let has_balance_tracking = lower.contains("balanceof")
+        || lower.contains("_balances")
+        || lower.contains("ownerof");
+
+    // Check for token standards
+    let is_token_standard = (has_token_interface || has_transfer) && has_balance_tracking;
+
+    if !is_token_standard {
+        return false;
+    }
+
+    // Exclude DeFi protocols - these are NOT simple tokens
+    let has_defi_patterns = lower.contains("addliquidity")
+        || lower.contains("removeliquidity")
+        || lower.contains("function swap(")
+        || lower.contains("getreserves")
+        || lower.contains("function borrow(")
+        || lower.contains("function repay(")
+        || lower.contains("collateral")
+        || lower.contains("liquidat")
+        || lower.contains("function stake(")
+        || lower.contains("function unstake(")
+        || lower.contains("flashloan")
+        || lower.contains("oracle")
+        || lower.contains("reserve0")
+        || lower.contains("converttoassets")
+        || lower.contains("converttoshares");
+
+    // Is a token standard but NOT a DeFi protocol
+    is_token_standard && !has_defi_patterns
+}
+
+/// Detects if function has OpenZeppelin's initializer protection
+///
+/// OpenZeppelin's Initializable contract provides:
+/// - `initializer` modifier - prevents re-initialization
+/// - `reinitializer(uint64)` modifier - for versioned re-initialization
+/// - `onlyInitializing` modifier - for initialization-only code
+/// - `_disableInitializers()` - disables initialization on implementation
+///
+/// This prevents FPs on properly protected upgradeable contracts.
+pub fn has_openzeppelin_initializer_guard(func_source: &str, contract_source: &str) -> bool {
+    // Check for initializer modifier on function
+    if has_modifier(func_source, "initializer") {
+        return true;
+    }
+
+    // Check for reinitializer modifier
+    if func_source.contains("reinitializer(") {
+        return true;
+    }
+
+    // Check for onlyInitializing modifier
+    if has_modifier(func_source, "onlyInitializing") {
+        return true;
+    }
+
+    // Check if contract inherits from Initializable and has protection
+    let inherits_initializable = contract_source.contains("Initializable")
+        || contract_source.contains("@openzeppelin/contracts-upgradeable");
+
+    // Check if contract disables initializers in constructor
+    let disables_in_constructor = contract_source.contains("_disableInitializers()");
+
+    // If it inherits Initializable and disables in constructor, initialization is protected
+    inherits_initializable && disables_in_constructor
+}
+
+/// Detects if function/contract has OpenZeppelin security patterns
+///
+/// Recognizes these OpenZeppelin security patterns:
+/// - ReentrancyGuard with nonReentrant modifier
+/// - Ownable with onlyOwner modifier
+/// - AccessControl with onlyRole modifier
+/// - Pausable with whenNotPaused/whenPaused modifiers
+/// - Initializable with initializer modifier
+///
+/// Returns true if the function has proper OZ security protection.
+pub fn has_openzeppelin_security(func_source: &str, contract_source: &str) -> bool {
+    // Check for nonReentrant (ReentrancyGuard)
+    if has_modifier(func_source, "nonReentrant") && contract_source.contains("ReentrancyGuard") {
+        return true;
+    }
+
+    // Check for onlyOwner (Ownable/Ownable2Step)
+    if has_modifier(func_source, "onlyOwner")
+        && (contract_source.contains("Ownable") || contract_source.contains("Ownable2Step"))
+    {
+        return true;
+    }
+
+    // Check for onlyRole (AccessControl)
+    if func_source.contains("onlyRole(") && contract_source.contains("AccessControl") {
+        return true;
+    }
+
+    // Check for whenNotPaused/whenPaused (Pausable)
+    if (has_modifier(func_source, "whenNotPaused") || has_modifier(func_source, "whenPaused"))
+        && contract_source.contains("Pausable")
+    {
+        return true;
+    }
+
+    // Check for initializer (Initializable)
+    if has_openzeppelin_initializer_guard(func_source, contract_source) {
+        return true;
+    }
+
+    false
+}
+
+/// Detects if the contract is a liquidity pool that should be analyzed by
+/// AMM/liquidity-specific detectors.
+///
+/// A liquidity pool has:
+/// - Liquidity add/remove functions
+/// - Reserve tracking
+/// - Swap functionality or LP token mechanics
+///
+/// Simple token contracts and L2 bridges are NOT liquidity pools.
+pub fn is_liquidity_pool(ctx: &AnalysisContext) -> bool {
+    // Skip if it's a simple token
+    if is_simple_token(ctx) {
+        return false;
+    }
+
+    // Skip if it's an L2 contract
+    if is_l2_contract(ctx) {
+        return false;
+    }
+
+    let lower = ctx.source_code.to_lowercase();
+    let contract_name = ctx.contract.name.name.to_lowercase();
+
+    // Must have explicit liquidity functions (not just withdraw)
+    let has_liquidity_ops = lower.contains("addliquidity")
+        || lower.contains("removeliquidity")
+        || lower.contains("providerliquidity")
+        || lower.contains("withdrawliquidity");
+
+    // Must have reserve tracking
+    let has_reserves = (lower.contains("reserve0") && lower.contains("reserve1"))
+        || lower.contains("getreserves")
+        || lower.contains("totalreserves");
+
+    // Must have swap or LP token mechanics
+    let has_swap_or_lp = lower.contains("function swap(")
+        || lower.contains("swaptokens")
+        || lower.contains("lptoken")
+        || lower.contains("pooltoken")
+        || lower.contains("liquiditytoken");
+
+    // Contract name indicates pool
+    let is_pool_named = contract_name.contains("pool")
+        || contract_name.contains("pair")
+        || contract_name.contains("amm")
+        || contract_name.contains("liquidity");
+
+    // Need liquidity operations + at least one other strong indicator
+    has_liquidity_ops && (has_reserves || has_swap_or_lp || is_pool_named)
+}
+
+/// Check if contract has escape hatch patterns specific to L2 contracts.
+///
+/// L2 escape hatches have:
+/// - References to L1 mechanisms
+/// - Sequencer/bridge dependencies
+/// - Forced withdrawal patterns
+///
+/// Simple emergency withdraw functions on L1 contracts are NOT escape hatches.
+pub fn has_l2_escape_hatch_patterns(ctx: &AnalysisContext) -> bool {
+    let lower = ctx.source_code.to_lowercase();
+
+    // Must be in an L2 context
+    if !is_l2_contract(ctx) {
+        return false;
+    }
+
+    // Check for escape hatch function names
+    let has_escape_functions = lower.contains("escapehatch")
+        || lower.contains("l1withdraw")
+        || lower.contains("forceinclude")
+        || lower.contains("forcedwithdrawal");
+
+    // Check for L1 dependency in escape logic
+    let has_l1_dependency = lower.contains("l1message")
+        || lower.contains("l1proof")
+        || lower.contains("withdrawalproof")
+        || lower.contains("sequencerdown");
+
+    has_escape_functions || has_l1_dependency
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

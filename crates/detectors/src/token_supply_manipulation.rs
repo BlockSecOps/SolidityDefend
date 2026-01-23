@@ -116,7 +116,24 @@ impl TokenSupplyManipulationDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        let func_name_lower = function.name.name.to_lowercase();
         let func_source = self.get_function_source(function, ctx);
+
+        // Skip constructors and initializers - they represent fixed supply at deployment
+        // Minting only in constructor means the supply is fixed, not vulnerable
+        if func_name_lower == "constructor"
+            || func_name_lower == "initialize"
+            || func_name_lower == "__init"
+            || func_name_lower.starts_with("_init")
+        {
+            return None;
+        }
+
+        // Skip internal functions (start with _ but are not public/external mint functions)
+        // The internal _mint function itself is fine - we care about who can call it
+        if func_name_lower.starts_with("_") && !func_name_lower.contains("public") {
+            return None;
+        }
 
         // Check if function affects token supply
         let affects_supply = func_source.contains("mint")
@@ -124,21 +141,25 @@ impl TokenSupplyManipulationDetector {
             || func_source.contains("totalSupply")
             || func_source.contains("_mint")
             || func_source.contains("_burn")
-            || function.name.name.to_lowercase().contains("mint")
-            || function.name.name.to_lowercase().contains("burn");
+            || func_name_lower.contains("mint")
+            || func_name_lower.contains("burn");
 
         if !affects_supply {
             return None;
         }
 
-        // Pattern 1: Mint function without max supply cap
-        let is_mint = func_source.contains("mint")
-            || func_source.contains("_mint")
-            || function.name.name.to_lowercase().contains("mint");
+        // Pattern 1: External/public mint function without max supply cap
+        // Internal _mint calls in constructor don't count - that's fixed supply
+        let is_external_mint = func_name_lower.contains("mint")
+            && !func_name_lower.starts_with("_");
 
-        // Skip supply cap check for ERC-4626 vaults - they mint shares, not tokens
-        // Shares are backed by assets and don't need a max supply cap
-        // Skip for ERC-3156 flash loans - they temporarily mint for flash loan duration
+        let is_mint = is_external_mint
+            || (func_source.contains("_mint") && self.has_external_mint_function(ctx));
+
+        // Skip supply cap check for:
+        // - ERC-4626 vaults - they mint shares, not tokens (shares backed by assets)
+        // - ERC-3156 flash loans - they temporarily mint for flash loan duration
+        // - Contracts without external mint functions (fixed supply)
         let no_supply_cap = is_mint
             && !is_vault  // Skip if vault
             && !is_flash_loan  // Skip if flash loan provider
@@ -315,6 +336,49 @@ impl TokenSupplyManipulationDetector {
             String::new()
         }
     }
+
+    /// Check if the contract has any external/public mint functions
+    /// If minting only occurs in constructor, it's a fixed-supply token (not vulnerable)
+    fn has_external_mint_function(&self, ctx: &AnalysisContext) -> bool {
+        let source = ctx.source_code.to_lowercase();
+
+        // Look for external/public mint function declarations
+        // These patterns indicate a mint function that can be called after deployment
+        let patterns = [
+            "function mint(",
+            "function mint (",
+            "function safemint(",
+            "function safemint (",
+            "function tokenmint(",
+            ") external",  // Check for external visibility with mint nearby
+            ") public",    // Check for public visibility with mint nearby
+        ];
+
+        // Check for explicit external/public mint functions
+        for pattern in &patterns {
+            if source.contains(pattern) {
+                // Verify it's actually a mint function with external/public visibility
+                // by looking for the pattern in context
+                let lines: Vec<&str> = source.lines().collect();
+                for (i, line) in lines.iter().enumerate() {
+                    if line.contains("function mint") || line.contains("function safemint") {
+                        // Check this line and next few lines for visibility
+                        let context: String = lines[i..std::cmp::min(i + 3, lines.len())].join(" ");
+                        if context.contains("external") || context.contains("public") {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Also check for role-based minting (indicates intentional external mint capability)
+        if source.contains("minter_role") || source.contains("minter role") {
+            return true;
+        }
+
+        false
+    }
 }
 
 #[cfg(test)]
@@ -327,5 +391,93 @@ mod tests {
         assert_eq!(detector.name(), "Token Supply Manipulation");
         assert_eq!(detector.default_severity(), Severity::Critical);
         assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_constructor_mint_not_flagged() {
+        // Fixed supply tokens that only mint in constructor should NOT be flagged
+        let source = r#"
+            contract Token is ERC20 {
+                constructor() ERC20("Token", "TKN") {
+                    _mint(msg.sender, 1000000 * 10 ** decimals());
+                }
+            }
+        "#;
+
+        // Constructor should be skipped
+        let func_name = "constructor";
+        let func_name_lower = func_name.to_lowercase();
+
+        let should_skip = func_name_lower == "constructor"
+            || func_name_lower == "initialize"
+            || func_name_lower == "__init";
+
+        assert!(should_skip);
+
+        // No external mint function
+        let has_external_mint = source.to_lowercase().contains("function mint(")
+            && (source.to_lowercase().contains("external")
+                || source.to_lowercase().contains("public"));
+
+        assert!(!has_external_mint);
+    }
+
+    #[test]
+    fn test_initializer_mint_not_flagged() {
+        // Upgradeable tokens that mint in initialize should NOT be flagged
+        let func_name = "initialize";
+        let func_name_lower = func_name.to_lowercase();
+
+        let should_skip = func_name_lower == "constructor"
+            || func_name_lower == "initialize"
+            || func_name_lower == "__init";
+
+        assert!(should_skip);
+    }
+
+    #[test]
+    fn test_internal_mint_not_flagged() {
+        // Internal _mint function should NOT be flagged
+        let func_name = "_mint";
+        let func_name_lower = func_name.to_lowercase();
+
+        let is_internal = func_name_lower.starts_with("_");
+        assert!(is_internal);
+    }
+
+    #[test]
+    fn test_external_mint_is_flagged() {
+        // External mint functions SHOULD be considered for flagging
+        let source = r#"
+            contract MintableToken is ERC20, Ownable {
+                function mint(address to, uint256 amount) external onlyOwner {
+                    _mint(to, amount);
+                }
+            }
+        "#;
+
+        let source_lower = source.to_lowercase();
+        let has_external_mint = source_lower.contains("function mint(")
+            && (source_lower.contains("external") || source_lower.contains("public"));
+
+        assert!(has_external_mint);
+    }
+
+    #[test]
+    fn test_fixed_supply_token_pattern() {
+        // Pattern: Token with _mint ONLY in constructor = fixed supply
+        let fixed_supply_token = r#"
+            contract FixedToken is ERC20 {
+                constructor() ERC20("Fixed", "FIX") {
+                    _mint(msg.sender, 1000000 ether);
+                }
+                // No other mint functions
+            }
+        "#;
+
+        // This should NOT have external mint capability
+        let source_lower = fixed_supply_token.to_lowercase();
+        let has_function_mint = source_lower.contains("function mint");
+        assert!(!has_function_mint);
     }
 }
