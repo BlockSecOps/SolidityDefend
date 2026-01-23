@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.7] - 2026-01-23
+
+### Changed
+
+#### Phase 11 False Positive Reduction - Contract Type Detection & Access Control Recognition
+
+Comprehensive false positive reduction through intelligent contract type detection and OpenZeppelin pattern recognition. This release significantly reduces noise on standard token contracts while maintaining full vulnerability detection on actual vulnerable contracts.
+
+**Findings Reduction:**
+- SimpleERC20.sol: 20 → 9 issues (-55%)
+- clean_contract.sol: 12 → 7 issues (-42%)
+- solmate library: 243 → 221 issues (-9.1%)
+- All true positives retained on vulnerable test contracts
+
+**P0: Contract Type Detection for Domain-Specific Detectors**
+
+New utility functions in `utils.rs`:
+- `is_l2_contract()` - Detects L2/cross-chain contracts by checking for bridge imports, L2 terminology, messaging functions, rollup patterns
+- `is_simple_token()` - Detects simple ERC20/ERC721 tokens without DeFi protocol complexity
+- `is_liquidity_pool()` - Detects actual liquidity pools vs standard contracts
+- `has_l2_escape_hatch_patterns()` - Detects L2-specific escape hatch patterns
+- `has_openzeppelin_initializer_guard()` - Recognizes `initializer`, `reinitializer`, `onlyInitializing` modifiers
+- `has_openzeppelin_security()` - Recognizes `nonReentrant`, `onlyOwner`, `onlyRole`, `whenNotPaused`
+
+Detectors updated with contract type gating:
+- `cross-l2-frontrunning` - Added `is_l2_contract()` check; only flags contracts with actual L2/cross-chain functionality
+- `escape-hatch-dependency` - Added `is_l2_contract()` check; no longer flags simple `emergencyWithdraw()` on L1 contracts
+- `cross-rollup-state-mismatch` - Added `is_l2_contract()` check; skips contracts without cross-chain functionality
+- `nft-mint-mev` - Added `is_nft_contract()` check; no longer flags ERC20 mint functions
+- `vault-share-inflation` - Added `is_erc4626_vault()` check; only flags actual ERC4626 vaults, not simple tokens
+- `guardian-role-centralization` - Requires actual guardian role infrastructure (state var + modifier)
+- `access-control` (UnprotectedInitializerDetector) - Added recognition of OZ `initializer`, `reinitializer`, `onlyInitializing` modifiers
+- `upgradeable-proxy-issues` - Added OZ modifier recognition; recognize UUPS `_authorizeUpgrade`
+
+**P1: Token Supply & Centralization False Positive Fixes**
+
+`token-supply-manipulation` improvements:
+- Skip access control management functions (`add*`, `remove*`, `grant*`, `revoke*`, `set*`, `update*`)
+- Skip role management functions (`*role*`, `renounceMinter`, `transferMintership`)
+- Only flag if function actually contains `_mint()` or `_burn()` calls
+
+`mev-priority-gas-auction` improvements:
+- Added access control check before flagging mint functions
+- Recognizes `onlyMinter`, `onlyOwner`, `onlyAdmin`, `hasRole`, `onlyRole` modifiers
+- Recognizes `require(msg.sender == owner/minter)` patterns
+- Only flags FCFS patterns when function is publicly callable without access control
+
+`centralization-risk` severity calibration:
+- Default severity changed from HIGH to MEDIUM
+- Recognizes OpenZeppelin Ownable as standard accepted pattern (skips entirely)
+- Only flags HIGH for truly dangerous patterns: selfdestruct, arbitrary token drain
+- Emergency functions only flagged if they can move funds without safeguards
+
+**is_erc4626_vault() Enhancement**
+
+Updated vault detection with three detection paths:
+1. Explicit ERC4626 interface (`ERC4626`, `IERC4626`)
+2. Standard ERC4626 function signatures (3+ of deposit/withdraw/redeem/totalAssets + shares + asset)
+3. Vault-like contracts with share calculation patterns (deposit/mint + totalSupply + share returns + conversion logic)
+
+This ensures vault-like contracts are analyzed for share inflation vulnerabilities while excluding simple ERC20 tokens.
+
+**Validation Results:**
+- All 604 detector tests passing
+- True positive retention verified on VulnerableVault_Inflation.sol and UnprotectedProxyUpgrade.sol
+- No regressions on known vulnerable contracts
+
 ## [1.10.5] - 2025-01-22
 
 ### Changed
