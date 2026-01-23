@@ -60,6 +60,11 @@ impl ConstructorReentrancyDetector {
     }
 
     /// Find callback triggers in constructors
+    ///
+    /// Note: ERC20's _mint() does NOT trigger callbacks.
+    /// Only ERC721/ERC1155 safe mint functions trigger receiver callbacks:
+    /// - _safeMint() triggers onERC721Received()
+    /// - safeTransferFrom() triggers onERC721Received()/onERC1155Received()
     fn find_constructor_callbacks(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
@@ -72,10 +77,15 @@ impl ConstructorReentrancyDetector {
                 let constructor_body: String = lines[line_num..func_end].join("\n");
 
                 // Check for operations that trigger callbacks
-                if constructor_body.contains("safeTransfer")
-                    || constructor_body.contains("safeMint")
-                    || constructor_body.contains("onERC")
-                    || constructor_body.contains("_mint")
+                // Note: ERC20's _mint() does NOT trigger callbacks - only _safeMint does
+                // _safeMint (ERC721/ERC1155) triggers onERC721Received/onERC1155Received
+                // safeTransferFrom triggers receiver callbacks
+                if constructor_body.contains("_safeMint")
+                    || constructor_body.contains("safeMint(")
+                    || constructor_body.contains("safeTransferFrom")
+                    || constructor_body.contains("_safeTransfer")
+                    || constructor_body.contains("onERC721Received")
+                    || constructor_body.contains("onERC1155Received")
                 {
                     findings.push((line_num as u32 + 1, "constructor".to_string()));
                 }
@@ -103,11 +113,14 @@ impl ConstructorReentrancyDetector {
                 for (i, cline) in constructor_lines.iter().enumerate() {
                     // Only flag calls that can cause reentrancy
                     // .transfer/.send have 2300 gas limit - cannot reenter
-                    // safeTransfer CAN cause reentrancy via onERC721Received etc.
+                    // Note: ERC20 SafeERC20.safeTransfer does NOT trigger callbacks
+                    // Only ERC721/ERC1155 safeTransferFrom triggers receiver callbacks
                     if cline.contains(".call(")
                         || cline.contains(".call{")
                         || cline.contains(".delegatecall(")
-                        || cline.contains("safeTransfer")
+                        || cline.contains("safeTransferFrom")
+                        || cline.contains("_safeTransfer")
+                        || cline.contains("_safeMint")
                     {
                         found_call = true;
                         call_line = i;
@@ -240,8 +253,8 @@ impl Detector for ConstructorReentrancyDetector {
 
         for (line, _) in self.find_constructor_callbacks(source) {
             let message = format!(
-                "Constructor in contract '{}' triggers callbacks (safeTransfer/safeMint). \
-                 Callbacks can reenter before initialization completes.",
+                "Constructor in contract '{}' uses ERC721/ERC1155 safe functions that trigger receiver callbacks. \
+                 Callbacks via onERC721Received/onERC1155Received can reenter before initialization completes.",
                 contract_name
             );
 
@@ -252,9 +265,10 @@ impl Detector for ConstructorReentrancyDetector {
                 .with_confidence(Confidence::High)
                 .with_fix_suggestion(
                     "Avoid callback-triggering operations in constructor:\n\n\
-                     1. Use non-safe variants (_mint instead of _safeMint)\n\
-                     2. Move minting to post-construction initialize()\n\
-                     3. Complete all state initialization first"
+                     1. For ERC721: Use _mint() instead of _safeMint()\n\
+                     2. For ERC1155: Complete state initialization before minting\n\
+                     3. Move minting to post-construction initialize()\n\
+                     4. Note: ERC20's _mint() is safe - no callbacks"
                         .to_string(),
                 );
 
@@ -328,5 +342,112 @@ mod tests {
         let detector = ConstructorReentrancyDetector::new();
         assert_eq!(detector.name(), "Constructor Reentrancy");
         assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    #[test]
+    fn test_erc20_mint_not_flagged_as_callback() {
+        let detector = ConstructorReentrancyDetector::new();
+
+        // ERC20's _mint() does NOT trigger callbacks - should NOT be flagged
+        let source = r#"
+            contract Token is ERC20 {
+                constructor() ERC20("Test", "TST") {
+                    _mint(msg.sender, 1000000 * 10 ** decimals());
+                }
+            }
+        "#;
+
+        let findings = detector.find_constructor_callbacks(source);
+        assert!(
+            findings.is_empty(),
+            "ERC20 _mint() should not be flagged as callback-triggering"
+        );
+    }
+
+    #[test]
+    fn test_erc721_safemint_flagged_as_callback() {
+        let detector = ConstructorReentrancyDetector::new();
+
+        // ERC721's _safeMint() DOES trigger onERC721Received callback - should be flagged
+        let source = r#"
+            contract NFT is ERC721 {
+                constructor() ERC721("Test", "TST") {
+                    _safeMint(msg.sender, 1);
+                }
+            }
+        "#;
+
+        let findings = detector.find_constructor_callbacks(source);
+        assert_eq!(
+            findings.len(),
+            1,
+            "ERC721 _safeMint() should be flagged as callback-triggering"
+        );
+    }
+
+    #[test]
+    fn test_safe_transfer_from_flagged() {
+        let detector = ConstructorReentrancyDetector::new();
+
+        // safeTransferFrom triggers receiver callbacks
+        let source = r#"
+            contract NFTReceiver {
+                constructor(IERC721 nft, uint256 tokenId) {
+                    nft.safeTransferFrom(address(this), msg.sender, tokenId);
+                }
+            }
+        "#;
+
+        let findings = detector.find_constructor_callbacks(source);
+        assert_eq!(
+            findings.len(),
+            1,
+            "safeTransferFrom should be flagged as callback-triggering"
+        );
+    }
+
+    #[test]
+    fn test_erc20_safe_transfer_not_flagged_in_callbacks() {
+        let detector = ConstructorReentrancyDetector::new();
+
+        // SafeERC20.safeTransfer does NOT trigger callbacks (just wraps transfer with check)
+        // It should NOT be in the callback findings
+        let source = r#"
+            contract Vault {
+                constructor(IERC20 token) {
+                    token.safeTransfer(msg.sender, 100);
+                }
+            }
+        "#;
+
+        let findings = detector.find_constructor_callbacks(source);
+        // safeTransfer (ERC20 style) should not trigger callback warning
+        // Note: Our detector now only looks for safeTransferFrom which is ERC721/1155
+        assert!(
+            findings.is_empty(),
+            "ERC20 safeTransfer should not be flagged as callback-triggering"
+        );
+    }
+
+    #[test]
+    fn test_external_call_flagged() {
+        let detector = ConstructorReentrancyDetector::new();
+
+        // Low-level .call() should be flagged
+        let source = r#"
+            contract Vulnerable {
+                constructor(address target) {
+                    (bool success,) = target.call{value: 1 ether}("");
+                    require(success);
+                }
+            }
+        "#;
+
+        let findings = detector.find_constructor_external_calls(source);
+        assert_eq!(
+            findings.len(),
+            1,
+            "Low-level .call() should be flagged"
+        );
     }
 }

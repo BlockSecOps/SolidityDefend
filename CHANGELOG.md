@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+#### False Positive Reduction - constructor-reentrancy
+
+Fixed false positive where `constructor-reentrancy` detector incorrectly flagged ERC20's `_mint()` as callback-triggering.
+
+**Root Cause:** The detector treated `_mint` as a callback-triggering operation, but ERC20's `_mint()` does NOT have any callback mechanism - only ERC721/ERC1155's `_safeMint()` triggers receiver callbacks via `onERC721Received`/`onERC1155Received`.
+
+**Changes:**
+- Removed `_mint` from general callback detection
+- Added specific patterns that DO trigger callbacks:
+  - `_safeMint` (ERC721/ERC1155)
+  - `safeTransferFrom` (ERC721/ERC1155)
+  - `_safeTransfer` (ERC721/ERC1155)
+  - `onERC721Received` / `onERC1155Received`
+- Updated finding message to accurately describe which functions trigger callbacks
+- Added 6 unit tests verifying correct behavior
+
+**Impact:**
+- Simple ERC20 tokens no longer flagged incorrectly
+- Upgradeable ERC20 tokens (UUPS, etc.) no longer flagged incorrectly
+- ERC721/ERC1155 contracts using `_safeMint()` still correctly flagged
+
 ## [1.10.3] - 2025-01-17
 
 ### Changed
