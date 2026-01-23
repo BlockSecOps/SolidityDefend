@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.7] - 2026-01-23
+
+### Fixed
+
+#### Phase 11 False Positive Reduction - DeFi Detectors
+
+Major FP reduction for 4 DeFi-related detectors that were incorrectly flagging simple tokens and non-pool contracts.
+
+**amm-liquidity-manipulation**
+- Fixed operator precedence bug: `&& burn || mint` was parsing as `(... && burn) || mint`, causing ANY contract with "mint" to be flagged
+- Added `has_amm_patterns()` context gating requiring 2+ AMM indicators before flagging:
+  - Both addLiquidity AND removeLiquidity functions
+  - Reserve tracking (reserve0/reserve1, getReserves)
+  - Swap functionality
+  - LP token mechanics
+  - Pool-related contract naming
+
+**token-supply-manipulation**
+- Skip constructors and initializers (represent fixed supply at deployment)
+- Skip internal `_mint` functions (not externally callable)
+- Only flag contracts with external/public mint functions that can be called post-deployment
+- Added `has_external_mint_function()` helper to detect accessible mint paths
+
+**jit-liquidity-sandwich**
+- Added `has_liquidity_pool_patterns()` requiring 2+ indicators before flagging
+- Skip interface files (define signatures, not vulnerable implementations)
+- Flag at specific function lines instead of line 1
+- Tightened liquidity function matching to require explicit liquidity context
+- Changed `withdraw`/`deposit` checks to require "liquidity" in context
+
+**cross-l2-frontrunning / escape-hatch-dependency**
+- Added `is_l2_contract()` utility to detect L2/cross-chain contracts
+- Only flag contracts with actual cross-chain functionality (bridge interfaces, L2 messaging, rollup patterns)
+- Prevents false positives on simple L1 contracts with withdraw functions
+
+### Added
+
+- `is_l2_contract()` - Detects L2/cross-chain contracts via bridge imports, L2 terminology, messaging functions
+- `is_governance_contract()` - Detects governance patterns (voting, proposals, timelock)
+- `is_multisig_contract()` - Detects multi-signature wallet patterns
+
+**Impact:**
+- Simple ERC20 tokens no longer flagged by AMM/supply/JIT detectors
+- Interfaces no longer flagged by JIT detector
+- L1 contracts no longer flagged by L2-specific detectors
+- All 604 detector tests pass
+
 ## [1.10.6] - 2026-01-22
 
 ### Fixed
