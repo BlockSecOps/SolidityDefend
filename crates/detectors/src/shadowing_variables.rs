@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::is_zk_contract;
 
 /// Detector for variable shadowing that can cause confusion
 pub struct ShadowingVariablesDetector {
@@ -57,6 +58,13 @@ impl Detector for ShadowingVariablesDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         // Skip test/mock files where shadowing is often intentional
         if self.should_skip_file(&ctx.file_path) {
+            return Ok(vec![]);
+        }
+
+        // Phase 14 FP Reduction: Skip ZK proof verification contracts
+        // ZK contracts legitimately use similar variable names across different
+        // proof contexts (e.g., multiple proof/publicInputs parameters)
+        if is_zk_contract(ctx) {
             return Ok(vec![]);
         }
 

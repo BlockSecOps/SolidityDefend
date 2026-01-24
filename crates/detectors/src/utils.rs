@@ -146,13 +146,25 @@ pub fn uses_openzeppelin(ctx: &AnalysisContext) -> bool {
 
 /// Detects if the function or contract has reentrancy guards
 pub fn has_reentrancy_guard(function_source: &str, contract_source: &str) -> bool {
-    function_source.contains("nonReentrant")
+    let func_lower = function_source.to_lowercase();
+    let contract_lower = contract_source.to_lowercase();
+
+    // Direct reentrancy guard patterns
+    func_lower.contains("nonreentrant")
         || function_source.contains("ReentrancyGuard")
         || contract_source.contains("ReentrancyGuard")
         || function_source.contains("_reentrancyGuard")
-        || function_source.contains("lock()") // Uniswap V2 style lock modifier
-        || function_source.contains("modifier lock") // Lock modifier definition
-        || (contract_source.contains("unlocked") && contract_source.contains("== 1")) // Uniswap V2 lock pattern
+        || func_lower.contains("lock()") // Uniswap V2 style lock modifier
+        || func_lower.contains("modifier lock") // Lock modifier definition
+        || (contract_lower.contains("unlocked") && contract_lower.contains("== 1")) // Uniswap V2 lock pattern
+        // Additional patterns (Phase 14)
+        || contract_source.contains("ReentrancyGuardUpgradeable")
+        || func_lower.contains("noreentrancy")
+        || func_lower.contains("noreentrant")
+        // OZ ReentrancyGuard state variable pattern
+        || (contract_lower.contains("_status") && contract_lower.contains("_not_entered"))
+        // Mutex pattern
+        || (contract_lower.contains("_locked") && contract_lower.contains("require(!_locked"))
 }
 
 /// Detects if the contract uses SafeERC20 for token transfers
@@ -2113,6 +2125,106 @@ pub fn has_openzeppelin_security(func_source: &str, contract_source: &str) -> bo
     false
 }
 
+/// Detects if the contract is a Zero-Knowledge proof verification contract.
+///
+/// ZK contracts have specific patterns:
+/// - Proof verification functions (verifyProof, verify, _pairing)
+/// - ZK-specific terminology (snark, stark, plonk, groth16)
+/// - Public inputs for proof verification
+/// - Elliptic curve pairing operations
+///
+/// These contracts should be analyzed by ZK-specific detectors, not by
+/// generic validators like parameter-consistency or shadowing-variables.
+///
+/// Phase 14 FP Reduction: Skip generic detectors on ZK contracts to avoid
+/// false positives from ZK-specific parameter patterns.
+pub fn is_zk_contract(ctx: &AnalysisContext) -> bool {
+    let source = &ctx.source_code;
+    let lower = source.to_lowercase();
+    let contract_name = ctx.contract.name.name.to_lowercase();
+
+    // Strong indicators - any single one is sufficient
+    // ZK-specific terminology in contract name
+    if contract_name.contains("verifier")
+        || contract_name.contains("proof")
+        || contract_name.contains("zk")
+        || contract_name.contains("snark")
+        || contract_name.contains("stark")
+        || contract_name.contains("groth")
+        || contract_name.contains("plonk")
+        || contract_name.contains("circuit")
+    {
+        return true;
+    }
+
+    // File path indicators for ZK contracts
+    if ctx.file_path.contains("zero_knowledge")
+        || ctx.file_path.contains("zk_")
+        || ctx.file_path.contains("/zk/")
+        || ctx.file_path.contains("zkproof")
+    {
+        return true;
+    }
+
+    // Count medium-strength indicators
+    let mut indicator_count = 0;
+
+    // ZK proof verification function patterns
+    if lower.contains("verifyproof") || lower.contains("verify_proof") {
+        indicator_count += 2;
+    }
+
+    if source.contains("function verify(") {
+        indicator_count += 1;
+    }
+
+    // Pairing/elliptic curve operations (core of ZK verification)
+    if lower.contains("pairing") || lower.contains("_pairing") {
+        indicator_count += 2;
+    }
+
+    if lower.contains("bn256") || lower.contains("bls12") || lower.contains("bn128") {
+        indicator_count += 2;
+    }
+
+    // ZK-specific terminology
+    if lower.contains("snark") || lower.contains("stark") {
+        indicator_count += 2;
+    }
+
+    if lower.contains("plonk") || lower.contains("groth16") || lower.contains("groth-16") {
+        indicator_count += 2;
+    }
+
+    // Public inputs pattern (typical ZK parameter)
+    if lower.contains("publicinputs") || lower.contains("public_inputs") {
+        indicator_count += 1;
+    }
+
+    // Proof array parameters (typical ZK function signature)
+    if source.contains("uint256[8]") && source.contains("proof") {
+        indicator_count += 1;
+    }
+
+    // Commitment/nullifier patterns (ZK privacy primitives)
+    if lower.contains("nullifier") && lower.contains("commitment") {
+        indicator_count += 2;
+    }
+
+    // Merkle root with proof verification context
+    if lower.contains("merkleroot") && lower.contains("verify") {
+        indicator_count += 1;
+    }
+
+    // Circuit-specific patterns
+    if lower.contains("circuit") && (lower.contains("verify") || lower.contains("proof")) {
+        indicator_count += 1;
+    }
+
+    // Need 2+ indicators to classify as ZK contract
+    indicator_count >= 2
+}
+
 /// Detects if the contract is a liquidity pool that should be analyzed by
 /// AMM/liquidity-specific detectors.
 ///
@@ -2193,6 +2305,182 @@ pub fn has_l2_escape_hatch_patterns(ctx: &AnalysisContext) -> bool {
         || lower.contains("sequencerdown");
 
     has_escape_functions || has_l1_dependency
+}
+
+/// Detects deployment tooling contracts (factories, upgrades libraries, deployers)
+///
+/// Deployment tooling contracts are designed to deploy other contracts and are not
+/// vulnerable to initcode injection - they ARE the deployment infrastructure.
+/// Examples:
+/// - OpenZeppelin Upgrades library (Core.sol, Upgrades.sol)
+/// - Factory contracts (Create2Factory, ProxyFactory)
+/// - Forge-std testing utilities
+/// - Clone/minimal proxy deployers
+///
+/// These should be skipped by initcode-injection and similar deployment detectors.
+pub fn is_deployment_tooling(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+    let contract_name = ctx.contract.name.name.to_lowercase();
+
+    // Check if it's a library (not a contract) - libraries are not user-facing
+    let is_library = source.contains("library ") && !source.contains("using ")
+        || lower.contains(&format!("library {}", contract_name));
+
+    // Deployment tooling naming patterns
+    let has_deployer_name = contract_name.contains("deploy")
+        || contract_name.contains("factory")
+        || contract_name.contains("upgrades")
+        || contract_name.contains("upgrader")
+        || contract_name.contains("create2")
+        || contract_name.contains("createcall") // Safe's CreateCall.sol
+        || contract_name.contains("clone")
+        || contract_name.contains("proxy") && contract_name.contains("admin")
+        || contract_name == "core" // Common name for upgrade libraries
+        || contract_name.contains("beacon");
+
+    // Forge-std / testing framework imports (deployment scripts)
+    let is_forge_script = source.contains("forge-std")
+        || source.contains("Vm.sol")
+        || source.contains("Script.sol")
+        || source.contains("Test.sol")
+        || lower.contains("import {vm}")
+        || lower.contains("vm.startbroadcast")
+        || lower.contains("vm.prank");
+
+    // Uses trusted bytecode patterns
+    let uses_trusted_bytecode = source.contains("type(") && source.contains(").creationCode")
+        || source.contains(".creationCode")
+        || source.contains("Clone.clone")
+        || source.contains("LibClone")
+        || source.contains("ClonesUpgradeable")
+        || source.contains("Clones.clone");
+
+    // OpenZeppelin deployment infrastructure
+    let is_oz_deployment = source.contains("@openzeppelin")
+        && (source.contains("Proxy") || source.contains("Upgradeable") || source.contains("Beacon"))
+        && (lower.contains("deploy") || lower.contains("upgrade"));
+
+    // Proxy factory/admin patterns
+    let is_proxy_infrastructure = (source.contains("ITransparentUpgradeableProxy")
+        || source.contains("IBeacon")
+        || source.contains("IERC1967")
+        || source.contains("ProxyAdmin"))
+        && (lower.contains("deploy") || lower.contains("create"));
+
+    // Comments indicating deployment tooling
+    let has_tooling_comment = lower.contains("internal helper methods")
+        || lower.contains("deployment helper")
+        || lower.contains("factory for creating")
+        || lower.contains("do not use directly");
+
+    // Library with deployment functions
+    if is_library && (has_deployer_name || lower.contains("deploy") || lower.contains("create2")) {
+        return true;
+    }
+
+    // Script/testing infrastructure
+    if is_forge_script {
+        return true;
+    }
+
+    // Uses trusted bytecode sources
+    if uses_trusted_bytecode {
+        return true;
+    }
+
+    // OZ deployment infrastructure
+    if is_oz_deployment || is_proxy_infrastructure {
+        return true;
+    }
+
+    // Tooling by name + comment
+    if has_deployer_name && has_tooling_comment {
+        return true;
+    }
+
+    // Factory contracts designed to deploy
+    if contract_name.contains("factory") && lower.contains("function create") {
+        return true;
+    }
+
+    // Contracts explicitly named for deployment (CreateCall, Deployer, etc.)
+    // These are deployment helpers even if not libraries
+    let is_explicit_deployer = (contract_name.contains("createcall")
+        || contract_name.contains("deployer")
+        || contract_name == "create"
+        || contract_name == "create2")
+        && (lower.contains("function performcreate")
+            || lower.contains("function deploy")
+            || lower.contains("assembly") && lower.contains("create"));
+
+    if is_explicit_deployer {
+        return true;
+    }
+
+    false
+}
+
+/// Detects view-only lens contracts (data aggregators)
+///
+/// Lens contracts are read-only contracts that aggregate data from other protocols.
+/// They typically:
+/// - Have "Lens", "Reader", or "Viewer" in their name
+/// - Contain many getter functions (function get...)
+/// - Lack state-modifying functions (deposit, borrow, repay, liquidate)
+/// - May contain comments indicating read-only design
+///
+/// These contracts should be skipped by vulnerability detectors that target
+/// state-modifying operations (e.g., lending protocol detectors).
+pub fn is_view_only_lens_contract(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+    let contract_name = ctx.contract.name.name.to_lowercase();
+
+    // Check for lens/view contract naming patterns
+    let has_lens_name = contract_name.contains("lens")
+        || contract_name.contains("reader")
+        || contract_name.contains("viewer")
+        || contract_name.contains("query")
+        || lower.contains("contract") && lower.contains("lens");
+
+    // Check for read-only design comments/markers
+    let has_readonly_comment = lower.contains("not designed to be called in a transaction")
+        || lower.contains("read-only")
+        || lower.contains("view only")
+        || lower.contains("view contract")
+        || lower.contains("query contract")
+        || lower.contains("data aggregator");
+
+    // If explicit read-only marker, skip immediately
+    if has_readonly_comment {
+        return true;
+    }
+
+    // Check for absence of state-modifying functions
+    let lacks_write_functions = !lower.contains("function deposit(")
+        && !lower.contains("function borrow(")
+        && !lower.contains("function repay(")
+        && !lower.contains("function liquidate(")
+        && !lower.contains("function mint(")
+        && !lower.contains("function burn(")
+        && !lower.contains("function swap(")
+        && !lower.contains("function transfer(")
+        && !lower.contains("function withdraw(");
+
+    // Count getter functions (function get...)
+    let getter_count = source.matches("function get").count();
+    let has_many_getters = getter_count >= 3;
+
+    // Count view/pure function modifiers
+    let view_count = source.matches("view").count();
+    let pure_count = source.matches("pure").count();
+    let has_many_view_pure = (view_count + pure_count) >= 5;
+
+    // Lens contract: has lens name + lacks write functions + has multiple getters
+    // OR has lens name + has many view/pure functions
+    (has_lens_name && lacks_write_functions && has_many_getters)
+        || (has_lens_name && has_many_view_pure && lacks_write_functions)
 }
 
 #[cfg(test)]

@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_standard_token};
+use crate::utils::{is_test_contract, is_standard_token, is_zk_contract};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -904,6 +904,13 @@ impl Detector for ParameterConsistencyDetector {
 
         // Phase 9 FP Reduction: Use centralized test contract detection
         if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 14 FP Reduction: Skip ZK proof verification contracts
+        // ZK contracts have unique parameter patterns (proof arrays, public inputs)
+        // that don't follow standard validation expectations
+        if is_zk_contract(ctx) {
             return Ok(findings);
         }
 

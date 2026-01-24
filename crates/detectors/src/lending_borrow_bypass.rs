@@ -424,6 +424,14 @@ impl Detector for LendingBorrowBypassDetector {
             return Ok(findings);
         }
 
+        // Skip view-only lens contracts (data aggregators)
+        // Lens contracts like FusePoolLens are read-only contracts that query lending pool data
+        // They contain keywords like "collateral", "borrow", "borrowBalance" but don't implement
+        // actual lending logic - they just aggregate and display data from lending protocols
+        if utils::is_view_only_lens_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Context gate: Only analyze contracts that are ACTUALLY implementing lending logic
         // Require actual lending infrastructure (borrowed state, collateral tracking, etc.)
         if !self.is_lending_implementation(ctx) {

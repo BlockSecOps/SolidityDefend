@@ -63,6 +63,16 @@ impl Detector for UpgradeableProxyIssuesDetector {
             return Ok(findings);
         }
 
+        // Phase 15 FP Reduction: Skip deployment tooling (libraries that deploy proxies)
+        if self.is_deployment_tooling(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 15 FP Reduction: Skip known trusted proxy implementations (vendored OZ)
+        if self.is_known_trusted_proxy(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(proxy_issue) = self.check_upgradeable_proxy_issues(function, ctx) {
                 let message = format!(
@@ -103,6 +113,71 @@ impl Detector for UpgradeableProxyIssuesDetector {
 }
 
 impl UpgradeableProxyIssuesDetector {
+    /// Phase 15 FP Reduction: Check if this is deployment tooling (not an actual proxy)
+    fn is_deployment_tooling(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let file_path = ctx.file_path.to_lowercase();
+
+        // OpenZeppelin Foundry Upgrades - deployment library
+        let is_oz_foundry_upgrades = file_path.contains("openzeppelin-foundry-upgrades")
+            || file_path.contains("foundry-upgrades")
+            || lower.contains("@openzeppelin/foundry-upgrades");
+
+        // Foundry script files
+        let is_foundry_script = file_path.contains("/script/")
+            || file_path.ends_with(".s.sol")
+            || lower.contains("import \"forge-std/script.sol\"")
+            || lower.contains("is script");
+
+        // Hardhat deployment scripts
+        let is_hardhat_deploy = file_path.contains("/deploy/")
+            || file_path.contains("/migrations/")
+            || lower.contains("hardhat-deploy");
+
+        // Library contract patterns (helps deploy, not a proxy itself)
+        let is_deployer_library = source.contains("library Upgrades")
+            || source.contains("library Defender")
+            || source.contains("library Core")
+            || (lower.contains("deployproxy") && lower.contains("upgradeproxy"))
+            || lower.contains("deployuupsproxyto")
+            || lower.contains("deploybeaconproxyto")
+            || lower.contains("deploytransparentproxyto");
+
+        // Test contracts
+        let is_test = file_path.contains("/test/")
+            || file_path.ends_with(".t.sol")
+            || lower.contains("import \"forge-std/test.sol\"");
+
+        is_oz_foundry_upgrades || is_foundry_script || is_hardhat_deploy || is_deployer_library || is_test
+    }
+
+    /// Phase 15 FP Reduction: Check if this is a known trusted proxy implementation
+    fn is_known_trusted_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let file_path = ctx.file_path.to_lowercase();
+
+        // Vendored OZ dependencies in major protocols (Aave, Compound, etc.)
+        let is_vendored_oz = file_path.contains("/dependencies/openzeppelin/")
+            || file_path.contains("/vendor/openzeppelin/")
+            || file_path.contains("@openzeppelin/contracts-upgradeable")
+            || file_path.contains("@openzeppelin/contracts/proxy");
+
+        // Known OZ proxy implementations with proper access control
+        // These use ifAdmin modifier and EIP-1967 admin slots
+        let has_oz_admin_pattern = source.contains("ADMIN_SLOT")
+            && (source.contains("ifAdmin") || source.contains("onlyAdmin"))
+            && source.contains("AdminChanged");
+
+        // Standard OZ TransparentUpgradeableProxy pattern
+        let is_transparent_proxy = source.contains("TransparentUpgradeableProxy")
+            || source.contains("BaseAdminUpgradeabilityProxy")
+            || (source.contains("AdminUpgradeability") && source.contains("ifAdmin"));
+
+        is_vendored_oz || has_oz_admin_pattern || is_transparent_proxy
+    }
+
     /// Check if contract is actually a proxy contract (Phase 6: Tightened)
     fn is_proxy_contract(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code;
@@ -133,6 +208,7 @@ impl UpgradeableProxyIssuesDetector {
         func_source.contains("onlyOwner")
             || func_source.contains("onlyAdmin")
             || func_source.contains("onlyProxyAdmin")
+            || func_source.contains("ifAdmin")  // Phase 15: OZ TransparentProxy pattern
             || func_source.contains("require(msg.sender == admin")
             || func_source.contains("require(msg.sender == owner")
             || func_source.contains("_checkAdmin")
