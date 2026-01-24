@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_bridge_contract, is_standard_token};
+use crate::utils::{is_test_contract, is_bridge_contract, is_standard_token, is_zk_contract};
 
 /// Detector for bridge merkle proof bypass vulnerabilities
 ///
@@ -302,6 +302,13 @@ impl Detector for BridgeMerkleBypassDetector {
         // Phase 9 FP Reduction: Skip standard token contracts
         // ERC20/ERC721/ERC1155/ERC4626 are tokens, not bridges
         if is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 14 FP Reduction: Skip ZK proof verification contracts
+        // ZK verifiers have verify/proof functions but are NOT bridges
+        // They should be analyzed by ZK-specific detectors instead
+        if is_zk_contract(ctx) {
             return Ok(findings);
         }
 

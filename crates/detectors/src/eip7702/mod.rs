@@ -82,13 +82,60 @@ pub use txorigin_bypass::EIP7702TxOriginBypassDetector;
 /// Helper function to detect if contract might be EIP-7702 delegate
 pub fn is_eip7702_delegate(ctx: &crate::types::AnalysisContext) -> bool {
     let source = &ctx.source_code.to_lowercase();
+    let file_path = ctx.file_path.to_lowercase();
 
-    // Check for EIP-7702 specific patterns
-    source.contains("delegatecall")
-        || source.contains("execute") && (source.contains("call") || source.contains("batch"))
-        || source.contains("eip7702")
+    // Phase 15 FP Reduction: Skip known pre-7702 contracts
+    // Safe Smart Account predates EIP-7702 (Pectra upgrade)
+    let is_safe = file_path.contains("safe-smart-account")
+        || file_path.contains("safe-contracts")
+        || file_path.contains("/safe/")
+        || source.contains("@author stefan george")
+        || source.contains("@author richard meissner")
+        || source.contains("gnosis safe");
+
+    // OpenZeppelin contracts predate EIP-7702
+    let is_openzeppelin = file_path.contains("openzeppelin")
+        || source.contains("@openzeppelin")
+        || source.contains("openzeppelin-contracts");
+
+    // Aave contracts predate EIP-7702
+    let is_aave = source.contains("@author aave")
+        || file_path.contains("aave-v3")
+        || file_path.contains("aave-v2");
+
+    // Solmate is a library that predates EIP-7702
+    let is_solmate = file_path.contains("/solmate/")
+        || source.contains("solmate");
+
+    // Skip all pre-7702 known contracts
+    if is_safe || is_openzeppelin || is_aave || is_solmate {
+        return false;
+    }
+
+    // Require explicit EIP-7702 references - not just delegatecall
+    // EIP-7702 is about EOA code delegation (Pectra upgrade 2025+)
+    let has_explicit_7702 = source.contains("eip7702")
+        || source.contains("eip-7702")
+        || source.contains("7702")
         || source.contains("setcode")
-        || source.contains("authorization")
+        || source.contains("eoa delegation")
+        || source.contains("eoa code");
+
+    // If explicit 7702 reference, definitely a delegate
+    if has_explicit_7702 {
+        return true;
+    }
+
+    // For contracts without explicit 7702 reference, require BOTH:
+    // 1. delegatecall pattern AND
+    // 2. Account abstraction / EOA pattern (not just regular proxy)
+    let has_delegatecall = source.contains("delegatecall");
+    let has_aa_pattern = source.contains("account abstraction")
+        || source.contains("smart account")
+        || source.contains("eoa")
+        || (source.contains("execute") && source.contains("authorization"));
+
+    has_delegatecall && has_aa_pattern
 }
 
 /// Helper to detect sweeper patterns (drain all assets)

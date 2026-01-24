@@ -7,6 +7,113 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.11] - 2026-01-24
+
+### Fixed
+
+#### Phase 15 False Positive Reduction - EIP-7702 & Proxy Tooling Detection
+
+FP cleanup for eip7702-storage-collision and upgradeable-proxy-issues detectors.
+
+**eip7702/mod.rs (is_eip7702_delegate helper)**
+- Skip known pre-7702 contracts (Safe, OZ, Aave, Solmate)
+- Require explicit EIP-7702 references ("7702", "setcode", "eoa delegation")
+- For contracts without explicit 7702 reference, require BOTH delegatecall AND account abstraction patterns
+- Prevents triggering on pre-Pectra contracts that use delegatecall
+
+**upgradeable_proxy_issues.rs**
+- Added `is_deployment_tooling()` - skip deployment libraries (OZ Foundry Upgrades, Forge scripts)
+- Added `is_known_trusted_proxy()` - skip vendored OZ dependencies with proper access control
+- Recognize `ifAdmin` modifier as valid access control (OZ TransparentProxy pattern)
+- Detect ADMIN_SLOT + AdminChanged events as proper OZ admin pattern
+
+**Results on real-world contracts:**
+- OZ Foundry Upgrades: 37 → 0 upgradeable-proxy-issues
+- Safe Smart Account: 13 → 0 eip7702-storage-collision
+- Solmate: 2 → 0 eip7702-storage-collision
+- Aave V3: 8 → 0 eip7702-storage-collision, 12 → 0 upgradeable-proxy-issues
+
+**Total FP reduction this release:**
+- eip7702-storage-collision: 23 → 0 (-100%)
+- upgradeable-proxy-issues: 49 → 0 (-100%)
+
+## [1.10.10] - 2026-01-24
+
+### Fixed
+
+#### Phase 14 False Positive Reduction - Lens Contract & Deployment Tooling Detection
+
+Final FP cleanup for lending-borrow-bypass and initcode-injection detectors.
+
+**utils.rs**
+- Added `is_view_only_lens_contract()` helper function
+  - Detects read-only data aggregator contracts (e.g., FusePoolLens)
+  - Recognizes lens/reader/viewer naming patterns
+  - Respects "read-only" and "not designed to be called in a transaction" comments
+
+- Added `is_deployment_tooling()` helper function
+  - Detects deployment libraries (factories, upgraders, deployers)
+  - Recognizes Forge-std testing framework imports
+  - Identifies trusted bytecode sources (`type(X).creationCode`, Clone patterns)
+  - Handles OpenZeppelin deployment infrastructure
+  - Catches explicit deployer contracts (CreateCall, Deployer, etc.)
+
+**lending_borrow_bypass.rs**
+- Added lens contract check to skip view-only contracts
+- FusePoolLens.sol and similar data aggregators no longer trigger false positives
+
+**initcode_injection.rs**
+- Skip deployment tooling contracts (they ARE the deployment infrastructure)
+- Improved `find_dynamic_bytecode` to only flag actual deployment contexts
+- Require `create`/`create2` usage in function body before flagging bytecode construction
+
+**oracle.rs (SingleSourceDetector)**
+- Added `contract_uses_oracle_data()` check - skip contracts without oracle patterns
+- Added `function_uses_oracle()` check - skip functions without price/oracle calls
+- Fixed `extract_oracle_source()` to only extract actual oracle-related member calls
+- Skip deployment tooling contracts
+
+**liquidation_mev.rs**
+- Added `is_interface_contract()` - skip interface contracts (no implementation)
+- Added `is_config_or_helper()` - skip configuration/helper contracts
+- Added `is_known_protected_protocol()` - skip Aave/Compound/MakerDAO with Chainlink
+- Added `has_liquidation_implementation()` - require actual liquidation logic
+- Fixed `find_liquidation_incentives()` - only flag actual calculations, not mentions
+- Fixed `find_health_factor_issues()` - check for Chainlink/TWAP protection
+- Fixed `find_flash_liquidation()` - require both flash + liquidate implementations
+
+**backrunning_opportunity.rs**
+- Added `is_interface_contract()` - skip interface contracts (IPool, IAToken, etc.)
+- Added `is_config_or_helper()` - skip configuration/helper contracts
+- Added `is_known_protected_protocol()` - skip Aave (@author Aave), Compound, MakerDAO
+- Added encoder/decoder helper detection - skip L2Encoder and similar calldata helpers
+- Added `has_function_body()` - require actual function implementation, not just signatures
+- Updated all finder functions to skip view/pure functions
+
+**reentrancy.rs (ClassicReentrancyDetector)**
+- Added `is_internal_or_private_function()` - skip internal/private functions
+- Added `is_internal_helper_pattern()` - skip functions with _ prefix convention
+- Added `is_known_protected_contract()` - skip OZ, Aave, Compound, Safe contracts
+- Added `has_contract_level_protection()` - skip contracts with ReentrancyGuard inheritance
+- Added `is_interface_contract()` - skip interface contracts
+- File path-based detection for Safe wallet contracts
+- Enhanced `has_reentrancy_guard()` with additional patterns
+
+**Results on real-world contracts:**
+- OZ Foundry Upgrades: 36 → 0 initcode-injection, 27 → 0 single-oracle-source, 8 → 0 classic-reentrancy
+- Safe Smart Account: 16 → 0 initcode-injection, 8 → 0 classic-reentrancy
+- Solmate: 8 → 0 initcode-injection, 4 → 0 single-oracle-source
+- Aave V3: 4 → 0 initcode-injection, 46 → 0 single-oracle-source, 67 → 0 liquidation-mev, 52 → 0 backrunning-opportunity, 52 → 0 classic-reentrancy
+
+**Total FP reduction this release:**
+- initcode-injection: 64 → 0 (-100%)
+- single-oracle-source: 77 → 0 (-100%)
+- liquidation-mev: 67 → 0 (-100%)
+- backrunning-opportunity: 52 → 0 (-100%)
+- classic-reentrancy: 68 → 0 (-100%)
+
+All 604 detector tests pass.
+
 ## [1.10.8] - 2026-01-23
 
 ### Fixed
