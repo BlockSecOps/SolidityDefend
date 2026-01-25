@@ -8,7 +8,7 @@ class Soliditydefend < Formula
   on_macos do
     if Hardware::CPU.arm?
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-arm64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_ARM64"
+      sha256 "8a6929d0283f09c141ae443e6e6838cba39dbebd6cb4b4edeeeeec98fce2d509"
     else
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/solidifydefend-v1.10.11-darwin-x86_64.tar.gz"
       sha256 "REPLACE_WITH_ACTUAL_SHA256_X86_64"
