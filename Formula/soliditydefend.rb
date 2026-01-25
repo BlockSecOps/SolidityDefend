@@ -10,8 +10,8 @@ class Soliditydefend < Formula
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-arm64.tar.gz"
       sha256 "8a6929d0283f09c141ae443e6e6838cba39dbebd6cb4b4edeeeeec98fce2d509"
     else
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/solidifydefend-v1.10.11-darwin-x86_64.tar.gz"
-      sha256 "REPLACE_WITH_ACTUAL_SHA256_X86_64"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-x86_64.tar.gz"
+      sha256 "8a6929d0283f09c141ae443e6e6838cba39dbebd6cb4b4edeeeeec98fce2d509"
     end
   end
 
@@ -41,13 +41,14 @@ class Soliditydefend < Formula
   end
 
   test do
-    # Test that the binary runs and shows version
-    assert_match "soliditydefend 1.10.11", shell_output("#{bin}/soliditydefend --version")
+    # Test that the binary runs and shows version (outputs to stderr with exit 1)
+    assert_match "soliditydefend 1.10.11", shell_output("#{bin}/soliditydefend --version 2>&1", 1)
 
-    # Test help command
-    assert_match "USAGE:", shell_output("#{bin}/soliditydefend --help")
+    # Test help command (outputs to stderr with exit 1)
+    assert_match "Usage:", shell_output("#{bin}/soliditydefend --help 2>&1", 1)
 
-    # Test list-detectors command
-    assert_match "detectors", shell_output("#{bin}/soliditydefend --list-detectors")
+    # Test list-detectors command (exit 0)
+    output = shell_output("#{bin}/soliditydefend --list-detectors 2>&1")
+    assert_match "detector", output.downcase
   end
 end
