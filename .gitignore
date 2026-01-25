@@ -68,3 +68,12 @@ venv/
 .claude
 debug_test
 debug_test*release/
+
+# Build/distribution artifacts
+dist/
+
+# Test result files
+results_phase*.json
+
+# Test execution artifacts
+test-execution/

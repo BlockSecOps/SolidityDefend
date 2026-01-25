@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO="SolidityOps/SolidityDefend"
+REPO="BlockSecOps/SolidityDefend"
 BINARY_NAME="soliditydefend"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${VERSION:-latest}"

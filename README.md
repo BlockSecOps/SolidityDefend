@@ -1,10 +1,10 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.10.8-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.10.11-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/BlockSecOps/SolidityDefend#license)
 [![Rust Version](https://img.shields.io/badge/rustc-1.82+-blue.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
-[![Detectors](https://img.shields.io/badge/detectors-333-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
+[![Detectors](https://img.shields.io/badge/detectors-330-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/blob/main/docs/DETECTORS.md)
 [![Context Aware](https://img.shields.io/badge/context%20aware-4%20types-blue.svg)](#context-aware-analysis)
 [![OWASP 2025](https://img.shields.io/badge/OWASP%202025-aligned-blue.svg)](#owasp-2025-alignment)
 [![Validated](https://img.shields.io/badge/validated-43.5%25%20detection%20rate-blue.svg)](#validation-testing)
@@ -139,21 +139,21 @@ Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/re
 
 **Linux (x86_64)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.6.0/soliditydefend-linux-x86_64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-linux-x86_64
 chmod +x soliditydefend-linux-x86_64
 sudo mv soliditydefend-linux-x86_64 /usr/local/bin/soliditydefend
 ```
 
 **Linux (ARM64)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.6.0/soliditydefend-linux-arm64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-linux-arm64
 chmod +x soliditydefend-linux-arm64
 sudo mv soliditydefend-linux-arm64 /usr/local/bin/soliditydefend
 ```
 
 **macOS (Apple Silicon)**
 ```bash
-curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.6.0/soliditydefend-darwin-arm64
+curl -LO https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-darwin-arm64
 chmod +x soliditydefend-darwin-arm64
 sudo mv soliditydefend-darwin-arm64 /usr/local/bin/soliditydefend
 ```
@@ -411,7 +411,7 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 - **[Usage Guide](docs/USAGE.md)** - Comprehensive tutorials and examples
 - **[CLI Reference](docs/CLI.md)** - Complete command-line documentation
 - **[Configuration](docs/CONFIGURATION.md)** - Configuration options and examples
-- **[Detector Documentation](docs/DETECTORS.md)** - All 74 detectors explained
+- **[Detector Documentation](docs/DETECTORS.md)** - All 330 detectors explained
 - **[Output Formats](docs/OUTPUT.md)** - Output format specifications
 
 ---
@@ -420,8 +420,8 @@ Learn more: [BlockSecOps.com](https://BlockSecOps.com)
 
 SolidityDefend follows [Semantic Versioning](https://semver.org/):
 
-- **Current Version**: v1.6.0 (Production Release)
-- **Detectors**: 233 security detectors (including 31 proxy/upgradeable)
+- **Current Version**: v1.10.11 (Production Release)
+- **Detectors**: 330 security detectors (including 45+ proxy/upgradeable)
 - **Status**: Production Ready
 
 See [CHANGELOG.md](CHANGELOG.md) for release history and detailed notes.
