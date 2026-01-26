@@ -1,7 +1,7 @@
 {
-  "version": "1.9.1+",
-  "generated": "2026-01-16",
-  "total_detectors": 333,
+  "version": "1.10.11+",
+  "generated": "2026-01-25",
+  "total_detectors": 330,
   "detectors": [
     {
       "id": "aa-account-takeover",

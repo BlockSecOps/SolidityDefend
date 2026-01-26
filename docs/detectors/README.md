@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **333 security detectors** in SolidityDefend v1.9.1+.
+Complete reference for all **330 security detectors** in SolidityDefend v1.10.11+.
 
-**Last Updated:** 2026-01-16
-**Version:** v1.9.1+
-**Total Detectors:** 333 (in tool)
+**Last Updated:** 2026-01-25
+**Version:** v1.10.11+
+**Total Detectors:** 330 (in tool)
 **Categories:** 28
 
 ---
