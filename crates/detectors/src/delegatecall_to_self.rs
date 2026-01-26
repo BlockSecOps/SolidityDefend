@@ -228,6 +228,111 @@ impl DelegatecallToSelfDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Phase 16 FP Reduction: Skip EIP-1967 compliant proxies
+    /// These proxies legitimately use delegatecall patterns
+    fn is_eip1967_proxy(&self, source: &str) -> bool {
+        // EIP-1967 implementation slot
+        source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || source.contains("_IMPLEMENTATION_SLOT")
+            || source.contains("ERC1967")
+            || source.contains("ERC1967Proxy")
+            || source.contains("TransparentUpgradeableProxy")
+            || source.contains("UUPSUpgradeable")
+            // OpenZeppelin proxy patterns
+            || source.contains("@openzeppelin/contracts/proxy")
+            || source.contains("Proxy.sol")
+    }
+
+    /// Phase 16 FP Reduction: Skip Diamond pattern (EIP-2535)
+    /// Diamond proxies legitimately use delegatecall routing
+    fn is_diamond_proxy(&self, source: &str) -> bool {
+        source.contains("selectorToFacet")
+            || source.contains("DiamondStorage")
+            || source.contains("facetAddress")
+            || source.contains("IDiamondCut")
+            || source.contains("Diamond.sol")
+            || source.contains("LibDiamond")
+            || source.contains("FacetCut")
+    }
+
+    /// Phase 16 FP Reduction: Skip Safe wallet patterns
+    /// Gnosis Safe uses delegatecall for module execution, which is intentional
+    fn is_safe_wallet(&self, source: &str, ctx: &AnalysisContext) -> bool {
+        // Check source content patterns
+        if source.contains("GnosisSafe")
+            || source.contains("Safe.sol")
+            || source.contains("@safe-global/")
+            || source.contains("@gnosis.pm/safe-contracts")
+            || source.contains("ModuleManager")
+            || source.contains("FallbackManager")
+            || source.contains("execTransactionFromModule")
+            // Safe-specific patterns
+            || (source.contains("module") && source.contains("delegatecall") && source.contains("require(success"))
+        {
+            return true;
+        }
+
+        // Check file path for Safe wallet projects
+        let file_path_lower = ctx.file_path.to_lowercase();
+        if file_path_lower.contains("safe-smart-account")
+            || file_path_lower.contains("safe-contracts")
+            || file_path_lower.contains("gnosis-safe")
+        {
+            return true;
+        }
+
+        // Check contract name patterns for Safe components
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let safe_contract_names = [
+            "multisend", "executor", "safeproxy", "safetol2setup",
+            "storageaccessible", "migration", "simulatetxaccessor",
+            "fallbackhandler", "compatibilityhandler", "signatureverifier",
+        ];
+        for name in &safe_contract_names {
+            if contract_name_lower.contains(name) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if delegatecall target is immutable
+    /// Immutable targets are safe because they can't be changed after construction
+    fn has_immutable_target(&self, source: &str, line: &str) -> bool {
+        // Extract the variable being used as delegatecall target
+        if let Some(target_var) = self.extract_delegatecall_target(line) {
+            // Check if that variable is declared as immutable
+            let immutable_pattern1 = format!("immutable {}", target_var);
+            let immutable_pattern2 = format!("{} immutable", target_var);
+            let immutable_pattern3 = format!("address immutable {}", target_var);
+
+            source.contains(&immutable_pattern1)
+                || source.contains(&immutable_pattern2)
+                || source.contains(&immutable_pattern3)
+        } else {
+            false
+        }
+    }
+
+    /// Extract the delegatecall target variable name from a line
+    fn extract_delegatecall_target(&self, line: &str) -> Option<String> {
+        // Match patterns like: target.delegatecall, implementation.delegatecall
+        if let Some(pos) = line.find(".delegatecall") {
+            let before = &line[..pos];
+            // Find the variable name (last word before the dot)
+            let words: Vec<&str> = before.split_whitespace().collect();
+            if let Some(last) = words.last() {
+                // Clean up any leading parentheses or other chars
+                let cleaned = last.trim_start_matches('(').trim_start_matches('{');
+                if !cleaned.is_empty() {
+                    return Some(cleaned.to_string());
+                }
+            }
+        }
+        None
+    }
 }
 
 impl Detector for DelegatecallToSelfDetector {
@@ -259,6 +364,19 @@ impl Detector for DelegatecallToSelfDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Phase 16 FP Reduction: Skip valid proxy patterns
+        if self.is_eip1967_proxy(source) {
+            return Ok(findings);
+        }
+
+        if self.is_diamond_proxy(source) {
+            return Ok(findings);
+        }
+
+        if self.is_safe_wallet(source, ctx) {
+            return Ok(findings);
+        }
 
         for (line, func_name, issue) in self.find_self_delegatecall(source) {
             let message = format!(

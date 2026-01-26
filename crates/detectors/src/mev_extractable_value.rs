@@ -142,9 +142,33 @@ impl MevExtractableValueDetector {
             return None; // Paymaster operations are not MEV targets
         }
 
-        // NEW: Early exit if function has sufficient MEV protection
-        if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {
-            return None; // Protected - no MEV risk
+        // Phase 16 Recall Recovery: Check trading functions first for better recall
+        // Trading functions by name require slippage protection regardless of other protections
+        let func_name_lower = function.name.name.to_lowercase();
+        let is_trading_by_name = func_name_lower.contains("swap")
+            || func_name_lower.contains("trade")
+            || func_name_lower.contains("exchange")
+            || func_name_lower.contains("arbitrage")
+            || func_name_lower.contains("liquidat")
+            || func_name_lower.contains("flashloan")
+            || func_name_lower.contains("flash");
+
+        // For trading functions, ALWAYS require slippage protection
+        // Access control alone doesn't protect against sandwich attacks
+        if is_trading_by_name && !mev_protection_patterns::has_slippage_protection(&func_source) {
+            return Some(format!(
+                "Trading/arbitrage function '{}' lacks slippage protection. \
+                Access control modifiers don't protect against MEV - without minAmountOut \
+                or similar protection, trades are vulnerable to sandwich attacks.",
+                function.name.name
+            ));
+        }
+
+        // For non-trading functions, use standard protection check
+        if !is_trading_by_name {
+            if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {
+                return None; // Protected - no MEV risk
+            }
         }
 
         // Skip standard ERC20/ERC721 token functions - these are NOT MEV targets by themselves

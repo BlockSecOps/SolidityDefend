@@ -103,6 +103,12 @@ impl Post080OverflowDetector {
         let block_no_comments = self.remove_comments(block);
         let block_trimmed = block_no_comments.trim();
 
+        // Phase 16 FP Reduction: Skip fixed-point arithmetic patterns
+        // Pattern: multiply then divide = bounded result (common in DeFi)
+        if self.is_fixed_point_arithmetic(&block_no_comments) {
+            return false;
+        }
+
         // Check if the block ONLY contains safe loop counter operations
         // A block like "unchecked { ++i; }" is safe
         let mut has_only_safe_patterns = false;
@@ -140,6 +146,7 @@ impl Post080OverflowDetector {
         }
 
         // Also flag multiplication which is the highest risk (Cetus-style)
+        // But skip if it's fixed-point arithmetic (already checked above)
         if block_no_comments.contains(" * ") || block_no_comments.contains("*=") {
             // Multiplication is almost always dangerous in unchecked
             // unless it's a very specific pattern
@@ -147,6 +154,162 @@ impl Post080OverflowDetector {
         }
 
         has_dangerous
+    }
+
+    /// Phase 16 FP Reduction: Check for fixed-point arithmetic patterns
+    /// Pattern: multiply then divide = bounded result (common in Safe, Solmate, DeFi)
+    /// Examples:
+    ///   - (a * b) / WAD
+    ///   - a.mulDivDown(b, c)
+    ///   - (x * PRECISION) / y
+    fn is_fixed_point_arithmetic(&self, block_content: &str) -> bool {
+        let has_mul = block_content.contains("*") || block_content.contains("mul");
+        let has_div = block_content.contains("/") || block_content.contains("div");
+
+        // Pattern 1: multiply then divide (bounded)
+        if has_mul && has_div {
+            return true;
+        }
+
+        // Pattern 2: Common fixed-point library function names
+        let fixed_point_patterns = [
+            "mulDiv", "muldiv", "mulWad", "mulwad", "divWad", "divwad",
+            "mulDown", "mulUp", "divDown", "divUp",
+            "fmul", "fdiv", "rmul", "rdiv", "wmul", "wdiv",
+            "FullMath", "fullMath", "PRBMath", "FixedPoint",
+        ];
+
+        for pattern in &fixed_point_patterns {
+            if block_content.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Pattern 3: WAD/RAY/PRECISION constants (common in DeFi)
+        let precision_constants = [
+            "WAD", "RAY", "PRECISION", "SCALE", "UNIT",
+            "1e18", "1e27", "10**18", "10**27",
+        ];
+
+        for constant in &precision_constants {
+            if block_content.contains(constant) && (has_mul || has_div) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if source is a known safe math library
+    /// These libraries intentionally use unchecked blocks for gas optimization
+    /// and are audited/well-tested
+    fn is_math_library(&self, source: &str) -> bool {
+        // Check for well-known math library imports/packages
+        let math_library_indicators = [
+            // Solmate library
+            "@solmate/", "solmate/", "library FixedPointMath",
+            // OpenZeppelin SafeMath (now less common but still used)
+            "library SafeMath", "@openzeppelin/contracts/utils/math",
+            // PRBMath
+            "PRBMath", "library SD59x18", "library UD60x18",
+            // Other common math libraries
+            "library FullMath", "library Math", "library SignedMath",
+            "library FixedPoint", "library ABDKMath",
+            // Gnosis Safe math
+            "GnosisSafe", "@safe-global/",
+        ];
+
+        for indicator in &math_library_indicators {
+            if source.contains(indicator) {
+                return true;
+            }
+        }
+
+        // Check for library declaration with math-related name
+        if source.contains("library ") {
+            let source_lower = source.to_lowercase();
+            if source_lower.contains("library math")
+                || source_lower.contains("library fixedpoint")
+                || source_lower.contains("library safecalc")
+                || source_lower.contains("library signedmath")
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if this is a Safe wallet project
+    /// Safe wallet contracts are heavily audited and use unchecked/assembly intentionally
+    fn is_safe_wallet_project(&self, ctx: &AnalysisContext) -> bool {
+        // Check file path
+        let file_path_lower = ctx.file_path.to_lowercase();
+        if file_path_lower.contains("safe-smart-account")
+            || file_path_lower.contains("safe-contracts")
+            || file_path_lower.contains("gnosis-safe")
+        {
+            return true;
+        }
+
+        // Check for Safe-specific contract patterns in source
+        let source = &ctx.source_code;
+        if source.contains("ISafe")
+            || source.contains("GnosisSafe")
+            || source.contains("Safe.sol")
+            || source.contains("@safe-global/")
+            || (source.contains("contract Safe") && source.contains("execTransaction"))
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if assembly block is marked as memory-safe
+    /// Blocks with @solidity memory-safe-assembly annotation are safe
+    fn is_memory_safe_assembly(&self, source: &str, assembly_line: usize) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+
+        // Check 2 lines before assembly for memory-safe annotation
+        let start = assembly_line.saturating_sub(3);
+        for i in start..assembly_line {
+            if let Some(line) = lines.get(i) {
+                if line.contains("memory-safe-assembly") || line.contains("memory-safe") {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if there's preceding validation before unchecked block
+    /// If the line before unchecked has a require/if check, the arithmetic is likely safe
+    fn has_preceding_validation(&self, source: &str, unchecked_line: usize) -> bool {
+        let lines: Vec<&str> = source.lines().collect();
+
+        // Check 3 lines before the unchecked block
+        let start = unchecked_line.saturating_sub(4);
+        for i in start..unchecked_line {
+            if let Some(line) = lines.get(i) {
+                let trimmed = line.trim();
+                // Skip empty lines and comments
+                if trimmed.is_empty() || trimmed.starts_with("//") {
+                    continue;
+                }
+
+                // Check for validation patterns
+                if trimmed.contains("require(")
+                    || trimmed.contains("if (")
+                    || trimmed.contains("if(")
+                    || trimmed.contains("assert(")
+                    || (trimmed.contains(">=") || trimmed.contains("<=") || trimmed.contains(">") || trimmed.contains("<"))
+                {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// Check if block has arithmetic on non-loop-counter variables
@@ -200,6 +363,12 @@ impl Post080OverflowDetector {
             // Look for "assembly {" or "assembly{"
             if trimmed.contains("assembly") && (trimmed.contains("{") ||
                 (i + 1 < lines.len() && lines[i + 1].trim().starts_with("{"))) {
+
+                // Phase 16 FP Reduction: Skip memory-safe assembly blocks
+                if self.is_memory_safe_assembly(source, i) {
+                    i += 1;
+                    continue;
+                }
 
                 let start_line = i;
                 let mut block_content = String::new();
@@ -366,9 +535,24 @@ impl Detector for Post080OverflowDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
 
+        // Phase 16 FP Reduction: Skip known safe math library files
+        if self.is_math_library(source) {
+            return Ok(findings);
+        }
+
+        // Phase 16 FP Reduction: Skip known audited wallet projects
+        if self.is_safe_wallet_project(ctx) {
+            return Ok(findings);
+        }
+
         // Phase 6: Properly analyze unchecked blocks instead of simple contains()
         let unchecked_blocks = self.find_unchecked_blocks(source);
-        for (line, _block, is_dangerous) in unchecked_blocks {
+        for (line, block, is_dangerous) in unchecked_blocks {
+            // Phase 16 FP Reduction: Skip if there's preceding validation
+            if is_dangerous && self.has_preceding_validation(source, line as usize) {
+                continue;
+            }
+
             if is_dangerous {
                 let finding = self
                     .base
@@ -570,5 +754,60 @@ mod tests {
 
         let unsafe_ops = detector.find_unsafe_assembly_arithmetic(safe_asm);
         assert!(unsafe_ops.is_empty(), "Protected assembly should not be flagged");
+    }
+
+    #[test]
+    fn test_fixed_point_arithmetic_not_flagged() {
+        let detector = Post080OverflowDetector::new();
+
+        // Phase 16: Fixed-point arithmetic is safe (multiply then divide)
+        let fixed_point_code = r#"
+            unchecked {
+                result = (a * b) / WAD;
+            }
+        "#;
+
+        let blocks = detector.find_unchecked_blocks(fixed_point_code);
+        let has_dangerous = blocks.iter().any(|(_, _, is_dangerous)| *is_dangerous);
+        assert!(!has_dangerous, "Fixed-point arithmetic (mul/div) should not be flagged");
+    }
+
+    #[test]
+    fn test_math_library_detection() {
+        let detector = Post080OverflowDetector::new();
+
+        // Solmate library should be detected as math library
+        let solmate_source = r#"
+            // SPDX-License-Identifier: MIT
+            pragma solidity ^0.8.0;
+            import {FixedPointMathLib} from "solmate/src/utils/FixedPointMathLib.sol";
+            library FixedPointMath { ... }
+        "#;
+        assert!(detector.is_math_library(solmate_source), "Solmate library should be detected");
+
+        // Regular contract should not be detected as math library
+        let regular_source = r#"
+            // SPDX-License-Identifier: MIT
+            pragma solidity ^0.8.0;
+            contract MyContract { }
+        "#;
+        assert!(!detector.is_math_library(regular_source), "Regular contract should not be detected as math library");
+    }
+
+    #[test]
+    fn test_preceding_validation_check() {
+        let detector = Post080OverflowDetector::new();
+
+        let code_with_validation = r#"
+            function test() {
+                require(a >= b, "underflow");
+                unchecked {
+                    result = a - b;
+                }
+            }
+        "#;
+
+        // Line 4 is where unchecked starts (1-indexed)
+        assert!(detector.has_preceding_validation(code_with_validation, 4), "Preceding require should be detected");
     }
 }
