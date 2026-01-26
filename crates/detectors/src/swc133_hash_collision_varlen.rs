@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::is_deployment_tooling;
 
 /// Detector for SWC-133: Hash Collisions With Multiple Variable Length Arguments
 ///
@@ -103,8 +104,20 @@ impl HashCollisionVarlenDetector {
     }
 
     /// Check if an argument is likely a variable-length type
+    /// Phase 16 FP Reduction: Improved type detection to reduce false positives
     fn is_variable_length_type(&self, arg: &str) -> bool {
         let arg_lower = arg.to_lowercase();
+        let arg_trimmed = arg.trim();
+
+        // Arrays are always variable length - check this FIRST before fixed type check
+        if arg.contains("[]") {
+            return true;
+        }
+
+        // Phase 16 FP Reduction: Skip fixed types that look like variable
+        if self.is_definitely_fixed_type(arg_trimmed) {
+            return false;
+        }
 
         // Fixed-size bytes types are NOT variable length
         // bytes1, bytes2, ..., bytes32 are fixed-size
@@ -112,36 +125,83 @@ impl HashCollisionVarlenDetector {
             return false;
         }
 
-        // Direct type indicators for variable-length types
-        if arg_lower.contains("string")
-            || arg_lower == "bytes"
-            || arg_lower.contains("bytes ")
-            || arg_lower.contains("bytes,")
-            || arg_lower.contains("bytes)")
+        // bytes (dynamic) is variable length, but bytes1-32 are fixed (checked above)
+        if arg_lower == "bytes"
             || arg_lower.starts_with("bytes ")
-            || arg.contains("[]") // arrays are variable length
+            || arg_lower.starts_with("bytes,")
+            || arg_lower.starts_with("bytes)")
+            || arg_lower.contains("string ")
+            || arg_lower.contains("string,")
+            || arg_lower.contains("string)")
         {
             return true;
         }
 
-        // String literals (quoted strings)
-        if (arg.starts_with('"') && arg.ends_with('"'))
-            || (arg.starts_with('\'') && arg.ends_with('\''))
+        // String literals (quoted strings) - definitely variable length
+        if (arg_trimmed.starts_with('"') && arg_trimmed.ends_with('"'))
+            || (arg_trimmed.starts_with('\'') && arg_trimmed.ends_with('\''))
         {
             return true;
         }
 
-        // Common variable names for strings/bytes (but not if they look like fixed types)
-        let var_length_patterns = [
-            "str", "string", "name", "symbol", "message", "data", "payload",
-            "text", "content", "description", "uri", "url", "path", "input",
-            "sig", "signature", "encoded", "packed",
+        // Phase 16 FP Reduction: Be more conservative with variable name patterns
+        // Only flag if the name strongly suggests a string/bytes type
+        let high_confidence_patterns = [
+            "string", "bytes", // Type names
         ];
 
-        // Only match if it contains the pattern but isn't a fixed bytes type
-        var_length_patterns
-            .iter()
-            .any(|p| arg_lower.contains(p))
+        // Lower confidence patterns - only flag if combined with other evidence
+        let medium_confidence_patterns = [
+            "str", "name", "symbol", "message", "data", "payload",
+            "text", "content", "description", "uri", "url", "path",
+        ];
+
+        // High confidence patterns - flag these
+        if high_confidence_patterns.iter().any(|p| arg_lower == *p) {
+            return true;
+        }
+
+        // Medium confidence - only flag if clearly a parameter name, not a field access
+        // Skip things like "msg.data" or "token.name()"
+        if !arg.contains('.') && !arg.contains('(') {
+            if medium_confidence_patterns.iter().any(|p| arg_lower == *p) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Phase 16 FP Reduction: Check if type is definitely fixed-length
+    fn is_definitely_fixed_type(&self, arg: &str) -> bool {
+        let arg_lower = arg.to_lowercase();
+
+        // Address is always 20 bytes
+        if arg_lower.contains("address") {
+            return true;
+        }
+
+        // Uint/int types are fixed
+        if arg_lower.contains("uint") || arg_lower.contains("int") {
+            return true;
+        }
+
+        // Bool is fixed
+        if arg_lower == "bool" || arg_lower.contains("bool ") {
+            return true;
+        }
+
+        // Numeric literals are fixed
+        if arg.chars().all(|c| c.is_ascii_digit() || c == 'x' || c == 'X') {
+            return true;
+        }
+
+        // Hex literals are fixed
+        if arg.starts_with("0x") {
+            return true;
+        }
+
+        false
     }
 
     /// Check if the type is a fixed-size bytes type (bytes1 through bytes32)
@@ -183,6 +243,37 @@ impl HashCollisionVarlenDetector {
             || source.contains("signature")
             || source.contains("hash")
     }
+
+    /// Phase 16 FP Reduction: Check if this is a library file
+    /// Libraries often have intentional encodePacked patterns for gas optimization
+    fn is_library_file(&self, source: &str) -> bool {
+        // Check for library declaration without contract
+        let has_library = source.contains("library ");
+        let has_contract = source.contains("contract ");
+
+        // Pure library file (no contract)
+        if has_library && !has_contract {
+            return true;
+        }
+
+        // Check for well-known utility libraries
+        let utility_library_patterns = [
+            "library ECDSA",
+            "library MerkleProof",
+            "library SignatureChecker",
+            "library EIP712",
+            "@openzeppelin/contracts/utils/cryptography",
+            "library MessageHashUtils",
+        ];
+
+        for pattern in &utility_library_patterns {
+            if source.contains(pattern) {
+                return true;
+            }
+        }
+
+        false
+    }
 }
 
 impl Detector for HashCollisionVarlenDetector {
@@ -212,9 +303,20 @@ impl Detector for HashCollisionVarlenDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 16 FP Reduction: Skip library files - they often have intentional patterns
+        if self.is_library_file(source) {
+            return Ok(findings);
+        }
+
+        // Phase 16 FP Reduction: Skip deployment tooling files
+        if is_deployment_tooling(ctx) {
+            return Ok(findings);
+        }
 
         // Scan entire source for vulnerable patterns
-        let vulnerabilities = self.find_vulnerable_encode_packed(&ctx.source_code);
+        let vulnerabilities = self.find_vulnerable_encode_packed(source);
 
         for (line_num, issue) in vulnerabilities {
             // Check if it's in a security-critical context

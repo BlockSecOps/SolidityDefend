@@ -78,6 +78,12 @@ impl Detector for FloatingPragmaDetector {
 
                 // Pattern 1: Caret operator (^) - floating pragma
                 if pragma_statement.contains('^') {
+                    // Phase 16 FP Reduction: Skip caret pragmas for 0.8+ entirely
+                    // Caret on 0.8+ is very low risk (built-in overflow, bounded range)
+                    if is_080_plus {
+                        continue;
+                    }
+
                     // Phase 9 FP Reduction: Lower severity for 0.8.x (has overflow checks)
                     let severity = if is_080_plus {
                         Severity::Info

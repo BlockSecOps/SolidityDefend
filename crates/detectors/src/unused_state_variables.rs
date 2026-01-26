@@ -81,6 +81,11 @@ impl Detector for UnusedStateVariablesDetector {
                     continue;
                 }
 
+                // Phase 16 FP Reduction: Skip storage gap variables and upgrade placeholders
+                if self.should_skip_variable(&var_name, &var_type) {
+                    continue;
+                }
+
                 let message = format!(
                     "State variable '{}' is declared but never used. \
                     Unused state variables waste storage slots and increase deployment gas costs. \
@@ -124,7 +129,10 @@ impl UnusedStateVariablesDetector {
         let lines: Vec<&str> = source.lines().collect();
         let mut in_contract = false;
         let mut in_function = false;
+        let mut in_struct = false;
+        let mut in_enum = false;
         let mut brace_depth = 0;
+        let mut struct_brace_depth = 0;
 
         for (line_idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -146,6 +154,30 @@ impl UnusedStateVariablesDetector {
             // Track braces to know when we're inside a function
             let open_braces = trimmed.matches('{').count();
             let close_braces = trimmed.matches('}').count();
+
+            // Phase 16 FP Reduction: Track struct boundaries
+            if trimmed.starts_with("struct ") {
+                in_struct = true;
+                struct_brace_depth = 0;
+            }
+
+            // Phase 16 FP Reduction: Track enum boundaries
+            if trimmed.starts_with("enum ") {
+                in_enum = true;
+                struct_brace_depth = 0;
+            }
+
+            // Track struct/enum brace depth
+            if in_struct || in_enum {
+                struct_brace_depth += open_braces as i32;
+                struct_brace_depth -= close_braces as i32;
+
+                if struct_brace_depth <= 0 && (open_braces > 0 || close_braces > 0) {
+                    in_struct = false;
+                    in_enum = false;
+                }
+                continue;
+            }
 
             if trimmed.starts_with("function ") || trimmed.starts_with("constructor ") {
                 in_function = true;
@@ -343,6 +375,51 @@ impl UnusedStateVariablesDetector {
 
     fn is_constant_or_immutable(&self, var_type: &str) -> bool {
         var_type.contains("constant") || var_type.contains("immutable")
+    }
+
+    /// Phase 16 FP Reduction: Skip storage gap and upgrade placeholder variables
+    /// These are intentionally unused for upgradeable contract storage layout
+    fn should_skip_variable(&self, var_name: &str, var_type: &str) -> bool {
+        let name_lower = var_name.to_lowercase();
+
+        // Storage gaps for upgradeable contracts (Aave, OpenZeppelin pattern)
+        // Examples: __gap, _gap, __reserved, _reserved
+        if name_lower.contains("gap")
+            || name_lower.contains("reserved")
+            || name_lower.contains("__unused")
+            || name_lower.contains("_placeholder")
+        {
+            return true;
+        }
+
+        // Variables starting with __ are often upgrade placeholders
+        if var_name.starts_with("__") {
+            return true;
+        }
+
+        // Private arrays that look like gaps (uint256[50] private __gap)
+        if var_type.contains("[") && var_type.contains("private") {
+            // Check for common gap patterns
+            if name_lower.contains("gap") || var_name.starts_with("_") {
+                return true;
+            }
+        }
+
+        // Skip specific OpenZeppelin/Aave upgrade patterns
+        let upgrade_patterns = [
+            "STORAGE_SLOT",
+            "POSITION",
+            "_SLOT",
+            "RESERVED",
+        ];
+
+        for pattern in &upgrade_patterns {
+            if var_name.contains(pattern) {
+                return true;
+            }
+        }
+
+        false
     }
 
     fn build_usage_map(

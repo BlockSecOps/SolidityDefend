@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_standard_token, is_zk_contract};
+use crate::utils::{is_test_contract, is_standard_token, is_zk_contract, is_deployment_tooling};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -111,6 +111,12 @@ impl ParameterConsistencyDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // Phase 16 FP Reduction: Skip standard ERC batch functions
+        // ERC1155 safeBatchTransferFrom, ERC721 batch mints, etc.
+        if self.is_standard_batch_function(function, ctx) {
+            return findings;
+        }
+
         // Find array parameters
         let array_params: Vec<_> = params
             .iter()
@@ -118,6 +124,13 @@ impl ParameterConsistencyDetector {
             .collect();
 
         if array_params.len() > 1 {
+            // Phase 16 FP Reduction: Check if arrays are processed together in a loop
+            // If they're not used in the same loop, they may be independent
+            let func_source = self.get_function_source(function, ctx);
+            if !self.arrays_processed_together(&func_source, &array_params) {
+                return findings;
+            }
+
             // Multiple arrays should likely have matching lengths
             let array_names: Vec<_> = array_params.iter().map(|p| &p.name).collect();
 
@@ -155,6 +168,90 @@ impl ParameterConsistencyDetector {
         findings.extend(self.check_related_array_parameters(params, function, ctx));
 
         findings
+    }
+
+    /// Phase 16 FP Reduction: Check if function is a standard ERC batch operation
+    fn is_standard_batch_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> bool {
+        let func_name_lower = function.name.name.to_lowercase();
+        let source = &ctx.source_code;
+
+        // ERC1155 batch functions
+        let erc1155_batch = (func_name_lower.contains("batch") || func_name_lower.contains("safebatch"))
+            && (source.contains("ERC1155") || source.contains("IERC1155"));
+
+        // ERC721 batch mints/transfers
+        let erc721_batch = func_name_lower.contains("batch")
+            && (source.contains("ERC721") || source.contains("IERC721"));
+
+        // Standard batch transfer patterns
+        let standard_batch = func_name_lower == "safebatchtransferfrom"
+            || func_name_lower == "batchtransfer"
+            || func_name_lower == "batchmint"
+            || func_name_lower == "batchburn";
+
+        erc1155_batch || erc721_batch || standard_batch
+    }
+
+    /// Phase 16 FP Reduction: Check if arrays are processed together in the same loop
+    fn arrays_processed_together(&self, source: &str, array_params: &[&ParameterInfo]) -> bool {
+        if array_params.len() < 2 {
+            return false;
+        }
+
+        // Check if there's a loop that indexes both arrays
+        let has_for_loop = source.contains("for");
+        if !has_for_loop {
+            // No loop - arrays might be independent
+            return false;
+        }
+
+        // Check if both arrays are indexed in the source
+        let arr1_indexed = source.contains(&format!("{}[", array_params[0].name));
+        let arr2_indexed = source.contains(&format!("{}[", array_params[1].name));
+
+        arr1_indexed && arr2_indexed
+    }
+
+    /// Phase 16 FP Reduction: Check if this is a Safe wallet project
+    /// Safe wallets have their own validation patterns for transaction parameters
+    fn is_safe_wallet_project(&self, ctx: &AnalysisContext) -> bool {
+        // Check file path for Safe wallet projects
+        let file_path_lower = ctx.file_path.to_lowercase();
+        if file_path_lower.contains("safe-smart-account")
+            || file_path_lower.contains("safe-contracts")
+            || file_path_lower.contains("gnosis-safe")
+        {
+            return true;
+        }
+
+        // Check for Safe-specific contract patterns
+        let source = &ctx.source_code;
+        if source.contains("GnosisSafe")
+            || source.contains("@safe-global/")
+            || source.contains("@gnosis.pm/safe-contracts")
+            || source.contains("ISafe")
+            || source.contains("ModuleManager")
+            || source.contains("OwnerManager")
+            || source.contains("FallbackManager")
+            || source.contains("GuardManager")
+        {
+            return true;
+        }
+
+        // Check contract name patterns for Safe components
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let safe_contracts = [
+            "safe", "multisend", "executor", "safeproxy", "modulemanager",
+            "ownermanager", "guardmanager", "fallbackmanager", "signatureverifier",
+            "transactionguard", "createcall", "simulatetxaccessor",
+        ];
+        for name in &safe_contracts {
+            if contract_name_lower.contains(name) {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Check if function body has array length validation
@@ -911,6 +1008,17 @@ impl Detector for ParameterConsistencyDetector {
         // ZK contracts have unique parameter patterns (proof arrays, public inputs)
         // that don't follow standard validation expectations
         if is_zk_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 16 FP Reduction: Skip Safe wallet projects
+        // Safe wallets have unique parameter validation patterns at the transaction level
+        if self.is_safe_wallet_project(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 16 FP Reduction: Skip deployment tooling
+        if is_deployment_tooling(ctx) {
             return Ok(findings);
         }
 

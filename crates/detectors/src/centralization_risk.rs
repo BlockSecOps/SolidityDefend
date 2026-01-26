@@ -145,9 +145,44 @@ impl CentralizationRiskDetector {
             || contract_source.contains(".transfer(msg.sender")
             && contract_source.contains("onlyOwner");
 
+        // Phase 16 FN Recovery: Check for governance-specific centralization
+        // Governance contracts have unique centralization risks even with OZ Ownable
+        let is_governance_contract = contract_source.contains("governance")
+            || contract_source.contains("proposal")
+            || contract_source.contains("voting")
+            || contract_source.contains("quorum")
+            || ctx.contract.name.name.to_lowercase().contains("governance")
+            || ctx.contract.name.name.to_lowercase().contains("dao");
+
+        // Governance-specific centralization patterns
+        let has_guardian_bypass = contract_source.contains("guardian")
+            && (contract_source.contains("emergency")
+                || contract_source.contains("bypass")
+                || contract_source.contains("pause"));
+
+        let has_centralized_parameter_control =
+            contract_source.contains("onlyOwner") || contract_source.contains("msg.sender == owner");
+
+        // Governance contracts with guardian/admin that can bypass voting
+        if is_governance_contract && has_guardian_bypass && has_centralized_parameter_control {
+            return Some(
+                "Governance contract has admin/guardian that can bypass voting process. \
+                Centralized emergency controls undermine decentralized governance"
+                    .to_string(),
+            );
+        }
+
         // If using OZ Ownable without dangerous patterns, skip entirely
         // This is a standard, well-audited pattern
         if uses_oz_ownable && !has_selfdestruct && !has_arbitrary_token_transfer {
+            // But still flag governance contracts with centralized control
+            if is_governance_contract && has_centralized_parameter_control {
+                return Some(
+                    "Governance contract uses centralized Ownable pattern. \
+                    Owner can modify governance parameters without community approval"
+                        .to_string(),
+                );
+            }
             return None;
         }
 
