@@ -574,7 +574,7 @@ This release significantly reduces false positives across 13 detectors while mai
 
 ### 100% Detection Rate Achievement
 
-This release achieves **100% detection rate** (60/60) in scanner comparison tests. Total detectors: **330**.
+This release achieves **100% detection rate** (60/60) in scanner comparison tests. Total detectors: **333**.
 
 ### Added
 
@@ -602,7 +602,7 @@ This release achieves **100% detection rate** (60/60) in scanner comparison test
 
 ### EIP-3074 & Future Standards - Phase 51
 
-This release adds **8 new detectors** for EIP-3074 (AUTH/AUTHCALL), EIP-4844 (Blob Transactions), EIP-6780 (Selfdestruct Changes), and PUSH0 compatibility. Total detectors: **332**.
+This release adds **8 new detectors** for EIP-3074 (AUTH/AUTHCALL), EIP-4844 (Blob Transactions), EIP-6780 (Selfdestruct Changes), and PUSH0 compatibility. Total detectors: **333**.
 
 #### Added
 
