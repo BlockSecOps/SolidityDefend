@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **330 security detectors** in SolidityDefend v1.10.11+.
+Complete reference for all **333 security detectors** in SolidityDefend v1.10.11+.
 
-**Last Updated:** 2026-01-25
+**Last Updated:** 2026-01-26
 **Version:** v1.10.11+
-**Total Detectors:** 330 (in tool)
+**Total Detectors:** 333 (in tool)
 **Categories:** 28
 
 ---
@@ -44,7 +44,7 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 - **[Code Quality](code-quality/)** - 38 detectors
 - **[Account Abstraction](account-abstraction/)** - 21 detectors
 - **[DeFi](defi/)** - 19 detectors
-- **[EIPs](eips/)** - 16 detectors
+- **[EIPs](eips/)** - 24 detectors (includes Phase 51: EIP-3074/4844/6780/PUSH0)
 - **[MEV](mev/)** - 28 detectors
 - **[Deployment](deployment/)** - 12 detectors
 - **[Callback Chain](callback-chain/)** - 10 detectors

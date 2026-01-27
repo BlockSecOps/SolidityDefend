@@ -1,9 +1,31 @@
 # EIP-Specific Detectors
 
-**Total:** 26 detectors (EIP-7702: 11, ERC-7683: 6, ERC-7821: 5, EIP-1153: 5)
+**Total:** 34 detectors
+- EIP-7702: 11
+- ERC-7683: 6
+- ERC-7821: 5
+- EIP-1153: 5
+- **Phase 51 (v1.9.1):** 8 (EIP-3074: 5, EIP-4844: 1, EIP-6780: 1, PUSH0: 1)
 
-**Last Updated:** 2026-01-13
-**Version:** v1.8.0
+**Last Updated:** 2026-01-26
+**Version:** v1.10.11
+
+---
+
+## Phase 51: EIP-3074 & Future Standards (v1.9.1)
+
+See **[phase51-eip3074-future.md](phase51-eip3074-future.md)** for detailed documentation.
+
+| Detector | Severity | Description |
+|----------|----------|-------------|
+| `eip3074-upgradeable-invoker` | Critical | Forbidden upgradeable invoker contracts |
+| `eip3074-commit-validation` | High | Improper commit hash verification |
+| `eip3074-replay-attack` | High | Missing replay protection in AUTH |
+| `eip3074-invoker-authorization` | High | Missing invoker authorization checks |
+| `eip4844-blob-validation` | High | Blob transaction validation issues |
+| `eip3074-call-depth-griefing` | Medium | Call depth manipulation attacks |
+| `eip6780-selfdestruct-change` | Medium | Post-Cancun selfdestruct behavior |
+| `push0-stack-assumption` | Low | PUSH0 cross-chain compatibility |
 
 ---
 
