@@ -165,6 +165,36 @@ impl EncryptedMempoolTimingDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Phase 51 FP Reduction: Check if contract is MEV-sensitive
+    /// Only contracts with auction, voting, or commit-reveal should be checked
+    fn is_mev_sensitive_contract(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // Auction patterns
+        let has_auction = lower.contains("auction")
+            || lower.contains("bid")
+            || lower.contains("highest")
+            || lower.contains("sealed");
+
+        // Voting/governance patterns
+        let has_voting = lower.contains("vote")
+            || lower.contains("ballot")
+            || lower.contains("proposal");
+
+        // Commit-reveal patterns
+        let has_commit_reveal = (lower.contains("commit") && lower.contains("reveal"))
+            || lower.contains("commitment")
+            || lower.contains("sealed");
+
+        // Game/lottery patterns
+        let has_game = lower.contains("lottery")
+            || lower.contains("raffle")
+            || lower.contains("randomness")
+            || lower.contains("game");
+
+        has_auction || has_voting || has_commit_reveal || has_game
+    }
 }
 
 impl Detector for EncryptedMempoolTimingDetector {
@@ -204,6 +234,12 @@ impl Detector for EncryptedMempoolTimingDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 51 FP Reduction: Skip contracts without MEV-sensitive patterns
+        // This detector should only apply to auction, voting, or commit-reveal systems
+        if !self.is_mev_sensitive_contract(source) {
+            return Ok(findings);
+        }
+
         for (line, func_name) in self.find_timing_vulnerable_commit_reveal(source) {
             let message = format!(
                 "Function '{}' in contract '{}' implements commit-reveal without timing protection. \
@@ -228,30 +264,21 @@ impl Detector for EncryptedMempoolTimingDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_gas_timing_leaks(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' has variable gas consumption that may \
-                 leak information about encrypted or committed data.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(208)
-                .with_confidence(Confidence::Low)
-                .with_fix_suggestion(
-                    "Use constant-time operations:\n\n\
-                     1. Pad operations to fixed gas cost\n\
-                     2. Avoid data-dependent loops\n\
-                     3. Use constant-time comparison functions"
-                        .to_string(),
-                );
-
-            findings.push(finding);
-        }
+        // Phase 51 FP Reduction: Skip gas timing leaks - too many FPs
+        // This check was flagging normal loops with hashing operations
+        // which are extremely common and usually not MEV-sensitive
 
         for (line, func_name) in self.find_deadline_timing(source) {
+            // Phase 51 FP Reduction: Only flag deadlines in MEV-sensitive contexts
+            // Skip deadline checks in normal swap/transfer patterns
+            if func_name.to_lowercase().contains("swap")
+                || func_name.to_lowercase().contains("transfer")
+                || func_name.to_lowercase().contains("deposit")
+                || func_name.to_lowercase().contains("withdraw")
+            {
+                continue;
+            }
+
             let message = format!(
                 "Function '{}' in contract '{}' uses predictable deadline timing. \
                  Attackers can time their actions around known deadlines.",

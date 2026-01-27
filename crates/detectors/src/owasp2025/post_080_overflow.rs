@@ -97,6 +97,8 @@ impl Post080OverflowDetector {
             "i -= 1", "j -= 1", "k -= 1",
             "++index", "index++",
             "++counter", "counter++",
+            "++n", "n++", "++len", "len++",
+            "++offset", "offset++",
         ];
 
         // Remove comments from the block for analysis
@@ -106,6 +108,18 @@ impl Post080OverflowDetector {
         // Phase 16 FP Reduction: Skip fixed-point arithmetic patterns
         // Pattern: multiply then divide = bounded result (common in DeFi)
         if self.is_fixed_point_arithmetic(&block_no_comments) {
+            return false;
+        }
+
+        // Phase 51 FP Reduction: Skip OpenZeppelin-style bounded arithmetic
+        // OZ uses unchecked blocks for gas optimization with provably safe math
+        if self.is_oz_bounded_arithmetic(&block_no_comments) {
+            return false;
+        }
+
+        // Phase 51 FP Reduction: Skip subtraction where we know a >= b
+        // Common pattern: unchecked { a - b } after require(a >= b)
+        if self.is_safe_subtraction_pattern(&block_no_comments) {
             return false;
         }
 
@@ -154,6 +168,81 @@ impl Post080OverflowDetector {
         }
 
         has_dangerous
+    }
+
+    /// Phase 51 FP Reduction: Check for OpenZeppelin-style bounded arithmetic
+    /// OZ Math library patterns that are provably safe:
+    /// - mulDiv with denominator checks
+    /// - Shift operations (<<, >>)
+    /// - Bitwise operations
+    /// - Return statements with bounded values
+    fn is_oz_bounded_arithmetic(&self, block_content: &str) -> bool {
+        // Shift operations are safe (can't overflow in predictable ways)
+        if block_content.contains("<<") || block_content.contains(">>") {
+            return true;
+        }
+
+        // Bitwise operations are safe
+        if block_content.contains(" & ") || block_content.contains(" | ") || block_content.contains(" ^ ") {
+            return true;
+        }
+
+        // OZ-style return with type conversion (bounded by type)
+        // e.g., return uint128(value)
+        if block_content.contains("return uint") &&
+           (block_content.contains("uint8(") || block_content.contains("uint16(") ||
+            block_content.contains("uint32(") || block_content.contains("uint64(") ||
+            block_content.contains("uint128(") || block_content.contains("uint160(")) {
+            return true;
+        }
+
+        // OZ-style inverse/negation (bounded operation)
+        if block_content.contains("~") || (block_content.contains("type(uint") && block_content.contains("max")) {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 51 FP Reduction: Check for safe subtraction patterns
+    /// Pattern: subtraction where the minuend is guaranteed >= subtrahend
+    fn is_safe_subtraction_pattern(&self, block_content: &str) -> bool {
+        let has_subtraction = block_content.contains(" - ") || block_content.contains("-=");
+
+        if !has_subtraction {
+            return false;
+        }
+
+        // Common safe subtraction patterns
+        let safe_patterns = [
+            // Length-based: arr.length - 1 (length is always >= 1 when accessed)
+            ".length - 1",
+            ".length-1",
+            // Balance after transfer check
+            "balance -",
+            // Timestamp/block calculations
+            "block.timestamp -",
+            "block.number -",
+            // Supply calculations
+            "totalSupply -",
+            "supply -",
+        ];
+
+        for pattern in &safe_patterns {
+            if block_content.contains(pattern) {
+                return true;
+            }
+        }
+
+        // Also safe if the subtraction result is immediately returned or assigned
+        // and the block is small (likely a single operation)
+        let line_count = block_content.lines().count();
+        if line_count <= 3 && (block_content.contains("return ") || block_content.contains(" = ")) {
+            // Small block with assignment/return is likely bounded by caller
+            return true;
+        }
+
+        false
     }
 
     /// Phase 16 FP Reduction: Check for fixed-point arithmetic patterns
@@ -208,8 +297,10 @@ impl Post080OverflowDetector {
         let math_library_indicators = [
             // Solmate library
             "@solmate/", "solmate/", "library FixedPointMath",
-            // OpenZeppelin SafeMath (now less common but still used)
+            // OpenZeppelin SafeMath and Math utilities
             "library SafeMath", "@openzeppelin/contracts/utils/math",
+            "@openzeppelin/contracts/utils/math/Math.sol",
+            "@openzeppelin/contracts/utils/math/SignedMath.sol",
             // PRBMath
             "PRBMath", "library SD59x18", "library UD60x18",
             // Other common math libraries
@@ -217,6 +308,14 @@ impl Post080OverflowDetector {
             "library FixedPoint", "library ABDKMath",
             // Gnosis Safe math
             "GnosisSafe", "@safe-global/",
+            // Uniswap math libraries
+            "library UnsafeMath", "library LowGasSafeMath", "library BitMath",
+            "library TickMath", "library SqrtPriceMath", "library FixedPoint96",
+            "library FullMath", "library LiquidityMath",
+            // Aave math
+            "library WadRayMath", "library PercentageMath", "library MathUtils",
+            // EigenLayer
+            "library Endian",
         ];
 
         for indicator in &math_library_indicators {
@@ -232,9 +331,20 @@ impl Post080OverflowDetector {
                 || source_lower.contains("library fixedpoint")
                 || source_lower.contains("library safecalc")
                 || source_lower.contains("library signedmath")
+                || source_lower.contains("library wadray")
+                || source_lower.contains("library percentage")
+                || source_lower.contains("library tick")
+                || source_lower.contains("library sqrt")
+                || source_lower.contains("library liquidity")
+                || source_lower.contains("library bit")
             {
                 return true;
             }
+        }
+
+        // Phase 51: Check if this is an OpenZeppelin utility file (heavily audited)
+        if source.contains("@openzeppelin") && source.contains("library ") {
+            return true;
         }
 
         false
