@@ -43,6 +43,70 @@ impl Default for PoolDonationEnhancedDetector {
     }
 }
 
+impl PoolDonationEnhancedDetector {
+    /// Phase 51 FP Reduction: Check for known safe vault implementations
+    /// These are audited protocols with proper donation protection
+    fn is_safe_vault_implementation(&self, source: &str, lower: &str) -> bool {
+        // Solmate's ERC4626 implementation uses virtual shares
+        if source.contains("solmate") || source.contains("@solmate") {
+            return true;
+        }
+
+        // Yearn vaults have built-in protection
+        if lower.contains("yearn") || lower.contains("yvault") || lower.contains("basestrategy") {
+            return true;
+        }
+
+        // Balancer pools have multi-layer protection
+        if lower.contains("balancer") || lower.contains("bpt") || lower.contains("weightedpool") {
+            return true;
+        }
+
+        // Aave aTokens and pools
+        if lower.contains("aave") || lower.contains("atoken") || source.contains("IAToken") {
+            return true;
+        }
+
+        // Compound cTokens
+        if lower.contains("compound") || lower.contains("ctoken") || source.contains("CToken") {
+            return true;
+        }
+
+        // Uniswap V2/V3 pools
+        if lower.contains("uniswap") || source.contains("IUniswap") || lower.contains("univ2") || lower.contains("univ3") {
+            return true;
+        }
+
+        // Curve pools
+        if lower.contains("curve") || lower.contains("stableswap") || source.contains("ICurve") {
+            return true;
+        }
+
+        // Morpho vaults
+        if lower.contains("morpho") {
+            return true;
+        }
+
+        // EigenLayer strategies
+        if lower.contains("eigenlayer") || lower.contains("strategymanager") || source.contains("IStrategy") {
+            return true;
+        }
+
+        // Check for explicit donation protection patterns
+        let has_explicit_protection = lower.contains("virtual shares")
+            || lower.contains("virtualshares")
+            || lower.contains("dead shares")
+            || lower.contains("deadshares")
+            || lower.contains("minimum_liquidity")
+            || lower.contains("minimum liquidity")
+            || lower.contains("lock_liquidity")
+            || lower.contains("firstdeposit")
+            || lower.contains("bootstrap");
+
+        has_explicit_protection
+    }
+}
+
 impl Detector for PoolDonationEnhancedDetector {
     fn id(&self) -> DetectorId {
         self.base.id.clone()
@@ -75,6 +139,11 @@ impl Detector for PoolDonationEnhancedDetector {
 
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 51 FP Reduction: Skip known safe vault implementations
+        if self.is_safe_vault_implementation(source, &lower) {
             return Ok(findings);
         }
 

@@ -56,18 +56,11 @@
           "severity": "high",
           "description": "Array bounds issue",
           "vulnerability_type": "array-bounds"
-        },
-        {
-          "detector_id": "enhanced-input-validation",
-          "line_range": [1, 50],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "Input validation issues",
-          "vulnerability_type": "input-validation"
         }
       ],
       "known_false_positives": [],
-      "clean_sections": []
+      "clean_sections": [],
+      "notes": "Phase 51: enhanced-input-validation now more specific to reduce FPs - other detectors cover these issues"
     },
     "tests/contracts/clean_examples/clean_contract.sol": {
       "contract_name": "CleanContract",

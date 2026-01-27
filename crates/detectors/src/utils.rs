@@ -1016,6 +1016,17 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
     let source = ctx.source_code.as_str();
     let lower = source.to_lowercase();
 
+    // Phase 51 FP Reduction: Fast path for OpenZeppelin Governor contracts
+    // These are battle-tested governance implementations and should never be flagged
+    if is_openzeppelin_governor(source) {
+        return true;
+    }
+
+    // Phase 51 FP Reduction: Skip Compound Governor Bravo implementations
+    if is_compound_governor(source) {
+        return true;
+    }
+
     // Core governance functions - REQUIRED
     let has_propose = lower.contains("function propose(")
         || (lower.contains("propose(") && lower.contains("targets"))
@@ -1072,6 +1083,116 @@ pub fn is_governance_protocol(ctx: &AnalysisContext) -> bool {
     .count();
 
     indicator_count >= 3
+}
+
+/// Phase 51 FP Reduction: Check if this is an OpenZeppelin Governor implementation
+/// OZ Governor is a battle-tested, audited governance framework
+fn is_openzeppelin_governor(source: &str) -> bool {
+    // Direct OZ import patterns
+    let oz_import_patterns = [
+        "@openzeppelin/contracts/governance",
+        "openzeppelin-contracts/governance",
+        "@openzeppelin/contracts-upgradeable/governance",
+        "import \"@openzeppelin",
+        "import '@openzeppelin",
+    ];
+
+    for pattern in &oz_import_patterns {
+        if source.contains(pattern) && source.to_lowercase().contains("governor") {
+            return true;
+        }
+    }
+
+    // OZ Governor interface
+    if source.contains("IGovernor") || source.contains("IERC5805") {
+        return true;
+    }
+
+    // OZ Governor abstract contract patterns
+    if source.contains("abstract contract Governor")
+        || source.contains("is Governor")
+        || source.contains("is GovernorCountingSimple")
+        || source.contains("is GovernorVotes")
+        || source.contains("is GovernorTimelockControl")
+        || source.contains("is GovernorSettings")
+        || source.contains("is GovernorPreventLateQuorum")
+    {
+        return true;
+    }
+
+    // OZ Governor extension contracts
+    let oz_extensions = [
+        "GovernorCountingSimple",
+        "GovernorVotes",
+        "GovernorVotesQuorumFraction",
+        "GovernorTimelockControl",
+        "GovernorTimelockCompound",
+        "GovernorSettings",
+        "GovernorPreventLateQuorum",
+        "GovernorStorage",
+        "GovernorProposalGuardian",
+    ];
+
+    let source_lower = source.to_lowercase();
+    for ext in &oz_extensions {
+        if source.contains(ext) || source_lower.contains(&ext.to_lowercase()) {
+            return true;
+        }
+    }
+
+    // OZ Governor-specific function signatures
+    let oz_governor_funcs = [
+        "function COUNTING_MODE()",
+        "function hashProposal(",
+        "function proposalThreshold()",
+        "function proposalSnapshot(",
+        "function proposalDeadline(",
+        "function proposalProposer(",
+        "function proposalEta(",
+        "function proposalNeedsQueuing(",
+        "_getVotes(",
+        "_countVote(",
+        "_quorumReached(",
+        "_voteSucceeded(",
+    ];
+
+    let mut func_count = 0;
+    for func in &oz_governor_funcs {
+        if source.contains(func) {
+            func_count += 1;
+        }
+    }
+
+    // If we have 3+ OZ Governor-specific functions, it's OZ Governor
+    func_count >= 3
+}
+
+/// Phase 51 FP Reduction: Check if this is a Compound Governor Bravo implementation
+fn is_compound_governor(source: &str) -> bool {
+    let lower = source.to_lowercase();
+
+    // Compound Governor Bravo specific patterns
+    let compound_patterns = [
+        "GovernorBravo",
+        "GovernorAlpha",
+        "GovernorBravoDelegator",
+        "GovernorBravoDelegate",
+        "comp.getpriorvotes",
+        "getPriorVotes(",
+    ];
+
+    for pattern in &compound_patterns {
+        if source.contains(pattern) {
+            return true;
+        }
+    }
+
+    // Compound-style timelock with eta
+    if lower.contains("timelock") && lower.contains("eta") && lower.contains("queuedtransactions") {
+        return true;
+    }
+
+    false
 }
 
 // ===========================================================================

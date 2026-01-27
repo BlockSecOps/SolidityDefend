@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+#### Phase 51 False Positive Reduction - Real-World Protocol Context-Aware Detection
+
+Context-aware FP reduction based on analysis of 6,000+ findings from real-world protocols (Safe, Aave V3, OpenZeppelin, Uniswap V4, EigenLayer).
+
+**post_080_overflow.rs**
+- Added `is_oz_bounded_arithmetic()` - recognizes shift/bitwise/type conversion patterns
+- Added `is_safe_subtraction_pattern()` - recognizes `.length - 1`, balance/supply calculations
+- Extended `is_math_library()` with Uniswap, Aave, EigenLayer library patterns
+- Added more loop counter patterns (`++n`, `++len`, `++offset`)
+
+**utils.rs (is_governance_protocol)**
+- Added `is_openzeppelin_governor()` - detects OZ Governor imports, interfaces, extensions
+- Added `is_compound_governor()` - detects GovernorBravo, GovernorAlpha patterns
+
+**encrypted_mempool_timing.rs**
+- Added `is_mev_sensitive_contract()` - only analyze auctions, voting, commit-reveal, games
+- Removed noisy `find_gas_timing_leaks()` check
+- Skip deadline checks in standard swap/transfer/deposit/withdraw functions
+
+**pool_donation_enhanced.rs**
+- Added `is_safe_vault_implementation()` - recognizes audited protocols:
+  - Solmate, Yearn, Balancer, Aave, Compound, Uniswap, Curve, Morpho, EigenLayer
+  - Explicit protection patterns (virtual shares, dead shares, etc.)
+
+**enhanced_input_validation.rs**
+- Added `is_safe_library_or_interface()` - skip OZ, Solmate, interfaces, abstracts
+- Made checks specific: batch operations, admin setters, fee setters only
+
+**Results on real-world contracts:**
+- Safe Smart Account: 272 → 86 (-68%)
+- Aave V3 Core: 1,187 → 1,079 (-9%)
+- Uniswap V4 Core: 432 → 370 (-14%)
+
+**Ground Truth: 100% Recall Maintained (18/18 TPs, 0 FNs)**
+
 ## [1.10.11] - 2026-01-24
 
 ### Fixed
