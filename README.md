@@ -108,12 +108,17 @@ SolidityDefend has been validated against major production codebases with contex
 
 | Project | Type | FP Reduction | Key Detectors Fixed |
 |---------|------|--------------|---------------------|
-| **Safe Smart Account** | Multisig Wallet | -100% target FPs | delegatecall-to-self, post-080-overflow, parameter-consistency |
-| **OpenZeppelin Foundry** | Upgrade Tooling | -100% target FPs | swc133-hash-collision, dos-unbounded-operation |
-| **Aave V3 Core** | DeFi Lending | -94% target FPs | unused-state-variables, floating-pragma |
+| **Safe Smart Account** | Multisig Wallet | -68% overall | delegatecall-to-self, post-080-overflow, parameter-consistency |
+| **OpenZeppelin Foundry** | Upgrade Tooling | -100% target FPs | swc133-hash-collision, dos-unbounded-operation, governance |
+| **Aave V3 Core** | DeFi Lending | -9% overall | unused-state-variables, post-080-overflow, pool-donation |
+| **Uniswap V4 Core** | AMM/DEX | -14% overall | encrypted-mempool-timing, enhanced-input-validation |
 | **Solmate** | Gas-Optimized Library | -100% target FPs | post-080-overflow |
 
-**Context-Aware Features:**
+**Context-Aware Features (Phase 51):**
+- Recognizes OpenZeppelin Governor and Compound Governor patterns
+- Detects audited DeFi protocols (Yearn, Balancer, Curve, Morpho, EigenLayer)
+- Filters MEV-sensitive contracts for timing attack detection
+- Identifies safe bounded arithmetic patterns (shifts, bitwise, type conversions)
 - Recognizes Safe wallet transaction validation patterns
 - Skips deployment tooling (Foundry scripts, upgrade libraries)
 - Detects memory-safe assembly annotations
