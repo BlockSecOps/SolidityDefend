@@ -6,18 +6,13 @@ class Soliditydefend < Formula
   license "MIT OR Apache-2.0"
 
   on_macos do
-    if Hardware::CPU.arm?
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-arm64.tar.gz"
-      sha256 "5abf471a61f84b57332b01a49a17cefa809725afabf42f1d773c4fcc1931d6d1"
-    else
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-x86_64.tar.gz"
-      sha256 "70069dfaa78bb5e7d86584bdf19a79b5f1420400721556b09d73474547c61bb4"
-    end
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-x86_64-apple-darwin.tar.gz"
+    sha256 "768afb89b2e3bd918f76637dede153255b5c5e562daa52e88b2b0ded2777a691"
   end
 
   on_linux do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-linux-x86_64.tar.gz"
-    sha256 "6ba5f891e42b963639c885e4d5fe7b7290374386556c4846a8c3bb9aacb9dccb"
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-x86_64-unknown-linux-gnu.tar.gz"
+    sha256 "ca6009dde8efea899f5e50653a99ccc4fa552541ac0b5acf1bc61d91af685dd3"
   end
 
   def install
