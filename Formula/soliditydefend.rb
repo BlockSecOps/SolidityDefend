@@ -6,12 +6,12 @@ class Soliditydefend < Formula
   license "MIT OR Apache-2.0"
 
   on_macos do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-x86_64-apple-darwin.tar.gz"
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-x86_64.tar.gz"
     sha256 "768afb89b2e3bd918f76637dede153255b5c5e562daa52e88b2b0ded2777a691"
   end
 
   on_linux do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-x86_64-unknown-linux-gnu.tar.gz"
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-linux-x86_64.tar.gz"
     sha256 "ca6009dde8efea899f5e50653a99ccc4fa552541ac0b5acf1bc61d91af685dd3"
   end
 
