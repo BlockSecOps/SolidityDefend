@@ -58,6 +58,18 @@ impl Detector for DangerousDelegatecallDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 52 FP Reduction: Skip legitimate proxy contracts
+        // Proxy contracts MUST use delegatecall in fallback to forward calls to implementation.
+        // This is by design per EIP-1967 and other proxy standards.
+        if utils::is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(risk_description) = self.has_dangerous_delegatecall(function, ctx) {
                 let message = format!(

@@ -42,8 +42,12 @@ jobs:
 
       - name: Verify detector count
         run: |
-          ./target/release/soliditydefend --list-detectors | grep -E '^  [a-z]' | wc -l
-          echo "Expected: 204 detectors"
+          COUNT=$(./target/release/soliditydefend --list-detectors | grep -E '^  [a-z]' | wc -l)
+          echo "Detector count: $COUNT"
+          if [ "$COUNT" -lt 330 ]; then
+            echo "ERROR: Expected at least 330 detectors, found $COUNT"
+            exit 1
+          fi
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4

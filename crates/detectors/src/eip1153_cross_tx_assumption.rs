@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for EIP-1153 cross-transaction assumption vulnerabilities
 ///
@@ -270,6 +271,18 @@ impl Detector for Eip1153CrossTxAssumptionDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Phase 52 FP Reduction: Skip transient storage utility contracts
+        // Contracts like Exttload/Extsload are DESIGNED to expose transient storage reads.
+        // These are EIP-1153 helper contracts for gas-efficient state access within transactions.
+        if utils::is_transient_storage_utility(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
 
         // Find separate store/load (cross-function patterns)
         let separate = self.find_separate_store_load(source);

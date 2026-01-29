@@ -7,6 +7,12 @@ Cargo.lock
 *.pdb
 **/mutants.out*/
 
+# Release artifacts (managed by CI/CD)
+/release-binaries/
+
+# Act configuration
+.actrc
+
 # IDE
 .vscode/
 .idea/
@@ -37,6 +43,13 @@ releases/
 # Test outputs
 test-outputs/
 temp/
+
+# Test execution artifacts (timestamped)
+/test-results/individual/
+/test-results/detector_list_*.txt
+/test-results/summary_*.txt
+/test-results/validation_*.log
+/test-results/*-analysis.json
 
 # Security
 *.pem
