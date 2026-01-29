@@ -2,23 +2,26 @@
 class Soliditydefend < Formula
   desc "High-performance static analysis security tool for Solidity smart contracts"
   homepage "https://github.com/BlockSecOps/SolidityDefend"
-  version "1.10.11"
+  version "1.10.12"
   license "MIT OR Apache-2.0"
 
   on_macos do
     on_arm do
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-arm64.tar.gz"
-      sha256 "5abf471a61f84b57332b01a49a17cefa809725afabf42f1d773c4fcc1931d6d1"
+      # ARM64 binary not yet available for v1.10.12
+      # ARM Mac users can use Rosetta 2 with x86_64 binary or build from source
+      # TODO: Add darwin-arm64 binary when available
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.12/soliditydefend-v1.10.12-darwin-x86_64.tar.gz"
+      sha256 "6d0811f1a6ef9189a11fc7128dea8c3040f8f60c7113603350c3fd87733d8986"
     end
     on_intel do
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-darwin-x86_64.tar.gz"
-      sha256 "768afb89b2e3bd918f76637dede153255b5c5e562daa52e88b2b0ded2777a691"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.12/soliditydefend-v1.10.12-darwin-x86_64.tar.gz"
+      sha256 "6d0811f1a6ef9189a11fc7128dea8c3040f8f60c7113603350c3fd87733d8986"
     end
   end
 
   on_linux do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.11/soliditydefend-v1.10.11-linux-x86_64.tar.gz"
-    sha256 "ca6009dde8efea899f5e50653a99ccc4fa552541ac0b5acf1bc61d91af685dd3"
+    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.12/soliditydefend-v1.10.12-linux-x86_64.tar.gz"
+    sha256 "776175bed357afd99f93e32328cc3d41a14855f3c626ff4ed423cfa3886f1e0d"
   end
 
   def install
@@ -43,7 +46,7 @@ class Soliditydefend < Formula
 
   test do
     # Test that the binary runs and shows version (outputs to stderr with exit 1)
-    assert_match "soliditydefend 1.10.11", shell_output("#{bin}/soliditydefend --version 2>&1", 1)
+    assert_match "soliditydefend 1.10.12", shell_output("#{bin}/soliditydefend --version 2>&1", 1)
 
     # Test help command (outputs to stderr with exit 1)
     assert_match "Usage:", shell_output("#{bin}/soliditydefend --help 2>&1", 1)
