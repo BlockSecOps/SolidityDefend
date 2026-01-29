@@ -85,6 +85,11 @@ impl Detector for FlashloanCallbackReentrancyDetector {
             return Ok(findings);
         }
 
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             let func_name = function.name.name.to_lowercase();
 

@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for unprotected delegatecall in fallback functions
 ///
@@ -72,6 +73,18 @@ impl Detector for FallbackDelegatecallUnprotectedDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 52 FP Reduction: Skip legitimate proxy contracts
+        // Proxy contracts MUST use delegatecall in fallback to forward calls to implementation.
+        // This is by design per EIP-1967 and other proxy standards (Safe, OpenZeppelin, etc.).
+        if utils::is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(risk_description) =

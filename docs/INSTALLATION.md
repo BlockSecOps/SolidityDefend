@@ -102,7 +102,7 @@ Building from source ensures you get the latest features and optimal performance
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd cli
    ```
 
@@ -152,12 +152,12 @@ Docker provides a consistent environment across all platforms.
 
 1. **Pull the image** (when available):
    ```bash
-   docker pull soliditydefend/cli:latest
+   docker pull blocksecops/soliditydefend:latest
    ```
 
 2. **Or build locally**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd cli
    docker build -f docker/Dockerfile -t soliditydefend .
    ```
@@ -251,7 +251,7 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd cli
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
@@ -272,7 +272,7 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd cli
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
@@ -287,7 +287,7 @@ Expected output should show detected issues.
 
 3. **Open PowerShell or Command Prompt** and run:
    ```cmd
-   git clone https://github.com/soliditydefend/cli.git
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd cli
    cargo build --release
    ```
@@ -304,7 +304,7 @@ For better performance and compatibility, consider using WSL:
 # In WSL
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/soliditydefend/cli.git
+git clone https://github.com/BlockSecOps/SolidityDefend.git
 cd cli
 cargo build --release
 ```
@@ -362,7 +362,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 If you encounter issues not covered here:
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/soliditydefend/cli/issues)
+1. **Check existing issues**: [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
 2. **Create a new issue**: Include system info and error messages
 3. **Community support**: Join our community channels
 4. **Documentation**: Check other docs in the [docs/](.) directory

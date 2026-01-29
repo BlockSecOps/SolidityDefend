@@ -84,6 +84,11 @@ impl Detector for FlashLoanReentrancyComboDetector {
             return Ok(findings);
         }
 
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         // Pattern 1: Flash loan callback without reentrancy guard
         let has_flash_callback = lower.contains("onflashloan")
             || lower.contains("receivetokens")

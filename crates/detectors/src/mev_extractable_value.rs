@@ -131,8 +131,24 @@ impl MevExtractableValueDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        // Phase 52 FP Reduction: Skip internal/private functions
+        // Internal/private functions cannot be called directly, so they're not MEV entry points
+        if function.visibility == ast::Visibility::Internal
+            || function.visibility == ast::Visibility::Private
+        {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
+
+        // Phase 52 FP Reduction: Skip view/pure functions
+        // View/pure functions cannot modify state, so they're not MEV-exploitable
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return None;
+        }
 
         // Skip if this is an ERC-4337 paymaster/account abstraction contract
         // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
@@ -140,6 +156,32 @@ impl MevExtractableValueDetector {
         let is_paymaster = utils::is_erc4337_paymaster(ctx);
         if is_paymaster {
             return None; // Paymaster operations are not MEV targets
+        }
+
+        // Phase 52 FP Reduction: Skip administrative functions with access control
+        // Functions with onlyOwner, onlyAdmin, onlyRole modifiers are not MEV targets
+        let has_access_control_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("role")
+                || name_lower.contains("auth")
+                || name_lower.contains("guardian")
+                || name_lower.contains("governance")
+        });
+
+        // Phase 52: Check if function is administrative (not price-sensitive)
+        let is_admin_function = func_name_lower.contains("set")
+            || func_name_lower.contains("update")
+            || func_name_lower.contains("configure")
+            || func_name_lower.contains("pause")
+            || func_name_lower.contains("unpause")
+            || func_name_lower.contains("emergency");
+
+        // Admin functions with access control are not MEV targets
+        if has_access_control_modifier && is_admin_function {
+            return None;
         }
 
         // Phase 16 Recall Recovery: Check trading functions first for better recall

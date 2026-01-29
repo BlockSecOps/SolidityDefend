@@ -960,6 +960,7 @@ pub fn is_lending_protocol(ctx: &AnalysisContext) -> bool {
 /// Flash loan providers include:
 /// - ERC-3156 compliant contracts
 /// - Aave LendingPool (provides flash loans)
+/// - Aave V3 protocol libraries (ReserveConfiguration, etc.)
 /// - Compound-style flash loans
 /// - Custom flash loan implementations
 pub fn is_flash_loan_provider(ctx: &AnalysisContext) -> bool {
@@ -974,6 +975,45 @@ pub fn is_flash_loan_provider(ctx: &AnalysisContext) -> bool {
     }
 
     let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Phase 52 FP Reduction: Skip Aave V3 protocol libraries
+    // These are internal protocol libraries that support flash loan functionality
+    // but are not flash loan consumers with vulnerabilities
+    let is_aave_library = source.contains("library Reserve")
+        || source.contains("library UserConfiguration")
+        || source.contains("library EModeConfiguration")
+        || source.contains("library BridgeLogic")
+        || source.contains("library FlashLoanLogic")
+        || source.contains("library BorrowLogic")
+        || source.contains("library SupplyLogic")
+        || source.contains("library LiquidationLogic")
+        || source.contains("library PoolLogic")
+        || (source.contains("library") && lower.contains("configuration"));
+
+    if is_aave_library {
+        return true;
+    }
+
+    // Phase 52 FP Reduction: Skip contracts in Aave protocol directory structure
+    let contract_name = ctx.contract.name.name;
+    let is_aave_protocol_contract = contract_name.contains("Configuration")
+        || contract_name.contains("Logic")
+        || contract_name == "Pool"
+        || contract_name == "PoolCore"
+        || contract_name.contains("DataTypes")
+        || contract_name.contains("Errors")
+        || contract_name.contains("Helpers")
+        || contract_name.contains("FlashLoan");
+
+    let has_aave_markers = lower.contains("aave")
+        || source.contains("IPool")
+        || source.contains("DataTypes")
+        || source.contains("ReserveData");
+
+    if is_aave_protocol_contract && has_aave_markers {
+        return true;
+    }
 
     // Check for flash loan function signatures
     let has_flash_loan_function = source.contains("function flashLoan(")
@@ -2711,6 +2751,191 @@ pub fn is_view_only_lens_contract(ctx: &AnalysisContext) -> bool {
     // OR has lens name + has many view/pure functions
     (has_lens_name && lacks_write_functions && has_many_getters)
         || (has_lens_name && has_many_view_pure && lacks_write_functions)
+}
+
+/// Phase 52 FP Reduction: Detects if the contract is a legitimate proxy contract
+///
+/// Proxy contracts MUST use delegatecall in their fallback functions to forward
+/// calls to the implementation contract. This is by design per EIP-1967 and other
+/// proxy standards (OpenZeppelin, Safe, etc.).
+///
+/// IMPORTANT: Vulnerable proxy patterns (user-controlled implementation setters)
+/// are NOT legitimate proxies and should still be flagged.
+///
+/// Detection criteria:
+/// - Has implementation/singleton/masterCopy storage variable OR EIP-1967 storage slot
+/// - Has fallback function with delegatecall
+/// - Common proxy patterns (EIP-1967, Safe, UUPS, Transparent)
+/// - Implementation setter has proper access control (not user-controlled)
+pub fn is_proxy_contract(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Phase 52: Check for VULNERABLE proxy patterns first - these should NOT be skipped
+    // Vulnerable pattern: setImplementation without access control
+    let has_vulnerable_setter = (lower.contains("function setimplementation")
+        || lower.contains("function upgradetoimplementation")
+        || lower.contains("function upgrade("))
+        && !lower.contains("onlyowner")
+        && !lower.contains("onlyadmin")
+        && !lower.contains("onlyproxyadmin")
+        && !lower.contains("require(msg.sender ==")
+        && !lower.contains("require(msg.sender==")
+        && !lower.contains("_checkowner")
+        && !lower.contains("onlyrole");
+
+    // If it has a vulnerable implementation setter, don't skip it
+    if has_vulnerable_setter {
+        return false;
+    }
+
+    // Check for proxy storage patterns (where implementation address is stored)
+    let has_impl_storage = source.contains("singleton")
+        || source.contains("_singleton")
+        || source.contains("masterCopy")
+        || source.contains("_masterCopy")
+        // EIP-1967 implementation storage slot: keccak256("eip1967.proxy.implementation") - 1
+        || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+        // EIP-1967 admin slot
+        || source.contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
+        // EIP-1967 beacon slot
+        || source.contains("0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50");
+
+    // Only consider "implementation" if it's immutable or constructor-set (not settable)
+    let has_immutable_impl = (lower.contains("immutable") && lower.contains("implementation"))
+        || (lower.contains("implementation") && !lower.contains("function") && lower.contains("constructor"));
+
+    // Check for proxy fallback pattern with delegatecall
+    let has_proxy_fallback = (source.contains("fallback()")
+        || source.contains("fallback ()")
+        || lower.contains("function ()"))  // Old-style fallback
+        && (source.contains("delegatecall") || source.contains("DELEGATECALL"));
+
+    // Check for Safe/Gnosis proxy pattern (these are always legitimate)
+    let is_safe_proxy = source.contains("GnosisSafe")
+        || source.contains("SafeProxy")
+        || (source.contains("singleton") && source.contains("delegatecall"));
+
+    // Check for OpenZeppelin proxy patterns (always legitimate, have built-in access control)
+    let is_oz_proxy = (source.contains("ERC1967")
+        || source.contains("TransparentUpgradeableProxy")
+        || source.contains("UUPSUpgradeable")
+        || source.contains("BeaconProxy"))
+        && source.contains("delegatecall");
+
+    // Must have proper proxy storage + proxy fallback pattern
+    // OR be an explicit safe proxy type
+    (has_impl_storage && has_proxy_fallback)
+        || (has_immutable_impl && has_proxy_fallback)
+        || is_safe_proxy
+        || is_oz_proxy
+}
+
+/// Phase 52 FP Reduction: Detects if the contract/file is interface-only
+///
+/// Interface-only files contain only type definitions, event declarations,
+/// and function signatures without implementations. These should not be
+/// analyzed for most security vulnerabilities.
+///
+/// Detection criteria:
+/// - All functions are external with no body
+/// - No state variables except constants
+/// - Contract/interface name starts with 'I' or ends with 'Interface'
+pub fn is_interface_only(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for explicit interface keyword
+    let has_interface_keyword = lower.contains("interface ");
+
+    // Check for interface naming conventions
+    let contract_name = &ctx.contract.name.name;
+    let has_interface_name = contract_name.starts_with('I') && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase())
+        || contract_name.ends_with("Interface")
+        || contract_name.ends_with("Interfaces");
+
+    // Check for absence of function implementations (bodies)
+    // Interface functions end with `;` not `{`
+    let function_count = source.matches("function ").count();
+    let function_with_body_count = source.matches("function ").count()
+        - source.matches("external;").count()
+        - source.matches("external view;").count()
+        - source.matches("external pure;").count()
+        - source.matches("public;").count()
+        - source.matches("public view;").count()
+        - source.matches("public pure;").count();
+
+    // All or most functions have no body
+    let mostly_no_body = function_count > 0 && function_with_body_count <= 1;
+
+    // Check for absence of state-modifying code
+    let no_state_changes = !source.contains(" = ")
+        || (source.matches(" = ").count() <= source.matches("constant").count() + source.matches("immutable").count());
+
+    // Check for only type definitions (structs, enums, events, errors)
+    let has_type_defs = lower.contains("struct ")
+        || lower.contains("enum ")
+        || lower.contains("event ")
+        || lower.contains("error ");
+
+    // Interface: has interface keyword or naming convention + no implementations
+    (has_interface_keyword && mostly_no_body)
+        || (has_interface_name && mostly_no_body && no_state_changes)
+        || (has_interface_name && has_type_defs && function_count == 0)
+}
+
+/// Phase 52 FP Reduction: Detects if the contract is a transient storage utility
+///
+/// EIP-1153 transient storage utilities are intentional helper contracts
+/// that provide access to transient storage (TLOAD/TSTORE). These are
+/// designed to expose transient storage reads and should not be flagged.
+///
+/// Detection criteria:
+/// - Contract named Exttload/Extsload or implementing IExttload/IExtsload
+/// - Pure transient storage accessor functions
+/// - Known utility patterns from Uniswap V4 and similar protocols
+pub fn is_transient_storage_utility(ctx: &AnalysisContext) -> bool {
+    let source = ctx.source_code.as_str();
+    let lower = source.to_lowercase();
+
+    // Check for known transient storage utility contract names
+    let contract_name = ctx.contract.name.name;
+    let is_extt_contract = contract_name == "Exttload"
+        || contract_name == "Extsload"
+        || contract_name.contains("Exttload")
+        || contract_name.contains("Extsload");
+
+    // Check for transient storage interface implementations
+    let implements_transient_interface = lower.contains("iexttload")
+        || lower.contains("iextsload")
+        || lower.contains("interface exttload")
+        || lower.contains("interface extsload");
+
+    // Check for pure tload/tstore accessor patterns (single-purpose functions)
+    let is_pure_accessor = (source.contains("function exttload")
+        || source.contains("function extsload")
+        || source.contains("function tload"))
+        && source.contains("tload(")
+        && !source.contains("tstore("); // Pure read accessor
+
+    // Check for transient storage library patterns
+    let is_transient_library = lower.contains("library transient")
+        || (lower.contains("transient") && lower.contains("library"));
+
+    // Check for StateLibrary pattern (Uniswap V4)
+    let is_state_library = contract_name == "StateLibrary"
+        || (lower.contains("statelibrary") && lower.contains("tload"));
+
+    // Check for PositionInfo pattern (Uniswap V4)
+    let is_position_info = contract_name.contains("PositionInfo")
+        || (lower.contains("positioninfo") && lower.contains("tload"));
+
+    is_extt_contract
+        || implements_transient_interface
+        || is_pure_accessor
+        || is_transient_library
+        || is_state_library
+        || is_position_info
 }
 
 #[cfg(test)]
