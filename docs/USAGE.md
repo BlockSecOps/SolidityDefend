@@ -74,7 +74,7 @@ soliditydefend /home/user/contracts/vault
 
 ```bash
 # Auto-detect directory and framework (RECOMMENDED)
-solidifydefend ./my-foundry-project
+soliditydefend ./my-foundry-project
 
 # Or use explicit project flag
 soliditydefend --project ./my-foundry-project
@@ -135,6 +135,152 @@ soliditydefend . --min-severity high -f json || exit 1
 soliditydefend ./project-v1 -f json -o v1.json
 soliditydefend ./project-v2 -f json -o v2.json
 ```
+
+## Project-Aware Scanning (v1.10.13+)
+
+**NEW in v1.10.13**: True project understanding with dependency graphs, cross-contract analysis, and smart file ordering.
+
+### Verbose Mode
+
+See exactly what SolidityDefend discovers and how it analyzes your project:
+
+```bash
+soliditydefend ./my-project --verbose
+```
+
+**Example Output:**
+```
+=== SolidityDefend Project Analysis ===
+Framework: Foundry (auto-detected)
+Project Root: /path/to/my-project
+
+Source Directories:
+  [SCAN] src - 5 files
+  [SKIP] test - excluded by default
+  [SKIP] script - excluded by default
+  [DEPS] lib - use --include-deps to scan
+
+Files to Analyze (5):
+  [SRC] src/Vault.sol
+  [SRC] src/Token.sol
+  [SRC] src/Governance.sol
+
+Import Remappings:
+  @openzeppelin/contracts/ -> lib/openzeppelin-contracts/contracts/
+  forge-std/ -> lib/forge-std/src/
+
+Dependency graph built successfully
+  Files ordered by dependencies for analysis
+
+Import Graph:
+  Vault.sol imports:
+    -> ERC20.sol
+    -> Ownable.sol
+  Token.sol imports:
+    -> ERC20.sol
+
+Analyzing 8 files in dependency order...
+  Analyzing: lib/openzeppelin-contracts/contracts/access/Ownable.sol
+    Found 3 issues
+  Analyzing: src/Token.sol
+    Found 2 issues
+```
+
+### Dependency Scanning
+
+Audit the third-party libraries you import (OpenZeppelin, etc.):
+
+```bash
+# Include dependencies in analysis
+soliditydefend ./my-project --include-deps
+
+# Only analyze dependencies (audit your imports)
+soliditydefend ./my-project --deps-only
+```
+
+**With `--include-deps`, output is categorized:**
+```
+=== Source Contract Findings (8) ===
+[CRITICAL] src/Vault.sol:45 - Reentrancy vulnerability
+...
+
+=== Dependency Findings (3) ===
+[MEDIUM] lib/openzeppelin-contracts/token/ERC20.sol:123 - ...
+Note: These are in third-party code you imported.
+
+=== Project Security Summary ===
+Contracts Analyzed: 15 (5 source, 10 dependencies)
+```
+
+### Cross-Contract Analysis
+
+Detect vulnerabilities that span multiple contracts:
+
+```bash
+soliditydefend ./my-project --cross-contract
+```
+
+**Cross-contract analysis detects:**
+- **Circular Dependencies** - Contracts that depend on each other, causing deployment issues
+- **Trust Boundary Violations** - Privileged calls to untrusted contracts
+- **State Inconsistencies** - Shared state without proper synchronization
+- **Atomicity Violations** - Multi-contract operations that can fail partially
+- **Cross-Contract Reentrancy** - Reentrancy paths spanning 3+ contracts
+
+**Example Output:**
+```
+Running cross-contract analysis...
+  [OK] No circular dependencies detected
+  5 contracts have external dependencies
+
+  [WARN] Trust boundary violation: Vault.sol makes privileged calls to untrusted Router.sol
+  [CRITICAL] Cross-contract reentrancy path: Vault -> Router -> Token -> Vault
+```
+
+### Full Project Audit
+
+Combine all features for a comprehensive audit:
+
+```bash
+# Complete project audit
+soliditydefend ./my-project \
+    --verbose \
+    --include-deps \
+    --cross-contract \
+    -f json \
+    -o full-audit.json
+
+# CI/CD with full analysis
+soliditydefend ./my-project --cross-contract --exit-code-level high
+```
+
+### Project Security Summary
+
+Every project analysis includes a security summary:
+
+```
+=== Project Security Summary ===
+Contracts Analyzed: 15 (5 source, 10 dependencies)
+
+Findings Overview:
+  Critical: 2 (IMMEDIATE ACTION REQUIRED)
+  High:     5 (should be addressed)
+  Medium:   8
+  Low:      3
+  Info:     2
+
+Cross-Contract Analysis: Enabled
+
+Protocol Risk Score: 7.5/10 (High Risk - Review Required)
+
+Analysis completed in 2.34s
+```
+
+**Risk Score Calculation:**
+- 0.0/10 - Excellent (no issues)
+- 0.1-2.9/10 - Low Risk
+- 3.0-5.9/10 - Medium Risk
+- 6.0-10.0/10 - High Risk (review required)
 
 ## Basic Usage
 
