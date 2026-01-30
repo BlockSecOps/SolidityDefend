@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.10.12-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.10.13-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 > Enterprise-grade static analysis for Solidity smart contracts
@@ -17,7 +17,9 @@ soliditydefend contract.sol
 - **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
 - **Context-Aware Analysis** - Recognizes DeFi patterns (ERC-4626, ERC-3156, ERC-4337, AMM pools) to reduce false positives
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
-- **Project Mode** - Analyze entire Foundry/Hardhat projects with auto-detection
+- **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
+- **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`
+- **Cross-Contract Analysis** - Detect vulnerabilities spanning multiple contracts with `--cross-contract`
 - **Lightning Fast** - 30-180ms analysis time, built in Rust
 - **CI/CD Ready** - JSON/SARIF output, exit codes, severity filtering
 - **100% Recall** - Validated against ground truth test suite
@@ -59,6 +61,15 @@ soliditydefend contract.sol
 # Foundry/Hardhat project (auto-detects framework)
 soliditydefend ./my-project
 
+# Verbose mode - see discovered files, dependency graph, and more
+soliditydefend ./my-project --verbose
+
+# Include dependency libraries (OpenZeppelin, etc.) in analysis
+soliditydefend ./my-project --include-deps
+
+# Cross-contract vulnerability detection
+soliditydefend ./my-project --cross-contract
+
 # Filter by severity
 soliditydefend -s high contract.sol
 
@@ -74,12 +85,22 @@ See [docs/USAGE.md](docs/USAGE.md) for complete usage guide.
 ## Example Output
 
 ```
-Found 12 issues in 1 file:
+=== SolidityDefend Project Analysis ===
+Framework: Foundry (auto-detected)
+Project Root: /path/to/my-project
+
+Source Directories:
+  [SCAN] src - 5 files
+  [SKIP] test - excluded by default
+  [SKIP] script - excluded by default
+  [DEPS] lib - use --include-deps to scan
+
+Found 12 issues in 5 files:
 
 CRITICAL: Reentrancy vulnerability detected in withdraw()
    Location: contracts/Vault.sol:45:5
    Detector: classic-reentrancy
-   CWE: CWE-841 | SWC: SWC-107
+   CWE: CWE-841
    Fix: Use ReentrancyGuard or checks-effects-interactions pattern
 
 HIGH: Missing access control on initialize()
@@ -88,9 +109,18 @@ HIGH: Missing access control on initialize()
    CWE: CWE-284
    Fix: Add onlyOwner or similar access control modifier
 
-Analysis Summary
------------------
-Critical: 1  |  High: 3  |  Medium: 5  |  Low: 3
+=== Project Security Summary ===
+Contracts Analyzed: 5 (5 source, 0 dependencies)
+
+Findings Overview:
+  Critical: 1 (IMMEDIATE ACTION REQUIRED)
+  High:     3 (should be addressed)
+  Medium:   5
+  Low:      3
+
+Protocol Risk Score: 6.5/10 (Medium Risk)
+
+Analysis completed in 0.45s
 ```
 
 ## Performance

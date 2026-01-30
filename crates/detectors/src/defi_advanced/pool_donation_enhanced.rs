@@ -105,6 +105,78 @@ impl PoolDonationEnhancedDetector {
 
         has_explicit_protection
     }
+
+    /// FP Reduction: Check if contract is actually a pool or vault that could be affected
+    /// by donation attacks. Basic ERC20 tokens, access control, and proxy contracts are NOT pools.
+    fn is_pool_or_vault_contract(&self, ctx: &AnalysisContext, source: &str, lower: &str) -> bool {
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Exclude obvious non-pool contracts by name
+        let excluded_by_name = contract_name.contains("proxy")
+            || contract_name.contains("erc20")
+            || contract_name.contains("erc721")
+            || contract_name.contains("erc1155")
+            || contract_name.contains("ownable")
+            || contract_name.contains("access")
+            || contract_name.contains("auth")
+            || contract_name.contains("governor")
+            || contract_name.contains("timelock")
+            || contract_name.contains("multicall")
+            || contract_name.contains("helper")
+            || contract_name.contains("utils")
+            || contract_name.contains("library")
+            || contract_name.contains("mock")
+            || contract_name.contains("test");
+
+        if excluded_by_name {
+            return false;
+        }
+
+        // Exclude proxy contracts - they forward calls, not pools
+        let is_proxy = lower.contains("delegatecall")
+            && (lower.contains("implementation")
+                || lower.contains("_fallback")
+                || lower.contains("eip1967")
+                || lower.contains("upgradeto"));
+
+        if is_proxy {
+            return false;
+        }
+
+        // Exclude simple token contracts (ERC20 without vault functionality)
+        let is_simple_erc20 = (lower.contains("erc20")
+            || (lower.contains("transfer") && lower.contains("balanceof")))
+            && !lower.contains("shares")
+            && !lower.contains("totalassets")
+            && !lower.contains("converttoshares")
+            && !lower.contains("converttoassets")
+            && !lower.contains("pool")
+            && !lower.contains("vault")
+            && !lower.contains("liquidity");
+
+        if is_simple_erc20 {
+            return false;
+        }
+
+        // Must have pool/vault indicators to be considered
+        let has_pool_indicators = lower.contains("erc4626")
+            || lower.contains("vault")
+            || lower.contains("pool")
+            || lower.contains("liquidity")
+            || lower.contains("stake")
+            || lower.contains("lp")
+            || (lower.contains("shares") && lower.contains("assets"))
+            || (lower.contains("deposit") && lower.contains("withdraw") && lower.contains("shares"))
+            || lower.contains("converttoshares")
+            || lower.contains("converttoassets")
+            || lower.contains("totalassets")
+            || lower.contains("addliquidity")
+            || lower.contains("removeliquidity")
+            || (contract_name.contains("vault") || contract_name.contains("pool"))
+            || source.contains("IERC4626");
+
+        has_pool_indicators
+    }
 }
 
 impl Detector for PoolDonationEnhancedDetector {
@@ -139,6 +211,12 @@ impl Detector for PoolDonationEnhancedDetector {
 
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze actual pool/vault contracts
+        // Skip basic ERC20 tokens, proxy contracts, access control, etc.
+        if !self.is_pool_or_vault_contract(ctx, source, &lower) {
             return Ok(findings);
         }
 

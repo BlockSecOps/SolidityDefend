@@ -42,10 +42,56 @@ impl UupsMissingDisableInitializersDetector {
     }
 
     /// Check if contract is a UUPS implementation
-    fn is_uups_contract(&self, source: &str) -> bool {
-        source.contains("UUPSUpgradeable")
-            || source.contains("_authorizeUpgrade")
-            || (source.contains("upgradeTo") && source.contains("Upgradeable"))
+    /// Must be careful to NOT flag TransparentUpgradeableProxy or other non-UUPS proxies
+    fn is_uups_contract(&self, source: &str, contract_name: &str) -> bool {
+        let name_lower = contract_name.to_lowercase();
+        let source_lower = source.to_lowercase();
+
+        // Explicitly exclude non-UUPS proxy types
+        // TransparentUpgradeableProxy uses admin-controlled upgrades, not UUPS pattern
+        let is_transparent_proxy = name_lower.contains("transparent")
+            || source_lower.contains("transparentupgradeableproxy")
+            || source_lower.contains("proxyadmin")
+            || (source_lower.contains("_admin") && source_lower.contains("ifadmin"));
+
+        if is_transparent_proxy {
+            return false;
+        }
+
+        // ERC1967Proxy is a base proxy, not UUPS
+        let is_erc1967_base = name_lower == "erc1967proxy"
+            || (name_lower.contains("erc1967") && !name_lower.contains("uups"));
+
+        if is_erc1967_base {
+            return false;
+        }
+
+        // Beacon proxies are not UUPS
+        let is_beacon_proxy = name_lower.contains("beacon")
+            || source_lower.contains("beaconproxy")
+            || source_lower.contains("upgradeablebeacon");
+
+        if is_beacon_proxy {
+            return false;
+        }
+
+        // Minimal proxies (clones) are not UUPS
+        let is_minimal_proxy = source_lower.contains("clone")
+            || source_lower.contains("minimal proxy")
+            || source_lower.contains("eip-1167");
+
+        if is_minimal_proxy {
+            return false;
+        }
+
+        // Now check for actual UUPS patterns
+        // UUPS requires _authorizeUpgrade to be implemented in the logic contract
+        let has_uups_pattern = source.contains("UUPSUpgradeable")
+            || source.contains("_authorizeUpgrade");
+
+        // Only flag if it explicitly has UUPS patterns
+        // Don't flag just because it has "upgradeTo" - that's common in many proxy types
+        has_uups_pattern
     }
 
     /// Check if constructor calls _disableInitializers
@@ -118,8 +164,8 @@ impl Detector for UupsMissingDisableInitializersDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
-        // Only check UUPS contracts
-        if !self.is_uups_contract(source) {
+        // Only check UUPS contracts (excludes Transparent, Beacon, and other proxy types)
+        if !self.is_uups_contract(source, &contract_name) {
             return Ok(findings);
         }
 
@@ -185,9 +231,12 @@ mod tests {
     #[test]
     fn test_is_uups_contract() {
         let detector = UupsMissingDisableInitializersDetector::new();
-        assert!(detector.is_uups_contract("contract MyToken is UUPSUpgradeable {"));
-        assert!(detector.is_uups_contract("function _authorizeUpgrade(address) internal override {}"));
-        assert!(!detector.is_uups_contract("contract SimpleToken {"));
+        assert!(detector.is_uups_contract("contract MyToken is UUPSUpgradeable {", "MyToken"));
+        assert!(detector.is_uups_contract("function _authorizeUpgrade(address) internal override {}", "MyUpgradeable"));
+        assert!(!detector.is_uups_contract("contract SimpleToken {", "SimpleToken"));
+        // TransparentUpgradeableProxy should NOT be flagged as UUPS
+        assert!(!detector.is_uups_contract("contract TransparentUpgradeableProxy {", "TransparentUpgradeableProxy"));
+        assert!(!detector.is_uups_contract("contract ERC1967Proxy {", "ERC1967Proxy"));
     }
 
     #[test]

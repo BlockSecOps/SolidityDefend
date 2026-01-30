@@ -1,8 +1,10 @@
 pub mod console;
 pub mod json;
+pub mod summary;
 
 pub use console::{ConsoleConfig, ConsoleFormatter};
 pub use json::{JsonError, JsonFormatter, JsonOutputBuilder};
+pub use summary::{CategorizedFindings, ProjectSummary};
 
 use detectors::types::{AnalysisContext, Finding};
 use std::collections::HashSet;

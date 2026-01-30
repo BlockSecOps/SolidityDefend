@@ -59,7 +59,8 @@ impl Detector for TokenSupplyManipulationDetector {
         let mut findings = Vec::new();
 
         // Skip if this is an ERC-4626 vault - shares don't need max supply caps
-        let is_vault = utils::is_erc4626_vault(ctx);
+        // Also check for additional vault patterns that utils::is_erc4626_vault might miss
+        let is_vault = utils::is_erc4626_vault(ctx) || self.is_vault_contract(ctx);
 
         // Skip if this is an ERC-3156 flash loan - flash minting is required behavior
         let is_flash_loan = utils::is_erc3156_flash_loan(ctx);
@@ -106,6 +107,46 @@ impl Detector for TokenSupplyManipulationDetector {
 }
 
 impl TokenSupplyManipulationDetector {
+    /// Check if contract is an ERC-4626 vault or similar share-based vault
+    /// These contracts mint SHARES not tokens - minting shares is the intended behavior
+    fn is_vault_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Check contract name for vault patterns
+        let has_vault_name = contract_name.contains("vault")
+            || contract_name.contains("erc4626")
+            || contract_name.contains("strategy")
+            || contract_name.contains("yield");
+
+        // Check for ERC-4626 function signatures
+        let has_erc4626_functions = (lower.contains("function deposit") && lower.contains("shares"))
+            || lower.contains("converttoshares")
+            || lower.contains("converttoassets")
+            || lower.contains("previewdeposit")
+            || lower.contains("previewmint")
+            || lower.contains("previewwithdraw")
+            || lower.contains("previewredeem")
+            || lower.contains("totalassets")
+            || lower.contains("maxdeposit")
+            || lower.contains("maxmint")
+            || lower.contains("maxwithdraw")
+            || lower.contains("maxredeem");
+
+        // Check for vault inheritance/interface
+        let has_vault_interface = source.contains("ERC4626")
+            || source.contains("IERC4626")
+            || lower.contains("erc-4626")
+            || lower.contains("tokenized vault");
+
+        // Check for share calculation patterns
+        let has_share_calc = lower.contains("shares =")
+            && (lower.contains("assets") || lower.contains("totalsupply"));
+
+        has_vault_name || has_erc4626_functions || has_vault_interface || has_share_calc
+    }
+
     /// Check for token supply manipulation vulnerabilities
     fn check_token_supply_manipulation(
         &self,
@@ -127,6 +168,27 @@ impl TokenSupplyManipulationDetector {
             || func_name_lower.starts_with("_init")
         {
             return None;
+        }
+
+        // FP Reduction: Skip ERC-4626 vault functions - these mint SHARES, not tokens
+        // Minting shares in a vault is the intended design, not a vulnerability
+        if is_vault {
+            let is_vault_function = func_name_lower == "deposit"
+                || func_name_lower == "mint"
+                || func_name_lower == "withdraw"
+                || func_name_lower == "redeem"
+                || func_name_lower.starts_with("preview")
+                || func_name_lower.starts_with("max")
+                || func_name_lower.starts_with("convert")
+                || func_name_lower == "totalassets"
+                || func_name_lower == "_deposit"
+                || func_name_lower == "_mint"
+                || func_name_lower == "_withdraw"
+                || func_name_lower == "_redeem";
+
+            if is_vault_function {
+                return None;
+            }
         }
 
         // Skip internal functions (start with _ but are not public/external mint functions)

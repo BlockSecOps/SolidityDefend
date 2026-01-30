@@ -130,4 +130,38 @@ impl Project {
             ProjectConfig::Plain => None,
         }
     }
+
+    /// Get the root directory of the project
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
+    /// Get the detected framework
+    pub fn framework(&self) -> Framework {
+        self.framework
+    }
+
+    /// Get the project configuration
+    pub fn project_config(&self) -> &ProjectConfig {
+        &self.config
+    }
+
+    /// Get directories that are excluded from analysis
+    pub fn excluded_dirs(&self) -> Vec<&str> {
+        self.config.exclude_dirs()
+    }
+
+    /// Get library directory paths as strings
+    pub fn lib_dir_names(&self) -> Vec<String> {
+        match &self.config {
+            ProjectConfig::Foundry(config) => config.libs.clone(),
+            ProjectConfig::Hardhat(_) => vec!["node_modules".to_string()],
+            ProjectConfig::Plain => vec![],
+        }
+    }
+
+    /// Get remappings for the project
+    pub fn remappings(&self) -> &[(String, String)] {
+        &self.remappings
+    }
 }

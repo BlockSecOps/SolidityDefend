@@ -7,6 +7,94 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.13] - 2026-01-29
+
+### Added
+
+#### Project-Aware Scanning Enhancement
+
+Major enhancement to project mode with true project understanding, dependency graphs, and cross-contract analysis capabilities.
+
+**New CLI Flags:**
+- `--verbose` / `-v` - Enable verbose output with detailed project information
+- `--cross-contract` - Enable cross-contract vulnerability detection
+- `--include-deps` - Include dependency libraries (lib/, node_modules/) in analysis
+- `--deps-only` - Only analyze dependency libraries (skip source contracts)
+
+**Verbose Project Discovery Output:**
+- Shows framework detection (Foundry/Hardhat/Plain) with source
+- Displays source directories with [SCAN], [SKIP], [DEPS] indicators
+- Lists all import remappings from project configuration
+- Shows dependency graph and import relationships between contracts
+- Reports files analyzed in topological (dependency) order
+- Displays per-file issue counts during analysis
+
+**Dependency Graph Integration:**
+- Builds import dependency graph using PathResolver and remappings
+- Analyzes files in topological order (dependencies first)
+- Detects circular dependencies in project structure
+- Shows import relationships in verbose mode
+
+**Cross-Contract Analysis:**
+- Infrastructure wired for CrossContractAnalyzer
+- Detects circular dependencies between contracts
+- Reports contracts with external dependencies
+- Framework ready for full cross-contract vulnerability detection:
+  - Trust boundary violations
+  - State inconsistencies across contracts
+  - Atomicity violations in multi-contract operations
+  - Cross-contract reentrancy vulnerabilities
+
+**Dependency Scanning:**
+- Scan OpenZeppelin and other imported libraries with `--include-deps`
+- Audit only dependencies with `--deps-only`
+- Findings categorized as source vs dependency
+- Separate output sections for source and dependency findings
+
+**Project Security Summary:**
+- New summary section at end of analysis
+- Shows contracts analyzed (source vs dependency counts)
+- Findings overview by severity with action indicators
+- Protocol Risk Score (0.0-10.0 scale) with risk level
+- Analysis duration reporting
+
+**New Output Module:**
+- Added `output/src/summary.rs` with `ProjectSummary` struct
+- `CategorizedFindings` for source/dependency separation
+- Risk score calculation based on severity weights
+- JSON export capability for project summary
+
+### Fixed
+
+#### False Positive Reduction - Proxy and Vault Detectors
+
+Fixed 4 detectors that were incorrectly flagging standard library contracts (OpenZeppelin, Solmate).
+
+**pool-donation-enhanced (Fixed)**
+- Added `is_pool_or_vault_contract()` context gate
+- Excludes non-pool contracts: ERC20, Ownable, proxies, access control, etc.
+- Requires actual pool/vault indicators: ERC4626, shares+assets, liquidity, etc.
+- No longer flags basic ERC20 tokens or proxy contracts
+
+**uups-missing-disable-initializers (Fixed)**
+- Improved `is_uups_contract()` to exclude non-UUPS proxy types
+- Excludes TransparentUpgradeableProxy (admin-controlled, not UUPS)
+- Excludes ERC1967Proxy (base proxy class)
+- Excludes BeaconProxy and Minimal/Clone proxies
+- Only flags actual UUPS implementations with `_authorizeUpgrade`
+
+**proxy-storage-collision (Fixed)**
+- Added `uses_eip1967_storage()` to detect compliant proxies
+- Recognizes EIP-1967 storage slot constants
+- Detects OpenZeppelin proxy patterns
+- No longer flags properly implemented EIP-1967 proxies
+
+**token-supply-manipulation (Fixed)**
+- Added `is_vault_contract()` for better ERC-4626 detection
+- Skips ERC-4626 vault functions (deposit, mint, withdraw, redeem, preview*, etc.)
+- Minting shares in vaults is intended design, not a vulnerability
+- No longer flags Solmate or OpenZeppelin ERC4626 implementations
+
 ## [1.10.9] - 2026-01-23
 
 ### Fixed
