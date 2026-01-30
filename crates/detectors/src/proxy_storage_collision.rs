@@ -123,6 +123,12 @@ impl ProxyStorageCollisionDetector {
             return None;
         }
 
+        // FP Reduction: If proxy uses proper EIP-1967 storage patterns, it's safe
+        // OpenZeppelin proxies and other audited implementations use these correctly
+        if self.uses_eip1967_storage(contract_source) {
+            return None;
+        }
+
         // Check for non-EIP-1967 storage in proxy
         if self.has_non_standard_storage(ctx, contract_source) {
             return Some(
@@ -181,6 +187,40 @@ impl ProxyStorageCollisionDetector {
         // 1. It has proxy in name AND delegatecall, OR
         // 2. It has explicit proxy storage slots/patterns
         (has_proxy_name && has_delegatecall) || has_proxy_patterns
+    }
+
+    /// Check if proxy uses proper EIP-1967 storage patterns
+    /// OpenZeppelin and other audited proxies use these patterns correctly
+    fn uses_eip1967_storage(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // Check for EIP-1967 storage slot constants
+        // These are the standard slots defined in EIP-1967
+        let has_implementation_slot = source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("_IMPLEMENTATION_SLOT");
+
+        let has_admin_slot = source.contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
+            || source.contains("ADMIN_SLOT")
+            || source.contains("_ADMIN_SLOT");
+
+        let has_beacon_slot = source.contains("0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50")
+            || source.contains("BEACON_SLOT")
+            || source.contains("_BEACON_SLOT");
+
+        // Check for OpenZeppelin proxy patterns
+        let is_oz_proxy = source.contains("@openzeppelin")
+            || source.contains("openzeppelin-contracts")
+            || lower.contains("erc1967upgrade")
+            || lower.contains("erc1967utils")
+            || lower.contains("storageSlot.getAddressSlot");
+
+        // Check for proper keccak256 slot calculation
+        let has_proper_slot_calc = source.contains("keccak256(\"eip1967.")
+            || source.contains("keccak256('eip1967.")
+            || source.contains("bytes32(uint256(keccak256");
+
+        has_implementation_slot || has_admin_slot || has_beacon_slot || is_oz_proxy || has_proper_slot_calc
     }
 
     /// Check if proxy has non-standard storage variables
