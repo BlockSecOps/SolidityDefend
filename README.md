@@ -191,4 +191,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 
-Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE).
+Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
+
+Copyright 2024-2026 Advanced Blockchain Security (ABS). See [NOTICE](NOTICE) for attribution requirements.
