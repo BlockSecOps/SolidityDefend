@@ -5,6 +5,8 @@
 
 > Enterprise-grade static analysis for Solidity smart contracts
 
+**Developed by [BlockSecOps](https://blocksecops.com)** - Smart Contract Security Experts
+
 ## Quick Start
 
 ```bash
@@ -38,16 +40,37 @@ brew install soliditydefend
 Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest).
 
 ### From Source
+
+**Requirements:** Rust 1.82+ ([install](https://rustup.rs))
+
 ```bash
+# Clone the repository
 git clone https://github.com/BlockSecOps/SolidityDefend.git
-cd SolidityDefend && cargo build --release
-sudo mv target/release/soliditydefend /usr/local/bin/
+cd SolidityDefend
+
+# Build release binary
+cargo build --release
+
+# Install (choose one)
+sudo cp target/release/soliditydefend /usr/local/bin/    # System-wide
+cp target/release/soliditydefend ~/.local/bin/           # User only
+```
+
+**Verify installation:**
+```bash
+soliditydefend --version
 ```
 
 ### Docker
 ```bash
+# Build image
 docker build -t soliditydefend:latest .
+
+# Run analysis (mount current directory)
 docker run --rm -v $(pwd):/workspace soliditydefend:latest contract.sol
+
+# Or pull from GitHub Container Registry (when available)
+# docker pull ghcr.io/blocksecops/soliditydefend:latest
 ```
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for details.
@@ -194,3 +217,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
 
 Copyright 2024-2026 Advanced Blockchain Security (ABS). See [NOTICE](NOTICE) for attribution requirements.
+
+---
+
+**[BlockSecOps](https://blocksecops.com)** - Smart Contract Security Audits & Tools
