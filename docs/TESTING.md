@@ -31,7 +31,9 @@ cargo test -- --nocapture
 ### Test Results (v1.10.13)
 
 ```
-test result: ok. 33 passed; 0 failed; 0 ignored
+Total: 858 tests passed, 0 failed, 11 ignored
+Detector tests: 609 passed
+Validation recall: 94.4% (17/18 ground truth vulnerabilities)
 ```
 
 ## Real-World Contract Testing

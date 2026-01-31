@@ -44,6 +44,58 @@ Context-aware FP reduction based on analysis of 6,000+ findings from real-world 
 
 **Ground Truth: 100% Recall Maintained (18/18 TPs, 0 FNs)**
 
+## [1.10.13] - 2026-01-30
+
+### Added
+
+#### Project-Aware Scanning
+- Framework auto-detection (Foundry/Hardhat)
+- Source directory discovery with `[SCAN]`, `[SKIP]`, `[DEPS]` indicators
+- Dependency graph with topological ordering
+- Import relationship visualization
+- Project Security Summary with Risk Score (0.0-10.0)
+
+**New CLI Flags:**
+- `--verbose` / `-v` - Detailed project discovery output
+- `--cross-contract` - Cross-contract vulnerability detection
+- `--include-deps` - Include dependency libraries in analysis
+- `--deps-only` - Only analyze dependencies
+
+### Fixed
+
+#### False Positive Reduction
+- `pool-donation-enhanced` - No longer flags ERC20, Ownable, proxy contracts
+- `uups-missing-disable-initializers` - No longer flags TransparentUpgradeableProxy
+- `proxy-storage-collision` - Recognizes EIP-1967 compliant proxies
+- `token-supply-manipulation` - No longer flags ERC-4626 share minting
+
+## [1.10.12] - 2026-01-29
+
+### Changed
+
+#### Repository Cleanup
+- Removed 67MB of build artifacts from git tracking
+- Cleaned up 179 timestamped test result files
+- Improved `.gitignore` for better artifact management
+
+#### Documentation Improvements
+- Added performance benchmarks to README
+- Enhanced installation documentation
+- Better README structure
+
+### Fixed
+
+#### Detector Enhancements
+Enhanced 8 security detectors for improved accuracy:
+- `dangerous_delegatecall` - Improved detection accuracy
+- `eip1153_cross_tx_assumption` - Enhanced pattern matching
+- `fallback_delegatecall_unprotected` - Refined checks
+- `flashloan/callback_reentrancy` - Optimized detection
+- `flashloan_enhanced/reentrancy_combo` - Improved analysis
+- `insufficient_randomness` - Enhanced pattern detection
+- `mev_extractable_value` - Refined vulnerability identification
+- `timestamp_manipulation` - Improved detection logic
+
 ## [1.10.11] - 2026-01-24
 
 ### Fixed
