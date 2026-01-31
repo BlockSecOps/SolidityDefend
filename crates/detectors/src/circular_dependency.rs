@@ -64,6 +64,19 @@ impl Detector for CircularDependencyDetector {
             return Ok(findings);
         }
 
+        // Phase 53 FP Reduction: Skip proxy contracts
+        // Proxy patterns (fallback -> _delegate -> implementation) are intentional, not circular
+        let source = &ctx.source_code;
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("library ERC1967Utils")
+            || (source.contains("function _delegate(") && source.contains("fallback()"));
+
+        if is_proxy_contract {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             // Phase 10: Skip batch execution patterns (multicall, executeBatch, etc.)
             let func_source = self.get_function_source(function, ctx);

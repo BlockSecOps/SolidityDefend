@@ -34,14 +34,27 @@ impl StorageLayoutUpgradeDetector {
         let source = &ctx.source_code;
         let source_lower = source.to_lowercase();
 
+        // Phase 53 FP Reduction: Skip proxy contracts
+        // Proxy contracts use EIP-1967 storage slots exclusively, not regular state variables
+        // They don't need storage gaps because their storage is in fixed slots
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("library ERC1967Utils")
+            || (source.contains("function _delegate(") && source.contains("fallback()"))
+            || source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
+
+        if is_proxy_contract {
+            return findings;
+        }
+
         // Check if contract is upgradeable
         let is_upgradeable = source_lower.contains("upgradeable")
-            || source_lower.contains("proxy")
             || source_lower.contains("initializer")
             || source_lower.contains("initialize")
             || source_lower.contains("uups")
-            || source_lower.contains("transparent")
-            || source_lower.contains("beacon")
             || source_lower.contains("diamond")
             || source_lower.contains("facet");
 

@@ -214,6 +214,22 @@ impl Detector for MissingStorageGapDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 53 FP Reduction: Skip proxy contracts
+        // Proxy contracts use EIP-1967 storage slots, not regular state variables
+        // They don't need storage gaps because they don't store state in regular slots
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("library ERC1967Utils")
+            || source.contains("function _delegate(address")
+            || source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
+
+        if is_proxy_contract {
+            return Ok(findings);
+        }
+
         // Only check upgradeable base contracts
         if !self.is_upgradeable_base_contract(source) {
             return Ok(findings);

@@ -165,6 +165,20 @@ impl Detector for ImmutableInUpgradeableDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 53 FP Reduction: Skip proxy contracts
+        // Proxy contracts (not implementations) CAN use immutables because they ARE the bytecode
+        // that will be executed. Immutables like _admin in TransparentUpgradeableProxy are correct.
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("library ERC1967Utils")
+            || (source.contains("function _delegate(") && source.contains("fallback()"));
+
+        if is_proxy_contract {
+            return Ok(findings);
+        }
+
         // Only check upgradeable contracts
         if !self.is_upgradeable_contract(source) {
             return Ok(findings);
