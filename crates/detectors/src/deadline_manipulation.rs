@@ -57,6 +57,7 @@ impl Detector for DeadlineManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
 
         // Phase 10: Skip test contracts and secure examples
         if is_test_contract(ctx) || is_secure_example_file(ctx) {
@@ -65,6 +66,17 @@ impl Detector for DeadlineManipulationDetector {
 
         // Phase 10: Skip AMM pool contracts - they implement deadlines internally
         if is_uniswap_v2_pair(ctx) || is_uniswap_v3_pool(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 53 FP Reduction: Skip Permit2 - it properly validates deadlines
+        let is_permit2 = source.contains("Permit2")
+            || source.contains("IAllowanceTransfer")
+            || source.contains("ISignatureTransfer")
+            || source.contains("PermitHash")
+            || source.contains("@uniswap/permit2");
+
+        if is_permit2 {
             return Ok(findings);
         }
 

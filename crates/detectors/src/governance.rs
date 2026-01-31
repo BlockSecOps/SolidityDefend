@@ -619,6 +619,21 @@ impl Detector for SignatureReplayDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 53 FP Reduction: Skip well-known signature verification libraries
+        // These are low-level verify functions - nonce handling is done at caller level
+        let is_signature_library = source.contains("SignatureVerification")
+            || source.contains("SignatureChecker")
+            || source.contains("ECDSA")
+            || source.contains("library ")
+            || source.contains("Permit2")
+            || source.contains("@uniswap")
+            || source.contains("@openzeppelin");
+
+        if is_signature_library {
+            return Ok(findings);
+        }
 
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)
