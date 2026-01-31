@@ -126,7 +126,18 @@ impl PoolDonationEnhancedDetector {
             || contract_name.contains("utils")
             || contract_name.contains("library")
             || contract_name.contains("mock")
-            || contract_name.contains("test");
+            || contract_name.contains("test")
+            // FP Reduction: Exclude utility libraries that are not pools
+            || contract_name == "arrays"
+            || contract_name == "math"
+            || contract_name == "strings"
+            || contract_name == "address"
+            || contract_name == "bytes32"
+            || contract_name == "storageslot"
+            || contract_name == "safeerc20"
+            || contract_name == "safemath"
+            || contract_name == "ecdsa"
+            || contract_name == "merkleproof";
 
         if excluded_by_name {
             return false;

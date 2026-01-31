@@ -239,13 +239,23 @@ impl TokenSupplyManipulationDetector {
         let is_mint = is_external_mint
             || (func_source.contains("_mint") && self.has_external_mint_function(ctx));
 
+        // FP Reduction: Bridge/crosschain mint functions are controlled by validators
+        // These tokens are backed by tokens locked on other chains, supply is validated externally
+        let is_bridge_mint = func_name_lower.contains("crosschain")
+            || func_name_lower.contains("bridge")
+            || func_name_lower.contains("relay")
+            || (ctx.source_code.to_lowercase().contains("bridgeable")
+                && func_name_lower.contains("mint"));
+
         // Skip supply cap check for:
         // - ERC-4626 vaults - they mint shares, not tokens (shares backed by assets)
         // - ERC-3156 flash loans - they temporarily mint for flash loan duration
+        // - Bridge/crosschain tokens - supply is validated by bridge protocol
         // - Contracts without external mint functions (fixed supply)
         let no_supply_cap = is_mint
             && !is_vault  // Skip if vault
             && !is_flash_loan  // Skip if flash loan provider
+            && !is_bridge_mint  // Skip if bridge mint function
             && !func_source.contains("maxSupply")
             && !func_source.contains("MAX_SUPPLY")
             && !func_source.contains("cap()");
@@ -258,12 +268,27 @@ impl TokenSupplyManipulationDetector {
             );
         }
 
+        // FP Reduction: Check for access control on the function
+        // Look in both func_source AND the full contract source for the function signature with modifiers
+        // This handles cases where the function signature line is not included in func_source
+        let func_name_str = &function.name.name;
+        let has_modifier_in_contract = self.function_has_modifier_in_source(func_name_str, ctx);
+
         // Pattern 2: Mint without access control
         let lacks_access_control = is_mint
             && !func_source.contains("onlyOwner")
             && !func_source.contains("onlyMinter")
             && !func_source.contains("hasRole")
-            && !func_source.contains("require(msg.sender");
+            && !func_source.contains("require(msg.sender")
+            // FP Reduction: Custom access control modifiers in function source
+            && !func_source.contains("onlyBridge")
+            && !func_source.contains("onlyTokenBridge")
+            && !func_source.contains("onlyRelayer")
+            && !func_source.contains("onlyValidator")
+            && !func_source.contains("onlyAdmin")
+            && !func_source.contains("onlyGovernance")
+            // Also check for modifier patterns in the contract source for this specific function
+            && !has_modifier_in_contract;
 
         if lacks_access_control {
             return Some(
@@ -341,7 +366,59 @@ impl TokenSupplyManipulationDetector {
         // Pattern 7: No supply change events
         let emits_event = func_source.contains("emit");
 
-        let no_supply_event = (is_mint || is_burn) && !emits_event;
+        // FP Reduction: OpenZeppelin Burnable extensions delegate to parent _burn/_mint
+        // which handles the event emission. These are audited standard implementations.
+        // Check for OpenZeppelin contract by: comment header, import pattern, or inheritance
+        let is_openzeppelin_extension = ctx.source_code.contains("OpenZeppelin Contracts")
+            || ctx.source_code.contains("@openzeppelin")
+            || ctx.source_code.contains("openzeppelin-contracts")
+            || (ctx.source_code.contains("import {ERC20}")
+                && ctx.source_code.contains("_burn("));
+
+        // FP Reduction: Check if function delegates to internal _burn/_mint which handles events
+        // OpenZeppelin's ERC20Burnable, ERC721Burnable, ERC1155Burnable all use this pattern
+        // The internal _burn/_mint functions emit Transfer events, so the wrapper doesn't need to
+        let delegates_to_internal = func_source.contains("_burn(")
+            || func_source.contains("_burnBatch(")  // ERC1155 batch operations
+            || func_source.contains("_mint(")
+            || func_source.contains("_mintBatch(")  // ERC1155 batch operations
+            || func_source.contains("super.burn(")
+            || func_source.contains("super.mint(")
+            // ERC721 uses _update(address(0), tokenId, auth) for burns
+            || func_source.contains("_update(address(0)");
+
+        let delegates_to_internal_with_event = delegates_to_internal
+            && (is_openzeppelin_extension
+                || ctx.source_code.contains("emit Transfer")
+                || ctx.source_code.contains("event Transfer"));
+
+        // FP Reduction: ERC20Wrapper's withdrawTo burns internal tokens and transfers underlying
+        // The _burn emits Transfer, and safeTransfer handles the underlying token event
+        let is_wrapper_pattern = func_name_lower == "withdrawto"
+            && func_source.contains("_burn(")
+            && func_source.contains("safeTransfer");
+
+        // FP Reduction: Flash loan functions follow ERC-3156 which has its own event handling
+        // The standard requires onFlashLoan callback which handles state validation
+        let is_flash_loan_function = is_flash_loan
+            && (func_name_lower == "flashloan"
+                || func_name_lower == "_flashloan"
+                || func_name_lower.contains("flashmint"));
+
+        // FP Reduction: Standard burn function names in extension contracts
+        // These are wrapper functions that call internal functions with events
+        let is_standard_burnable_wrapper = (func_name_lower == "burn"
+            || func_name_lower == "burnfrom"
+            || func_name_lower == "burnbatch")
+            && delegates_to_internal
+            && ctx.contract.name.name.to_lowercase().contains("burnable");
+
+        let no_supply_event = (is_mint || is_burn)
+            && !emits_event
+            && !delegates_to_internal_with_event
+            && !is_wrapper_pattern
+            && !is_flash_loan_function
+            && !is_standard_burnable_wrapper;
 
         if no_supply_event {
             return Some(
@@ -458,6 +535,53 @@ impl TokenSupplyManipulationDetector {
         // Also check for role-based minting (indicates intentional external mint capability)
         if source.contains("minter_role") || source.contains("minter role") {
             return true;
+        }
+
+        false
+    }
+
+    /// FP Reduction: Check if a function has an access control modifier in the contract source
+    /// This handles cases where func_source doesn't include the function signature line
+    fn function_has_modifier_in_source(&self, func_name: &str, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let func_lower = func_name.to_lowercase();
+
+        // Find function definition line with modifiers
+        // Pattern: "function funcName(...) ... onlyXxx"
+        for line in lower.lines() {
+            if line.contains(&format!("function {}", func_lower)) {
+                // Check if this line or continuation has access control modifiers
+                if line.contains("only")
+                    || line.contains("hasrole")
+                    || line.contains("authorized")
+                    || line.contains("auth")
+                {
+                    return true;
+                }
+            }
+        }
+
+        // Also check if there's a modifier defined that matches the function
+        // E.g., modifier onlyXxx() applied to the function
+        let has_modifier_definition = lower.contains("modifier only");
+
+        // Look for function definition with modifier application
+        if has_modifier_definition {
+            // Search for "function funcName" followed by any "only" modifier on the same declaration
+            let func_pattern = format!("function {}", func_lower);
+            if let Some(pos) = lower.find(&func_pattern) {
+                // Look at the next ~200 characters for the function signature end
+                let end_pos = std::cmp::min(pos + 200, lower.len());
+                let func_signature = &lower[pos..end_pos];
+                // Find where the function body starts
+                if let Some(brace_pos) = func_signature.find('{') {
+                    let signature_part = &func_signature[..brace_pos];
+                    if signature_part.contains("only") {
+                        return true;
+                    }
+                }
+            }
         }
 
         false
