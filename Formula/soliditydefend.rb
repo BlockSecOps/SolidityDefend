@@ -11,11 +11,11 @@ class Soliditydefend < Formula
       # ARM Mac users can use Rosetta 2 with x86_64 binary or build from source
       # TODO: Add darwin-arm64 binary when available
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.13/soliditydefend-v1.10.13-darwin-x86_64.tar.gz"
-      sha256 "91098bd70b69d8c750cdac746cb1823b9839de21d9e460b12875e50d69d06eff"
+      sha256 "2c1b9c9c483a094de9321cba0372325ce56e10cd6c0b7805309dae8f7800af9f"
     end
     on_intel do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.13/soliditydefend-v1.10.13-darwin-x86_64.tar.gz"
-      sha256 "91098bd70b69d8c750cdac746cb1823b9839de21d9e460b12875e50d69d06eff"
+      sha256 "2c1b9c9c483a094de9321cba0372325ce56e10cd6c0b7805309dae8f7800af9f"
     end
   end
 
