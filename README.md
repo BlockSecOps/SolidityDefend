@@ -123,6 +123,23 @@ Protocol Risk Score: 6.5/10 (Medium Risk)
 Analysis completed in 0.45s
 ```
 
+## Real-World Testing
+
+Tested against production contracts from leading protocols:
+
+| Test Case | Source | Framework | Files | Findings | Time |
+|-----------|--------|-----------|-------|----------|------|
+| Proxy Contracts | OpenZeppelin v5.0 | Plain | 6 | 28 (4 Crit, 17 High) | 0.08s |
+| Upgradeable Contracts | OZ + Compound | Plain | 5 | 139 (21 Crit, 31 High) | 1.02s |
+| Foundry Project | Uniswap Permit2 | Foundry | 4 | 54 (2 Crit, 30 High) | 0.05s |
+| Hardhat Project | Aave V3 Core | Hardhat | 5 | 146 (23 Crit, 44 High) | 0.31s |
+
+**Contracts Tested:**
+- OpenZeppelin: Proxy.sol, ERC1967Proxy, TransparentUpgradeableProxy, BeaconProxy
+- Compound: Comptroller (62KB), ComptrollerStorage
+- Uniswap: Permit2, SignatureTransfer, AllowanceTransfer
+- Aave: Pool.sol, PoolStorage, SupplyLogic, BorrowLogic
+
 ## Performance
 
 Real-world benchmarks on production contracts:
@@ -156,8 +173,17 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
 | [CLI Reference](docs/CLI.md) | Command-line options |
 | [Detectors](docs/DETECTORS.md) | All 333 detectors |
 | [Configuration](docs/CONFIGURATION.md) | Configuration reference |
+| [Testing](docs/TESTING.md) | Real-world testing and validation |
 | [Docker](docs/DOCKER.md) | Docker usage and CI/CD |
 | [Validation](docs/VALIDATION.md) | Validation test results |
+
+### Task Documentation
+
+Developer documentation in [TaskDocs-SolidityDefend/](TaskDocs-SolidityDefend/):
+- [Release Process](TaskDocs-SolidityDefend/RELEASE.md)
+- [Testing Protocols](TaskDocs-SolidityDefend/TESTING-PROTOCOLS.md)
+- [FP Reduction Guide](TaskDocs-SolidityDefend/FP-REDUCTION.md)
+- [Detector Development](TaskDocs-SolidityDefend/DETECTOR-DEVELOPMENT.md)
 
 ## Contributing
 
