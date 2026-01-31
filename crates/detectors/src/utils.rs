@@ -2823,12 +2823,28 @@ pub fn is_proxy_contract(ctx: &AnalysisContext) -> bool {
         || source.contains("BeaconProxy"))
         && source.contains("delegatecall");
 
+    // Phase 53 FP Reduction: Check for abstract proxy base contracts
+    // These have _delegate/_implementation pattern and are legitimate proxy building blocks
+    let is_abstract_proxy = source.contains("abstract contract Proxy")
+        || source.contains("abstract contract BaseProxy")
+        || (source.contains("function _delegate(") && source.contains("function _implementation("))
+        || (source.contains("function _delegate(address") && source.contains("delegatecall"));
+
+    // Phase 53 FP Reduction: Check for proxy utility libraries (ERC1967Utils, etc.)
+    // These contain proxy slot management functions and are legitimate
+    let is_proxy_utils = source.contains("library ERC1967Utils")
+        || source.contains("ERC1967Utils")
+        || (source.contains("IMPLEMENTATION_SLOT") && source.contains("StorageSlot"))
+        || (source.contains("getAddressSlot") && source.contains("0x360894"));
+
     // Must have proper proxy storage + proxy fallback pattern
     // OR be an explicit safe proxy type
     (has_impl_storage && has_proxy_fallback)
         || (has_immutable_impl && has_proxy_fallback)
         || is_safe_proxy
         || is_oz_proxy
+        || is_abstract_proxy
+        || is_proxy_utils
 }
 
 /// Phase 52 FP Reduction: Detects if the contract/file is interface-only

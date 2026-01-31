@@ -217,6 +217,19 @@ impl Detector for FallbackDelegatecallPatternDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 53 FP Reduction: Skip standard proxy contracts
+        // Proxies delegate ALL calls to implementation by design - that's their purpose
+        let is_standard_proxy = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("OpenZeppelin")
+            || (source.contains("function _implementation(") && source.contains("function _delegate("));
+
+        if is_standard_proxy {
+            return Ok(findings);
+        }
+
         // Check for unfiltered fallback delegatecall
         if let Some((line, is_assembly)) = self.find_unfiltered_fallback_delegatecall(source) {
             let assembly_note = if is_assembly {

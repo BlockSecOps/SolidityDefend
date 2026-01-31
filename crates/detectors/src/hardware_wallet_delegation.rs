@@ -238,11 +238,30 @@ impl Detector for HardwareWalletDelegationDetector {
 
 impl HardwareWalletDelegationDetector {
     fn is_delegation_contract(&self, source: &str) -> bool {
-        source.contains("delegatecall")
-            || source.contains("EIP-7702")
-            || source.contains("delegation")
-            || source.contains("setCode")
-            || source.contains("DELEGATECALL")
+        // Phase 53 FP Reduction: Skip standard proxy contracts
+        // Proxy contracts use delegatecall but are NOT EIP-7702 delegation contracts
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract Proxy ")
+            || source.contains("TransparentUpgradeableProxy")
+            || source.contains("UUPSUpgradeable")
+            || source.contains("BeaconProxy")
+            || source.contains("ERC1967")
+            || source.contains("function _implementation(")
+            || (source.contains("function _delegate(") && source.contains("fallback()"));
+
+        if is_proxy_contract {
+            return false;
+        }
+
+        // Only flag as delegation contract if it has EIP-7702 specific patterns
+        // Not just any delegatecall usage
+        source.contains("EIP-7702")
+            || source.contains("EIP7702")
+            || source.contains("setCode(")
+            || (source.contains("delegation")
+                && (source.contains("setDelegation")
+                    || source.contains("removeDelegation")
+                    || source.contains("enableDelegation")))
     }
 
     fn check_hardcoded_relayer(&self, source: &str) -> Option<Vec<(u32, String)>> {
