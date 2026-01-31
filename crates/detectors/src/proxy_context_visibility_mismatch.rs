@@ -196,6 +196,21 @@ impl Detector for ProxyContextVisibilityMismatchDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 53 FP Reduction: Skip Compound-style protocols
+        // Compound uses underscore-prefixed PUBLIC functions intentionally for admin operations
+        // e.g., _setPriceOracle, _setCloseFactor, _setCollateralFactor
+        // This is a deliberate design pattern, not a visibility mismatch
+        let is_compound_style = source.contains("Comptroller")
+            || source.contains("comptroller")
+            || source.contains("CToken")
+            || source.contains("Compound")
+            || source.contains("compound-protocol")
+            || (source.contains("_set") && source.contains("admin"));
+
+        if is_compound_style {
+            return Ok(findings);
+        }
+
         // Only check implementation contracts
         if !self.is_implementation_contract(source) {
             return Ok(findings);
