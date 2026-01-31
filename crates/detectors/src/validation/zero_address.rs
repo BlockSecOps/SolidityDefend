@@ -181,29 +181,44 @@ impl ZeroAddressDetector {
     fn is_critical_address_param(&self, param_name: &str) -> bool {
         let name_lower = param_name.to_lowercase();
 
+        // FP Reduction Phase 2: Parameters that intentionally allow zero address
+        // - "fallback*" - zero means disable fallback
+        // - "new*" parameters in upgrade functions - often validated elsewhere
+        // - Generic single-letter or very short names
+        let is_intentionally_nullable = name_lower.contains("fallback")
+            || name_lower.contains("optional")
+            || name_lower.contains("default")
+            || name_lower == "a"
+            || name_lower == "b"
+            || name_lower == "_a"
+            || name_lower == "_b";
+
+        if is_intentionally_nullable {
+            return false;
+        }
+
         // CRITICAL address parameters that MUST be checked for zero:
         // These control contract functionality, access, or ownership
-        let is_access_control = name_lower.contains("owner")
-            || name_lower.contains("admin")
-            || name_lower.contains("authority")
-            || name_lower.contains("controller")
-            || name_lower.contains("manager")
-            || name_lower.contains("governance")
-            || name_lower.contains("operator")
-            || name_lower.contains("minter")
-            || name_lower.contains("burner")
-            || name_lower.contains("pauser")
+        // FP Reduction Phase 2: Be more specific - only core access control
+        let is_access_control = name_lower == "owner"
             || name_lower == "newowner"
-            || name_lower == "pendingowner";
+            || name_lower == "_owner"
+            || name_lower == "_newowner"
+            || name_lower == "pendingowner"
+            || name_lower == "_pendingowner"
+            || name_lower == "admin"
+            || name_lower == "_admin"
+            || (name_lower.contains("admin") && !name_lower.contains("pool"))  // FP: poolAdmin often checked elsewhere
+            || name_lower == "governance"
+            || name_lower == "_governance";
 
-        // Contract address parameters that affect functionality
-        let is_contract_address = name_lower.contains("token")
-            || name_lower.contains("factory")
-            || name_lower.contains("router")
-            || name_lower.contains("oracle")
-            || name_lower.contains("vault")
-            || name_lower.contains("implementation")
-            || name_lower.contains("beacon");
+        // FP Reduction Phase 2: Contract addresses that are CRITICAL
+        // But exclude addresses that may be intentionally disabled
+        let is_critical_contract_address = name_lower == "implementation"
+            || name_lower == "_implementation"
+            || name_lower == "newimplementation"
+            || name_lower == "beacon"
+            || name_lower == "_beacon";
 
         // NOT CRITICAL - transfer destinations where zero address may be intentional:
         // - "to" / "recipient" / "beneficiary" - often zero for burn operations
@@ -213,7 +228,7 @@ impl ZeroAddressDetector {
         // Phase 6: Added more non-critical patterns
         // - "sender", "origin", "caller" - already validated by EVM
         // - "_receiver", "_beneficiary" - commonly flexible parameters
-        // These should NOT be flagged as missing zero address checks
+        // Phase 2: Added more patterns that are commonly flexible
         let is_transfer_destination = name_lower.starts_with("to")
             || name_lower == "recipient"
             || name_lower == "beneficiary"
@@ -223,19 +238,30 @@ impl ZeroAddressDetector {
             || name_lower == "destination"
             || name_lower == "account"
             || name_lower == "user"
-            || name_lower == "sender"      // Phase 6
-            || name_lower == "origin"      // Phase 6
-            || name_lower == "caller"      // Phase 6
-            || name_lower == "_receiver"   // Phase 6
-            || name_lower == "_beneficiary" // Phase 6
-            || name_lower == "_to"         // Phase 6
-            || name_lower == "_from"       // Phase 6
-            || name_lower == "_recipient"  // Phase 6
-            || name_lower.contains("receiver"); // Phase 6
+            || name_lower == "sender"
+            || name_lower == "origin"
+            || name_lower == "caller"
+            || name_lower == "_receiver"
+            || name_lower == "_beneficiary"
+            || name_lower == "_to"
+            || name_lower == "_from"
+            || name_lower == "_recipient"
+            || name_lower.contains("receiver")
+            // FP Reduction Phase 2: More flexible patterns
+            || name_lower.contains("token")  // token addresses often optional
+            || name_lower.contains("oracle")  // oracles can be disabled
+            || name_lower.contains("factory")
+            || name_lower.contains("router")
+            || name_lower.contains("vault")
+            || name_lower.contains("pool")
+            || name_lower.contains("manager")  // manager roles often flexible
+            || name_lower.contains("controller")
+            || name_lower.contains("operator")
+            || name_lower.contains("asset");
 
-        // Only flag as critical if it's an access control or contract address parameter
-        // AND not a transfer destination
-        (is_access_control || is_contract_address) && !is_transfer_destination
+        // Only flag as critical if it's a core access control or critical implementation address
+        // AND not a transfer destination or intentionally nullable
+        (is_access_control || is_critical_contract_address) && !is_transfer_destination
     }
 
     /// Find zero address checks in function body
@@ -593,6 +619,26 @@ impl Detector for ZeroAddressDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // FP Reduction Phase 2: Skip test/mock contracts
+        let file_path = ctx.file_path.to_lowercase();
+        if file_path.contains("/mock")
+            || file_path.contains("/test/")
+            || file_path.contains(".t.sol")
+            || file_path.contains("mock")
+        {
+            return Ok(findings);
+        }
+
+        // FP Reduction Phase 2: Skip vendored dependencies
+        // These are audited third-party code
+        if file_path.contains("/dependencies/")
+            || file_path.contains("/vendor/")
+            || file_path.contains("@openzeppelin")
+            || file_path.contains("openzeppelin-contracts")
+        {
+            return Ok(findings);
+        }
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
