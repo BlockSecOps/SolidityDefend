@@ -1,8 +1,10 @@
 pub mod console;
 pub mod json;
+pub mod summary;
 
 pub use console::{ConsoleConfig, ConsoleFormatter};
 pub use json::{JsonError, JsonFormatter, JsonOutputBuilder};
+pub use summary::{CategorizedFindings, ProjectSummary};
 
 use detectors::types::{AnalysisContext, Finding};
 use std::collections::HashSet;
@@ -45,6 +47,93 @@ pub fn deduplicate_findings(findings: Vec<Finding>) -> Vec<Finding> {
     }
 
     deduplicated
+}
+
+/// Phase 9 FP Reduction: Enhanced deduplication with function-scope grouping
+///
+/// This function provides additional deduplication for specific detector categories
+/// that tend to report multiple findings for the same logical issue:
+/// - MEV detectors: Multiple findings for the same vulnerable function
+/// - Validation detectors: Multiple findings for the same parameter issue
+///
+/// When multiple findings exist for the same (file, function_range), keeps only
+/// the highest severity finding.
+pub fn deduplicate_findings_enhanced(findings: Vec<Finding>) -> Vec<Finding> {
+    // First, apply standard deduplication
+    let findings = deduplicate_findings(findings);
+
+    // Group findings by file and approximate function (using line ranges)
+    let mut by_function: std::collections::HashMap<u64, Vec<Finding>> = std::collections::HashMap::new();
+
+    for finding in findings {
+        // Create a function-scope key using file and line range (±10 lines)
+        let mut hasher = DefaultHasher::new();
+        finding.primary_location.file.hash(&mut hasher);
+        // Round line to nearest 10 to group findings in same function
+        let line_group = finding.primary_location.line / 10;
+        line_group.hash(&mut hasher);
+        let key = hasher.finish();
+
+        by_function.entry(key).or_default().push(finding);
+    }
+
+    // For each function group, check if we have multiple MEV/validation findings
+    let mut deduplicated = Vec::new();
+
+    for (_key, mut group) in by_function {
+        // Separate MEV/validation findings from others
+        let (mut mev_validation, others): (Vec<_>, Vec<_>) = group
+            .drain(..)
+            .partition(|f| {
+                let id = f.detector_id.0.as_str();
+                id.contains("mev")
+                    || id.contains("sandwich")
+                    || id.contains("front-run")
+                    || id.contains("parameter")
+                    || id.contains("validation")
+            });
+
+        // Add all non-MEV/validation findings
+        deduplicated.extend(others);
+
+        // For MEV/validation findings, keep highest severity per category
+        if !mev_validation.is_empty() {
+            // Sort by severity (higher first)
+            mev_validation.sort_by(|a, b| {
+                severity_rank(&b.severity).cmp(&severity_rank(&a.severity))
+            });
+
+            // Group by detector category
+            let mut seen_categories: HashSet<String> = HashSet::new();
+            for finding in mev_validation {
+                let category = if finding.detector_id.0.contains("mev")
+                    || finding.detector_id.0.contains("sandwich")
+                    || finding.detector_id.0.contains("front-run")
+                {
+                    "mev".to_string()
+                } else {
+                    "validation".to_string()
+                };
+
+                if seen_categories.insert(category) {
+                    deduplicated.push(finding);
+                }
+            }
+        }
+    }
+
+    deduplicated
+}
+
+/// Convert severity to numeric rank for comparison
+fn severity_rank(severity: &detectors::types::Severity) -> u8 {
+    match severity {
+        detectors::types::Severity::Critical => 5,
+        detectors::types::Severity::High => 4,
+        detectors::types::Severity::Medium => 3,
+        detectors::types::Severity::Low => 2,
+        detectors::types::Severity::Info => 1,
+    }
 }
 
 /// Unified output formatter that supports multiple formats

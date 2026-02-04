@@ -203,6 +203,20 @@ impl Detector for RoleEscalationUpgradeDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 53 FP Reduction: Skip proxy contracts
+        // Proxy contracts set admin/implementation in constructor, which is expected behavior
+        // They are not implementation contracts that get upgraded
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("library ERC1967Utils")
+            || (source.contains("function _delegate(") && source.contains("fallback()"));
+
+        if is_proxy_contract {
+            return Ok(findings);
+        }
+
         for (line, issue) in self.find_constructor_privileges(source) {
             let message = format!(
                 "Constructor in contract '{}' grants privileges. {}. \

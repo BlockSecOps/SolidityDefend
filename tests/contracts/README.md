@@ -1,8 +1,8 @@
 # Test Contracts
 
-**SolidityDefend v1.0.0 Test Suite**
-**Last Updated**: October 13, 2025
-**Total Contracts**: 32
+**SolidityDefend v1.10.13+ Test Suite**
+**Last Updated**: February 2026
+**Total Contracts**: 36
 
 This directory contains Solidity test contracts with various vulnerabilities for validating the SolidityDefend analyzer.
 
@@ -53,6 +53,12 @@ tests/contracts/
 │   ├── VulnerableVault_*.sol        (5 vulnerable contracts)
 │   └── SecureVault_*.sol            (4 secure mitigation examples)
 │
+├── fp_benchmarks/              # FP regression testing (safe implementations)
+│   ├── safe_erc4626_vault.sol       (ERC-4626 with inflation protection)
+│   ├── safe_chainlink_consumer.sol  (Multi-oracle with staleness checks)
+│   ├── safe_flash_loan_provider.sol (ERC-3156 compliant)
+│   └── safe_amm_pool.sol            (TWAP with slippage/deadline protection)
+│
 ├── README.md                    # This file
 └── VULNERABILITY_INVENTORY.md   # Detailed vulnerability documentation
 ```
@@ -92,6 +98,30 @@ Secure contracts for false positive testing.
 ```bash
 ./target/release/soliditydefend tests/contracts/clean_examples/clean_contract.sol
 ```
+
+---
+
+### 2.5. FP Benchmark Contracts (4 contracts)
+
+Contracts implementing **proper security patterns** for false positive regression testing. These verify that SolidityDefend's Safe Patterns Library correctly identifies secure implementations.
+
+| Contract | Safe Patterns | Expected Issues |
+|----------|---------------|-----------------|
+| `safe_erc4626_vault.sol` | Virtual shares, dead shares, min deposit, tracked assets | Minimal (code quality only) |
+| `safe_chainlink_consumer.sol` | Multi-oracle, staleness, deviation bounds | Minimal |
+| `safe_flash_loan_provider.sol` | ERC-3156, CALLBACK_SUCCESS, balance validation | Minimal |
+| `safe_amm_pool.sol` | TWAP, MINIMUM_LIQUIDITY, slippage, deadline | Minimal |
+
+**Usage**:
+```bash
+# Verify safe contracts don't trigger vulnerability findings
+./target/release/soliditydefend tests/contracts/fp_benchmarks/
+
+# Run FP regression tests
+cargo test -p detectors --test fp_regression_tests
+```
+
+See [fp_benchmarks/README.md](./fp_benchmarks/README.md) for detailed pattern documentation.
 
 ---
 
@@ -236,10 +266,11 @@ done
 |----------|-----------|-----------|-------|------------|
 | Basic Vulnerabilities | 3 | 3 | 0 | Simple |
 | Clean Examples | 1 | 0 | 1 | Simple |
+| FP Benchmarks | 4 | 0 | 4 | Medium |
 | Complex Scenarios | 5 | 5 | 0 | High |
 | Cross-Chain | 14 | 9 | 5 | Medium-High |
 | ERC-4626 Vaults | 9 | 5 | 4 | Medium |
-| **TOTAL** | **32** | **22** | **10** | **Mixed** |
+| **TOTAL** | **36** | **22** | **14** | **Mixed** |
 
 ### By Severity
 
@@ -277,9 +308,10 @@ done
 ### Best for Benchmarking
 
 1. **clean_contract.sol** - False positive baseline
-2. **FlashLoanArbitrage.sol** - Complex multi-vulnerability detection
-3. **DAOGovernance.sol** - High vulnerability count (18+)
-4. **Cross-chain suite** - Bridge-specific detectors
+2. **fp_benchmarks/** - Safe pattern recognition (FP regression)
+3. **FlashLoanArbitrage.sol** - Complex multi-vulnerability detection
+4. **DAOGovernance.sol** - High vulnerability count (18+)
+5. **Cross-chain suite** - Bridge-specific detectors
 
 ### Best for Specific Detectors
 

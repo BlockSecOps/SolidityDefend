@@ -1,9 +1,9 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **333 security detectors** in SolidityDefend v1.9.1+.
+Complete reference for all **333 security detectors** in SolidityDefend v1.10.11+.
 
-**Last Updated:** 2026-01-16
-**Version:** v1.9.1+
+**Last Updated:** 2026-01-26
+**Version:** v1.10.11+
 **Total Detectors:** 333 (in tool)
 **Categories:** 28
 
@@ -44,7 +44,7 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 - **[Code Quality](code-quality/)** - 38 detectors
 - **[Account Abstraction](account-abstraction/)** - 21 detectors
 - **[DeFi](defi/)** - 19 detectors
-- **[EIPs](eips/)** - 16 detectors
+- **[EIPs](eips/)** - 24 detectors (includes Phase 51: EIP-3074/4844/6780/PUSH0)
 - **[MEV](mev/)** - 28 detectors
 - **[Deployment](deployment/)** - 12 detectors
 - **[Callback Chain](callback-chain/)** - 10 detectors
@@ -86,6 +86,32 @@ Each category contains comprehensive documentation for all detectors:
 - **High Severity:** 93 detectors (42%)
 - **Medium Severity:** 61 detectors (28%)
 - **Low/Info Severity:** 8 detectors (4%)
+
+---
+
+## Safe Patterns Library (FP Reduction)
+
+SolidityDefend includes a **Safe Patterns Library** for context-aware false positive reduction. Detectors automatically recognize secure implementations and skip or reduce severity for properly protected contracts.
+
+### Available Modules
+
+| Module | Patterns Detected |
+|--------|-------------------|
+| `oracle_patterns` | Chainlink, TWAP, multi-oracle, staleness checks, deviation bounds |
+| `flash_loan_patterns` | ERC-3156 compliance, callback validation, reentrancy protection |
+| `restaking_patterns` | EigenLayer delegation, AVS validation, withdrawal delays |
+| `vault_patterns` | ERC-4626 inflation protection, dead shares, virtual shares |
+| `amm_patterns` | AMM classification, slippage protection, TWAP oracles |
+| `reentrancy_patterns` | ReentrancyGuard, checks-effects-interactions |
+
+### Effect on Detection
+
+When safe patterns are detected:
+- **Skip entirely**: Contracts with comprehensive safety measures produce no findings
+- **Reduce severity**: Partial safety measures lower finding severity (e.g., Critical → High)
+- **Add context**: Findings include information about detected protections
+
+See [TaskDocs-SolidityDefend/FP-REDUCTION.md](../../TaskDocs-SolidityDefend/FP-REDUCTION.md) for implementation details.
 
 ---
 

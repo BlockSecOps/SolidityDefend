@@ -4,6 +4,48 @@
 
 ---
 
+## Safe Pattern Detection
+
+Restaking detectors use the **Safe Patterns Library** to reduce false positives. Contracts implementing proper EigenLayer patterns and restaking safety measures are automatically recognized.
+
+### Recognized Safe Patterns
+
+| Pattern | Detection Function | Effect |
+|---------|-------------------|--------|
+| EigenLayer Delegation Safety | `has_eigenlayer_delegation_safety()` | Skips contracts with operator validation and delegation caps |
+| AVS Validation | `has_avs_validation()` | Reduces severity when governance approval required |
+| Slashing Accounting | `has_slashing_accounting()` | Reduces severity with MAX_SLASH_PERCENTAGE |
+| Operator Validation | `has_operator_validation_pattern()` | Skips contracts with operator whitelisting |
+| Withdrawal Queue Protection | `has_withdrawal_queue_protection()` | Skips two-step withdrawal implementations |
+| LRT Inflation Protection | `has_lrt_inflation_protection()` | Skips LRTs with tracked assets |
+
+### Example Safe Implementation
+
+```solidity
+// This contract will NOT trigger restaking vulnerability findings
+contract SafeRestakingVault {
+    IDelegationManager public delegationManager;
+    mapping(address => bool) public approvedOperators;
+    uint256 public constant WITHDRAWAL_DELAY = 7 days;
+
+    function delegateTo(address operator) external {
+        require(approvedOperators[operator], "Not approved");
+        delegationManager.delegateTo(operator);
+    }
+
+    function requestWithdrawal(uint256 shares) external {
+        pendingWithdrawals[msg.sender] = block.timestamp;
+    }
+
+    function completeWithdrawal() external {
+        require(block.timestamp >= pendingWithdrawals[msg.sender] + WITHDRAWAL_DELAY);
+        // Complete withdrawal...
+    }
+}
+```
+
+---
+
 ## AVS Validation Bypass
 
 **ID:** `avs-validation-bypass`  

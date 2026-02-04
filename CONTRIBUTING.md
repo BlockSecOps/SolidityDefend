@@ -132,4 +132,8 @@ When adding new vulnerability detectors:
 - Check the documentation
 - Review existing code for examples
 
+## License
+
+By contributing to SolidityDefend, you agree that your contributions will be licensed under the same dual MIT OR Apache-2.0 license that covers the project. See [LICENSE](LICENSE) for details.
+
 Thank you for contributing to SolidityDefend!

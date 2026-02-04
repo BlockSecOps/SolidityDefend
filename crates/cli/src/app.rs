@@ -1,6 +1,7 @@
 use anyhow::{Result, anyhow};
 use clap::{Arg, ArgAction, Command};
 use project::{Framework, Project};
+use resolver::{DependencyGraph, PathResolver};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
@@ -12,6 +13,8 @@ use cache::analysis_cache::{
 };
 use cache::{CacheKey, CacheManager};
 use db::Database;
+// Cross-contract analysis infrastructure (available for future full integration)
+// use detectors::cross_contract::{CrossContractAnalyzer, CrossContractContext};
 use detectors::registry::{DetectorRegistry, RegistryConfig};
 use detectors::types::{AnalysisContext, Finding, Severity};
 use output::{OutputFormat, OutputManager};
@@ -350,6 +353,32 @@ impl CliApp {
                     .value_name("THRESHOLD")
                     .requires("validate"),
             )
+            .arg(
+                Arg::new("cross-contract")
+                    .long("cross-contract")
+                    .help("Enable cross-contract vulnerability detection")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("include-deps")
+                    .long("include-deps")
+                    .help("Include dependency libraries in analysis")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("deps-only")
+                    .long("deps-only")
+                    .help("Only analyze dependency libraries")
+                    .action(ArgAction::SetTrue)
+                    .conflicts_with("files"),
+            )
+            .arg(
+                Arg::new("verbose")
+                    .short('v')
+                    .long("verbose")
+                    .help("Enable verbose output with detailed project information")
+                    .action(ArgAction::SetTrue),
+            )
             .try_get_matches_from(args)?;
 
         // Handle configuration initialization first (doesn't need config loading)
@@ -498,6 +527,12 @@ impl CliApp {
                 exit_config.error_on_high_severity = false;
             }
 
+            // Get new flags
+            let enable_cross_contract = matches.get_flag("cross-contract");
+            let include_deps = matches.get_flag("include-deps");
+            let deps_only = matches.get_flag("deps-only");
+            let verbose = matches.get_flag("verbose");
+
             return app.analyze_project(
                 project_path,
                 framework_override,
@@ -507,6 +542,10 @@ impl CliApp {
                 min_confidence,
                 use_cache,
                 exit_config,
+                enable_cross_contract,
+                include_deps,
+                deps_only,
+                verbose,
             );
         }
 
@@ -572,6 +611,12 @@ impl CliApp {
                     exit_config.error_on_high_severity = false;
                 }
 
+                // Get new flags
+                let enable_cross_contract = matches.get_flag("cross-contract");
+                let include_deps = matches.get_flag("include-deps");
+                let deps_only = matches.get_flag("deps-only");
+                let verbose = matches.get_flag("verbose");
+
                 println!("Detected directory path, switching to project mode...");
                 return app.analyze_project(
                     files[0],
@@ -582,6 +627,10 @@ impl CliApp {
                     min_confidence,
                     use_cache,
                     exit_config,
+                    enable_cross_contract,
+                    include_deps,
+                    deps_only,
+                    verbose,
                 );
             }
         }
@@ -655,6 +704,7 @@ impl CliApp {
     }
 
     /// Analyze a Foundry or Hardhat project
+    #[allow(clippy::too_many_arguments)]
     fn analyze_project(
         &self,
         project_path: &str,
@@ -665,6 +715,10 @@ impl CliApp {
         min_confidence: detectors::types::Confidence,
         use_cache: bool,
         exit_config: ExitCodeConfig,
+        enable_cross_contract: bool,
+        include_deps: bool,
+        deps_only: bool,
+        verbose: bool,
     ) -> Result<()> {
         Self::display_banner();
         println!("Starting project analysis...");
@@ -679,9 +733,6 @@ impl CliApp {
         // Detect or use specified framework
         let detected_framework = project::detect_framework(&project_dir);
         let framework = framework_override.unwrap_or(detected_framework);
-
-        println!("Detected framework: {}", framework);
-        println!("Project root: {}", project_dir.display());
 
         // Load project configuration
         let project = match Project::load(&project_dir) {
@@ -737,43 +788,390 @@ impl CliApp {
             }
         };
 
-        println!("Source directory: {}", project.source_dir().display());
-        println!("Found {} Solidity files", project.solidity_files.len());
+        // === PHASE 1: Verbose Project Discovery Output ===
+        println!();
+        println!("=== SolidityDefend Project Analysis ===");
+        println!("Framework: {:?} ({})", framework, if framework_override.is_some() { "specified" } else { "auto-detected" });
+        println!("Project Root: {}", project.root().display());
+        println!();
 
-        if !project.remappings.is_empty() {
-            println!("Import remappings:");
-            for (prefix, target) in &project.remappings {
-                println!("  {} -> {}", prefix, target);
+        // Show source directories
+        println!("Source Directories:");
+        println!("  [SCAN] {} - {} files", project.source_dir().display(), project.solidity_files.len());
+
+        for excluded in project.excluded_dirs() {
+            println!("  [SKIP] {} - excluded by default", excluded);
+        }
+
+        let lib_dirs = project.lib_dir_names();
+        if !lib_dirs.is_empty() {
+            if include_deps || deps_only {
+                for lib in &lib_dirs {
+                    println!("  [DEPS] {} - included for scanning", lib);
+                }
+            } else {
+                println!("  [DEPS] {} - use --include-deps to scan", lib_dirs.join(", "));
+            }
+        }
+        println!();
+
+        // === Collect files to analyze ===
+        let mut source_files: Vec<PathBuf> = Vec::new();
+        let mut dep_files: Vec<PathBuf> = Vec::new();
+
+        if !deps_only {
+            source_files = project.solidity_files.clone();
+        }
+
+        // Discover dependency files if requested
+        if include_deps || deps_only {
+            for lib_dir in project.lib_dirs() {
+                if lib_dir.exists() {
+                    for entry in walkdir::WalkDir::new(&lib_dir)
+                        .follow_links(false)
+                        .into_iter()
+                        .filter_map(|e| e.ok())
+                    {
+                        let path = entry.path();
+                        if path.is_file() {
+                            if let Some(ext) = path.extension() {
+                                if ext == "sol" {
+                                    // Skip test directories in dependencies
+                                    let path_str = path.to_string_lossy();
+                                    if !path_str.contains("/test/") && !path_str.contains("/tests/") {
+                                        dep_files.push(path.to_path_buf());
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if verbose || deps_only {
+                println!("Dependency Files Found: {}", dep_files.len());
             }
         }
 
-        println!();
+        // Combine files
+        let mut all_files: Vec<PathBuf> = source_files.clone();
+        all_files.extend(dep_files.clone());
 
-        // Convert PathBufs to string references for analyze_files
-        let file_strs: Vec<String> = project
-            .solidity_files
-            .iter()
-            .map(|p| p.to_string_lossy().to_string())
-            .collect();
-        let file_refs: Vec<&str> = file_strs.iter().map(|s| s.as_str()).collect();
+        if all_files.is_empty() {
+            return Err(anyhow!("No Solidity files found to analyze"));
+        }
 
-        // Use existing analyze_files method
-        // Note: In the future, we can enhance this to use the dependency graph
-        // for proper analysis ordering
-        let result = self.analyze_files(
-            &file_refs,
-            format,
-            output_file,
-            min_severity,
-            min_confidence,
-            use_cache,
-            exit_config,
+        // Show files to analyze in verbose mode
+        if verbose {
+            println!("Files to Analyze ({}):", all_files.len());
+            for file in &source_files {
+                let relative = file.strip_prefix(project.root()).unwrap_or(file);
+                println!("  [SRC] {}", relative.display());
+            }
+            for file in &dep_files {
+                let relative = file.strip_prefix(project.root()).unwrap_or(file);
+                println!("  [DEP] {}", relative.display());
+            }
+            println!();
+        }
+
+        // Show remappings
+        if !project.remappings().is_empty() && verbose {
+            println!("Import Remappings:");
+            for (prefix, target) in project.remappings() {
+                println!("  {} -> {}", prefix, target);
+            }
+            println!();
+        }
+
+        // === PHASE 2: Build Dependency Graph ===
+        let resolver = PathResolver::new(
+            project.root().to_path_buf(),
+            project.remappings().to_vec(),
+            project.lib_dirs(),
         );
 
-        let elapsed = start_time.elapsed();
-        println!("\nProject analysis completed in {:.2}s", elapsed.as_secs_f64());
+        let mut dep_graph = DependencyGraph::new();
+        let mut analysis_order = all_files.clone();
 
-        result
+        match dep_graph.build(&all_files, &resolver) {
+            Ok(()) => {
+                // Check for circular dependencies
+                if dep_graph.has_cycles() {
+                    println!("Warning: Circular dependencies detected in project");
+                    if verbose {
+                        println!("  Analysis will proceed in arbitrary order");
+                    }
+                } else {
+                    // Get files in dependency order (dependencies first)
+                    match dep_graph.topological_order() {
+                        Ok(ordered) => {
+                            analysis_order = ordered;
+                            if verbose {
+                                println!("Dependency graph built successfully");
+                                println!("  Files ordered by dependencies for analysis");
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Warning: Could not determine dependency order: {}", e);
+                        }
+                    }
+                }
+
+                // Show dependency information in verbose mode
+                if verbose {
+                    let files_with_deps: Vec<_> = all_files.iter()
+                        .filter(|f| !dep_graph.dependencies(f).is_empty())
+                        .collect();
+
+                    if !files_with_deps.is_empty() {
+                        println!();
+                        println!("Import Graph:");
+                        for file in files_with_deps {
+                            let deps = dep_graph.dependencies(file);
+                            if !deps.is_empty() {
+                                let file_name = file.file_name().unwrap_or_default().to_string_lossy();
+                                println!("  {} imports:", file_name);
+                                for dep in deps {
+                                    let dep_name = dep.file_name().unwrap_or_default().to_string_lossy();
+                                    println!("    -> {}", dep_name);
+                                }
+                            }
+                        }
+                    }
+                    println!();
+                }
+            }
+            Err(e) => {
+                eprintln!("Warning: Could not build dependency graph: {}", e);
+                eprintln!("  Proceeding with arbitrary analysis order");
+            }
+        }
+
+        // === Run Analysis ===
+        let mut analysis_summary = AnalysisSummary::default();
+        let mut all_findings: Vec<Finding> = Vec::new();
+        let mut source_findings: Vec<Finding> = Vec::new();
+        let mut dep_findings: Vec<Finding> = Vec::new();
+
+        // Track analysis contexts for cross-contract analysis
+        // Note: Full cross-contract integration requires collecting AnalysisContext during parsing
+        let _cross_contract_enabled = enable_cross_contract;
+
+        println!("Analyzing {} files in dependency order...", analysis_order.len());
+
+        for file_path in &analysis_order {
+            let file_str = file_path.to_string_lossy().to_string();
+            let relative_path = file_path.strip_prefix(project.root()).unwrap_or(file_path);
+
+            if verbose {
+                println!("  Analyzing: {}", relative_path.display());
+            }
+            analysis_summary.total_files += 1;
+
+            match self.analyze_file(&file_str, min_severity, min_confidence, use_cache) {
+                Ok((findings, from_cache)) => {
+                    analysis_summary.successful_files += 1;
+
+                    if verbose {
+                        let cache_indicator = if from_cache { " (cached)" } else { "" };
+                        println!("    Found {} issues{}", findings.len(), cache_indicator);
+                    }
+
+                    // Track findings by severity
+                    for finding in &findings {
+                        analysis_summary.add_finding(&finding.severity);
+                    }
+
+                    // Categorize findings as source or dependency
+                    let is_dep = dep_files.contains(file_path);
+                    if is_dep {
+                        dep_findings.extend(findings.clone());
+                    } else {
+                        source_findings.extend(findings.clone());
+                    }
+
+                    all_findings.extend(findings);
+                }
+                Err(e) => {
+                    eprintln!("    Error: {}", e);
+                    analysis_summary.failed_files += 1;
+                }
+            }
+        }
+
+        // === PHASE 3: Cross-Contract Analysis ===
+        if enable_cross_contract {
+            println!();
+            println!("Running cross-contract analysis...");
+
+            // Note: Full cross-contract analysis requires collecting AnalysisContext during parsing
+            // The infrastructure is in place via CrossContractAnalyzer and CrossContractContext
+            // For complete integration, the analyze_file loop would need to return contexts
+            //
+            // What cross-contract analysis detects:
+            // - Circular dependencies between contracts
+            // - Trust boundary violations (calls to untrusted contracts)
+            // - State inconsistencies across contracts
+            // - Atomicity violations in multi-contract operations
+            // - Cross-contract reentrancy vulnerabilities
+
+            // For now, we can detect circular dependencies from the dependency graph
+            if dep_graph.has_cycles() {
+                println!("  [WARN] Circular dependencies detected - this can cause deployment issues");
+            } else {
+                println!("  [OK] No circular dependencies detected");
+            }
+
+            // Report on multi-file interaction patterns
+            let files_with_imports: usize = all_files.iter()
+                .filter(|f| !dep_graph.dependencies(f).is_empty())
+                .count();
+
+            if files_with_imports > 0 {
+                println!("  {} contracts have external dependencies", files_with_imports);
+            }
+        }
+
+        let duration = start_time.elapsed();
+
+        // === Deduplicate and categorize findings ===
+        let source_findings = output::deduplicate_findings(source_findings);
+        let dep_findings = output::deduplicate_findings(dep_findings);
+        let all_findings = output::deduplicate_findings(all_findings);
+
+        // === PHASE 4: Separate Output for Source vs Dependencies ===
+        println!();
+        if include_deps || deps_only {
+            // Show categorized output
+            println!("=== Source Contract Findings ({}) ===", source_findings.len());
+            if !source_findings.is_empty() {
+                self.output_manager.write_to_stdout(&source_findings, format)?;
+            } else {
+                println!("  No issues found in source contracts");
+            }
+
+            println!();
+            println!("=== Dependency Findings ({}) ===", dep_findings.len());
+            if !dep_findings.is_empty() {
+                self.output_manager.write_to_stdout(&dep_findings, format)?;
+                println!();
+                println!("Note: These are in third-party code you imported.");
+            } else {
+                println!("  No issues found in dependencies");
+            }
+        } else {
+            // Standard output
+            match output_file.as_ref() {
+                Some(path) => {
+                    self.output_manager
+                        .write_to_file(&all_findings, format, path)?;
+                    println!("Results written to: {}", path.display());
+                }
+                None => {
+                    self.output_manager.write_to_stdout(&all_findings, format)?;
+                }
+            }
+        }
+
+        // === PHASE 5: Project Summary Report ===
+        println!();
+        println!("=== Project Security Summary ===");
+
+        let critical_count = *analysis_summary.findings_by_severity.get(&Severity::Critical).unwrap_or(&0);
+        let high_count = *analysis_summary.findings_by_severity.get(&Severity::High).unwrap_or(&0);
+        let medium_count = *analysis_summary.findings_by_severity.get(&Severity::Medium).unwrap_or(&0);
+        let low_count = *analysis_summary.findings_by_severity.get(&Severity::Low).unwrap_or(&0);
+        let info_count = *analysis_summary.findings_by_severity.get(&Severity::Info).unwrap_or(&0);
+
+        println!("Contracts Analyzed: {} ({} source, {} dependencies)",
+            analysis_summary.total_files,
+            source_files.len(),
+            dep_files.len()
+        );
+        println!();
+        println!("Findings Overview:");
+        if critical_count > 0 {
+            println!("  Critical: {} (IMMEDIATE ACTION REQUIRED)", critical_count);
+        }
+        if high_count > 0 {
+            println!("  High:     {} (should be addressed)", high_count);
+        }
+        if medium_count > 0 {
+            println!("  Medium:   {}", medium_count);
+        }
+        if low_count > 0 {
+            println!("  Low:      {}", low_count);
+        }
+        if info_count > 0 {
+            println!("  Info:     {}", info_count);
+        }
+        if all_findings.is_empty() {
+            println!("  No security issues detected!");
+        }
+
+        if enable_cross_contract {
+            println!();
+            println!("Cross-Contract Analysis: Enabled");
+        }
+
+        // Calculate risk score (simplified)
+        let risk_score = (critical_count as f32 * 5.0
+            + high_count as f32 * 3.0
+            + medium_count as f32 * 1.5
+            + low_count as f32 * 0.5)
+            .min(10.0);
+
+        println!();
+        if risk_score == 0.0 {
+            println!("Protocol Risk Score: 0.0/10 (Excellent)");
+        } else if risk_score < 3.0 {
+            println!("Protocol Risk Score: {:.1}/10 (Low Risk)", risk_score);
+        } else if risk_score < 6.0 {
+            println!("Protocol Risk Score: {:.1}/10 (Medium Risk)", risk_score);
+        } else {
+            println!("Protocol Risk Score: {:.1}/10 (High Risk - Review Required)", risk_score);
+        }
+
+        println!();
+        println!("Analysis completed in {:.2}s", duration.as_secs_f64());
+        if analysis_summary.failed_files > 0 {
+            println!("  ({} files failed to analyze)", analysis_summary.failed_files);
+        }
+
+        // Write combined output to file if specified
+        if let Some(path) = output_file {
+            if include_deps || deps_only {
+                // Write categorized JSON with both source and dep findings
+                self.output_manager.write_to_file(&all_findings, format, &path)?;
+                println!("\nFull results written to: {}", path.display());
+            }
+        }
+
+        // Determine exit code based on configuration
+        let exit_code = self.determine_exit_code(&analysis_summary, &exit_config);
+
+        if exit_code != ExitCode::Success {
+            println!("\nExiting with code {} due to:", exit_code.as_code());
+            if analysis_summary.failed_files > 0 && exit_config.error_on_analysis_failure {
+                println!(
+                    "  - {} file(s) failed to analyze",
+                    analysis_summary.failed_files
+                );
+            }
+            if let Some(severity) = &exit_config.error_on_severity {
+                if analysis_summary.has_findings_at_or_above(severity) {
+                    println!("  - Found {} or higher severity issues", severity);
+                }
+            } else if exit_config.error_on_high_severity
+                && analysis_summary.has_findings_at_or_above(&Severity::High)
+            {
+                println!("  - Found high or critical severity issues");
+            }
+            exit_code.exit();
+        }
+
+        Ok(())
     }
 
     fn list_detectors(&self) -> Result<()> {

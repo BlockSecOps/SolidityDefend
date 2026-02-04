@@ -106,6 +106,23 @@ impl Detector for MissingEIP712DomainDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 53 FP Reduction: Skip signature verification libraries
+        // These are low-level verify functions - EIP-712 domain is at caller level
+        // Also skip Permit2 which implements EIP-712 at the contract level
+        let is_signature_library = source.contains("SignatureVerification")
+            || source.contains("SignatureChecker")
+            || source.contains("library ")
+            || source.contains("Permit2")
+            || source.contains("EIP712")
+            || source.contains("_hashTypedData")
+            || source.contains("@uniswap")
+            || source.contains("@openzeppelin");
+
+        if is_signature_library {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_missing_eip712_domain(function, ctx) {

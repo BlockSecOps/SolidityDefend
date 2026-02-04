@@ -5,6 +5,7 @@ use std::collections::HashSet;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_standard_token, is_zk_contract, is_deployment_tooling};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -110,6 +111,12 @@ impl ParameterConsistencyDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // Phase 16 FP Reduction: Skip standard ERC batch functions
+        // ERC1155 safeBatchTransferFrom, ERC721 batch mints, etc.
+        if self.is_standard_batch_function(function, ctx) {
+            return findings;
+        }
+
         // Find array parameters
         let array_params: Vec<_> = params
             .iter()
@@ -117,6 +124,13 @@ impl ParameterConsistencyDetector {
             .collect();
 
         if array_params.len() > 1 {
+            // Phase 16 FP Reduction: Check if arrays are processed together in a loop
+            // If they're not used in the same loop, they may be independent
+            let func_source = self.get_function_source(function, ctx);
+            if !self.arrays_processed_together(&func_source, &array_params) {
+                return findings;
+            }
+
             // Multiple arrays should likely have matching lengths
             let array_names: Vec<_> = array_params.iter().map(|p| &p.name).collect();
 
@@ -154,6 +168,90 @@ impl ParameterConsistencyDetector {
         findings.extend(self.check_related_array_parameters(params, function, ctx));
 
         findings
+    }
+
+    /// Phase 16 FP Reduction: Check if function is a standard ERC batch operation
+    fn is_standard_batch_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> bool {
+        let func_name_lower = function.name.name.to_lowercase();
+        let source = &ctx.source_code;
+
+        // ERC1155 batch functions
+        let erc1155_batch = (func_name_lower.contains("batch") || func_name_lower.contains("safebatch"))
+            && (source.contains("ERC1155") || source.contains("IERC1155"));
+
+        // ERC721 batch mints/transfers
+        let erc721_batch = func_name_lower.contains("batch")
+            && (source.contains("ERC721") || source.contains("IERC721"));
+
+        // Standard batch transfer patterns
+        let standard_batch = func_name_lower == "safebatchtransferfrom"
+            || func_name_lower == "batchtransfer"
+            || func_name_lower == "batchmint"
+            || func_name_lower == "batchburn";
+
+        erc1155_batch || erc721_batch || standard_batch
+    }
+
+    /// Phase 16 FP Reduction: Check if arrays are processed together in the same loop
+    fn arrays_processed_together(&self, source: &str, array_params: &[&ParameterInfo]) -> bool {
+        if array_params.len() < 2 {
+            return false;
+        }
+
+        // Check if there's a loop that indexes both arrays
+        let has_for_loop = source.contains("for");
+        if !has_for_loop {
+            // No loop - arrays might be independent
+            return false;
+        }
+
+        // Check if both arrays are indexed in the source
+        let arr1_indexed = source.contains(&format!("{}[", array_params[0].name));
+        let arr2_indexed = source.contains(&format!("{}[", array_params[1].name));
+
+        arr1_indexed && arr2_indexed
+    }
+
+    /// Phase 16 FP Reduction: Check if this is a Safe wallet project
+    /// Safe wallets have their own validation patterns for transaction parameters
+    fn is_safe_wallet_project(&self, ctx: &AnalysisContext) -> bool {
+        // Check file path for Safe wallet projects
+        let file_path_lower = ctx.file_path.to_lowercase();
+        if file_path_lower.contains("safe-smart-account")
+            || file_path_lower.contains("safe-contracts")
+            || file_path_lower.contains("gnosis-safe")
+        {
+            return true;
+        }
+
+        // Check for Safe-specific contract patterns
+        let source = &ctx.source_code;
+        if source.contains("GnosisSafe")
+            || source.contains("@safe-global/")
+            || source.contains("@gnosis.pm/safe-contracts")
+            || source.contains("ISafe")
+            || source.contains("ModuleManager")
+            || source.contains("OwnerManager")
+            || source.contains("FallbackManager")
+            || source.contains("GuardManager")
+        {
+            return true;
+        }
+
+        // Check contract name patterns for Safe components
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let safe_contracts = [
+            "safe", "multisend", "executor", "safeproxy", "modulemanager",
+            "ownermanager", "guardmanager", "fallbackmanager", "signatureverifier",
+            "transactionguard", "createcall", "simulatetxaccessor",
+        ];
+        for name in &safe_contracts {
+            if contract_name_lower.contains(name) {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Check if function body has array length validation
@@ -469,37 +567,57 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if address parameter is used in risky operations
+    /// Only flag truly risky patterns to reduce FPs
     fn is_address_used_in_risky_operation(&self, param_name: &str, func_source: &str) -> bool {
         let source_lower = func_source.to_lowercase();
         let param_lower = param_name.to_lowercase();
 
-        // Check for transfer/call operations with this address
-        if source_lower.contains(&format!("{}.transfer(", param_lower))
-            || source_lower.contains(&format!("{}.call", param_lower))
+        // High risk: External calls that forward value or execute code
+        // These are the most dangerous patterns
+        if source_lower.contains(&format!("{}.call", param_lower))
             || source_lower.contains(&format!("{}.delegatecall", param_lower))
-            || source_lower.contains(&format!("{}.send(", param_lower)) {
+            || source_lower.contains(&format!("call{{value:")) && source_lower.contains(&param_lower)
+        {
             return true;
         }
 
-        // Check for storage writes (assignments to storage mappings/arrays)
-        if source_lower.contains(&format!("[{}]", param_lower))
-            && (source_lower.contains(" = ") || source_lower.contains("=")) {
-            // Likely a storage operation - check if param is used as key
+        // High risk: Critical storage writes - ownership, admin, roles
+        let critical_storage_patterns = [
+            "owner", "admin", "operator", "minter", "burner", "pauser",
+            "guardian", "controller", "manager", "governance", "role",
+            "allowance", "approve", "whitelist", "blacklist", "banned",
+        ];
+
+        for pattern in &critical_storage_patterns {
+            // Check if critical storage is being assigned with our param
+            if source_lower.contains(pattern)
+                && source_lower.contains(&format!("[{}]", param_lower))
+                && source_lower.contains(" = ")
+            {
+                return true;
+            }
+            // Check for direct assignment: owner = param
+            if source_lower.contains(&format!("{} = {}", pattern, param_lower))
+                || source_lower.contains(&format!("{}={}", pattern, param_lower))
+            {
+                return true;
+            }
+        }
+
+        // Medium risk: safeTransferFrom where param is recipient
+        // Only flag if param is explicitly the "to" address
+        if source_lower.contains("safetransferfrom")
+            && (source_lower.contains(&format!(", {}, ", param_lower))
+                || source_lower.contains(&format!(", {})", param_lower)))
+        {
             return true;
         }
 
-        // Check for ownership/admin assignments
-        if (source_lower.contains("owner =") || source_lower.contains("admin ="))
-            && source_lower.contains(&param_lower) {
-            return true;
-        }
+        // Low priority: Regular transfers - these are common and usually intentional
+        // Skip .transfer() and .send() as they have limited gas and are relatively safe
+        // Skip regular safeTransfer as it's a common, audited pattern
 
-        // Check for safeTransfer calls
-        if source_lower.contains("safetransfer") && source_lower.contains(&param_lower) {
-            return true;
-        }
-
-        // Not used in risky operations
+        // Not used in high-risk operations
         false
     }
 
@@ -881,30 +999,32 @@ impl Detector for ParameterConsistencyDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // Phase 5 FP Reduction: Skip test contracts entirely
-        // Contracts with "Vulnerable", "Test", "Mock" in the name are test fixtures
-        let contract_name = ctx.contract.name.name.to_string();
-        let contract_name_lower = contract_name.to_lowercase();
-        if contract_name_lower.contains("vulnerable")
-            || contract_name_lower.contains("test")
-            || contract_name_lower.contains("mock")
-            || contract_name_lower.contains("example")
-            || contract_name_lower.contains("demo")
-        {
+        // Phase 9 FP Reduction: Use centralized test contract detection
+        if is_test_contract(ctx) {
             return Ok(findings);
         }
 
-        // Skip analysis for standard protocols - they follow established patterns
-        // ERC20, ERC721, ERC4626, etc. have well-defined interfaces with specific behaviors
-        let source_lower = ctx.source_code.to_lowercase();
-        let is_standard_token = (source_lower.contains("function transfer(address")
-            || source_lower.contains("function transferfrom("))
-            && source_lower.contains("balanceof")
-            && source_lower.contains("erc20")
-            || source_lower.contains("erc721")
-            || source_lower.contains("erc1155");
+        // Phase 14 FP Reduction: Skip ZK proof verification contracts
+        // ZK contracts have unique parameter patterns (proof arrays, public inputs)
+        // that don't follow standard validation expectations
+        if is_zk_contract(ctx) {
+            return Ok(findings);
+        }
 
-        if is_standard_token {
+        // Phase 16 FP Reduction: Skip Safe wallet projects
+        // Safe wallets have unique parameter validation patterns at the transaction level
+        if self.is_safe_wallet_project(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 16 FP Reduction: Skip deployment tooling
+        if is_deployment_tooling(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard token contracts
+        // ERC20, ERC721, ERC1155, ERC4626 follow established patterns
+        if is_standard_token(ctx) {
             // Only check array length consistency for standard tokens
             // Skip pedantic parameter validation checks
             for function in ctx.get_functions() {
@@ -916,10 +1036,29 @@ impl Detector for ParameterConsistencyDetector {
 
         // Analyze all functions in the contract (skip constructors - one-time init is safe)
         for function in ctx.get_functions() {
-            // Phase 5 FP Reduction: Skip constructors - one-time initialization is safe
+            // Skip constructors - one-time initialization is safe
             if matches!(function.function_type, ast::FunctionType::Constructor) {
                 continue;
             }
+
+            // Phase 9 FP Reduction: Skip functions with < 3 parameters
+            // Functions with 1-2 params rarely have parameter consistency issues
+            let params = self.extract_parameter_info(function);
+            if params.len() < 3 {
+                // Only check critical address parameters for small functions
+                let critical_params: Vec<_> = params
+                    .iter()
+                    .filter(|p| {
+                        matches!(p.type_info, ParameterType::Address)
+                            && (p.name.to_lowercase().contains("owner")
+                                || p.name.to_lowercase().contains("admin"))
+                    })
+                    .collect();
+                if critical_params.is_empty() {
+                    continue;
+                }
+            }
+
             findings.extend(self.analyze_function(function, ctx)?);
         }
 

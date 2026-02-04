@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_oracle_implementation, is_deployment_tooling};
 
 /// Detector for single oracle source dependencies
 pub struct SingleSourceDetector {
@@ -31,6 +32,106 @@ impl SingleSourceDetector {
                 Severity::High,
             ),
         }
+    }
+
+    /// Check if function has slippage protection which mitigates oracle manipulation risk
+    fn has_slippage_protection(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+        lower.contains("minoutput")
+            || lower.contains("minamount")
+            || lower.contains("minreturn")
+            || lower.contains("maxslippage")
+            || lower.contains("amountoutmin")
+            || lower.contains("amountinmax")
+            || lower.contains("min_output")
+            || lower.contains("min_amount")
+            || lower.contains("slippage")
+            || lower.contains("deadline")
+            // Check for explicit bound checks on amounts
+            || (lower.contains("require") && (lower.contains(">= min") || lower.contains("<= max")))
+    }
+
+    /// Phase 9 FP Reduction: Check if using Chainlink oracle pattern
+    /// Chainlink is a well-established, reliable oracle infrastructure
+    fn is_using_chainlink(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+        lower.contains("aggregatorv3interface")
+            || lower.contains("aggregatorinterface")
+            || lower.contains("latestrounddata")
+            || lower.contains("getlatestprice")
+            || lower.contains("pricefeed")
+            || lower.contains("chainlink")
+            || lower.contains("datafeedstore")
+    }
+
+    /// Phase 9 FP Reduction: Check if using TWAP oracle pattern
+    /// TWAP oracles are resistant to flash loan manipulation
+    fn is_using_twap(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+        lower.contains("twap")
+            || lower.contains("timewightedaverage")
+            || lower.contains("pricecumulativelast")
+            || lower.contains("observe(")
+            || lower.contains("consult(")
+            || lower.contains("oraclecumulative")
+            || lower.contains("gettwap")
+    }
+
+    /// Phase 14 FP Reduction: Check if contract actually uses oracle/price data
+    /// Skip contracts that don't use oracles at all
+    fn contract_uses_oracle_data(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // Must have price-related state or function calls
+        let has_price_calls = lower.contains("getprice")
+            || lower.contains("latestprice")
+            || lower.contains("latestrounddata")
+            || lower.contains("pricefeed")
+            || lower.contains("getlatestanswer")
+            || lower.contains("getassetprice")
+            || lower.contains("getunderlyingprice");
+
+        // Must have oracle-related imports or interfaces
+        let has_oracle_imports = lower.contains("ioracle")
+            || lower.contains("ipriceoracle")
+            || lower.contains("aggregatorv3interface")
+            || lower.contains("aggregatorinterface")
+            || lower.contains("pricefeedinterface")
+            || lower.contains("chainlinkpricefeed");
+
+        // Must have oracle state variable patterns
+        let has_oracle_state = lower.contains("oracle")
+            && (lower.contains("address") || lower.contains("mapping"))
+            && !lower.contains("// oracle"); // Skip comments
+
+        // Check for actual price usage patterns
+        let has_price_usage = (lower.contains("price") || lower.contains("rate"))
+            && (lower.contains("*") || lower.contains("/") || lower.contains("calculate"));
+
+        has_price_calls || has_oracle_imports || (has_oracle_state && has_price_usage)
+    }
+
+    /// Check if function actually uses oracle/price data
+    fn function_uses_oracle(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Oracle call patterns
+        let has_oracle_call = lower.contains("getprice")
+            || lower.contains("latestprice")
+            || lower.contains("latestrounddata")
+            || lower.contains("getlatestanswer")
+            || lower.contains("getassetprice")
+            || lower.contains("getunderlyingprice")
+            || lower.contains("pricefeed.")
+            || lower.contains("oracle.get")
+            || lower.contains("priceoracle.");
+
+        // Price calculation patterns
+        let has_price_calc = (lower.contains("price") || lower.contains("rate"))
+            && (lower.contains(" * ") || lower.contains(" / "))
+            && !lower.contains("address"); // Not address-related
+
+        has_oracle_call || has_price_calc
     }
 
     fn _is_oracle_call(&self, expr: &ast::Expression<'_>) -> bool {
@@ -84,11 +185,35 @@ impl SingleSourceDetector {
         sources: &mut std::collections::HashSet<String>,
     ) {
         if let ast::Expression::FunctionCall { function, .. } = expr {
-            if let ast::Expression::MemberAccess { expression, .. } = function {
-                if let ast::Expression::Identifier(id) = expression {
-                    sources.insert(id.name.to_string());
+            if let ast::Expression::MemberAccess { expression, member, .. } = function {
+                // Phase 14 FP Reduction: Only extract if it's an actual oracle call
+                let member_name = member.name.to_lowercase();
+                let is_oracle_call = member_name.contains("price")
+                    || member_name.contains("rate")
+                    || member_name.contains("latestrounddata")
+                    || member_name.contains("getprice")
+                    || member_name.contains("getlatestanswer")
+                    || member_name.contains("decimals")
+                    || member_name.contains("getassetprice");
+
+                if is_oracle_call {
+                    if let ast::Expression::Identifier(id) = expression {
+                        sources.insert(id.name.to_string());
+                    }
                 }
             }
+        }
+    }
+
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
         }
     }
 }
@@ -120,12 +245,59 @@ impl Detector for SingleSourceDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip contracts that ARE oracle implementations
+        // Oracle contracts providing data don't need multiple oracle sources themselves
+        if is_oracle_implementation(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 14 FP Reduction: Skip deployment tooling
+        // Deployment libraries don't use oracles for price data
+        if is_deployment_tooling(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 14 FP Reduction: Skip contracts that don't actually use oracle data
+        // This is the main fix - only analyze contracts that have oracle-related patterns
+        if !self.contract_uses_oracle_data(source) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip if using Chainlink (trusted decentralized oracle)
+        if self.is_using_chainlink(source) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip if using TWAP (manipulation resistant)
+        if self.is_using_twap(source) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
+            // Get function source first
+            let func_source = self.get_function_source(function, ctx);
+
+            // Phase 14 FP Reduction: Skip functions that don't actually use oracle data
+            if !self.function_uses_oracle(&func_source) {
+                continue;
+            }
+
             let oracle_count = self.count_oracle_sources(function);
             if oracle_count == 1 {
+                // Skip if function has slippage protection - mitigates oracle manipulation
+                if self.has_slippage_protection(&func_source) {
+                    continue;
+                }
+
                 let message = format!(
-                    "Function '{}' relies on a single oracle source, creating centralization risk",
+                    "Function '{}' relies on a single oracle source for price data, creating centralization risk",
                     function.name.name
                 );
 

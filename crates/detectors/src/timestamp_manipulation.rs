@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for timestamp manipulation vulnerabilities
 pub struct TimestampManipulationDetector {
@@ -57,6 +58,11 @@ impl Detector for TimestampManipulationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(timestamp_issue) = self.check_timestamp_manipulation(function, ctx) {
                 let message = format!(
@@ -102,6 +108,51 @@ impl TimestampManipulationDetector {
         matches!(function.function_type, ast::FunctionType::Constructor)
     }
 
+    /// Phase 52 FP Reduction: Check if timestamp is used for deadline/expiry validation
+    /// Deadline checks (require(block.timestamp <= expiry)) are safe and intentional
+    fn is_deadline_or_expiry_check(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+        // Check if function has deadline/expiry parameter
+        let has_deadline_param = function.parameters.iter().any(|p| {
+            if let Some(name) = &p.name {
+                let lower = name.name.to_lowercase();
+                lower.contains("expiry")
+                    || lower.contains("deadline")
+                    || lower.contains("validuntil")
+                    || lower.contains("expires")
+                    || lower.contains("timeout")
+                    || lower == "v" || lower == "r" || lower == "s" // Signature params indicate signature verification
+            } else {
+                false
+            }
+        });
+
+        // Check for common deadline variable names
+        let has_deadline_var = func_source.contains("expiry")
+            || func_source.contains("deadline")
+            || func_source.contains("validUntil")
+            || func_source.contains("expires")
+            || func_source.contains("signatureExpiry");
+
+        // Check for signature-related functions (delegateBySig, permit, etc.)
+        let is_signature_function = function.name.name.to_lowercase().contains("bysig")
+            || function.name.name.to_lowercase().contains("permit")
+            || function.name.name.to_lowercase().contains("delegate")
+            || func_source.contains("ecrecover")
+            || func_source.contains("ECDSA.recover");
+
+        // Check if timestamp is only used for comparison (deadline check)
+        let is_deadline_comparison = (func_source.contains("block.timestamp <=")
+            || func_source.contains("block.timestamp <")
+            || func_source.contains(">= block.timestamp")
+            || func_source.contains("> block.timestamp")
+            || func_source.contains("require(block.timestamp"))
+            && (has_deadline_var || has_deadline_param);
+
+        (has_deadline_param && is_signature_function)
+            || is_deadline_comparison
+            || (has_deadline_var && is_signature_function)
+    }
+
     /// Check for timestamp manipulation vulnerabilities
     fn check_timestamp_manipulation(
         &self,
@@ -116,6 +167,12 @@ impl TimestampManipulationDetector {
         }
 
         let func_source = self.get_function_source(function, ctx);
+
+        // Phase 52 FP Reduction: Skip deadline/expiry validation functions
+        // Functions like delegateBySig, permit use timestamp for expiry checks, not manipulation
+        if self.is_deadline_or_expiry_check(&func_source, function) {
+            return None;
+        }
 
         // Check for block.timestamp usage
         let uses_timestamp = func_source.contains("block.timestamp") || func_source.contains("now"); // Solidity < 0.7.0
@@ -279,14 +336,16 @@ impl TimestampManipulationDetector {
         None
     }
 
-    /// Get function source code
+    /// Get function source code with comments and strings removed for analysis
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            // Clean the source to avoid FPs from comments and strings
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

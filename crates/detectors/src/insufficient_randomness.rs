@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for weak or predictable randomness sources
 pub struct InsufficientRandomnessDetector {
@@ -57,6 +58,11 @@ impl Detector for InsufficientRandomnessDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(randomness_issue) = self.check_weak_randomness(function, ctx) {
                 let message = format!(
@@ -100,6 +106,49 @@ impl Detector for InsufficientRandomnessDetector {
 }
 
 impl InsufficientRandomnessDetector {
+    /// Phase 52 FP Reduction: Check if timestamp is used for deadline/expiry (not randomness)
+    fn is_deadline_usage(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+        // Check if function has deadline/expiry parameter
+        let has_deadline_param = function.parameters.iter().any(|p| {
+            if let Some(name) = &p.name {
+                let lower = name.name.to_lowercase();
+                lower.contains("expiry")
+                    || lower.contains("deadline")
+                    || lower.contains("validuntil")
+                    || lower.contains("expires")
+                    || lower.contains("timeout")
+            } else {
+                false
+            }
+        });
+
+        if has_deadline_param {
+            return true;
+        }
+
+        // Check for deadline variable patterns in source
+        let has_deadline_var = func_source.contains("expiry")
+            || func_source.contains("deadline")
+            || func_source.contains("validUntil")
+            || func_source.contains("expires");
+
+        // Check if timestamp is only used in comparisons (deadline check), not arithmetic
+        let is_comparison_only = (func_source.contains("block.timestamp <=")
+            || func_source.contains("block.timestamp >=")
+            || func_source.contains("block.timestamp <")
+            || func_source.contains("block.timestamp >")
+            || func_source.contains("<= block.timestamp")
+            || func_source.contains(">= block.timestamp")
+            || func_source.contains("< block.timestamp")
+            || func_source.contains("> block.timestamp"))
+            && !func_source.contains("block.timestamp +")
+            && !func_source.contains("block.timestamp -")
+            && !func_source.contains("block.timestamp *")
+            && !func_source.contains("block.timestamp %");
+
+        has_deadline_var && is_comparison_only
+    }
+
     fn check_weak_randomness(
         &self,
         function: &ast::Function<'_>,
@@ -120,11 +169,28 @@ impl InsufficientRandomnessDetector {
             return None; // Using secure randomness, no issue
         }
 
+        // Phase 52 FP Reduction: Skip deadline/expiry checks
+        // Functions like delegateBySig use timestamp for expiry validation, not randomness
+        if self.is_deadline_usage(&func_source, function) {
+            return None;
+        }
+
         // Pattern 1: block.timestamp for randomness
-        if func_source.contains("block.timestamp")
+        // Phase 52: Only flag if actually used for randomness (not just present with keccak256)
+        let uses_timestamp_for_randomness = func_source.contains("block.timestamp")
             && (func_source.contains("random")
                 || func_source.contains("lottery")
-                || func_source.contains("keccak256"))
+                // Only flag keccak256 if timestamp is part of randomness generation
+                || (func_source.contains("keccak256")
+                    && (func_source.contains("block.timestamp +")
+                        || func_source.contains("block.timestamp,")
+                        || func_source.contains("abi.encodePacked") && func_source.contains("block.timestamp"))));
+
+        // Exclude deadline patterns even if keccak256 is present (e.g., signature validation)
+        if uses_timestamp_for_randomness
+            && !func_source.contains("expiry")
+            && !func_source.contains("deadline")
+            && !func_source.contains("validUntil")
         {
             return Some(
                 "Uses block.timestamp for randomness generation. \

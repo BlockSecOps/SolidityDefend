@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for over-reliance on L1 escape hatch mechanisms
 ///
@@ -231,6 +232,14 @@ impl Detector for EscapeHatchDependencyDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
+        // This detector is for L2 escape hatch mechanisms, NOT simple emergency withdrawals.
+        // A regular onlyOwner emergencyWithdraw on an L1 contract is NOT an L2 escape hatch.
+        if !utils::is_l2_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

@@ -59,10 +59,21 @@ impl Detector for MevExtractableValueDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 9 FP Reduction: Skip test contracts
+        if utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Skip if this is an AMM pool - AMM pools INTENTIONALLY expose MEV
         // MEV extraction (arbitrage, liquidations) is how AMM pools maintain efficient pricing.
         // This detector should focus on contracts that CONSUME AMM data unsafely.
         if utils::is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard token contracts
+        // ERC20/ERC721 tokens themselves are not MEV targets
+        if utils::is_standard_token(ctx) {
             return Ok(findings);
         }
 
@@ -120,8 +131,24 @@ impl MevExtractableValueDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        // Phase 52 FP Reduction: Skip internal/private functions
+        // Internal/private functions cannot be called directly, so they're not MEV entry points
+        if function.visibility == ast::Visibility::Internal
+            || function.visibility == ast::Visibility::Private
+        {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
+
+        // Phase 52 FP Reduction: Skip view/pure functions
+        // View/pure functions cannot modify state, so they're not MEV-exploitable
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return None;
+        }
 
         // Skip if this is an ERC-4337 paymaster/account abstraction contract
         // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
@@ -131,9 +158,59 @@ impl MevExtractableValueDetector {
             return None; // Paymaster operations are not MEV targets
         }
 
-        // NEW: Early exit if function has sufficient MEV protection
-        if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {
-            return None; // Protected - no MEV risk
+        // Phase 52 FP Reduction: Skip administrative functions with access control
+        // Functions with onlyOwner, onlyAdmin, onlyRole modifiers are not MEV targets
+        let has_access_control_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("role")
+                || name_lower.contains("auth")
+                || name_lower.contains("guardian")
+                || name_lower.contains("governance")
+        });
+
+        // Phase 52: Check if function is administrative (not price-sensitive)
+        let is_admin_function = func_name_lower.contains("set")
+            || func_name_lower.contains("update")
+            || func_name_lower.contains("configure")
+            || func_name_lower.contains("pause")
+            || func_name_lower.contains("unpause")
+            || func_name_lower.contains("emergency");
+
+        // Admin functions with access control are not MEV targets
+        if has_access_control_modifier && is_admin_function {
+            return None;
+        }
+
+        // Phase 16 Recall Recovery: Check trading functions first for better recall
+        // Trading functions by name require slippage protection regardless of other protections
+        let func_name_lower = function.name.name.to_lowercase();
+        let is_trading_by_name = func_name_lower.contains("swap")
+            || func_name_lower.contains("trade")
+            || func_name_lower.contains("exchange")
+            || func_name_lower.contains("arbitrage")
+            || func_name_lower.contains("liquidat")
+            || func_name_lower.contains("flashloan")
+            || func_name_lower.contains("flash");
+
+        // For trading functions, ALWAYS require slippage protection
+        // Access control alone doesn't protect against sandwich attacks
+        if is_trading_by_name && !mev_protection_patterns::has_slippage_protection(&func_source) {
+            return Some(format!(
+                "Trading/arbitrage function '{}' lacks slippage protection. \
+                Access control modifiers don't protect against MEV - without minAmountOut \
+                or similar protection, trades are vulnerable to sandwich attacks.",
+                function.name.name
+            ));
+        }
+
+        // For non-trading functions, use standard protection check
+        if !is_trading_by_name {
+            if mev_protection_patterns::has_sufficient_mev_protection(function, &func_source, ctx) {
+                return None; // Protected - no MEV risk
+            }
         }
 
         // Skip standard ERC20/ERC721 token functions - these are NOT MEV targets by themselves
@@ -377,14 +454,16 @@ impl MevExtractableValueDetector {
         }
     }
 
-    /// Get function source code
+    /// Get function source code (cleaned to avoid FPs from comments/strings)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            // Clean source to avoid FPs from comments/strings
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

@@ -241,30 +241,91 @@ impl IntegerOverflowDetector {
             return None;
         }
 
+        // FP Reduction: Skip safe unchecked patterns commonly used in production code
+        // These are mathematically proven safe and widely used in OpenZeppelin, Aave, etc.
+
+        // Pattern 1: Loop counter increments (unchecked { ++i; } or unchecked { i++; })
+        // Safe because loop bounds are checked in the for condition
+        let is_loop_increment = func_source.contains("unchecked { ++")
+            || func_source.contains("unchecked { i++")
+            || func_source.contains("unchecked {++")
+            || func_source.contains("unchecked{ ++")
+            || func_source.contains("unchecked {\n")  // Multi-line with just increment
+                && (func_source.contains("++i;") || func_source.contains("i++;"));
+
+        // Only increment in the unchecked block, nothing else
+        let unchecked_only_increment = self.is_unchecked_only_increment(&func_source);
+
+        if is_loop_increment || unchecked_only_increment {
+            return None; // Safe pattern, skip
+        }
+
+        // Pattern 2: Division remainder (cannot overflow)
+        // Example: unchecked { return a - (a / b) * b; }
+        let is_division_remainder = func_source.contains("unchecked")
+            && func_source.contains(" / ")
+            && !func_source.contains(" * ")
+            && !func_source.contains(" + ");
+
+        if is_division_remainder {
+            return None;
+        }
+
+        // Pattern 3: Subtraction where result is already bounds-checked
+        // Example: require(a >= b); unchecked { return a - b; }
+        let has_prior_bounds_check = self.has_bounds_check_before_unchecked(&func_source);
+        if has_prior_bounds_check {
+            return None;
+        }
+
         // Check if unchecked block contains risky operations
         let has_user_input = func_source.contains("msg.value")
             || func_source.contains("_amount")
-            || func_source.contains("amount)")
-            || (func_source.contains("uint") && func_source.contains("memory"));
+            || func_source.contains("amount)");
 
         let has_state_changes = func_source.contains("balance")
             || func_source.contains("totalSupply")
             || func_source.contains("supply");
 
-        if has_unchecked && (has_user_input || has_state_changes) {
-            return Some("Unchecked block performs arithmetic on user-controlled values or critical state variables".to_string());
-        }
-
-        // Pattern: Unchecked without clear justification comment
-        let has_safety_comment = func_source.contains("// Safe:")
-            || func_source.contains("// Cannot overflow")
-            || func_source.contains("// Checked above");
-
-        if has_unchecked && !has_safety_comment {
-            return Some("Unchecked block lacks safety justification comments".to_string());
+        // Only flag if unchecked block actually performs risky operations
+        // with user input or state changes, not just any unchecked block
+        if has_unchecked && has_user_input && has_state_changes {
+            return Some("Unchecked block performs arithmetic on user-controlled values that modify critical state variables".to_string());
         }
 
         None
+    }
+
+    /// Check if unchecked block only contains increment/decrement
+    fn is_unchecked_only_increment(&self, func_source: &str) -> bool {
+        // Find unchecked blocks and check if they only contain increment
+        if let Some(start) = func_source.find("unchecked {") {
+            if let Some(end) = func_source[start..].find('}') {
+                let block_content = &func_source[start + 11..start + end];
+                let trimmed = block_content.trim();
+                // Only increment operations
+                return trimmed == "++i;"
+                    || trimmed == "i++;"
+                    || trimmed == "++j;"
+                    || trimmed == "j++;"
+                    || trimmed.starts_with("++") && trimmed.ends_with(';')
+                    || trimmed.ends_with("++;");
+            }
+        }
+        false
+    }
+
+    /// Check if there's a bounds check before the unchecked block
+    fn has_bounds_check_before_unchecked(&self, func_source: &str) -> bool {
+        if let Some(unchecked_pos) = func_source.find("unchecked") {
+            let before_unchecked = &func_source[..unchecked_pos];
+            // Check for require/assert with >= or > comparisons
+            before_unchecked.contains("require(") &&
+                (before_unchecked.contains(" >= ") || before_unchecked.contains(" > ") ||
+                 before_unchecked.contains(" <= ") || before_unchecked.contains(" < "))
+        } else {
+            false
+        }
     }
 
     /// Get function source code

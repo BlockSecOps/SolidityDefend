@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::is_test_contract;
 
 /// Detector for unsafe type casting that can lead to data loss
 pub struct UnsafeTypeCastingDetector {
@@ -57,7 +58,20 @@ impl Detector for UnsafeTypeCastingDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
+            // Phase 9 FP Reduction: Skip internal pure/view functions (less critical)
+            if function.visibility == ast::Visibility::Internal
+                && (function.mutability == ast::StateMutability::Pure
+                    || function.mutability == ast::StateMutability::View)
+            {
+                continue;
+            }
+
             if let Some(casting_issues) = self.check_unsafe_casting(function, ctx) {
                 for (line_offset, issue_desc) in casting_issues {
                     let message = format!(
@@ -101,6 +115,87 @@ impl Detector for UnsafeTypeCastingDetector {
 }
 
 impl UnsafeTypeCastingDetector {
+    /// Check if a line is within an unchecked block
+    /// Unchecked blocks explicitly indicate developer awareness of overflow behavior
+    fn is_in_unchecked_block(&self, lines: &[&str], current_line: usize) -> bool {
+        let mut depth = 0;
+        let mut in_unchecked = false;
+
+        // Scan backwards to find if we're inside an unchecked block
+        for i in (0..=current_line).rev() {
+            let line = lines[i].trim();
+
+            // Count braces to track depth
+            for c in line.chars().rev() {
+                match c {
+                    '}' => depth += 1,
+                    '{' => {
+                        if depth > 0 {
+                            depth -= 1;
+                        } else if line.contains("unchecked") {
+                            return true;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // Found unchecked keyword
+            if line.contains("unchecked") && line.contains("{") {
+                in_unchecked = true;
+            }
+        }
+
+        in_unchecked
+    }
+
+    /// Check if this is a safe literal cast (e.g., uint8(18), uint8(6))
+    /// Literal values are always safe as they're known at compile time
+    fn is_safe_literal_cast(&self, line: &str) -> bool {
+        // Match patterns like uint8(18), uint16(255), int8(-1)
+        // These are safe because literals are validated at compile time
+        let patterns = [
+            "uint8(", "uint16(", "uint32(", "uint64(", "uint128(",
+            "int8(", "int16(", "int32(", "int64(", "int128(",
+        ];
+
+        for pattern in &patterns {
+            if let Some(start) = line.find(pattern) {
+                let after = &line[start + pattern.len()..];
+                // Check if followed by a numeric literal (optionally negative)
+                let trimmed = after.trim_start_matches('-').trim_start();
+                if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                    // Check it's a pure number followed by )
+                    if let Some(end) = trimmed.find(')') {
+                        let num_part = &trimmed[..end];
+                        if num_part.chars().all(|c| c.is_ascii_digit() || c == '_') {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Check if function uses SafeCast library (OpenZeppelin)
+    /// SafeCast is audited and handles overflow/underflow safely
+    fn uses_safe_cast(&self, func_source: &str) -> bool {
+        func_source.contains("SafeCast.")
+            || func_source.contains(".toUint8(")
+            || func_source.contains(".toUint16(")
+            || func_source.contains(".toUint32(")
+            || func_source.contains(".toUint64(")
+            || func_source.contains(".toUint128(")
+            || func_source.contains(".toUint256(")
+            || func_source.contains(".toInt8(")
+            || func_source.contains(".toInt16(")
+            || func_source.contains(".toInt32(")
+            || func_source.contains(".toInt64(")
+            || func_source.contains(".toInt128(")
+            || func_source.contains(".toInt256(")
+    }
+
     fn check_unsafe_casting(
         &self,
         function: &ast::Function<'_>,
@@ -109,15 +204,33 @@ impl UnsafeTypeCastingDetector {
         function.body.as_ref()?;
 
         let func_source = self.get_function_source(function, ctx);
+
+        // Skip if function uses SafeCast library - it handles safety
+        if self.uses_safe_cast(&func_source) {
+            return None;
+        }
+
         let lines: Vec<&str> = func_source.lines().collect();
         let mut issues = Vec::new();
 
         for (line_idx, line) in lines.iter().enumerate() {
+            // Skip safe literal casts (e.g., uint8(18))
+            if self.is_safe_literal_cast(line) {
+                continue;
+            }
+
+            // Phase 9 FP Reduction: Skip casts inside unchecked blocks
+            // Developers using unchecked are aware of overflow behavior
+            if self.is_in_unchecked_block(&lines, line_idx) {
+                continue;
+            }
+
             // Pattern 1: Downcasting (larger type to smaller type)
             if self.is_downcast(line) {
                 let has_validation = self.has_range_check(&lines, line_idx);
+                let has_type_max_check = self.has_type_max_check(&lines, line_idx);
 
-                if !has_validation {
+                if !has_validation && !has_type_max_check {
                     issues.push((
                         line_idx,
                         "Unsafe downcast detected without range validation. Value may exceed target type capacity".to_string()
@@ -213,6 +326,25 @@ impl UnsafeTypeCastingDetector {
                     || lines[i].contains("type(")
                     || lines[i].contains("max"))
             {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Phase 9 FP Reduction: Check for type(uintX).max bounds checks
+    /// Pattern: require(value <= type(uint64).max, "...")
+    fn has_type_max_check(&self, lines: &[&str], current_line: usize) -> bool {
+        let start = current_line.saturating_sub(5);
+
+        for i in start..current_line {
+            let line = lines[i];
+            // Check for type(uintX).max pattern
+            if line.contains("type(uint") && line.contains(").max") {
+                return true;
+            }
+            // Check for common max constants
+            if line.contains("MAX_UINT") || line.contains("type(") && line.contains("max") {
                 return true;
             }
         }

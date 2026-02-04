@@ -120,6 +120,25 @@ impl UnprotectedInitializerDetector {
         // Look for access control patterns
         for modifier in &function.modifiers {
             let modifier_name = modifier.name.name.to_lowercase();
+
+            // CRITICAL FP FIX: Recognize OpenZeppelin's initializer modifier
+            // The `initializer` modifier from @openzeppelin/contracts-upgradeable
+            // prevents re-initialization and is proper protection.
+            if modifier_name == "initializer" || modifier_name.contains("initializer") {
+                return true;
+            }
+
+            // Also check for reinitializer
+            if modifier_name.contains("reinitializer") {
+                return true;
+            }
+
+            // Check for onlyInitializing
+            if modifier_name == "onlyinitializing" {
+                return true;
+            }
+
+            // Standard access control patterns
             if modifier_name.contains("only")
                 || modifier_name.contains("auth")
                 || modifier_name.contains("restricted")

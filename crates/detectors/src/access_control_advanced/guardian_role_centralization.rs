@@ -62,12 +62,45 @@ impl Detector for GuardianRoleCentralizationDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
         let lower = ctx.source_code.to_lowercase();
+        let source = ctx.source_code.as_str();
 
-        // Check for guardian/emergency role definitions
-        let has_guardian_role =
-            lower.contains("guardian") || lower.contains("emergency") || lower.contains("keeper");
+        // CRITICAL FP FIX: Check for actual guardian role definitions, not just keywords
+        // A contract with emergencyWithdraw() does NOT have a "guardian role"
+        // We need to check for explicit guardian role infrastructure:
+        // - State variable: address public guardian, address guardian
+        // - Role constant: GUARDIAN_ROLE
+        // - Modifier: onlyGuardian, modifier guardian
+        // - Function for setting guardian: setGuardian, updateGuardian
 
-        if !has_guardian_role {
+        let has_guardian_state = lower.contains("address guardian")
+            || lower.contains("address public guardian")
+            || lower.contains("address private guardian")
+            || source.contains("GUARDIAN_ROLE")
+            || lower.contains("bytes32 guardian");
+
+        let has_guardian_modifier = lower.contains("onlyguardian")
+            || lower.contains("modifier guardian")
+            || (lower.contains("only") && lower.contains("guardian") && lower.contains("modifier"));
+
+        let has_guardian_setter = lower.contains("function setguardian")
+            || lower.contains("function updateguardian")
+            || lower.contains("function changeguardian");
+
+        // Must have actual guardian infrastructure (state var + modifier or setter)
+        let has_actual_guardian_role =
+            has_guardian_state && (has_guardian_modifier || has_guardian_setter);
+
+        // Similarly check for keeper role (actual infrastructure, not just keywords)
+        let has_keeper_state = lower.contains("address keeper")
+            || lower.contains("address public keeper")
+            || source.contains("KEEPER_ROLE");
+
+        let has_keeper_modifier = lower.contains("onlykeeper") || lower.contains("modifier keeper");
+
+        let has_actual_keeper_role = has_keeper_state && has_keeper_modifier;
+
+        // Skip if no actual guardian/keeper role infrastructure
+        if !has_actual_guardian_role && !has_actual_keeper_role {
             return Ok(findings);
         }
 
@@ -76,7 +109,7 @@ impl Detector for GuardianRoleCentralizationDetector {
             || lower.contains("function emergencypause")
             || lower.contains("function shutdown");
 
-        if has_pause && has_guardian_role {
+        if has_pause && (has_actual_guardian_role || has_actual_keeper_role) {
             let has_multisig_protection = lower.contains("multisig")
                 || lower.contains("threshold")
                 || lower.contains("requiresignatures")
@@ -106,7 +139,7 @@ impl Detector for GuardianRoleCentralizationDetector {
             || lower.contains("function emergencywithdraw")
             || lower.contains("function rescue");
 
-        if has_withdrawal && has_guardian_role {
+        if has_withdrawal && (has_actual_guardian_role || has_actual_keeper_role) {
             // Check if guardian modifier is used with withdrawal
             let guardian_withdraw_patterns = ["onlyguardian", "onlyemergency", "onlykeeper"];
 
@@ -161,7 +194,7 @@ impl Detector for GuardianRoleCentralizationDetector {
             || lower.contains("function upgradeimplementation")
             || lower.contains("_upgradeto");
 
-        if has_upgrade && has_guardian_role {
+        if has_upgrade && (has_actual_guardian_role || has_actual_keeper_role) {
             // Check if guardian has upgrade powers
             let can_upgrade = lower.contains("onlyguardian")
                 && (lower.contains("upgradeto") || lower.contains("upgrade"));
@@ -206,7 +239,7 @@ impl Detector for GuardianRoleCentralizationDetector {
         }
 
         // Pattern 6: Guardian without revocation mechanism
-        if has_guardian_role {
+        if (has_actual_guardian_role || has_actual_keeper_role) {
             let has_revoke = lower.contains("revokeguardian")
                 || lower.contains("removeguardian")
                 || lower.contains("revokerole");
@@ -228,7 +261,7 @@ impl Detector for GuardianRoleCentralizationDetector {
         }
 
         // Pattern 7: Guardian without time-bound powers
-        if has_guardian_role {
+        if (has_actual_guardian_role || has_actual_keeper_role) {
             let has_time_limit = lower.contains("guardianexpiry")
                 || lower.contains("validuntil")
                 || lower.contains("expirationtime");

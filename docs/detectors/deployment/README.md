@@ -93,6 +93,11 @@ Detects patterns where contracts can be destroyed and recreated at the same addr
 
 Detects external calls in constructors that can enable reentrancy before security mechanisms are fully initialized. Covers external calls, callback triggers, and state-after-call patterns.
 
+**Important:** This detector correctly distinguishes between ERC standards:
+- **ERC20 `_mint()`** - Does NOT trigger callbacks, NOT flagged
+- **ERC721/ERC1155 `_safeMint()`** - Triggers `onERC721Received`/`onERC1155Received`, IS flagged
+- **`safeTransferFrom()`** - Triggers receiver callbacks, IS flagged
+
 **Source:** `src/constructor_reentrancy.rs`
 
 ---

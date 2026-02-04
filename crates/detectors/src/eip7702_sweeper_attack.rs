@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_eip7702_context};
 
 /// Detector for EIP-7702 sweeper attack vulnerabilities
 ///
@@ -348,11 +349,19 @@ impl Detector for Eip7702SweeperAttackDetector {
         let contract_name = self.get_contract_name(ctx);
         let lines: Vec<&str> = source.lines().collect();
 
-        // Only flag as high severity if contract appears to be EIP-7702 related
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Use shared EIP-7702 context detection (requires 2+ indicators)
+        // Only flag if contract appears to be EIP-7702 related
         // Otherwise these are legitimate rescue/recovery functions
-        let is_7702_context = self.is_eip7702_context(source);
+        let is_7702_context = is_eip7702_context(ctx);
 
         // Find sweep function patterns
+        // Phase 6.1 FP Reduction: Only report sweep functions if in EIP-7702 context
+        // Otherwise these are legitimate rescue/recovery functions commonly used in DeFi
         let sweep_funcs = self.find_sweep_functions(source);
         for (line, func_name) in &sweep_funcs {
             // Skip functions with access control - they are legitimate rescue functions
@@ -361,17 +370,10 @@ impl Detector for Eip7702SweeperAttackDetector {
                 continue;
             }
 
-            // Without EIP-7702 context, skip common rescue function names that are protected
+            // Phase 6.1: Require EIP-7702 context for ALL sweep function findings
+            // Without EIP-7702 context, these are legitimate rescue/recovery functions
             if !is_7702_context {
-                let lower_name = func_name.to_lowercase();
-                // Skip legitimate rescue/recovery patterns
-                if lower_name == "recover"
-                    || lower_name == "rescue"
-                    || lower_name == "emergencywithdraw"
-                    || lower_name.contains("admin")
-                {
-                    continue;
-                }
+                continue;
             }
 
             let message = format!(

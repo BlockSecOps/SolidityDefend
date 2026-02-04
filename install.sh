@@ -12,7 +12,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-REPO="SolidityOps/SolidityDefend"
+REPO="BlockSecOps/SolidityDefend"
 BINARY_NAME="soliditydefend"
 INSTALL_DIR="${INSTALL_DIR:-$HOME/.local/bin}"
 VERSION="${VERSION:-latest}"
@@ -40,36 +40,36 @@ detect_platform() {
     local os
     local arch
 
-    # Detect OS
+    # Detect OS (matches release naming: darwin, linux)
     case "$(uname -s)" in
         Linux*)
-            os="unknown-linux-gnu"
+            os="linux"
             ;;
         Darwin*)
-            os="apple-darwin"
+            os="darwin"
             ;;
         MINGW*|MSYS*|CYGWIN*)
-            os="pc-windows-msvc"
+            os="windows"
             ;;
         *)
             error "Unsupported operating system: $(uname -s)"
             ;;
     esac
 
-    # Detect architecture
+    # Detect architecture (matches release naming: x86_64, arm64)
     case "$(uname -m)" in
         x86_64|amd64)
             arch="x86_64"
             ;;
         aarch64|arm64)
-            arch="aarch64"
+            arch="arm64"
             ;;
         *)
             error "Unsupported architecture: $(uname -m)"
             ;;
     esac
 
-    echo "${arch}-${os}"
+    echo "${os}-${arch}"
 }
 
 # Get the latest release version from GitHub

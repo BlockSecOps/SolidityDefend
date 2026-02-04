@@ -33,33 +33,80 @@ impl BatchTransferOverflowDetector {
 
     /// Check if function has batch transfer overflow vulnerability
     fn check_batch_transfer_overflow(&self, function_source: &str, function_name: &str) -> bool {
-        // Must be a batch/multi transfer function
-        let is_batch_function = function_name.to_lowercase().contains("batch")
-            || function_name.to_lowercase().contains("multi")
-            || function_name.to_lowercase().contains("group");
+        // Check Solidity version first - Solidity 0.8.0+ has built-in overflow protection
+        let is_solidity_08_plus = self.is_solidity_08_or_higher(function_source);
 
-        if !is_batch_function {
-            // Also check source for batch patterns
-            if !(function_source.contains("[] memory") || function_source.contains("[] calldata")) {
-                return false;
-            }
+        let func_lower = function_name.to_lowercase();
+
+        // FP Reduction: Skip utility/library functions that work with arrays but aren't transfers
+        // These are NOT vulnerable to batch transfer overflow
+        let is_utility_function = func_lower.contains("sort")
+            || func_lower.contains("search")
+            || func_lower.contains("find")
+            || func_lower.contains("begin")
+            || func_lower.contains("end")
+            || func_lower.contains("mload")
+            || func_lower.contains("mstore")
+            || func_lower.contains("copy")
+            || func_lower.contains("concat")
+            || func_lower.contains("slice")
+            || func_lower.contains("reverse")
+            || func_lower.contains("quicksort")
+            || func_lower.contains("merge")
+            || func_lower.starts_with("_")  // Private helper functions
+            || func_lower == "push"
+            || func_lower == "pop";
+
+        if is_utility_function {
+            return false; // Not a transfer function
         }
 
+        // Must be a batch/multi transfer function - stricter check
+        let is_batch_transfer_function = (func_lower.contains("batch") && func_lower.contains("transfer"))
+            || (func_lower.contains("multi") && func_lower.contains("transfer"))
+            || func_lower.contains("batchtransfer")
+            || func_lower.contains("multitransfer")
+            || func_lower.contains("grouptransfer")
+            || func_lower.contains("airdrop")
+            || func_lower.contains("distribute");
+
+        // Secondary check: function has array parameter AND is a transfer
+        let has_transfer_with_array = (function_source.contains("[] memory")
+            || function_source.contains("[] calldata"))
+            && (func_lower.contains("transfer")
+                || func_lower.contains("send")
+                || function_source.contains(".transfer(")
+                || function_source.contains("safeTransfer"));
+
+        if !is_batch_transfer_function && !has_transfer_with_array {
+            return false; // Not a batch transfer function
+        }
+
+        // FP Reduction: Skip standard library implementations
+        // OpenZeppelin, Solmate, and other audited libraries have safe implementations
+        let is_standard_library = function_source.contains("@openzeppelin")
+            || function_source.contains("openzeppelin-contracts")
+            || function_source.contains("solmate");
+
         // Pattern 1: array.length * value (direct overflow risk)
-        let has_length_multiplication = (function_source.contains(".length *")
-            || function_source.contains("* _value")
-            || function_source.contains("* value"))
-            && function_source.contains(".length");
+        // Specifically looking for amount/value multiplication, not just any multiplication
+        let has_length_value_multiplication = function_source.contains(".length *")
+            && (function_source.contains("value")
+                || function_source.contains("amount")
+                || function_source.contains("_value")
+                || function_source.contains("_amount"));
 
         // Pattern 2: Intermediate variable multiplying count with value
         let has_count_value_mult = function_source.contains("count =")
             && function_source.contains(".length")
-            && (function_source.contains("count *") || function_source.contains("* count"));
+            && (function_source.contains("count *") || function_source.contains("* count"))
+            && (function_source.contains("value") || function_source.contains("amount"));
 
         // Pattern 3: Using unchecked block with multiplication (bypasses Solidity 0.8+ overflow protection)
         let unchecked_multiplication = function_source.contains("unchecked")
             && function_source.contains('*')
-            && function_source.contains(".length");
+            && function_source.contains(".length")
+            && (function_source.contains("value") || function_source.contains("amount"));
 
         // Check if using safe math or checked arithmetic
         let has_safe_math = function_source.contains("SafeMath")
@@ -73,15 +120,50 @@ impl BatchTransferOverflowDetector {
                 || function_source.contains("0.6")
                 || function_source.contains("0.7"));
 
+        // FP Reduction: For Solidity 0.8+, only flag unchecked blocks with risky multiplications
+        if is_solidity_08_plus && !unchecked_multiplication {
+            return false; // Safe - Solidity 0.8+ has built-in overflow checks
+        }
+
+        // FP Reduction: Skip standard library implementations
+        if is_standard_library && !unchecked_multiplication {
+            return false;
+        }
+
         // Vulnerable if:
-        // - Has length*value multiplication AND no safe math
-        // - OR unchecked multiplication with array length
+        // - Has length*value multiplication in unchecked block (Solidity 0.8+)
         // - OR old Solidity version (< 0.8.0) without SafeMath
-        (has_length_multiplication || has_count_value_mult)
+        (has_length_value_multiplication || has_count_value_mult)
             && !has_safe_math
-            && (unchecked_multiplication
-                || likely_old_solidity
-                || !function_source.contains("checked"))
+            && (unchecked_multiplication || likely_old_solidity)
+    }
+
+    /// Check if source indicates Solidity 0.8.0 or higher
+    fn is_solidity_08_or_higher(&self, source: &str) -> bool {
+        // Look for pragma solidity statement
+        for line in source.lines() {
+            if line.contains("pragma solidity") {
+                let lower = line.to_lowercase();
+                // Check for 0.8.x or higher
+                if lower.contains("0.8.") || lower.contains("^0.8")
+                    || lower.contains(">=0.8") || lower.contains(">= 0.8")
+                    || lower.contains("0.9.") || lower.contains("^0.9")
+                {
+                    return true;
+                }
+                // If explicit old version, it's not 0.8+
+                if lower.contains("0.4.") || lower.contains("0.5.")
+                    || lower.contains("0.6.") || lower.contains("0.7.")
+                    || lower.contains("^0.4") || lower.contains("^0.5")
+                    || lower.contains("^0.6") || lower.contains("^0.7")
+                {
+                    return false;
+                }
+            }
+        }
+        // Default to true (assume modern Solidity) to reduce FPs
+        // Most projects use 0.8+ now
+        true
     }
 }
 

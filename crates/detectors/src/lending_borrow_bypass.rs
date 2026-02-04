@@ -315,6 +315,66 @@ impl LendingBorrowBypassDetector {
             String::new()
         }
     }
+
+    /// Check if contract is actually implementing lending logic
+    /// Require actual lending infrastructure before analyzing
+    fn is_lending_implementation(&self, ctx: &AnalysisContext) -> bool {
+        let lower = ctx.source_code.to_lowercase();
+
+        // Must have lending state tracking infrastructure
+        // Look for state variables that track borrowed amounts or collateral
+        let has_borrow_state = [
+            "borrowed[",           // borrowed[user] = amount
+            "mapping(address => uint256) borrowed",
+            "mapping(address => uint256) debt",
+            "mapping(address => uint256) loans",
+            "debt[",               // debt[user] = amount
+            "loans[",              // loans[user] = amount
+            "borrowbalance",       // borrowBalance mapping or variable
+            "borrowedamount",      // borrowedAmount tracking
+        ].iter().any(|p| lower.contains(p));
+
+        let has_collateral_state = [
+            "collateral[",         // collateral[user] = amount
+            "mapping(address => uint256) collateral",
+            "mapping(address => uint256) deposits",
+            "collateralbalance",   // collateralBalance mapping
+            "usercollateral",      // userCollateral tracking
+        ].iter().any(|p| lower.contains(p));
+
+        // Must have at least borrow state OR (collateral + borrow function)
+        if !has_borrow_state {
+            // Check for collateral + explicit borrow function combo
+            let has_borrow_function = lower.contains("function borrow(")
+                || lower.contains("function borrowasset(")
+                || lower.contains("function takeloan(");
+
+            if !has_collateral_state || !has_borrow_function {
+                return false;
+            }
+        }
+
+        // Additional indicators that increase confidence
+        let lending_indicators = [
+            "collateralfactor",    // LTV/collateral factor
+            "healthfactor",        // Health factor tracking
+            "liquidat",            // Liquidation logic
+            "interestrate",        // Interest calculations
+            "borrowlimit",         // Borrow limits
+            "maxborrow",           // Maximum borrow
+            "repay(",              // Repayment function
+        ];
+
+        let indicator_count = lending_indicators
+            .iter()
+            .filter(|p| lower.contains(*p))
+            .count();
+
+        // Require at least one additional lending indicator
+        // This prevents false positives on contracts that just happen to have
+        // variables named "borrowed" or "collateral" for other purposes
+        indicator_count >= 1
+    }
 }
 
 impl Detector for LendingBorrowBypassDetector {
@@ -361,6 +421,20 @@ impl Detector for LendingBorrowBypassDetector {
         // Users withdraw their own assets, not collateral backing a loan
         // No health factor or collateral checks needed for vault withdrawals
         if utils::is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip view-only lens contracts (data aggregators)
+        // Lens contracts like FusePoolLens are read-only contracts that query lending pool data
+        // They contain keywords like "collateral", "borrow", "borrowBalance" but don't implement
+        // actual lending logic - they just aggregate and display data from lending protocols
+        if utils::is_view_only_lens_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Context gate: Only analyze contracts that are ACTUALLY implementing lending logic
+        // Require actual lending infrastructure (borrowed state, collateral tracking, etc.)
+        if !self.is_lending_implementation(ctx) {
             return Ok(findings);
         }
 

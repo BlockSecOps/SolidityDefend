@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_amm_pool, is_standard_token};
 
 pub struct SandwichAttackDetector {
     base: BaseDetector,
@@ -73,6 +74,21 @@ impl Detector for SandwichAttackDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip AMM pools - they intentionally expose MEV
+        if is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard tokens
+        if is_standard_token(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if self.is_vulnerable_to_sandwich_attack(function) {
@@ -189,6 +205,21 @@ impl Detector for FrontRunningDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip AMM pools - they intentionally expose MEV
+        if is_amm_pool(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Skip standard tokens
+        if is_standard_token(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if self.is_vulnerable_to_front_running(function) {

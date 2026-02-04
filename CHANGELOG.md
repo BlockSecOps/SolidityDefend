@@ -7,6 +7,231 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.13] - 2026-01-29
+
+### Added
+
+#### Project-Aware Scanning Enhancement
+
+Major enhancement to project mode with true project understanding, dependency graphs, and cross-contract analysis capabilities.
+
+**New CLI Flags:**
+- `--verbose` / `-v` - Enable verbose output with detailed project information
+- `--cross-contract` - Enable cross-contract vulnerability detection
+- `--include-deps` - Include dependency libraries (lib/, node_modules/) in analysis
+- `--deps-only` - Only analyze dependency libraries (skip source contracts)
+
+**Verbose Project Discovery Output:**
+- Shows framework detection (Foundry/Hardhat/Plain) with source
+- Displays source directories with [SCAN], [SKIP], [DEPS] indicators
+- Lists all import remappings from project configuration
+- Shows dependency graph and import relationships between contracts
+- Reports files analyzed in topological (dependency) order
+- Displays per-file issue counts during analysis
+
+**Dependency Graph Integration:**
+- Builds import dependency graph using PathResolver and remappings
+- Analyzes files in topological order (dependencies first)
+- Detects circular dependencies in project structure
+- Shows import relationships in verbose mode
+
+**Cross-Contract Analysis:**
+- Infrastructure wired for CrossContractAnalyzer
+- Detects circular dependencies between contracts
+- Reports contracts with external dependencies
+- Framework ready for full cross-contract vulnerability detection:
+  - Trust boundary violations
+  - State inconsistencies across contracts
+  - Atomicity violations in multi-contract operations
+  - Cross-contract reentrancy vulnerabilities
+
+**Dependency Scanning:**
+- Scan OpenZeppelin and other imported libraries with `--include-deps`
+- Audit only dependencies with `--deps-only`
+- Findings categorized as source vs dependency
+- Separate output sections for source and dependency findings
+
+**Project Security Summary:**
+- New summary section at end of analysis
+- Shows contracts analyzed (source vs dependency counts)
+- Findings overview by severity with action indicators
+- Protocol Risk Score (0.0-10.0 scale) with risk level
+- Analysis duration reporting
+
+**New Output Module:**
+- Added `output/src/summary.rs` with `ProjectSummary` struct
+- `CategorizedFindings` for source/dependency separation
+- Risk score calculation based on severity weights
+- JSON export capability for project summary
+
+### Fixed
+
+#### False Positive Reduction - Proxy and Vault Detectors
+
+Fixed 4 detectors that were incorrectly flagging standard library contracts (OpenZeppelin, Solmate).
+
+**pool-donation-enhanced (Fixed)**
+- Added `is_pool_or_vault_contract()` context gate
+- Excludes non-pool contracts: ERC20, Ownable, proxies, access control, etc.
+- Requires actual pool/vault indicators: ERC4626, shares+assets, liquidity, etc.
+- No longer flags basic ERC20 tokens or proxy contracts
+
+**uups-missing-disable-initializers (Fixed)**
+- Improved `is_uups_contract()` to exclude non-UUPS proxy types
+- Excludes TransparentUpgradeableProxy (admin-controlled, not UUPS)
+- Excludes ERC1967Proxy (base proxy class)
+- Excludes BeaconProxy and Minimal/Clone proxies
+- Only flags actual UUPS implementations with `_authorizeUpgrade`
+
+**proxy-storage-collision (Fixed)**
+- Added `uses_eip1967_storage()` to detect compliant proxies
+- Recognizes EIP-1967 storage slot constants
+- Detects OpenZeppelin proxy patterns
+- No longer flags properly implemented EIP-1967 proxies
+
+**token-supply-manipulation (Fixed)**
+- Added `is_vault_contract()` for better ERC-4626 detection
+- Skips ERC-4626 vault functions (deposit, mint, withdraw, redeem, preview*, etc.)
+- Minting shares in vaults is intended design, not a vulnerability
+- No longer flags Solmate or OpenZeppelin ERC4626 implementations
+
+## [1.10.9] - 2026-01-23
+
+### Fixed
+
+#### Phase 13 False Positive Reduction - Medium Priority Detectors
+
+Comprehensive FP reduction for 3 medium priority detectors through stricter context gating.
+
+**token-decimal-confusion (131 FPs reduced)**
+- Added `is_decimal_sensitive_contract()` - requires actual multi-token infrastructure
+- Added `handles_decimals_properly()` - recognizes proper decimal handling patterns
+- Added `has_cross_token_arithmetic()` - only flags actual cross-token calculations
+- Added `has_price_oracle_pattern()` - requires actual oracle infrastructure (not just "price" keyword)
+- No longer flags simple ERC20 tokens or contracts without cross-token arithmetic
+
+**lending-borrow-bypass (90 FPs reduced)**
+- Added `is_lending_implementation()` context gate
+- Requires actual lending infrastructure (borrowed state, collateral tracking)
+- Must have at least one lending indicator (healthFactor, liquidation, repay, etc.)
+- No longer flags Oracle contracts, helper contracts, or vault withdrawal functions
+
+**vault-donation-attack (55 FPs reduced)**
+- Added ERC-4626 vault check at contract level using `is_erc4626_vault()`
+- Only analyzes actual ERC-4626 vaults, not simple ERC20 tokens
+- Existing function-level checks now only run after contract-level gating passes
+
+All 604 detector tests pass.
+
+## [1.10.8] - 2026-01-23
+
+### Fixed
+
+#### Phase 12 False Positive Reduction - Additional Context Gating
+
+Additional FP reduction for 7 detectors through improved context detection and OpenZeppelin pattern recognition.
+
+**access_control.rs (UnprotectedInitializerDetector)**
+- Recognize OpenZeppelin's `initializer`, `reinitializer`, and `onlyInitializing` modifiers as proper protection
+
+**guardian_role_centralization.rs**
+- Require actual guardian role infrastructure (state var + modifier/setter)
+- No longer flags contracts with just `emergencyWithdraw()` function names
+
+**nft_mint_mev.rs**
+- Added `is_nft_contract()` helper function
+- Only flags NFT contracts (ERC721/ERC1155), not ERC20 tokens
+
+**token_supply_manipulation.rs**
+- Skip access control management functions (addMinter, removeMinter, grantRole, etc.)
+- Only flag if function actually contains `_mint()` or `_burn()` calls
+
+**vault_share_inflation.rs**
+- Only analyze ERC4626 vaults, not simple ERC20 tokens
+
+**utils.rs**
+- Improved `is_erc4626_vault()` with 3-path detection:
+  1. Explicit ERC4626 interface
+  2. Standard function signatures
+  3. Vault-like share calculation patterns
+
+**centralization_risk.rs, priority_gas_auction.rs, upgradeable_proxy_issues.rs**
+- Additional context gating improvements
+
+All 604 detector tests pass.
+
+## [1.10.7] - 2026-01-23
+
+### Fixed
+
+#### Phase 11 False Positive Reduction - DeFi Detectors
+
+Major FP reduction for 4 DeFi-related detectors that were incorrectly flagging simple tokens and non-pool contracts.
+
+**amm-liquidity-manipulation**
+- Fixed operator precedence bug: `&& burn || mint` was parsing as `(... && burn) || mint`, causing ANY contract with "mint" to be flagged
+- Added `has_amm_patterns()` context gating requiring 2+ AMM indicators before flagging:
+  - Both addLiquidity AND removeLiquidity functions
+  - Reserve tracking (reserve0/reserve1, getReserves)
+  - Swap functionality
+  - LP token mechanics
+  - Pool-related contract naming
+
+**token-supply-manipulation**
+- Skip constructors and initializers (represent fixed supply at deployment)
+- Skip internal `_mint` functions (not externally callable)
+- Only flag contracts with external/public mint functions that can be called post-deployment
+- Added `has_external_mint_function()` helper to detect accessible mint paths
+
+**jit-liquidity-sandwich**
+- Added `has_liquidity_pool_patterns()` requiring 2+ indicators before flagging
+- Skip interface files (define signatures, not vulnerable implementations)
+- Flag at specific function lines instead of line 1
+- Tightened liquidity function matching to require explicit liquidity context
+- Changed `withdraw`/`deposit` checks to require "liquidity" in context
+
+**cross-l2-frontrunning / escape-hatch-dependency**
+- Added `is_l2_contract()` utility to detect L2/cross-chain contracts
+- Only flag contracts with actual cross-chain functionality (bridge interfaces, L2 messaging, rollup patterns)
+- Prevents false positives on simple L1 contracts with withdraw functions
+
+### Added
+
+- `is_l2_contract()` - Detects L2/cross-chain contracts via bridge imports, L2 terminology, messaging functions
+- `is_governance_contract()` - Detects governance patterns (voting, proposals, timelock)
+- `is_multisig_contract()` - Detects multi-signature wallet patterns
+
+**Impact:**
+- Simple ERC20 tokens no longer flagged by AMM/supply/JIT detectors
+- Interfaces no longer flagged by JIT detector
+- L1 contracts no longer flagged by L2-specific detectors
+- All 604 detector tests pass
+
+## [1.10.6] - 2026-01-22
+
+### Fixed
+
+#### False Positive Reduction - constructor-reentrancy
+
+Fixed false positive where `constructor-reentrancy` detector incorrectly flagged ERC20's `_mint()` as callback-triggering.
+
+**Root Cause:** The detector treated `_mint` as a callback-triggering operation, but ERC20's `_mint()` does NOT have any callback mechanism - only ERC721/ERC1155's `_safeMint()` triggers receiver callbacks via `onERC721Received`/`onERC1155Received`.
+
+**Changes:**
+- Removed `_mint` from general callback detection
+- Added specific patterns that DO trigger callbacks:
+  - `_safeMint` (ERC721/ERC1155)
+  - `safeTransferFrom` (ERC721/ERC1155)
+  - `_safeTransfer` (ERC721/ERC1155)
+  - `onERC721Received` / `onERC1155Received`
+- Updated finding message to accurately describe which functions trigger callbacks
+- Added 6 unit tests verifying correct behavior
+
+**Impact:**
+- Simple ERC20 tokens no longer flagged incorrectly
+- Upgradeable ERC20 tokens (UUPS, etc.) no longer flagged incorrectly
+- ERC721/ERC1155 contracts using `_safeMint()` still correctly flagged
+
 ## [1.10.3] - 2025-01-17
 
 ### Changed
@@ -253,7 +478,7 @@ This release significantly reduces false positives across 13 detectors while mai
 
 ### 100% Detection Rate Achievement
 
-This release achieves **100% detection rate** (60/60) in scanner comparison tests. Total detectors: **333**.
+This release achieves **100% detection rate** (60/60) in scanner comparison tests. Total detectors: **330**.
 
 ### Added
 

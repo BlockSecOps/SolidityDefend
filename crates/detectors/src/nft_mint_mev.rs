@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for NFT mint MEV vulnerabilities
 ///
@@ -214,6 +215,52 @@ impl NftMintMevDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Check if contract is an NFT (ERC721/ERC1155) vs ERC20
+    ///
+    /// NFT contracts have:
+    /// - ERC721 or ERC1155 interfaces/inheritance
+    /// - tokenURI function
+    /// - ownerOf function (ERC721)
+    /// - Token ID based operations
+    ///
+    /// ERC20 tokens should NOT be flagged by this detector.
+    fn is_nft_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = ctx.source_code.as_str();
+        let lower = source.to_lowercase();
+
+        // Check for ERC721/ERC1155 interfaces
+        let has_nft_interface = source.contains("ERC721")
+            || source.contains("ERC1155")
+            || source.contains("IERC721")
+            || source.contains("IERC1155");
+
+        // Check for NFT-specific functions
+        let has_token_uri = lower.contains("tokenuri")
+            || lower.contains("uri(uint256")
+            || lower.contains("function uri(");
+
+        let has_owner_of = lower.contains("ownerof");
+
+        // Check for token ID operations (NFTs have IDs, ERC20s don't)
+        let has_token_id_ops = lower.contains("tokenid")
+            || lower.contains("_tokenids")
+            || lower.contains("safemint(address,uint256");
+
+        // Exclude ERC20-only patterns
+        let is_erc20_only = source.contains("ERC20")
+            && !source.contains("ERC721")
+            && !source.contains("ERC1155")
+            && lower.contains("decimals")
+            && !has_owner_of;
+
+        if is_erc20_only {
+            return false;
+        }
+
+        // Must have NFT interface OR (tokenURI AND ownerOf) OR token ID operations
+        has_nft_interface || (has_token_uri && has_owner_of) || has_token_id_ops
+    }
 }
 
 impl Detector for NftMintMevDetector {
@@ -243,6 +290,27 @@ impl Detector for NftMintMevDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // CRITICAL FP FIX: Only analyze NFT contracts (ERC721/ERC1155)
+        // This detector is for NFT mint MEV, NOT ERC20 token minting.
+        // ERC20 tokens with mint functions should not be flagged.
+        if !self.is_nft_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip if it's a simple token without NFT characteristics
+        if utils::is_simple_token(ctx) {
+            // Simple tokens might have ERC20 patterns, double-check for NFT
+            let source_lower = ctx.source_code.to_lowercase();
+            let has_nft_patterns = source_lower.contains("erc721")
+                || source_lower.contains("erc1155")
+                || source_lower.contains("tokenuri")
+                || source_lower.contains("ownerof");
+            if !has_nft_patterns {
+                return Ok(findings);
+            }
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

@@ -24,11 +24,12 @@ RUN cargo build --release --bin soliditydefend && \
     strip target/release/soliditydefend
 
 # Runtime stage - minimal image for production
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
-# Install runtime dependencies
+# Install runtime dependencies (libssl3 for bookworm)
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    libssl3 \
     git \
     && rm -rf /var/lib/apt/lists/* \
     && useradd -m -r -s /bin/false soliditydefend
@@ -50,7 +51,7 @@ ENTRYPOINT ["soliditydefend"]
 CMD ["--help"]
 
 # Build arguments for OCI labels
-ARG SERVICE_VERSION=1.10.3
+ARG SERVICE_VERSION=1.10.13
 ARG BUILD_DATE
 ARG VCS_REF
 

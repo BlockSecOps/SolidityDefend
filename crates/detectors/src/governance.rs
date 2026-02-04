@@ -245,7 +245,9 @@ impl GovernanceDetector {
             return false;
         }
 
-        let func_source = source_lines[func_start..=func_end].join("\n");
+        // Clean source to avoid FPs from comments/strings
+        let raw_source = source_lines[func_start..=func_end].join("\n");
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Enhanced patterns for current balance checks without snapshot protection
         let balance_patterns = [
@@ -289,7 +291,9 @@ impl GovernanceDetector {
     }
 
     fn has_governance_token_patterns(&self, ctx: &AnalysisContext) -> bool {
-        let source_lower = ctx.source_code.to_lowercase();
+        // Clean source to avoid FPs from comments/strings
+        let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
+        let source_lower = cleaned.to_lowercase();
 
         // Strong positive indicators - contract MUST have at least one of these
         // These indicate actual governance functionality, not just ownership patterns
@@ -327,6 +331,8 @@ impl GovernanceDetector {
     }
 
     fn has_snapshot_mechanisms(&self, ctx: &AnalysisContext) -> bool {
+        // Clean source to avoid FPs from comments/strings
+        let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
         let snapshot_patterns = [
             "snapshot",
             "getPastVotes",  // OpenZeppelin Governor
@@ -338,10 +344,12 @@ impl GovernanceDetector {
         ];
         snapshot_patterns
             .iter()
-            .any(|&pattern| ctx.source_code.contains(pattern))
+            .any(|&pattern| cleaned.contains(pattern))
     }
 
     fn has_time_delay_protection(&self, ctx: &AnalysisContext, _func: &ast::Function) -> bool {
+        // Clean source to avoid FPs from comments/strings
+        let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
         let time_delay_patterns = [
             "timelock",
             "delay",
@@ -352,7 +360,7 @@ impl GovernanceDetector {
         ];
         time_delay_patterns
             .iter()
-            .any(|&pattern| ctx.source_code.contains(pattern))
+            .any(|&pattern| cleaned.contains(pattern))
     }
 }
 
@@ -385,7 +393,9 @@ impl ExternalCallsLoopDetector {
             return false;
         }
 
-        let func_source = source_lines[func_start_line..=func_end_line].join("\n");
+        // Clean source to avoid FPs from comments/strings
+        let raw_source = source_lines[func_start_line..=func_end_line].join("\n");
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Enhanced loop patterns
         let loop_patterns = ["for (", "for(", "while (", "while(", "do {", "foreach"];
@@ -535,7 +545,9 @@ impl SignatureReplayDetector {
 
             let source_lines: Vec<&str> = ctx.source_code.lines().collect();
             if func_start < source_lines.len() && func_end < source_lines.len() {
-                let func_source = source_lines[func_start..=func_end].join("\n");
+                // Clean source to avoid FPs from comments/strings
+                let raw_source = source_lines[func_start..=func_end].join("\n");
+                let func_source = utils::clean_source_for_search(&raw_source);
                 let contains_signature_verification = func_source.contains("ecrecover")
                     || func_source.contains("ECDSA.recover")
                     || func_source.contains("verify")
@@ -568,7 +580,9 @@ impl SignatureReplayDetector {
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if func_start < source_lines.len() && func_end < source_lines.len() {
-            let func_source = source_lines[func_start..=func_end].join("\n");
+            // Clean source to avoid FPs from comments/strings
+            let raw_source = source_lines[func_start..=func_end].join("\n");
+            let func_source = utils::clean_source_for_search(&raw_source);
 
             let nonce_patterns = ["nonce", "nonces", "_nonce", "counter", "replay", "used"];
             let has_nonce_protection = nonce_patterns
@@ -605,6 +619,21 @@ impl Detector for SignatureReplayDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 53 FP Reduction: Skip well-known signature verification libraries
+        // These are low-level verify functions - nonce handling is done at caller level
+        let is_signature_library = source.contains("SignatureVerification")
+            || source.contains("SignatureChecker")
+            || source.contains("ECDSA")
+            || source.contains("library ")
+            || source.contains("Permit2")
+            || source.contains("@uniswap")
+            || source.contains("@openzeppelin");
+
+        if is_signature_library {
+            return Ok(findings);
+        }
 
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)
@@ -703,6 +732,8 @@ impl EmergencyPauseCentralizationDetector {
         });
 
         // Check if the contract lacks multisig or timelock protection
+        // Clean source to avoid FPs from comments/strings
+        let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
         let multisig_patterns = [
             "multisig",
             "timelock",
@@ -713,7 +744,7 @@ impl EmergencyPauseCentralizationDetector {
         ];
         let has_multisig_protection = multisig_patterns
             .iter()
-            .any(|&pattern| ctx.source_code.to_lowercase().contains(pattern));
+            .any(|&pattern| cleaned.to_lowercase().contains(pattern));
 
         // Flag if it's an emergency function with centralized control and no multisig protection
         has_centralized_control && !has_multisig_protection

@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_eip7702_context};
 
 /// Detector for EIP-7702 authorization bypass vulnerabilities
 ///
@@ -236,6 +237,16 @@ impl Detector for Eip7702AuthorizationBypassDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Phase 9 FP Reduction: Skip test contracts
+        if is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 9 FP Reduction: Use shared EIP-7702 context detection (requires 2+ indicators)
+        if !is_eip7702_context(ctx) {
+            return Ok(findings);
+        }
 
         // Find unprotected execute functions
         let unprotected = self.find_unprotected_execute(source);

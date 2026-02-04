@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for initcode injection vulnerabilities
 ///
@@ -82,15 +83,45 @@ impl InitcodeInjectionDetector {
             let trimmed = line.trim();
 
             // Look for bytecode concatenation or construction
-            if (trimmed.contains("abi.encodePacked") || trimmed.contains("bytes.concat"))
-                && (trimmed.contains("bytecode") || trimmed.contains("code"))
-            {
+            // Must specifically be about "bytecode" or "creationCode", not just "code"
+            // "code" alone matches too many false positives (e.g., hashCode, errorCode, opcode)
+            let is_bytecode_construction = (trimmed.contains("abi.encodePacked")
+                || trimmed.contains("bytes.concat"))
+                && (trimmed.contains("bytecode")
+                    || trimmed.contains("creationCode")
+                    || trimmed.contains("initcode")
+                    || trimmed.contains("runtimeCode"));
+
+            if is_bytecode_construction {
+                // Verify this is in a function that actually deploys
                 let func_name = self.find_containing_function(&lines, line_num);
-                findings.push((line_num as u32 + 1, func_name));
+                let func_start = self.find_function_start(&lines, line_num);
+                let func_end = self.find_function_end(&lines, func_start);
+                let func_body: String = lines[func_start..func_end].join("\n").to_lowercase();
+
+                // Only flag if the function actually uses create/create2
+                let is_deployment_context = func_body.contains("create(")
+                    || func_body.contains("create2(")
+                    || func_body.contains("new ")
+                    || func_body.contains(".deploy");
+
+                if is_deployment_context {
+                    findings.push((line_num as u32 + 1, func_name));
+                }
             }
         }
 
         findings
+    }
+
+    fn find_function_start(&self, lines: &[&str], line_num: usize) -> usize {
+        for i in (0..=line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                return i;
+            }
+        }
+        0
     }
 
     /// Find unvalidated bytecode deployment
@@ -240,6 +271,14 @@ impl Detector for InitcodeInjectionDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Skip deployment tooling contracts (factories, upgrade libraries, deployers)
+        // These contracts are DESIGNED to deploy other contracts and are not vulnerable
+        // to initcode injection - they ARE the deployment infrastructure
+        if utils::is_deployment_tooling(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

@@ -56,6 +56,20 @@ impl Detector for SignatureMalleabilityDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 53 FP Reduction: Skip well-known signature libraries
+        // OpenZeppelin ECDSA handles malleability, Permit2 uses it
+        let is_safe_library = source.contains("SignatureVerification")
+            || source.contains("ECDSA")
+            || source.contains("library ")
+            || source.contains("Permit2")
+            || source.contains("@uniswap")
+            || source.contains("@openzeppelin");
+
+        if is_safe_library {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(malleability_risk) = self.check_signature_malleability(function, ctx) {

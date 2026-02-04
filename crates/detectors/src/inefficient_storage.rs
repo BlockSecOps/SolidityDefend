@@ -21,9 +21,11 @@ impl InefficientStorageDetector {
             base: BaseDetector::new(
                 DetectorId("inefficient-storage".to_string()),
                 "Inefficient Storage Usage".to_string(),
+                // Phase 6 FP Reduction: Reclassified from Low to Info.
+                // This is a gas optimization suggestion, not a security vulnerability.
                 "Detects inefficient storage patterns including unpacked structs, redundant storage variables, and suboptimal storage layout that waste gas".to_string(),
-                vec![DetectorCategory::Logic],
-                Severity::Low,
+                vec![DetectorCategory::BestPractices],
+                Severity::Info,
             ),
         }
     }
@@ -324,7 +326,8 @@ mod tests {
     fn test_detector_properties() {
         let detector = InefficientStorageDetector::new();
         assert_eq!(detector.name(), "Inefficient Storage Usage");
-        assert_eq!(detector.default_severity(), Severity::Low);
+        // Phase 6: Reclassified from Low to Info (gas optimization, not security)
+        assert_eq!(detector.default_severity(), Severity::Info);
         assert!(detector.is_enabled());
     }
 }

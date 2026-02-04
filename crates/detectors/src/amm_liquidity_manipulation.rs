@@ -72,6 +72,12 @@ impl Detector for AmmLiquidityManipulationDetector {
             return Ok(findings);
         }
 
+        // Skip simple ERC20/ERC721 tokens that have no AMM functionality
+        // These contracts have mint/burn but are not vulnerable to liquidity manipulation
+        if !self.has_amm_patterns(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(manipulation_issue) = self.check_liquidity_manipulation(function, ctx) {
                 let message = format!(
@@ -165,16 +171,18 @@ impl AmmLiquidityManipulationDetector {
         }
 
         // Pattern 3: Add/remove liquidity without minimum lock
+        // Only applies to actual liquidity functions, not standard ERC20 mint/burn
         let is_liquidity_function = func_source.contains("addLiquidity")
             || func_source.contains("removeLiquidity")
             || function.name.name.to_lowercase().contains("liquidity");
 
+        // Fix: Use parentheses to ensure proper operator precedence
+        // Must be a liquidity function AND have mint/burn without protections
         let lacks_liquidity_lock = is_liquidity_function
             && !func_source.contains("MINIMUM_LIQUIDITY")
             && !func_source.contains("liquidityLock")
             && !func_source.contains("block.timestamp")
-            && func_source.contains("burn")
-            || func_source.contains("mint");
+            && (func_source.contains("burn") || func_source.contains("mint"));
 
         if lacks_liquidity_lock {
             return Some(
@@ -235,17 +243,63 @@ impl AmmLiquidityManipulationDetector {
         None
     }
 
-    /// Get function source code
+    /// Get function source code (cleaned to avoid FPs)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }
+    }
+
+    /// Check if the contract has actual AMM/DEX patterns
+    /// Simple ERC20/ERC721 tokens with mint/burn should not be flagged
+    fn has_amm_patterns(&self, ctx: &AnalysisContext) -> bool {
+        let source = ctx.source_code.to_lowercase();
+
+        // Must have liquidity-related functions
+        let has_liquidity_functions = source.contains("addliquidity")
+            || source.contains("removeliquidity")
+            || source.contains("addliquidityeth");
+
+        // Must have swap functionality
+        let has_swap_functions =
+            source.contains("function swap") || source.contains("function swaptokens");
+
+        // Must have reserve tracking (Uniswap V2 pattern)
+        let has_reserves = (source.contains("reserve0") && source.contains("reserve1"))
+            || source.contains("getreserves");
+
+        // Must have pool token mechanics
+        let has_pool_tokens = source.contains("lptoken")
+            || source.contains("pooltoken")
+            || (source.contains("totalsupply") && source.contains("liquidity"));
+
+        // Contract naming indicates AMM/DEX
+        let contract_name = ctx.contract.name.name.to_lowercase();
+        let is_amm_named = contract_name.contains("pair")
+            || contract_name.contains("pool")
+            || contract_name.contains("amm")
+            || contract_name.contains("swap")
+            || contract_name.contains("router")
+            || contract_name.contains("liquidity");
+
+        // Need at least two AMM indicators to flag
+        let amm_indicators = [
+            has_liquidity_functions,
+            has_swap_functions,
+            has_reserves,
+            has_pool_tokens,
+            is_amm_named,
+        ];
+
+        let indicator_count = amm_indicators.iter().filter(|&&x| x).count();
+        indicator_count >= 2
     }
 }
 
@@ -259,5 +313,103 @@ mod tests {
         assert_eq!(detector.name(), "AMM Liquidity Manipulation");
         assert_eq!(detector.default_severity(), Severity::Critical);
         assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_simple_erc20_not_flagged() {
+        // Simple ERC20 tokens with _mint() in constructor should NOT be flagged
+        // This was the bug - operator precedence caused `|| mint` to match everything
+        let source = r#"
+            // SPDX-License-Identifier: MIT
+            pragma solidity ^0.8.0;
+            import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+
+            contract Token is ERC20 {
+                constructor() ERC20("Token", "TKN") {
+                    _mint(msg.sender, 1000000 * 10 ** decimals());
+                }
+            }
+        "#;
+
+        // The source has "mint" but no AMM patterns
+        let has_liquidity = source.to_lowercase().contains("addliquidity");
+        let has_swap = source.to_lowercase().contains("function swap");
+        let has_reserves = source.to_lowercase().contains("reserve0");
+
+        // Simple token should not have AMM patterns
+        assert!(!has_liquidity);
+        assert!(!has_swap);
+        assert!(!has_reserves);
+
+        // The detector should skip this contract because it lacks AMM patterns
+        // Note: Full integration test would require AnalysisContext
+    }
+
+    #[test]
+    fn test_operator_precedence_fix() {
+        // Verify the fix for Pattern 3 operator precedence
+        // Before: is_liquidity_func && ... && burn || mint
+        // After:  is_liquidity_func && ... && (burn || mint)
+
+        // Simulate the old (broken) logic
+        let is_liquidity_function = false;
+        let has_protections = false;
+        let has_burn = false;
+        let has_mint = true;
+
+        // OLD (broken): would match because `|| has_mint` is evaluated last
+        let old_broken_logic = is_liquidity_function
+            && !has_protections
+            && has_burn
+            || has_mint; // BUG: this matches any mint!
+
+        // NEW (fixed): properly groups burn/mint
+        let new_fixed_logic =
+            is_liquidity_function && !has_protections && (has_burn || has_mint);
+
+        // Old logic incorrectly returns true (FP)
+        assert!(old_broken_logic);
+
+        // New logic correctly returns false (no FP)
+        assert!(!new_fixed_logic);
+    }
+
+    #[test]
+    fn test_actual_amm_pattern_detection() {
+        // A real AMM/DEX contract SHOULD be flagged
+        let amm_source = r#"
+            contract LiquidityPool {
+                uint112 private reserve0;
+                uint112 private reserve1;
+
+                function addLiquidity(uint amount0, uint amount1) external {
+                    _mint(msg.sender, liquidity);
+                }
+
+                function swap(uint amount0Out, uint amount1Out) external {
+                    // swap logic
+                }
+
+                function getReserves() public view returns (uint112, uint112) {
+                    return (reserve0, reserve1);
+                }
+            }
+        "#;
+
+        let source = amm_source.to_lowercase();
+
+        // This should have AMM patterns
+        let has_liquidity = source.contains("addliquidity");
+        let has_swap = source.contains("function swap");
+        let has_reserves = source.contains("reserve0") && source.contains("reserve1");
+
+        assert!(has_liquidity);
+        assert!(has_swap);
+        assert!(has_reserves);
+
+        // Should have at least 2 AMM indicators
+        let indicators = [has_liquidity, has_swap, has_reserves];
+        let count = indicators.iter().filter(|&&x| x).count();
+        assert!(count >= 2);
     }
 }

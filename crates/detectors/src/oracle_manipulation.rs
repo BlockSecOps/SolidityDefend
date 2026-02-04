@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::oracle_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::utils;
 
@@ -83,16 +84,52 @@ impl Detector for OracleManipulationDetector {
             return Ok(findings);
         }
 
+        // Early exit for contracts with comprehensive oracle safety measures
+        // These patterns indicate proper oracle integration with manipulation resistance
+        if oracle_patterns::has_comprehensive_oracle_safety(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip if contract uses multi-oracle validation (highly manipulation resistant)
+        if oracle_patterns::has_multi_oracle_validation(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip if contract uses TWAP oracle (time-weighted, not susceptible to flash loans)
+        if oracle_patterns::has_twap_oracle(ctx) {
+            return Ok(findings);
+        }
+
+        // Reduce confidence for contracts with Chainlink + staleness checks
+        // These are generally safe but we'll still check for issues
+        let has_chainlink_safety =
+            oracle_patterns::has_chainlink_oracle(ctx) && oracle_patterns::has_staleness_check(ctx);
+
         for function in ctx.get_functions() {
             if self.is_vulnerable_to_oracle_manipulation(function, ctx) {
-                let message = format!(
-                    "Function '{}' uses spot price from oracle without flash loan protection. \
-                    Attackers can manipulate pool reserves via flash loans to skew oracle prices, \
-                    enabling profitable liquidations or unfair trades.",
-                    function.name.name
-                );
+                // Reduce severity if contract has Chainlink + staleness (likely safe)
+                let (message, severity) = if has_chainlink_safety {
+                    (
+                        format!(
+                            "Function '{}' uses Chainlink oracle with staleness check, but may benefit from additional protections. \
+                            Consider adding deviation bounds or multi-oracle validation for extra safety.",
+                            function.name.name
+                        ),
+                        Severity::Low,
+                    )
+                } else {
+                    (
+                        format!(
+                            "Function '{}' uses spot price from oracle without flash loan protection. \
+                            Attackers can manipulate pool reserves via flash loans to skew oracle prices, \
+                            enabling profitable liquidations or unfair trades.",
+                            function.name.name
+                        ),
+                        Severity::Critical,
+                    )
+                };
 
-                let finding = self
+                let mut finding = self
                     .base
                     .create_finding(
                         ctx,
@@ -108,6 +145,9 @@ impl Detector for OracleManipulationDetector {
                     or implement multi-oracle validation with deviation checks in function '{}'",
                         function.name.name
                     ));
+
+                // Override severity based on safe patterns detected
+                finding.severity = severity;
 
                 findings.push(finding);
             }
@@ -142,7 +182,9 @@ impl OracleManipulationDetector {
             return false;
         }
 
-        let func_source = source_lines[func_start..=func_end].join("\n");
+        let raw_source = source_lines[func_start..=func_end].join("\n");
+        // Clean source to avoid FPs from comments/strings
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Check if function uses price oracles
         let price_query_patterns = [

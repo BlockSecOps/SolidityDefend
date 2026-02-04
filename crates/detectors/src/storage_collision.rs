@@ -56,6 +56,22 @@ impl Detector for StorageCollisionDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        let source = &ctx.source_code;
+
+        // Phase 53 FP Reduction: Skip proxy base contracts
+        // Proxy contracts are DESIGNED to use delegatecall - that's their purpose
+        // Storage collision is intentional and handled by EIP-1967 slots
+        let is_proxy_contract = source.contains("abstract contract Proxy")
+            || source.contains("contract TransparentUpgradeableProxy")
+            || source.contains("contract ERC1967Proxy")
+            || source.contains("contract BeaconProxy")
+            || source.contains("library ERC1967Utils")
+            || (source.contains("function _delegate(") && source.contains("fallback()"))
+            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
+
+        if is_proxy_contract {
+            return Ok(findings);
+        }
 
         // Check for delegatecall storage collision in functions
         for function in ctx.get_functions() {

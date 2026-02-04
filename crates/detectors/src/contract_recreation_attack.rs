@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils::{is_test_contract, is_factory_contract};
 
 /// Detector for contract recreation attack vulnerabilities
 ///
@@ -33,28 +34,39 @@ impl ContractRecreationAttackDetector {
         }
     }
 
-    /// Find destroy and redeploy patterns
+    /// Find destroy and redeploy patterns - only flag if SAME function has both
     fn find_destroy_redeploy_pattern(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
-        let has_destroy = source.contains("selfdestruct")
-            || source.contains("destroy")
-            || source.contains("kill");
-        let has_deploy = source.contains("deploy")
-            || source.contains("create2")
-            || source.contains("CREATE2");
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
 
-        if has_destroy && has_deploy {
-            for (line_num, line) in lines.iter().enumerate() {
-                let trimmed = line.trim();
+            // Look for function definitions
+            if trimmed.contains("function ") && !trimmed.starts_with("//") {
+                let func_name = self.extract_function_name(trimmed);
+                let func_end = self.find_function_end(&lines, line_num);
+                let func_body: String = lines[line_num..func_end].join("\n");
+                let func_lower = func_body.to_lowercase();
 
-                if trimmed.contains("function ")
-                    && (trimmed.contains("redeploy")
-                        || trimmed.contains("recreate")
-                        || trimmed.contains("upgrade"))
+                // Check if SAME function has both destroy and redeploy
+                let has_destroy = func_lower.contains("selfdestruct")
+                    || func_lower.contains("_destroy")
+                    || func_lower.contains(".kill(");
+
+                let has_create2 = func_lower.contains("create2")
+                    || func_lower.contains("new ") && func_lower.contains("salt");
+
+                // Only flag if same function has both - true recreation attack vector
+                if has_destroy && has_create2 {
+                    findings.push((line_num as u32 + 1, func_name));
+                }
+                // Also flag explicit redeploy/recreate functions that have deploy capability
+                else if (trimmed.contains("redeploy")
+                    || trimmed.contains("recreate")
+                    || trimmed.contains("metamorphic"))
+                    && has_create2
                 {
-                    let func_name = self.extract_function_name(trimmed);
                     findings.push((line_num as u32 + 1, func_name));
                 }
             }
@@ -226,82 +238,112 @@ impl Detector for ContractRecreationAttackDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+        let source_lower = source.to_lowercase();
 
-        for (line, func_name) in self.find_destroy_redeploy_pattern(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' implements destroy-redeploy pattern. \
-                 This enables contract recreation with different code at the same address.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(913)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Prevent contract recreation attacks:\n\n\
-                     1. Track used salts and prevent reuse:\n\
-                     mapping(bytes32 => bool) public usedSalts;\n\
-                     require(!usedSalts[salt], \"Salt already used\");\n\
-                     usedSalts[salt] = true;\n\n\
-                     2. Use immutable deployment patterns\n\
-                     3. Verify bytecode on every interaction"
-                        .to_string(),
-                );
-
-            findings.push(finding);
+        // Phase 9 FP Reduction: Skip test contracts entirely
+        if is_test_contract(ctx) {
+            return Ok(findings);
         }
 
-        for (line, func_name) in self.find_bytecode_change_pattern(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' stores mutable bytecode. \
-                 Different code can be deployed at predictable addresses.",
-                func_name, contract_name
-            );
+        // Phase 9 FP Reduction: Context gate - only check contracts that are:
+        // 1. Factory patterns (create/deploy other contracts)
+        // 2. Have selfdestruct capability (required for recreation attack)
+        let has_selfdestruct = source_lower.contains("selfdestruct")
+            || source_lower.contains("suicide");
+        let has_create2 = source_lower.contains("create2");
 
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(913)
-                .with_confidence(Confidence::Medium)
-                .with_fix_suggestion(
-                    "Use immutable bytecode:\n\n\
-                     bytes public constant BYTECODE = hex\"...\";\n\n\
-                     Or track bytecode hashes:\n\
-                     bytes32 public immutable EXPECTED_CODEHASH;"
-                        .to_string(),
-                );
-
-            findings.push(finding);
+        // If not a factory and doesn't have selfdestruct, skip most checks
+        if !is_factory_contract(ctx) && !has_selfdestruct {
+            // Only check for unverified trust patterns in non-factory contracts
+            // that interact with external contracts
+            if !source_lower.contains("trusted") && !source_lower.contains("whitelist") {
+                return Ok(findings);
+            }
         }
 
-        for (line, func_name) in self.find_factory_recreation(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' allows CREATE2 deployment without \
-                 salt reuse prevention. Contracts can be recreated at same address.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(913)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Track deployed salts:\n\n\
-                     mapping(bytes32 => bool) public deployed;\n\n\
-                     function deploy(bytes32 salt) external {\n\
-                         require(!deployed[salt], \"Already deployed\");\n\
-                         deployed[salt] = true;\n\
-                         // CREATE2 deployment\n\
-                     }"
-                        .to_string(),
+        // Only check destroy-redeploy if contract has BOTH capabilities
+        if has_selfdestruct || has_create2 {
+            for (line, func_name) in self.find_destroy_redeploy_pattern(source) {
+                let message = format!(
+                    "Function '{}' in contract '{}' implements destroy-redeploy pattern. \
+                     This enables contract recreation with different code at the same address.",
+                    func_name, contract_name
                 );
 
-            findings.push(finding);
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(913)
+                    .with_confidence(Confidence::High)
+                    .with_fix_suggestion(
+                        "Prevent contract recreation attacks:\n\n\
+                         1. Track used salts and prevent reuse:\n\
+                         mapping(bytes32 => bool) public usedSalts;\n\
+                         require(!usedSalts[salt], \"Salt already used\");\n\
+                         usedSalts[salt] = true;\n\n\
+                         2. Use immutable deployment patterns\n\
+                         3. Verify bytecode on every interaction"
+                            .to_string(),
+                    );
+
+                findings.push(finding);
+            }
         }
 
+        // Only check bytecode change patterns in factory contracts
+        if is_factory_contract(ctx) {
+            for (line, func_name) in self.find_bytecode_change_pattern(source) {
+                let message = format!(
+                    "Function '{}' in contract '{}' stores mutable bytecode. \
+                     Different code can be deployed at predictable addresses.",
+                    func_name, contract_name
+                );
+
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(913)
+                    .with_confidence(Confidence::Medium)
+                    .with_fix_suggestion(
+                        "Use immutable bytecode:\n\n\
+                         bytes public constant BYTECODE = hex\"...\";\n\n\
+                         Or track bytecode hashes:\n\
+                         bytes32 public immutable EXPECTED_CODEHASH;"
+                            .to_string(),
+                    );
+
+                findings.push(finding);
+            }
+
+            // Only check factory recreation in actual factory contracts
+            for (line, func_name) in self.find_factory_recreation(source) {
+                let message = format!(
+                    "Function '{}' in contract '{}' allows CREATE2 deployment without \
+                     salt reuse prevention. Contracts can be recreated at same address.",
+                    func_name, contract_name
+                );
+
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(913)
+                    .with_confidence(Confidence::High)
+                    .with_fix_suggestion(
+                        "Track deployed salts:\n\n\
+                         mapping(bytes32 => bool) public deployed;\n\n\
+                         function deploy(bytes32 salt) external {\n\
+                             require(!deployed[salt], \"Already deployed\");\n\
+                             deployed[salt] = true;\n\
+                             // CREATE2 deployment\n\
+                         }"
+                            .to_string(),
+                    );
+
+                findings.push(finding);
+            }
+        }
+
+        // Only check unverified trust in contracts that actually have trusted address patterns
         for (line, func_name) in self.find_unverified_trust(source) {
             let message = format!(
                 "Function '{}' in contract '{}' trusts addresses without bytecode verification. \

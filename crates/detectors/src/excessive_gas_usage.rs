@@ -22,9 +22,11 @@ impl ExcessiveGasUsageDetector {
             base: BaseDetector::new(
                 DetectorId("excessive-gas-usage".to_string()),
                 "Excessive Gas Usage".to_string(),
+                // Phase 6 FP Reduction: Reclassified from Low to Info.
+                // This is a gas optimization suggestion, not a security vulnerability.
                 "Detects patterns causing excessive gas consumption such as storage operations in loops, redundant storage reads, and inefficient data structures".to_string(),
-                vec![DetectorCategory::Logic],
-                Severity::Low,
+                vec![DetectorCategory::BestPractices],
+                Severity::Info,
             ),
         }
     }
@@ -350,7 +352,8 @@ mod tests {
     fn test_detector_properties() {
         let detector = ExcessiveGasUsageDetector::new();
         assert_eq!(detector.name(), "Excessive Gas Usage");
-        assert_eq!(detector.default_severity(), Severity::Low);
+        // Phase 6: Reclassified from Low to Info (gas optimization, not security)
+        assert_eq!(detector.default_severity(), Severity::Info);
         assert!(detector.is_enabled());
     }
 }

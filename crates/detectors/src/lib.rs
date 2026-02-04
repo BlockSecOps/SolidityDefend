@@ -102,14 +102,11 @@ pub mod hardware_wallet_delegation;
 pub mod bridge_chain_id_validation;
 pub mod bridge_message_verification;
 pub mod bridge_token_minting;
-// pub mod erc7683_filler_frontrunning;
-// pub mod erc7683_oracle_dependency;
-// pub mod erc7683_permit2_integration;
-// pub mod erc7683_replay_attack;
-// pub mod erc7683_settlement_validation;
-
-// Phase 13 v0.9.0: Comprehensive ERC-7683 Intent Detectors (2025) - TODO: Add to v0.12.0
-// pub mod erc7683;
+pub mod erc7683_filler_frontrunning;
+pub mod erc7683_oracle_dependency;
+pub mod erc7683_permit2_integration;
+pub mod erc7683_replay_attack;
+pub mod erc7683_settlement_validation;
 
 // Phase 31: Restaking & LRT Security (v0.17.0)
 pub mod restaking;

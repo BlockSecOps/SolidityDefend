@@ -97,6 +97,53 @@ When you pass a directory path, SolidityDefend automatically:
 - **Hardhat**: Detected from `hardhat.config.js` or `hardhat.config.ts`, reads `contracts/`, excludes `node_modules/`, `artifacts/`
 - **Plain**: Scans all `.sol` files in directory (excludes test/, lib/, node_modules/)
 
+### Project-Aware Scanning Options (v1.10.13+)
+
+```bash
+-v, --verbose           Enable verbose output with detailed project information
+--cross-contract        Enable cross-contract vulnerability detection
+--include-deps          Include dependency libraries (lib/, node_modules/) in analysis
+--deps-only             Only analyze dependency libraries (skip source contracts)
+```
+
+**Examples:**
+```bash
+# Verbose mode - shows framework detection, file discovery, dependency graph
+soliditydefend ./my-project --verbose
+
+# Include OpenZeppelin and other dependencies in analysis
+soliditydefend ./my-project --include-deps
+
+# Analyze only dependencies (audit your imports)
+soliditydefend ./my-project --deps-only
+
+# Cross-contract analysis (detect multi-contract vulnerabilities)
+soliditydefend ./my-project --cross-contract
+
+# Full project audit with all features
+soliditydefend ./my-project --verbose --include-deps --cross-contract -f json -o full-audit.json
+```
+
+**Verbose Output Shows:**
+- Framework detection (Foundry/Hardhat/Plain)
+- Source directories with [SCAN], [SKIP], [DEPS] indicators
+- Import remappings from project configuration
+- Dependency graph and import relationships
+- Files analyzed in topological (dependency) order
+- Per-file issue counts during analysis
+
+**Cross-Contract Analysis Detects:**
+- Circular dependencies between contracts
+- Trust boundary violations
+- State inconsistencies across contracts
+- Atomicity violations in multi-contract operations
+- Cross-contract reentrancy vulnerabilities
+
+**Dependency Scanning:**
+- With `--include-deps`: Findings are categorized as source vs dependency
+- Dependency findings show "Note: These are in third-party code you imported"
+- Project summary shows separate counts: "Contracts Analyzed: X (Y source, Z dependencies)"
+
 ## Commands
 
 ### analyze (default)

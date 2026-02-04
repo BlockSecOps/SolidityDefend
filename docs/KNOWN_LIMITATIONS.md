@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.9.0
-**Last Updated:** 2026-01-15
+**Version:** v1.10.13
+**Last Updated:** 2026-01-29
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 
@@ -9,7 +9,17 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.9.0 has **321 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.10.13 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+
+**v1.10.13 Improvements:** False Positive Reduction for Proxy & Vault Detectors:
+- Fixed `pool-donation-enhanced` flagging non-pool contracts (ERC20, Ownable, proxies)
+- Fixed `uups-missing-disable-initializers` flagging TransparentUpgradeableProxy
+- Fixed `proxy-storage-collision` not recognizing EIP-1967 compliant proxies
+- Fixed `token-supply-manipulation` flagging ERC-4626 vault share minting
+- Added project-aware scanning with dependency graph analysis
+- Added `--cross-contract`, `--include-deps`, `--verbose` CLI flags
+- Tested against OpenZeppelin, Solmate, and Uniswap V3 codebases
+- False Positive Rate on standard libraries: Significantly reduced
 
 **v1.9.0 Improvements:** Added 4 new Diamond Proxy & Advanced Upgrades detectors:
 - Proxy double initialize (missing _disableInitializers, beacon downgrade)

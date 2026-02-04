@@ -74,7 +74,22 @@ impl Detector for MEVPriorityGasAuctionDetector {
                 || lower.contains("whitelist")
                 || lower.contains("allowlist");
 
-            if is_fcfs && !has_queue {
+            // P1 FP FIX: Check for access control on mint functions
+            // If mint is restricted to specific addresses, there's no PGA
+            // because random users can't compete for the mint
+            let has_access_control = lower.contains("onlyminter")
+                || lower.contains("onlyowner")
+                || lower.contains("onlyadmin")
+                || lower.contains("hasrole")
+                || lower.contains("onlyrole")
+                || lower.contains("require(msg.sender == owner")
+                || lower.contains("require(msg.sender == minter")
+                || lower.contains("require(isminter[msg.sender]")
+                || lower.contains("require(minters[msg.sender]");
+
+            // Only flag if FCFS, no queue system, AND no access control
+            // Access-controlled mint = only authorized addresses can call = no PGA
+            if is_fcfs && !has_queue && !has_access_control {
                 let finding = self.base.create_finding(
                     ctx,
                     "First-come-first-served mint - creates PGA where users bid up gas to mint first".to_string(),

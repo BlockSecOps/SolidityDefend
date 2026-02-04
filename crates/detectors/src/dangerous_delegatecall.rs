@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for dangerous delegatecall to untrusted addresses
 pub struct DangerousDelegatecallDetector {
@@ -56,6 +57,18 @@ impl Detector for DangerousDelegatecallDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 52 FP Reduction: Skip legitimate proxy contracts
+        // Proxy contracts MUST use delegatecall in fallback to forward calls to implementation.
+        // This is by design per EIP-1967 and other proxy standards.
+        if utils::is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip interface-only contracts
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             if let Some(risk_description) = self.has_dangerous_delegatecall(function, ctx) {
@@ -234,14 +247,15 @@ impl DangerousDelegatecallDetector {
         !has_whitelist && !has_target_check
     }
 
-    /// Get function source code
+    /// Get function source code (cleaned to avoid FPs from comments/strings)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

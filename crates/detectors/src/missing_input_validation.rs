@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for missing input parameter validation
 pub struct MissingInputValidationDetector {
@@ -182,7 +183,9 @@ impl MissingInputValidationDetector {
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+            let raw_source = source_lines[start..=end].join("\n");
+            // Clean source to avoid FPs from comments/strings
+            utils::clean_source_for_search(&raw_source)
         } else {
             String::new()
         }

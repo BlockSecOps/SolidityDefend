@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for cross-rollup state mismatch vulnerabilities
 ///
@@ -271,6 +272,14 @@ impl Detector for CrossRollupStateMismatchDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
+        // Cross-rollup state mismatch only applies to contracts deployed across multiple chains.
+        // Simple L1 contracts cannot have cross-rollup state issues.
+        if !utils::is_l2_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 

@@ -8,6 +8,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils::{is_secure_example_file, is_test_contract};
 
 pub struct EnhancedInputValidationDetector {
     base: BaseDetector,
@@ -33,6 +34,194 @@ impl EnhancedInputValidationDetector {
 impl Default for EnhancedInputValidationDetector {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl EnhancedInputValidationDetector {
+    /// Phase 51 FP Reduction: Skip known safe libraries
+    fn is_safe_library_or_interface(&self, source: &str, lower: &str) -> bool {
+        // OpenZeppelin contracts are battle-tested
+        if source.contains("@openzeppelin") || source.contains("openzeppelin-contracts") {
+            return true;
+        }
+
+        // Solmate
+        if source.contains("@solmate") || source.contains("solmate/") {
+            return true;
+        }
+
+        // Interface files don't have implementations
+        if lower.contains("interface ") && !lower.contains("contract ") {
+            return true;
+        }
+
+        // Abstract contracts often delegate validation to implementations
+        if lower.contains("abstract contract") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 51 FP Reduction: Check batch operations for array validation
+    fn check_batch_operations(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+        // Only check functions with "batch", "multi", or "bulk" in name
+        let has_batch_function = lower.contains("function batch")
+            || lower.contains("function multi")
+            || lower.contains("function bulk")
+            || lower.contains("batchexecute")
+            || lower.contains("multicall");
+
+        if !has_batch_function {
+            return;
+        }
+
+        // Check for multiple array parameters (high risk for mismatch)
+        let has_multiple_arrays = (source.matches("[]").count() >= 2
+            || source.matches("[] calldata").count() >= 2
+            || source.matches("[] memory").count() >= 2);
+
+        if has_multiple_arrays {
+            // Check for length matching validation
+            let has_length_match = lower.contains(".length ==")
+                || lower.contains(".length !=")
+                || lower.contains("length mismatch")
+                || lower.contains("arrays must");
+
+            if !has_length_match {
+                let finding = self
+                    .base
+                    .create_finding_with_severity(
+                        ctx,
+                        "Batch function with multiple arrays lacks length matching validation"
+                            .to_string(),
+                        1,
+                        0,
+                        20,
+                        Severity::High,
+                    )
+                    .with_fix_suggestion(
+                        "✅ VALIDATE ARRAY MATCHING:\n\
+                     function batchTransfer(\n\
+                         address[] calldata recipients,\n\
+                         uint256[] calldata amounts\n\
+                     ) external {\n\
+                         require(\n\
+                             recipients.length == amounts.length,\n\
+                             \"Length mismatch\"\n\
+                         );\n\
+                         require(recipients.length > 0, \"Empty arrays\");\n\
+                         require(recipients.length <= MAX_BATCH, \"Too many\");\n\
+                     }"
+                            .to_string(),
+                    );
+                findings.push(finding);
+            }
+        }
+    }
+
+    /// Phase 51 FP Reduction: Check admin functions for address validation
+    fn check_admin_address_validation(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+        // Check for admin/owner setter functions and simple address setters
+        let admin_setter_patterns = [
+            "function setowner",
+            "function settokenaddress",
+            "function settreasury",
+            "function setadmin",
+            "function transferownership",
+            "function updateoracle",
+            "function setfeerecipient",
+            // Common address setter patterns
+            "function settoken",
+            "function setaddress",
+            "function setcontract",
+            "function setrecipient",
+            "function setmanager",
+        ];
+
+        let has_admin_setter = admin_setter_patterns.iter().any(|p| lower.contains(p));
+
+        // Also check for generic "function set*" followed by "(address" pattern
+        let has_address_setter = lower.contains("function set") && lower.contains("(address");
+
+        if !has_admin_setter && !has_address_setter {
+            return;
+        }
+
+        // Check for zero-address validation
+        let has_address_check = source.contains("address(0)")
+            && (source.contains("require") || source.contains("if") || source.contains("revert"));
+
+        if !has_address_check {
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Admin setter function without zero-address validation".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "✅ VALIDATE ADMIN ADDRESS:\n\
+                 function setOwner(address newOwner) external onlyOwner {\n\
+                     require(newOwner != address(0), \"Zero address\");\n\
+                     owner = newOwner;\n\
+                 }"
+                        .to_string(),
+                );
+            findings.push(finding);
+        }
+    }
+
+    /// Phase 51 FP Reduction: Check fee setter functions for bounds validation
+    fn check_fee_setter_functions(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+        // Only check explicit fee/ratio setter functions
+        let fee_setter_patterns = [
+            "function setfee",
+            "function updatefee",
+            "function setratio",
+            "function setbasispoints",
+            "function setpercentage",
+            "function setprotocolfee",
+            "function setswapfee",
+        ];
+
+        let has_fee_setter = fee_setter_patterns.iter().any(|p| lower.contains(p));
+
+        if !has_fee_setter {
+            return;
+        }
+
+        // Check for upper bounds validation
+        let has_upper_bound = source.contains("<=") || source.contains("< ")
+            || lower.contains("max_fee") || lower.contains("maxfee")
+            || lower.contains("fee_cap") || lower.contains("feecap");
+
+        if !has_upper_bound {
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    "Fee setter function without upper bounds validation".to_string(),
+                    1,
+                    0,
+                    20,
+                    Severity::Medium,
+                )
+                .with_fix_suggestion(
+                    "✅ VALIDATE FEE BOUNDS:\n\
+                 uint256 public constant MAX_FEE = 1000;  // 10% in basis points\n\
+                 \n\
+                 function setFee(uint256 newFee) external onlyOwner {\n\
+                     require(newFee <= MAX_FEE, \"Fee too high\");\n\
+                     fee = newFee;\n\
+                 }"
+                        .to_string(),
+                );
+            findings.push(finding);
+        }
     }
 }
 
@@ -63,225 +252,31 @@ impl Detector for EnhancedInputValidationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // Phase 10: Skip test contracts and secure examples
+        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
+        let lower = source.to_lowercase();
 
-        // Check for array access without length validation
-        if source.contains("[") && source.contains("]") {
-            let has_length_check =
-                source.contains(".length") && (source.contains("require") || source.contains("if"));
-
-            if !has_length_check {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        "Array access without length validation - can cause out-of-bounds access"
-                            .to_string(),
-                        1,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
-                    .with_fix_suggestion(
-                        "❌ MISSING ARRAY VALIDATION (OWASP 2025 - $14.6M impact):\n\
-                     function process(uint256[] calldata ids) external {\n\
-                         for (uint256 i = 0; i < ids.length; i++) {\n\
-                             // What if ids is empty? Or too large?\n\
-                         }\n\
-                     }\n\
-                     \n\
-                     ✅ VALIDATE ARRAY LENGTH:\n\
-                     function process(uint256[] calldata ids) external {\n\
-                         // Check minimum length\n\
-                         require(ids.length > 0, \"Empty array\");\n\
-                         \n\
-                         // Check maximum length (prevent DoS)\n\
-                         require(ids.length <= MAX_BATCH_SIZE, \"Batch too large\");\n\
-                         \n\
-                         for (uint256 i = 0; i < ids.length; i++) {\n\
-                             // Safe to access ids[i]\n\
-                         }\n\
-                     }\n\
-                     \n\
-                     ✅ VALIDATE ARRAY MATCHING:\n\
-                     function batchTransfer(\n\
-                         address[] calldata recipients,\n\
-                         uint256[] calldata amounts\n\
-                     ) external {\n\
-                         // Arrays must match in length\n\
-                         require(\n\
-                             recipients.length == amounts.length,\n\
-                             \"Length mismatch\"\n\
-                         );\n\
-                         require(recipients.length > 0, \"Empty arrays\");\n\
-                         require(recipients.length <= MAX_BATCH, \"Too many\");\n\
-                         \n\
-                         for (uint256 i = 0; i < recipients.length; i++) {\n\
-                             // Safe parallel access\n\
-                         }\n\
-                     }"
-                        .to_string(),
-                    );
-                findings.push(finding);
-            }
+        // Phase 51 FP Reduction: Skip known safe libraries and interfaces
+        // These are heavily audited and have proper validation
+        if self.is_safe_library_or_interface(source, &lower) {
+            return Ok(findings);
         }
 
-        // Check for transfer/payment functions without zero-value check
-        let has_transfer = source.contains("transfer")
-            || source.contains("send")
-            || source.contains("call{value:");
-        let has_amount = source.contains("amount") || source.contains("value");
-        let has_zero_check = source.contains("amount > 0")
-            || source.contains("amount != 0")
-            || source.contains("value > 0")
-            || source.contains("value != 0");
+        // Phase 51 FP Reduction: Only check for specific high-risk patterns
+        // Focus on batch/multi-call operations where array validation is critical
+        self.check_batch_operations(ctx, source, &lower, &mut findings);
 
-        if has_transfer && has_amount && !has_zero_check {
-            let finding = self
-                .base
-                .create_finding_with_severity(
-                    ctx,
-                    "Transfer function without zero-value check - validate non-zero amounts"
-                        .to_string(),
-                    1,
-                    0,
-                    20,
-                    Severity::Medium,
-                )
-                .with_fix_suggestion(
-                    "❌ MISSING ZERO-VALUE CHECK:\n\
-                 function transfer(address to, uint256 amount) external {\n\
-                     _transfer(msg.sender, to, amount);\n\
-                     // What if amount is 0? Wastes gas, may break accounting\n\
-                 }\n\
-                 \n\
-                 ✅ VALIDATE NON-ZERO:\n\
-                 function transfer(address to, uint256 amount) external {\n\
-                     require(amount > 0, \"Zero amount\");\n\
-                     require(to != address(0), \"Zero address\");\n\
-                     _transfer(msg.sender, to, amount);\n\
-                 }\n\
-                 \n\
-                 ✅ COMPLETE VALIDATION:\n\
-                 function deposit(uint256 amount) external payable {\n\
-                     // For ERC20 deposits\n\
-                     require(amount > 0, \"Zero amount\");\n\
-                     require(amount <= MAX_DEPOSIT, \"Exceeds maximum\");\n\
-                     \n\
-                     // For native ETH deposits\n\
-                     if (msg.value > 0) {\n\
-                         require(msg.value == amount, \"Value mismatch\");\n\
-                     }\n\
-                     \n\
-                     // Proceed with deposit\n\
-                 }"
-                    .to_string(),
-                );
-            findings.push(finding);
-        }
+        // Phase 51 FP Reduction: Only check admin functions for address validation
+        // Regular user functions often don't need zero-address checks
+        self.check_admin_address_validation(ctx, source, &lower, &mut findings);
 
-        // Check for missing address validation
-        let has_address_param = source.contains("address") && source.contains("function");
-        let has_address_check =
-            source.contains("address(0)") && (source.contains("require") || source.contains("if"));
-
-        if has_address_param && !has_address_check {
-            let finding = self
-                .base
-                .create_finding_with_severity(
-                    ctx,
-                    "Address parameter without zero-address validation".to_string(),
-                    1,
-                    0,
-                    20,
-                    Severity::Medium,
-                )
-                .with_fix_suggestion(
-                    "❌ MISSING ADDRESS VALIDATION:\n\
-                 function setOwner(address newOwner) external {\n\
-                     owner = newOwner;  // What if newOwner is address(0)?\n\
-                 }\n\
-                 \n\
-                 ✅ VALIDATE ADDRESS:\n\
-                 function setOwner(address newOwner) external onlyOwner {\n\
-                     require(newOwner != address(0), \"Zero address\");\n\
-                     require(newOwner != owner, \"Same address\");\n\
-                     owner = newOwner;\n\
-                 }\n\
-                 \n\
-                 ✅ VALIDATE MULTIPLE ADDRESSES:\n\
-                 function initialize(\n\
-                     address _token,\n\
-                     address _oracle,\n\
-                     address _treasury\n\
-                 ) external {\n\
-                     require(_token != address(0), \"Zero token\");\n\
-                     require(_oracle != address(0), \"Zero oracle\");\n\
-                     require(_treasury != address(0), \"Zero treasury\");\n\
-                     \n\
-                     // Check for duplicates if needed\n\
-                     require(_token != _oracle, \"Token == oracle\");\n\
-                     require(_token != _treasury, \"Token == treasury\");\n\
-                     \n\
-                     token = _token;\n\
-                     oracle = _oracle;\n\
-                     treasury = _treasury;\n\
-                 }"
-                    .to_string(),
-                );
-            findings.push(finding);
-        }
-
-        // Check for percentage/ratio validation
-        let has_percentage = source.contains("percent")
-            || source.contains("ratio")
-            || source.contains("fee")
-            || source.contains("basis");
-
-        if has_percentage && source.contains("function") {
-            let has_bounds = source.contains("<=") || source.contains("<");
-
-            if !has_bounds {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        "Percentage/fee parameter without bounds validation".to_string(),
-                        1,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
-                    .with_fix_suggestion(
-                        "❌ UNBOUNDED PERCENTAGE:\n\
-                     function setFee(uint256 newFee) external {\n\
-                         fee = newFee;  // Could be set to 100% or higher!\n\
-                     }\n\
-                     \n\
-                     ✅ VALIDATE PERCENTAGE BOUNDS:\n\
-                     uint256 public constant MAX_FEE = 1000;  // 10% in basis points\n\
-                     uint256 public constant BASIS_POINTS = 10000;  // 100%\n\
-                     \n\
-                     function setFee(uint256 newFee) external onlyOwner {\n\
-                         require(newFee <= MAX_FEE, \"Fee too high\");\n\
-                         fee = newFee;\n\
-                     }\n\
-                     \n\
-                     ✅ COMPREHENSIVE RATIO VALIDATION:\n\
-                     function setCollateralRatio(uint256 ratio) external {\n\
-                         // Must be between 110% and 200%\n\
-                         uint256 MIN_RATIO = 11000;  // 110%\n\
-                         uint256 MAX_RATIO = 20000;  // 200%\n\
-                         \n\
-                         require(ratio >= MIN_RATIO, \"Ratio too low\");\n\
-                         require(ratio <= MAX_RATIO, \"Ratio too high\");\n\
-                         collateralRatio = ratio;\n\
-                     }"
-                        .to_string(),
-                    );
-                findings.push(finding);
-            }
-        }
+        // Phase 51 FP Reduction: Only check functions that explicitly set fees/ratios
+        self.check_fee_setter_functions(ctx, source, &lower, &mut findings);
 
         Ok(findings)
     }

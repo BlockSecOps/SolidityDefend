@@ -19,7 +19,7 @@ This guide provides detailed installation instructions for SolidityDefend on var
 - **OS**: Linux, macOS, or Windows 10+
 - **RAM**: 2GB minimum, 4GB+ recommended for large projects
 - **Disk**: 500MB for installation, additional space for cache and analysis results
-- **Rust**: 1.75.0 or later (for source builds)
+- **Rust**: 1.82.0 or later (for source builds)
 
 ### Recommended Requirements
 - **RAM**: 8GB+ for optimal performance on large codebases
@@ -65,9 +65,9 @@ brew upgrade soliditydefend
 Download pre-compiled binaries from the [releases page](https://github.com/BlockSecOps/SolidityDefend/releases):
 
 **Available platforms:**
-- Linux (x86_64, ARM64)
-- macOS (Intel x86_64, Apple Silicon ARM64)
-- Windows (x86_64)
+- Linux x86_64 (`soliditydefend-vX.X.X-linux-x86_64.tar.gz`)
+- Linux ARM64 (`soliditydefend-vX.X.X-linux-arm64.tar.gz`)
+- macOS Intel (`soliditydefend-vX.X.X-darwin-x86_64.tar.gz`)
 
 **Installation steps:**
 1. Download the appropriate archive for your platform
@@ -90,7 +90,7 @@ Building from source ensures you get the latest features and optimal performance
 2. **Verify Rust installation**:
    ```bash
    rustc --version
-   # Should show version 1.75.0 or later
+   # Should show version 1.82.0 or later
    ```
 
 3. **Install Git** (if not already installed):
@@ -102,8 +102,8 @@ Building from source ensures you get the latest features and optimal performance
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   cd SolidityDefend
    ```
 
 2. **Build the project**:
@@ -152,14 +152,14 @@ Docker provides a consistent environment across all platforms.
 
 1. **Pull the image** (when available):
    ```bash
-   docker pull soliditydefend/cli:latest
+   docker pull blocksecops/soliditydefend:latest
    ```
 
 2. **Or build locally**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
-   docker build -f docker/Dockerfile -t soliditydefend .
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   cd SolidityDefend
+   docker build -t soliditydefend .
    ```
 
 3. **Run analysis**:
@@ -251,8 +251,8 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   cd SolidityDefend
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
    ```
@@ -272,8 +272,8 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   cd SolidityDefend
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
    ```
@@ -287,8 +287,8 @@ Expected output should show detected issues.
 
 3. **Open PowerShell or Command Prompt** and run:
    ```cmd
-   git clone https://github.com/soliditydefend/cli.git
-   cd cli
+   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   cd SolidityDefend
    cargo build --release
    ```
 
@@ -304,8 +304,8 @@ For better performance and compatibility, consider using WSL:
 # In WSL
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/soliditydefend/cli.git
-cd cli
+git clone https://github.com/BlockSecOps/SolidityDefend.git
+cd SolidityDefend
 cargo build --release
 ```
 
@@ -362,7 +362,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 If you encounter issues not covered here:
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/soliditydefend/cli/issues)
+1. **Check existing issues**: [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
 2. **Create a new issue**: Include system info and error messages
 3. **Community support**: Join our community channels
 4. **Documentation**: Check other docs in the [docs/](.) directory

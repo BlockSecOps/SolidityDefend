@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for liquidation MEV vulnerabilities
 ///
@@ -76,13 +77,29 @@ impl LiquidationMevDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            // Look for high liquidation incentives
-            if trimmed.contains("liquidationBonus")
+            // Skip struct definitions, comments, and parameter declarations
+            if trimmed.starts_with("//")
+                || trimmed.starts_with("*")
+                || trimmed.starts_with("struct ")
+                || trimmed.contains("@param")
+                || trimmed.contains("uint256 liquidation") // parameter declaration
+            {
+                continue;
+            }
+
+            // Look for liquidation incentive USAGE in calculations, not just mentions
+            // Must be in actual calculation context (assignment or arithmetic)
+            if (trimmed.contains("liquidationBonus")
                 || trimmed.contains("liquidationIncentive")
-                || trimmed.contains("liquidationPenalty")
+                || trimmed.contains("liquidationPenalty"))
+                && (trimmed.contains("=") || trimmed.contains("*") || trimmed.contains("/"))
+                && !trimmed.contains("//") // Not a comment
             {
                 let func_name = self.find_containing_function(&lines, line_num);
-                findings.push((line_num as u32 + 1, func_name));
+                // Only flag if in actual function, not struct or interface
+                if func_name != "unknown" {
+                    findings.push((line_num as u32 + 1, func_name));
+                }
             }
         }
 
@@ -93,23 +110,53 @@ impl LiquidationMevDetector {
     fn find_health_factor_issues(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
+        let source_lower = source.to_lowercase();
+
+        // Skip if using Chainlink (reliable oracle) or has TWAP
+        if source_lower.contains("chainlink")
+            || source_lower.contains("aggregatorv3")
+            || source_lower.contains("latestrounddata")
+            || source_lower.contains("twap")
+        {
+            return findings;
+        }
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("healthFactor")
+            // Skip comments, struct definitions, interface declarations
+            if trimmed.starts_with("//")
+                || trimmed.starts_with("*")
+                || trimmed.starts_with("struct ")
+                || trimmed.contains("interface ")
+                || trimmed.contains("@return")
+            {
+                continue;
+            }
+
+            // Only flag health factor CALCULATIONS, not just variable reads
+            if (trimmed.contains("healthFactor")
                 || trimmed.contains("collateralRatio")
-                || trimmed.contains("isLiquidatable")
+                || trimmed.contains("isLiquidatable"))
+                && (trimmed.contains("=") && (trimmed.contains("*") || trimmed.contains("/")))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
 
-                // Check if it uses spot price
-                let context_start = if line_num > 5 { line_num - 5 } else { 0 };
-                let context_end = std::cmp::min(line_num + 5, lines.len());
-                let context: String = lines[context_start..context_end].join("\n");
+                // Only flag if in actual function
+                if func_name != "unknown" {
+                    // Check surrounding context for price oracle protection
+                    let context_start = if line_num > 10 { line_num - 10 } else { 0 };
+                    let context_end = std::cmp::min(line_num + 10, lines.len());
+                    let context: String = lines[context_start..context_end].join("\n").to_lowercase();
 
-                if !context.contains("twap") && !context.contains("TWAP") {
-                    findings.push((line_num as u32 + 1, func_name));
+                    // Skip if context shows oracle protection
+                    if !context.contains("twap")
+                        && !context.contains("chainlink")
+                        && !context.contains("aggregator")
+                        && !context.contains("pricefeed")
+                    {
+                        findings.push((line_num as u32 + 1, func_name));
+                    }
                 }
             }
         }
@@ -121,15 +168,40 @@ impl LiquidationMevDetector {
     fn find_flash_liquidation(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
+        let lower = source.to_lowercase();
 
-        let has_flash = source.contains("flash") || source.contains("Flash");
-        let has_liquidate = source.contains("liquidat") || source.contains("Liquidat");
+        // Must have BOTH flash loan AND liquidation in same contract with actual implementation
+        let has_flash_impl = lower.contains("function flashloan") && source.contains("{");
+        let has_liquidate_impl = lower.contains("function liquidate") && source.contains("{");
 
-        if has_flash && has_liquidate {
-            for (line_num, line) in lines.iter().enumerate() {
-                let trimmed = line.trim();
+        // Skip if it's just an interface or only has one of the two
+        if !has_flash_impl || !has_liquidate_impl {
+            return findings;
+        }
 
-                if trimmed.contains("function ") && trimmed.contains("flash") {
+        // Skip if has reentrancy protection
+        if lower.contains("nonreentrant") || lower.contains("reentrancyguard") {
+            return findings;
+        }
+
+        // Skip if uses Chainlink/TWAP (manipulation resistant)
+        if lower.contains("chainlink") || lower.contains("twap") || lower.contains("aggregator") {
+            return findings;
+        }
+
+        for (line_num, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+
+            // Only flag actual flash loan function implementations
+            if trimmed.contains("function ")
+                && trimmed.to_lowercase().contains("flash")
+                && (trimmed.contains("external") || trimmed.contains("public"))
+            {
+                // Check if this function can trigger liquidation
+                let func_end = self.find_function_end(&lines, line_num);
+                let func_body: String = lines[line_num..func_end].join("\n").to_lowercase();
+
+                if func_body.contains("liquidat") {
                     let func_name = self.extract_function_name(trimmed);
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -186,6 +258,108 @@ impl LiquidationMevDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Check if contract is an interface (no implementation)
+    fn is_interface_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let contract_name = &ctx.contract.name.name;
+
+        // Interface naming convention
+        if contract_name.starts_with('I') && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase()) {
+            return true;
+        }
+
+        // Explicit interface keyword
+        if source.contains(&format!("interface {}", contract_name)) {
+            return true;
+        }
+
+        // No function implementations (all functions end with ;)
+        let has_implementation = source.contains("function ")
+            && source.contains("{")
+            && !source.contains("interface ");
+
+        !has_implementation
+    }
+
+    /// Check if contract is a configuration/helper (not actual liquidation logic)
+    fn is_config_or_helper(&self, ctx: &AnalysisContext) -> bool {
+        let contract_name = ctx.contract.name.name.to_lowercase();
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Config/helper naming patterns
+        let is_config_named = contract_name.contains("config")
+            || contract_name.contains("helper")
+            || contract_name.contains("setup")
+            || contract_name.contains("admin")
+            || contract_name.contains("registry")
+            || contract_name.contains("factory")
+            || contract_name.contains("types")
+            || contract_name.contains("storage")
+            || contract_name.contains("events");
+
+        // Library contracts
+        let is_library = source_lower.contains(&format!("library {}", contract_name));
+
+        // Data types / structs only
+        let is_types_only = source_lower.contains("struct ")
+            && !source_lower.contains("function liquidate");
+
+        is_config_named || is_library || is_types_only
+    }
+
+    /// Check if contract is a known lending protocol with MEV protection
+    fn is_known_protected_protocol(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Aave patterns - uses Chainlink oracles and has proper protections
+        let is_aave = (lower.contains("aave") || lower.contains("atoken") || lower.contains("ipool"))
+            && (lower.contains("chainlink") || lower.contains("aggregator") || lower.contains("getassetprice"));
+
+        // Compound patterns - uses Chainlink and has proper protections
+        let is_compound = (lower.contains("compound") || lower.contains("ctoken") || lower.contains("comptroller"))
+            && (lower.contains("pricefeed") || lower.contains("getunderlyingprice"));
+
+        // MakerDAO patterns
+        let is_maker = lower.contains("makerdao") || lower.contains("dss") || lower.contains("vat.");
+
+        // Check for Chainlink oracle usage (strong MEV protection)
+        let uses_chainlink = lower.contains("aggregatorv3interface")
+            || lower.contains("latestrounddata")
+            || lower.contains("chainlinkpricefeed");
+
+        // Check for access control on liquidation
+        let has_access_control = lower.contains("onlykeeper")
+            || lower.contains("onlyliquidator")
+            || lower.contains("authorized")
+            || (lower.contains("liquidat") && lower.contains("hasrole"));
+
+        is_aave || is_compound || is_maker || uses_chainlink || has_access_control
+    }
+
+    /// Check if the contract actually implements liquidation logic (not just references it)
+    fn has_liquidation_implementation(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Must have actual liquidation function with body
+        let has_liquidate_func = lower.contains("function liquidate")
+            || lower.contains("function liquidatecall")
+            || lower.contains("function executeliquidation");
+
+        // Must have implementation (function body with logic)
+        let has_implementation = source.contains("function ")
+            && source.matches('{').count() > source.matches("interface").count() + 1;
+
+        // Must have collateral seizure or debt repayment logic
+        let has_liquidation_logic = lower.contains("seize")
+            || lower.contains("repayborrow")
+            || lower.contains("transfercollateral")
+            || (lower.contains("liquidat") && lower.contains("transfer"));
+
+        has_liquidate_func && has_implementation && has_liquidation_logic
+    }
 }
 
 impl Detector for LiquidationMevDetector {
@@ -217,6 +391,32 @@ impl Detector for LiquidationMevDetector {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Skip test contracts
+        if utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip interface contracts - they have no implementation to analyze
+        if self.is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip configuration/helper contracts - they don't execute liquidations
+        if self.is_config_or_helper(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip known lending protocols with proper MEV protection
+        // (Aave, Compound, MakerDAO use Chainlink and have access controls)
+        if self.is_known_protected_protocol(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip if contract doesn't actually implement liquidation logic
+        if !self.has_liquidation_implementation(ctx) {
+            return Ok(findings);
+        }
 
         for (line, func_name) in self.find_liquidation_functions(source) {
             let message = format!(
