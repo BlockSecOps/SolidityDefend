@@ -1,6 +1,6 @@
 # Multi-stage build for SolidityDefend
 # Builder stage
-FROM rust:1.82-slim-bookworm AS builder
+FROM rust:1.85-slim-bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -13,8 +13,8 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy workspace configuration first
-COPY Cargo.toml Cargo.lock ./
+# Copy workspace configuration first (Cargo.lock generated during build)
+COPY Cargo.toml ./
 
 # Copy source code
 COPY . .
@@ -49,11 +49,18 @@ ENTRYPOINT ["soliditydefend"]
 # Default command shows help
 CMD ["--help"]
 
+# Build arguments for OCI labels
+ARG SERVICE_VERSION=1.10.3
+ARG BUILD_DATE
+ARG VCS_REF
+
 # OCI Image Format Specification labels
 LABEL org.opencontainers.image.title="SolidityDefend" \
-      org.opencontainers.image.version="1.3.7" \
-      org.opencontainers.image.description="High-performance static analysis security tool for Solidity smart contracts with 178 detectors" \
-      org.opencontainers.image.authors="Advanced Blockchain Security" \
+      org.opencontainers.image.version="${SERVICE_VERSION}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.description="High-performance static analysis security tool for Solidity smart contracts with 333 detectors" \
+      org.opencontainers.image.authors="BlockSecOps" \
       org.opencontainers.image.vendor="BlockSecOps" \
       org.opencontainers.image.url="https://github.com/BlockSecOps/SolidityDefend" \
       org.opencontainers.image.source="https://github.com/BlockSecOps/SolidityDefend" \
