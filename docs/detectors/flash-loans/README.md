@@ -4,6 +4,45 @@
 
 ---
 
+## Safe Pattern Detection
+
+Flash loan detectors use the **Safe Patterns Library** to reduce false positives. Contracts implementing ERC-3156 compliance and proper callback validation are automatically recognized.
+
+### Recognized Safe Patterns
+
+| Pattern | Detection Function | Effect |
+|---------|-------------------|--------|
+| ERC-3156 Compliance | `is_erc3156_compliant()` | Skips standard flash loan providers |
+| Callback Validation | `has_flash_loan_callback_validation()` | Reduces severity when msg.sender/initiator checked |
+| Fee Validation | `has_flash_loan_fee_validation()` | Reduces severity when fee bounds enforced |
+| State Validation | `has_state_validation_after_callback()` | Reduces severity for balance before/after checks |
+| Reentrancy Protection | `has_flash_loan_reentrancy_protection()` | Reduces severity with ReentrancyGuard |
+
+### Example Safe Implementation
+
+```solidity
+// This contract will NOT trigger flash loan vulnerability findings
+contract SafeFlashLoanProvider is IERC3156FlashLender, ReentrancyGuard {
+    bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
+
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data)
+        external nonReentrant returns (bool)
+    {
+        uint256 balanceBefore = IERC20(token).balanceOf(address(this));
+        IERC20(token).transfer(address(receiver), amount);
+
+        bytes32 result = receiver.onFlashLoan(msg.sender, token, amount, fee, data);
+        require(result == CALLBACK_SUCCESS, "Invalid callback");
+
+        uint256 balanceAfter = IERC20(token).balanceOf(address(this));
+        require(balanceAfter >= balanceBefore + fee, "Insufficient repayment");
+        return true;
+    }
+}
+```
+
+---
+
 ## Flash Loan Collateral Swap
 
 **ID:** `flash-loan-collateral-swap`  

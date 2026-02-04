@@ -621,22 +621,21 @@ impl DetectorRegistry {
         ));
 
         // Cross-Chain Intent & Bridge Security (Phase 13 - 2025)
-        // TODO v0.12.0: Uncomment when erc7683 detectors are added
-        // self.register(Arc::new(
-        //     crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683_replay_attack::ReplayAttackDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
-        // ));
+        self.register(Arc::new(
+            crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_replay_attack::ReplayAttackDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
+        ));
         self.register(Arc::new(
             crate::bridge_token_minting::TokenMintingDetector::new(),
         ));
@@ -646,21 +645,6 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::bridge_chain_id_validation::ChainIdValidationDetector::new(),
         ));
-
-        // ERC-7683 Comprehensive Intent Detectors (v0.9.0 - 2025)
-        // TODO v0.12.0: Uncomment when erc7683 module is added
-        // self.register(Arc::new(
-        //     crate::erc7683::IntentSignatureReplayDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683::IntentSolverManipulationDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683::IntentNonceManagementDetector::new(),
-        // ));
-        // self.register(Arc::new(
-        //     crate::erc7683::IntentSettlementValidationDetector::new(),
-        // ));
 
         // Phase 31: Restaking & LRT Security (v0.17.0 - 2025)
         self.register(Arc::new(
