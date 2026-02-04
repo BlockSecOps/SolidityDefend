@@ -17,7 +17,7 @@ soliditydefend contract.sol
 ## Features
 
 - **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
-- **Context-Aware Analysis** - Recognizes DeFi patterns (ERC-4626, ERC-3156, ERC-4337, AMM pools) to reduce false positives
+- **Context-Aware Analysis** - Safe Patterns Library reduces false positives by detecting secure implementations (Chainlink oracles, TWAP, ERC-3156 flash loans, ERC-4626 vaults, restaking protocols)
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
 - **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`

@@ -16,7 +16,10 @@ pub mod vault_patterns;
 pub mod access_control_patterns;
 pub mod advanced_patterns;
 pub mod cross_chain_patterns;
+pub mod flash_loan_patterns;
 pub mod modern_eip_patterns;
+pub mod oracle_patterns;
+pub mod restaking_patterns;
 
 // Re-export all pattern functions
 pub use access_control_patterns::*;
@@ -24,8 +27,11 @@ pub use advanced_patterns::*;
 pub use contract_classification::*;
 pub use cross_chain_patterns::*;
 pub use erc_standard_compliance::*;
+pub use flash_loan_patterns::*;
 pub use mev_protection_patterns::*;
 pub use modern_eip_patterns::*;
+pub use oracle_patterns::*;
 pub use reentrancy_patterns::*;
+pub use restaking_patterns::*;
 pub use safe_call_patterns::*;
 pub use vault_patterns::*;

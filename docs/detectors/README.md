@@ -89,6 +89,32 @@ Each category contains comprehensive documentation for all detectors:
 
 ---
 
+## Safe Patterns Library (FP Reduction)
+
+SolidityDefend includes a **Safe Patterns Library** for context-aware false positive reduction. Detectors automatically recognize secure implementations and skip or reduce severity for properly protected contracts.
+
+### Available Modules
+
+| Module | Patterns Detected |
+|--------|-------------------|
+| `oracle_patterns` | Chainlink, TWAP, multi-oracle, staleness checks, deviation bounds |
+| `flash_loan_patterns` | ERC-3156 compliance, callback validation, reentrancy protection |
+| `restaking_patterns` | EigenLayer delegation, AVS validation, withdrawal delays |
+| `vault_patterns` | ERC-4626 inflation protection, dead shares, virtual shares |
+| `amm_patterns` | AMM classification, slippage protection, TWAP oracles |
+| `reentrancy_patterns` | ReentrancyGuard, checks-effects-interactions |
+
+### Effect on Detection
+
+When safe patterns are detected:
+- **Skip entirely**: Contracts with comprehensive safety measures produce no findings
+- **Reduce severity**: Partial safety measures lower finding severity (e.g., Critical → High)
+- **Add context**: Findings include information about detected protections
+
+See [TaskDocs-SolidityDefend/FP-REDUCTION.md](../../TaskDocs-SolidityDefend/FP-REDUCTION.md) for implementation details.
+
+---
+
 ## New in v1.5.0 - SWC Coverage Expansion
 
 ### SWC-Aligned Detectors

@@ -4,6 +4,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct YieldFarmingDetector {
@@ -79,6 +80,8 @@ impl YieldFarmingDetector {
         &self,
         function: &ast::Function<'_>,
         ctx: &AnalysisContext,
+        skip_inflation_checks: bool,
+        has_contract_min_deposit: bool,
     ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
@@ -92,32 +95,36 @@ impl YieldFarmingDetector {
 
         // Check deposit functions
         if name.contains("deposit") || name.contains("stake") {
-            // Check for share inflation attack protection (check function body)
-            let has_min_deposit = source_lower.contains("minimum")
-                || source_lower.contains("min_deposit")
-                || (source_lower.contains("require") && source_lower.contains("amount >"))
-                || source_lower.contains("amount >= min");
+            // Skip inflation-related checks if contract has protection patterns
+            if !skip_inflation_checks {
+                // Check for share inflation attack protection (check function body)
+                let has_min_deposit = has_contract_min_deposit
+                    || source_lower.contains("minimum")
+                    || source_lower.contains("min_deposit")
+                    || (source_lower.contains("require") && source_lower.contains("amount >"))
+                    || source_lower.contains("amount >= min");
 
-            if !has_min_deposit {
-                issues.push((
-                    "No minimum deposit (share inflation attack risk)".to_string(),
-                    Severity::Critical,
-                    "Add minimum: require(amount >= MIN_DEPOSIT, \"Amount too small\"); // e.g., MIN_DEPOSIT = 1e6".to_string()
-                ));
-            }
+                if !has_min_deposit {
+                    issues.push((
+                        "No minimum deposit (share inflation attack risk)".to_string(),
+                        Severity::Critical,
+                        "Add minimum: require(amount >= MIN_DEPOSIT, \"Amount too small\"); // e.g., MIN_DEPOSIT = 1e6".to_string()
+                    ));
+                }
 
-            // Check for first depositor protection (in function body)
-            let has_first_deposit_lock = source_lower.contains("totalsupply == 0")
-                || source_lower.contains("totalsupply() == 0")
-                || source_lower.contains("initialdeposit")
-                || contract_source_lower.contains("_initialdeposit"); // contract-level check
+                // Check for first depositor protection (in function body)
+                let has_first_deposit_lock = source_lower.contains("totalsupply == 0")
+                    || source_lower.contains("totalsupply() == 0")
+                    || source_lower.contains("initialdeposit")
+                    || contract_source_lower.contains("_initialdeposit"); // contract-level check
 
-            if !has_first_deposit_lock && source_lower.contains("shares") {
-                issues.push((
-                    "No first depositor protection (inflation attack on vault initialization)".to_string(),
-                    Severity::Critical,
-                    "Lock initial shares: if (totalSupply() == 0) { _mint(address(0), INITIAL_SHARES); }".to_string()
-                ));
+                if !has_first_deposit_lock && source_lower.contains("shares") {
+                    issues.push((
+                        "No first depositor protection (inflation attack on vault initialization)".to_string(),
+                        Severity::Critical,
+                        "Lock initial shares: if (totalSupply() == 0) { _mint(address(0), INITIAL_SHARES); }".to_string()
+                    ));
+                }
             }
 
             // Check for share calculation (in function body)
@@ -338,6 +345,16 @@ impl Detector for YieldFarmingDetector {
             return Ok(findings);
         }
 
+        // Check for vault inflation protection patterns
+        // These reduce false positives for share inflation attacks
+        let has_inflation_protection = vault_patterns::has_inflation_protection(ctx);
+        let has_dead_shares = vault_patterns::has_dead_shares_pattern(ctx);
+        let has_virtual_shares = vault_patterns::has_virtual_shares_pattern(ctx);
+        let has_min_deposit = vault_patterns::has_minimum_deposit_pattern(ctx);
+
+        // If vault has comprehensive inflation protection, skip inflation-related checks
+        let skip_inflation_checks = has_inflation_protection || has_dead_shares || has_virtual_shares;
+
         for function in ctx.get_functions() {
             // Skip internal/private functions
             if function.visibility == ast::Visibility::Internal
@@ -364,7 +381,7 @@ impl Detector for YieldFarmingDetector {
                 continue;
             }
 
-            let issues = self.check_function(function, ctx);
+            let issues = self.check_function(function, ctx, skip_inflation_checks, has_min_deposit);
             for (message, severity, remediation) in issues {
                 let finding = self
                     .base

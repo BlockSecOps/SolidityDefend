@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::flash_loan_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 
 /// Detector for flash callback manipulation vulnerabilities
@@ -237,18 +238,46 @@ impl Detector for FlashCallbackManipulationDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Early exit for contracts with comprehensive flash loan safety measures
+        // ERC-3156 compliant implementations have proper callback validation and return values
+        if flash_loan_patterns::has_comprehensive_flash_loan_safety(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip safe flash loan providers (they implement proper protections)
+        if flash_loan_patterns::is_safe_flash_loan_provider(ctx) {
+            return Ok(findings);
+        }
+
+        // Skip safe flash loan borrowers/receivers (they validate callbacks properly)
+        if flash_loan_patterns::is_safe_flash_loan_borrower(ctx) {
+            return Ok(findings);
+        }
+
+        // Track if contract has some safety measures (for reduced severity findings)
+        let has_callback_validation = flash_loan_patterns::has_flash_loan_callback_validation(ctx);
+        let has_reentrancy_protection = flash_loan_patterns::has_flash_loan_reentrancy_protection(ctx);
+        let has_partial_safety = has_callback_validation || has_reentrancy_protection;
+
         for (line, func_name) in self.find_state_read_before_callback(source) {
+            // Reduce severity and confidence if some protections exist
+            let (severity, confidence) = if has_partial_safety {
+                (Severity::Medium, Confidence::Medium)
+            } else {
+                (Severity::High, Confidence::High)
+            };
+
             let message = format!(
                 "Function '{}' in contract '{}' reads state before flash callback. \
                  Callback can manipulate state causing TOCTOU vulnerability.",
                 func_name, contract_name
             );
 
-            let finding = self
+            let mut finding = self
                 .base
                 .create_finding(ctx, message, line, 1, 50)
                 .with_cwe(367)
-                .with_confidence(Confidence::High)
+                .with_confidence(confidence)
                 .with_fix_suggestion(
                     "Prevent flash callback manipulation:\n\n\
                      1. Read state AFTER callback completes:\n\
@@ -260,6 +289,7 @@ impl Detector for FlashCallbackManipulationDetector {
                         .to_string(),
                 );
 
+            finding.severity = severity;
             findings.push(finding);
         }
 
@@ -311,28 +341,31 @@ impl Detector for FlashCallbackManipulationDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_unvalidated_flash_callback(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' executes callback without validation. \
-                 Arbitrary callbacks can execute malicious code.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(367)
-                .with_confidence(Confidence::Medium)
-                .with_fix_suggestion(
-                    "Validate flash loan callbacks:\n\n\
-                     1. Verify callback source:\n\
-                     require(msg.sender == address(pool));\n\n\
-                     2. Use whitelisted callback targets\n\
-                     3. Implement callback interface checks"
-                        .to_string(),
+        // Skip unvalidated callback check if callback validation is present
+        if !has_callback_validation {
+            for (line, func_name) in self.find_unvalidated_flash_callback(source) {
+                let message = format!(
+                    "Function '{}' in contract '{}' executes callback without validation. \
+                     Arbitrary callbacks can execute malicious code.",
+                    func_name, contract_name
                 );
 
-            findings.push(finding);
+                let finding = self
+                    .base
+                    .create_finding(ctx, message, line, 1, 50)
+                    .with_cwe(367)
+                    .with_confidence(Confidence::Medium)
+                    .with_fix_suggestion(
+                        "Validate flash loan callbacks:\n\n\
+                         1. Verify callback source:\n\
+                         require(msg.sender == address(pool));\n\n\
+                         2. Use whitelisted callback targets\n\
+                         3. Implement callback interface checks"
+                            .to_string(),
+                    );
+
+                findings.push(finding);
+            }
         }
 
         Ok(findings)

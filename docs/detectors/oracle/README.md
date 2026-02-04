@@ -4,6 +4,42 @@
 
 ---
 
+## Safe Pattern Detection
+
+Oracle detectors use the **Safe Patterns Library** to reduce false positives. Contracts implementing proper oracle safety measures are automatically skipped or receive reduced severity.
+
+### Recognized Safe Patterns
+
+| Pattern | Detection Function | Effect |
+|---------|-------------------|--------|
+| Chainlink AggregatorV3Interface | `has_chainlink_oracle()` | Reduces FPs for standard Chainlink usage |
+| TWAP Oracle (Uniswap V3 style) | `has_twap_oracle()` | Skips contracts using time-weighted prices |
+| Multi-Oracle Validation | `has_multi_oracle_validation()` | Skips contracts with fallback oracles |
+| Staleness Check | `has_staleness_check()` | Reduces severity when updatedAt is validated |
+| Deviation Bounds | `has_deviation_bounds()` | Reduces severity when price bands are enforced |
+
+### Example Safe Implementation
+
+```solidity
+// This contract will NOT trigger oracle manipulation findings
+contract SafeChainlinkConsumer {
+    AggregatorV3Interface public primaryOracle;
+    AggregatorV3Interface public secondaryOracle;
+    uint256 public constant MAX_STALENESS = 3600;
+    uint256 public constant MAX_DEVIATION = 500; // 5%
+
+    function getValidatedPrice() external view returns (uint256) {
+        (, int256 answer,, uint256 updatedAt,) = primaryOracle.latestRoundData();
+        require(block.timestamp - updatedAt <= MAX_STALENESS, "Stale");
+        require(answer > 0, "Invalid");
+        // Multi-oracle deviation check...
+        return uint256(answer);
+    }
+}
+```
+
+---
+
 ## AI Agent Decision Manipulation
 
 **ID:** `ai-agent-decision-manipulation`  
