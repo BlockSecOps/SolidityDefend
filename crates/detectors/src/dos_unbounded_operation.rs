@@ -118,6 +118,21 @@ impl DosUnboundedOperationDetector {
             return None;
         }
 
+        // Phase 54 FP Reduction: Skip view/pure functions with pagination parameters
+        if self.is_paginated_view_function(function, &func_source) {
+            return None;
+        }
+
+        // Phase 54 FP Reduction: Skip multicall patterns with size validation
+        if self.is_safe_multicall_pattern(&func_source) {
+            return None;
+        }
+
+        // Phase 54 FP Reduction: Skip admin-only view functions
+        if self.is_admin_only_view(function, ctx) {
+            return None;
+        }
+
         // Pattern 1: Loop over unbounded array
         let has_loop = func_source.contains("for") || func_source.contains("while");
         let loops_over_storage =
@@ -258,6 +273,103 @@ impl DosUnboundedOperationDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Phase 54 FP Reduction: Check if function is a view/pure with pagination parameters
+    fn is_paginated_view_function(
+        &self,
+        function: &ast::Function<'_>,
+        func_source: &str,
+    ) -> bool {
+        // Must be view or pure
+        if function.mutability != ast::StateMutability::View
+            && function.mutability != ast::StateMutability::Pure
+        {
+            return false;
+        }
+
+        let func_lower = func_source.to_lowercase();
+
+        // Check for pagination parameters
+        func_lower.contains("offset")
+            || func_lower.contains("limit")
+            || func_lower.contains("start")
+            || func_lower.contains("count")
+            || func_lower.contains("pagesize")
+            || func_lower.contains("page_size")
+            || func_lower.contains("skip")
+            || func_lower.contains("take")
+    }
+
+    /// Phase 54 FP Reduction: Check if this is a safe multicall pattern with size validation
+    fn is_safe_multicall_pattern(&self, func_source: &str) -> bool {
+        let func_lower = func_source.to_lowercase();
+
+        // Check if it's a multicall pattern
+        let is_multicall = func_lower.contains("multicall")
+            || func_lower.contains("batch")
+            || func_lower.contains("aggregate");
+
+        if !is_multicall {
+            return false;
+        }
+
+        // Check for size validation
+        let has_size_check = func_lower.contains("require(")
+            && (func_lower.contains(".length")
+                && (func_lower.contains("<=") || func_lower.contains("<")))
+            || func_lower.contains("max_")
+            || func_lower.contains("_max")
+            || func_lower.contains("maxcalls")
+            || func_lower.contains("max_calls");
+
+        // Check for Math.min usage in loop bounds
+        let has_min_bound = func_lower.contains("math.min(")
+            || func_lower.contains(".min(")
+            || (func_lower.contains("min(") && func_lower.contains("length"));
+
+        has_size_check || has_min_bound
+    }
+
+    /// Phase 54 FP Reduction: Check if function is an admin-only view function
+    fn is_admin_only_view(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+        // Must be view or pure
+        if function.mutability != ast::StateMutability::View
+            && function.mutability != ast::StateMutability::Pure
+        {
+            return false;
+        }
+
+        // Check for access control modifiers
+        let has_admin_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("owner")
+                || name_lower.contains("admin")
+                || name_lower.contains("only")
+                || name_lower.contains("authorized")
+        });
+
+        if has_admin_modifier {
+            return true;
+        }
+
+        // Check for inline access control in source
+        let func_source = self.get_function_source(function, ctx);
+        let has_inline_check = func_source.contains("require(msg.sender")
+            || func_source.contains("require(hasRole")
+            || func_source.contains("if (msg.sender");
+
+        has_inline_check
+    }
+
+    /// Phase 54 FP Reduction: Check if contract uses EnumerableSet/EnumerableMap
+    fn uses_enumerable_library(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        source.contains("EnumerableSet")
+            || source.contains("EnumerableMap")
+            || source.contains("using EnumerableSet")
+            || source.contains("using EnumerableMap")
     }
 }
 

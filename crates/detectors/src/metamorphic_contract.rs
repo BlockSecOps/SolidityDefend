@@ -76,6 +76,31 @@ impl MetamorphicContractDetector {
             return findings; // Legitimate deterministic deployment factory
         }
 
+        // Phase 54 FP Reduction: Skip known safe protocol factory patterns
+        if self.is_known_safe_factory(source, &source_lower) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if selfdestruct has long timelock (>7 days)
+        if self.has_long_selfdestruct_timelock(source, &source_lower) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if CREATE2 and selfdestruct are in truly separate,
+        // unrelated contracts (e.g., CREATE2 in a factory and selfdestruct in a completely
+        // unrelated utility contract)
+        // NOTE: We do NOT skip if the contracts might be related (e.g., MetamorphicInit + Factory)
+        // because that's a classic metamorphic pattern
+        // This check is disabled for now as it's hard to determine contract relationships
+        // if self.are_create2_and_selfdestruct_separate(&source_lower) {
+        //     return findings;
+        // }
+
+        // Phase 54 FP Reduction: Check for salt validation pattern
+        if self.has_salt_validation(source, &source_lower) && has_access_control {
+            return findings;
+        }
+
         // Pattern 1: Full metamorphic pattern (CREATE2 + SELFDESTRUCT in constructor)
         if has_create2 && has_selfdestruct {
             let has_constructor_selfdestruct = source_lower.contains("constructor")
@@ -234,6 +259,136 @@ impl MetamorphicContractDetector {
         }
 
         findings
+    }
+
+    /// Phase 54 FP Reduction: Check for known safe protocol factory patterns
+    fn is_known_safe_factory(&self, source: &str, source_lower: &str) -> bool {
+        // Uniswap factory patterns (well-audited)
+        if source.contains("UniswapV2Factory")
+            || source.contains("UniswapV3Factory")
+            || source.contains("IUniswapV2Factory")
+            || source.contains("IUniswapV3Factory")
+            || source.contains("PoolDeployer")
+        {
+            return true;
+        }
+
+        // Aave factory patterns
+        if source.contains("AaveV2")
+            || source.contains("AaveV3")
+            || source.contains("@aave")
+            || source_lower.contains("aave")
+        {
+            return true;
+        }
+
+        // Safe (Gnosis Safe) factory patterns
+        if source.contains("GnosisSafeProxyFactory")
+            || source.contains("SafeProxyFactory")
+            || source.contains("CreateCall")
+            || source.contains("@safe-global")
+        {
+            return true;
+        }
+
+        // OpenZeppelin Clones (audited minimal proxy)
+        if source.contains("Clones.")
+            || source.contains("LibClone")
+            || source.contains("@openzeppelin")
+                && (source.contains("clone") || source.contains("Clone"))
+        {
+            return true;
+        }
+
+        // Compound/Maker factory patterns
+        if source.contains("Comptroller")
+            || source.contains("CToken")
+            || source.contains("DSProxy")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check if selfdestruct has long timelock (>7 days)
+    fn has_long_selfdestruct_timelock(&self, source: &str, source_lower: &str) -> bool {
+        if !source_lower.contains("selfdestruct") {
+            return false;
+        }
+
+        // Check for long time delays (7+ days)
+        let has_long_delay = source.contains("7 days")
+            || source.contains("1 weeks")
+            || source.contains("2 weeks")
+            || source.contains("30 days")
+            || source.contains("60 days")
+            || source.contains("90 days")
+            || source.contains("180 days")
+            || source.contains("365 days")
+            || source.contains("604800")   // 7 days in seconds
+            || source.contains("1209600")  // 14 days in seconds
+            || source.contains("2592000"); // 30 days in seconds
+
+        // Also check for governance delay patterns
+        let has_governance = source_lower.contains("governance")
+            || source_lower.contains("timelock")
+            || source_lower.contains("timelockcontroller");
+
+        has_long_delay || has_governance
+    }
+
+    /// Phase 54 FP Reduction: Check if CREATE2 and selfdestruct are in different contracts
+    fn are_create2_and_selfdestruct_separate(&self, source_lower: &str) -> bool {
+        // Count contract definitions
+        let contract_count = source_lower.matches("contract ").count();
+
+        if contract_count < 2 {
+            return false;
+        }
+
+        // Find positions of CREATE2 and selfdestruct
+        let create2_pos = source_lower.find("create2");
+        let selfdestruct_pos = source_lower.find("selfdestruct");
+
+        if let (Some(c2), Some(sd)) = (create2_pos, selfdestruct_pos) {
+            // Find contract boundaries
+            let contracts: Vec<_> = source_lower.match_indices("contract ").collect();
+
+            // Check if CREATE2 and selfdestruct are in different contract blocks
+            for (i, (contract_start, _)) in contracts.iter().enumerate() {
+                let contract_end = if i + 1 < contracts.len() {
+                    contracts[i + 1].0
+                } else {
+                    source_lower.len()
+                };
+
+                let create2_in_this = c2 >= *contract_start && c2 < contract_end;
+                let selfdestruct_in_this = sd >= *contract_start && sd < contract_end;
+
+                // If one is in this contract and the other is not, they're separate
+                if create2_in_this != selfdestruct_in_this {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check for salt validation pattern
+    fn has_salt_validation(&self, source: &str, source_lower: &str) -> bool {
+        // Check for used salts mapping
+        let has_salt_tracking = source_lower.contains("usedsalts")
+            || source_lower.contains("deployedsalts")
+            || source_lower.contains("saltused");
+
+        // Check for salt validation in require
+        let has_salt_require = source_lower.contains("require")
+            && source_lower.contains("salt")
+            && (source.contains("!") || source_lower.contains("not"));
+
+        has_salt_tracking || has_salt_require
     }
 }
 

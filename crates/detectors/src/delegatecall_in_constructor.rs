@@ -241,6 +241,96 @@ impl DelegatecallInConstructorDetector {
 
         false
     }
+
+    /// Phase 54 FP Reduction: Check if contract is a known proxy implementation
+    fn is_proxy_implementation(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // EIP-1967 proxy patterns
+        if source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || source.contains("_IMPLEMENTATION_SLOT")
+        {
+            return true;
+        }
+
+        // OpenZeppelin proxy patterns
+        if source.contains("ERC1967Proxy")
+            || source.contains("TransparentUpgradeableProxy")
+            || source.contains("BeaconProxy")
+            || source.contains("UUPSUpgradeable")
+        {
+            return true;
+        }
+
+        // Diamond proxy patterns (EIP-2535)
+        if source.contains("DiamondCutFacet")
+            || source.contains("IDiamondCut")
+            || source.contains("DiamondLoupeFacet")
+            || source.contains("IDiamondLoupe")
+            || source_lower.contains("diamond proxy")
+        {
+            return true;
+        }
+
+        // Minimal proxy / clone patterns
+        if source.contains("Clones")
+            || source.contains("LibClone")
+            || source.contains("EIP1167")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check for OpenZeppelin Initializable pattern
+    fn has_initializable_pattern(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Initializable imports
+        source.contains("Initializable")
+            || source.contains("@openzeppelin/contracts-upgradeable")
+            || source.contains("initializer")
+            || source.contains("_disableInitializers")
+    }
+
+    /// Phase 54 FP Reduction: Check for immutable proxy pattern
+    fn is_immutable_proxy(&self, source: &str) -> bool {
+        // Check if constructor only sets immutable values and doesn't delegatecall
+        let has_immutable = source.contains("immutable");
+        let constructor_idx = source.find("constructor");
+
+        if let Some(idx) = constructor_idx {
+            let constructor_section = &source[idx..];
+            // Find the end of the constructor body
+            if let Some(body_start) = constructor_section.find('{') {
+                let mut depth = 1;
+                let mut body_end = body_start + 1;
+                for (i, c) in constructor_section[body_start + 1..].chars().enumerate() {
+                    match c {
+                        '{' => depth += 1,
+                        '}' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                body_end = body_start + 1 + i;
+                                break;
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+                let constructor_body = &constructor_section[body_start..=body_end];
+                // If constructor only has immutable assignments and no delegatecall, it's safe
+                if has_immutable && !constructor_body.contains("delegatecall") {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
 }
 
 impl Default for DelegatecallInConstructorDetector {
@@ -277,6 +367,16 @@ impl Detector for DelegatecallInConstructorDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 54 FP Reduction: Skip known proxy implementations
+        if self.is_proxy_implementation(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip contracts using Initializable pattern
+        if self.has_initializable_pattern(ctx) {
+            return Ok(findings);
+        }
+
         // Check all functions for constructor delegatecall
         for function in ctx.get_functions() {
             // Only check constructors
@@ -288,6 +388,11 @@ impl Detector for DelegatecallInConstructorDetector {
 
             // Skip if this is a known safe pattern
             if self.is_safe_pattern(&source) {
+                continue;
+            }
+
+            // Phase 54 FP Reduction: Skip immutable proxy patterns
+            if self.is_immutable_proxy(&source) {
                 continue;
             }
 

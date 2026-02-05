@@ -51,7 +51,7 @@ ENTRYPOINT ["soliditydefend"]
 CMD ["--help"]
 
 # Build arguments for OCI labels
-ARG SERVICE_VERSION=1.10.13
+ARG SERVICE_VERSION=1.10.14
 ARG BUILD_DATE
 ARG VCS_REF
 

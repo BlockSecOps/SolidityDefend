@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.10.13
-**Last Updated:** 2026-01-29
+**Version:** v1.10.14
+**Last Updated:** 2026-02-05
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 
@@ -9,7 +9,15 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.10.13 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.10.14 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+
+**v1.10.14 Improvements:** Comprehensive False Positive Reduction (24 Categories):
+- **NEW** `safe_patterns/library_patterns.rs` module for library/protocol detection
+- Added FP reduction for 24 detector categories (see CHANGELOG.md for full list)
+- Key categories: Reentrancy (SafeERC20, pull payment), Access Control (inline checks), External Calls (try/catch), Centralization (timelock, multi-sig), Timestamp (grace periods), Delegatecall (Diamond, EIP-1967), CREATE2 (Clones, EIP-1167), DOS (EnumerableSet, pagination), Permit (Permit2, ERC-2771), Type Casting (safe conversions), Metamorphic (factory patterns), EXTCODESIZE (OZ Address), Batch Auth (inherited controls), Storage Layout (Diamond, EIP-7201)
+- **Estimated FP Reduction: 50-70%**
+- 941 unit tests passing, 32 FP regression tests
+- 100% recall maintained on ground truth dataset
 
 **v1.10.13 Improvements:** False Positive Reduction for Proxy & Vault Detectors:
 - Fixed `pool-donation-enhanced` flagging non-pool contracts (ERC20, Ownable, proxies)

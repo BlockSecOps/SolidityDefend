@@ -330,6 +330,72 @@ impl MissingModifiersDetector {
             String::new()
         }
     }
+
+    /// Phase 15 FP Reduction: Check for inline access control patterns
+    fn has_inline_access_control(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Check for require/revert with msg.sender checks
+        let has_sender_require = (lower.contains("require(") || lower.contains("if ("))
+            && (lower.contains("msg.sender ==")
+                || lower.contains("== msg.sender")
+                || lower.contains("msg.sender !=")
+                || lower.contains("!= msg.sender"));
+
+        // Check for onlyXXX style inline checks
+        let has_inline_only = lower.contains("require(isowner")
+            || lower.contains("require(isadmin")
+            || lower.contains("require(hasrole")
+            || lower.contains("_checkowner")
+            || lower.contains("_checkrole");
+
+        // Check for revert patterns
+        let has_revert_unauthorized = lower.contains("revert unauthorized")
+            || lower.contains("revert notowner")
+            || lower.contains("revert notadmin")
+            || lower.contains("revert accessdenied");
+
+        has_sender_require || has_inline_only || has_revert_unauthorized
+    }
+
+    /// Phase 15 FP Reduction: Check if function has owner check
+    fn has_owner_check(&self, func_source: &str, contract_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Contract has Ownable pattern
+        let has_ownable = contract_source.to_lowercase().contains("ownable")
+            || contract_source.contains("owner")
+            || contract_source.contains("_owner");
+
+        // Function checks owner
+        let checks_owner = lower.contains("msg.sender == owner")
+            || lower.contains("owner == msg.sender")
+            || lower.contains("msg.sender == _owner")
+            || lower.contains("_owner == msg.sender")
+            || lower.contains("owner()")
+            || lower.contains("_checkowner");
+
+        has_ownable && checks_owner
+    }
+
+    /// Phase 15 FP Reduction: Check if function is meant to be called only during construction
+    fn is_constructor_callable_only(&self, func_source: &str, ctx: &AnalysisContext) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Check if this looks like initialization that checks if already initialized
+        let has_init_check = lower.contains("!initialized")
+            || lower.contains("initialized == false")
+            || lower.contains("require(!_initialized")
+            || lower.contains("require(_initialized == false");
+
+        // Check if contract has initialized state variable
+        let contract_lower = ctx.source_code.to_lowercase();
+        let has_initialized_var = contract_lower.contains("bool private _initialized")
+            || contract_lower.contains("bool internal _initialized")
+            || contract_lower.contains("bool public initialized");
+
+        has_init_check && has_initialized_var
+    }
 }
 
 impl Detector for MissingModifiersDetector {
@@ -384,31 +450,51 @@ impl Detector for MissingModifiersDetector {
 
             // Check if function name suggests it needs access control
             if self.requires_access_control(function.name.name) {
-                // Check if it has proper access control
-                if !self.has_access_control(function) {
-                    let message = format!(
-                        "Function '{}' performs critical operations but lacks access control modifiers",
-                        function.name.name
-                    );
-
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            function.name.location.start().line() as u32,
-                            function.name.location.start().column() as u32,
-                            function.name.name.len() as u32,
-                        )
-                        .with_cwe(284) // CWE-284: Improper Access Control
-                        .with_confidence(Confidence::High) // NEW: High confidence when truly missing
-                        .with_fix_suggestion(format!(
-                            "Add an access control modifier like 'onlyOwner' to function '{}'",
-                            function.name.name
-                        ));
-
-                    findings.push(finding);
+                // Check if it has proper access control via modifiers
+                if self.has_access_control(function) {
+                    continue;
                 }
+
+                // Phase 15 FP Reduction: Check for inline access control
+                let func_source = self.get_function_source(function, ctx);
+                if self.has_inline_access_control(&func_source) {
+                    continue;
+                }
+
+                // Phase 15 FP Reduction: Check if function is in a contract with Ownable
+                // and has require(msg.sender == owner) check
+                if self.has_owner_check(&func_source, &ctx.source_code) {
+                    continue;
+                }
+
+                // Phase 15 FP Reduction: Skip constructor-callable only patterns
+                // These are functions meant to be called only during deployment
+                if self.is_constructor_callable_only(&func_source, ctx) {
+                    continue;
+                }
+
+                let message = format!(
+                    "Function '{}' performs critical operations but lacks access control modifiers",
+                    function.name.name
+                );
+
+                let finding = self
+                    .base
+                    .create_finding(
+                        ctx,
+                        message,
+                        function.name.location.start().line() as u32,
+                        function.name.location.start().column() as u32,
+                        function.name.name.len() as u32,
+                    )
+                    .with_cwe(284) // CWE-284: Improper Access Control
+                    .with_confidence(Confidence::High) // NEW: High confidence when truly missing
+                    .with_fix_suggestion(format!(
+                        "Add an access control modifier like 'onlyOwner' to function '{}'",
+                        function.name.name
+                    ));
+
+                findings.push(finding);
             }
         }
 

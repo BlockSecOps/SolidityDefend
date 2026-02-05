@@ -50,6 +50,16 @@ impl StorageLayoutUpgradeDetector {
             return findings;
         }
 
+        // Phase 54 FP Reduction: Skip Diamond storage libraries
+        if self.is_diamond_storage_library(source, &source_lower) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip EIP-7201 namespaced storage
+        if self.uses_eip7201_namespaced_storage(source, &source_lower) {
+            return findings;
+        }
+
         // Check if contract is upgradeable
         let is_upgradeable = source_lower.contains("upgradeable")
             || source_lower.contains("initializer")
@@ -208,6 +218,71 @@ impl StorageLayoutUpgradeDetector {
         // Pattern 13: REMOVED - Internal libraries are common and don't indicate vulnerabilities
 
         findings
+    }
+
+    /// Phase 54 FP Reduction: Check for Diamond storage library patterns
+    fn is_diamond_storage_library(&self, source: &str, source_lower: &str) -> bool {
+        // LibDiamond pattern
+        if source.contains("LibDiamond") || source.contains("library Diamond") {
+            return true;
+        }
+
+        // AppStorage pattern (common in Diamond implementations)
+        if source.contains("AppStorage") || source.contains("appStorage") {
+            return true;
+        }
+
+        // DiamondStorage pattern
+        if source.contains("DiamondStorage") || source.contains("diamondStorage") {
+            return true;
+        }
+
+        // Storage lib with explicit slot
+        if source_lower.contains("storage")
+            && source_lower.contains("library")
+            && source_lower.contains("slot")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check for EIP-7201 namespaced storage
+    fn uses_eip7201_namespaced_storage(&self, source: &str, source_lower: &str) -> bool {
+        // EIP-7201 specific patterns
+        if source.contains("eip7201") || source.contains("EIP7201") {
+            return true;
+        }
+
+        // Namespaced storage annotation
+        if source.contains("@custom:storage-location") {
+            return true;
+        }
+
+        // OpenZeppelin namespaced storage pattern
+        if source.contains("StorageSlot") && source.contains("getAddressSlot") {
+            return true;
+        }
+
+        // Storage struct with explicit slot calculation
+        if source_lower.contains("struct")
+            && source_lower.contains("storage")
+            && source.contains("keccak256")
+            && (source.contains("erc7201:") || source.contains("eip7201:"))
+        {
+            return true;
+        }
+
+        // Check for explicit storage slot patterns
+        if source.contains("bytes32 private constant")
+            && source.contains("keccak256")
+            && (source.contains("storage.") || source.contains(".storage"))
+        {
+            return true;
+        }
+
+        false
     }
 }
 

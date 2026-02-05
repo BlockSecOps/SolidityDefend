@@ -133,6 +133,41 @@ impl CentralizationRiskDetector {
             || ctx.source_code.contains("import \"@openzeppelin")
             || ctx.source_code.contains("import '@openzeppelin");
 
+        // Phase 52 FP Reduction: Detect decentralization patterns
+        // If any of these are present, the contract has meaningful decentralization
+        let has_timelock = contract_source.contains("timelock")
+            || contract_source.contains("TimelockController")
+            || contract_source.contains("queueTransaction")
+            || contract_source.contains("delay =")
+            || contract_source.contains("executeTransaction")
+            || (contract_source.contains("timestamp") && contract_source.contains("require(block.timestamp >="));
+
+        let has_multisig = contract_source.contains("multisig")
+            || contract_source.contains("MultiSig")
+            || contract_source.contains("Gnosis")
+            || contract_source.contains("threshold")
+            || contract_source.contains("confirmations")
+            || contract_source.contains("requiredSignatures")
+            || contract_source.contains("Safe");
+
+        let has_governance = contract_source.contains("Governor")
+            || contract_source.contains("propose(")
+            || contract_source.contains("castVote")
+            || contract_source.contains("quorum")
+            || contract_source.contains("votingPeriod")
+            || contract_source.contains("votingDelay");
+
+        let has_access_control_roles = contract_source.contains("AccessControl")
+            || contract_source.contains("hasRole(")
+            || contract_source.contains("grantRole(")
+            || contract_source.contains("DEFAULT_ADMIN_ROLE")
+            || contract_source.contains("_ROLE = keccak256");
+
+        // Skip entirely if contract has proper decentralization mechanisms
+        if has_timelock || has_multisig || has_governance {
+            return None;
+        }
+
         // P1 FP FIX: Only flag truly dangerous centralization
         // Standard Ownable without extra risk factors is just a design choice
 
@@ -186,13 +221,14 @@ impl CentralizationRiskDetector {
             return None;
         }
 
-        let has_multisig = contract_source.contains("multisig")
-            || contract_source.contains("MultiSig")
-            || contract_source.contains("Gnosis")
-            || contract_source.contains("threshold");
+        // Phase 52 FP Reduction: Skip if contract uses role-based access control
+        // Role-based access is a design choice, not a vulnerability, unless combined with dangerous functions
+        if has_access_control_roles && !has_selfdestruct && !has_arbitrary_token_transfer {
+            return None;
+        }
 
         // Pattern 1: Dangerous centralization - selfdestruct controlled by single owner
-        if has_selfdestruct && !has_multisig {
+        if has_selfdestruct && !has_multisig && !has_timelock {
             return Some(
                 "Contract has selfdestruct controllable by single address. \
                 Owner can permanently destroy contract and steal funds"
@@ -201,7 +237,7 @@ impl CentralizationRiskDetector {
         }
 
         // Pattern 2: Owner can drain arbitrary tokens without restriction
-        if has_arbitrary_token_transfer && !has_multisig {
+        if has_arbitrary_token_transfer && !has_multisig && !has_timelock {
             return Some(
                 "Owner can transfer arbitrary tokens from contract without timelock. \
                 Single key compromise enables immediate fund extraction"
@@ -257,7 +293,14 @@ impl CentralizationRiskDetector {
         if is_owner_check && is_dangerous_function {
             let has_decentralization = func_source.contains("require(multisig")
                 || func_source.contains("timelock")
-                || func_source.contains("governance");
+                || func_source.contains("governance")
+                || func_source.contains("delay")
+                || func_source.contains("TimelockController")
+                || func_source.contains("queueTransaction")
+                || func_source.contains("threshold")
+                || ctx.source_code.contains("TimelockController")
+                || ctx.source_code.contains("Gnosis")
+                || ctx.source_code.contains("Safe");
 
             if !has_decentralization {
                 return Some(format!(

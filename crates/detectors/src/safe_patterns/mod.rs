@@ -21,6 +21,9 @@ pub mod modern_eip_patterns;
 pub mod oracle_patterns;
 pub mod restaking_patterns;
 
+// Phase 2 FP Reduction: Library and protocol pattern detection
+pub mod library_patterns;
+
 // Re-export all pattern functions
 pub use access_control_patterns::*;
 pub use advanced_patterns::*;
@@ -28,6 +31,7 @@ pub use contract_classification::*;
 pub use cross_chain_patterns::*;
 pub use erc_standard_compliance::*;
 pub use flash_loan_patterns::*;
+pub use library_patterns::*;
 pub use mev_protection_patterns::*;
 pub use modern_eip_patterns::*;
 pub use oracle_patterns::*;

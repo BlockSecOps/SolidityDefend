@@ -31,14 +31,34 @@ impl ExtcodesizeBypassDetector {
         let source = &ctx.source_code;
         let source_lower = source.to_lowercase();
 
+        // Phase 54 FP Reduction: Skip OpenZeppelin Address library usage
+        if self.uses_oz_address_library(source) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if code documents constructor bypass
+        if self.has_documented_bypass(source, &source_lower) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if has companion isInConstruction function
+        if self.has_construction_check_companion(source, &source_lower) {
+            return findings;
+        }
+
         // Pattern 1: address.code.length checks
         if source_lower.contains(".code.length") {
-            // Check if it's used for EOA validation
-            let has_eoa_validation = source_lower.contains("== 0")
-                || source_lower.contains("!= 0")
-                || (source_lower.contains("require") && source_lower.contains(".code.length"));
+            // Phase 54 FP Reduction: Only flag if used in require() for security, not view functions
+            let is_security_check = source_lower.contains("require")
+                && source_lower.contains(".code.length")
+                && (source_lower.contains("== 0") || source_lower.contains("!= 0"));
 
-            if has_eoa_validation {
+            // Skip pure view/getter functions (not security critical)
+            let is_view_getter = source_lower.contains("function get")
+                || source_lower.contains("function is")
+                || (source_lower.contains("view") && source_lower.contains("returns"));
+
+            if is_security_check && !is_view_getter {
                 // Check if there's any warning about constructor bypass
                 let has_bypass_protection = source_lower.contains("constructor")
                     && (source_lower.contains("bypass")
@@ -139,6 +159,64 @@ impl ExtcodesizeBypassDetector {
         }
 
         findings
+    }
+
+    /// Phase 54 FP Reduction: Check for OpenZeppelin Address library usage
+    /// OZ Address library documents and handles the constructor bypass limitation
+    fn uses_oz_address_library(&self, source: &str) -> bool {
+        // Check for Address library import
+        if source.contains("import") && source.contains("Address") {
+            return true;
+        }
+
+        // Check for using Address for
+        if source.contains("using Address for") {
+            return true;
+        }
+
+        // Check for Address library function calls
+        if source.contains("Address.isContract(")
+            || source.contains("isContract(")
+                && source.contains("@openzeppelin")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check if code documents the constructor bypass limitation
+    fn has_documented_bypass(&self, source: &str, source_lower: &str) -> bool {
+        // Check for comments documenting the bypass
+        let has_comment = source.contains("// Note:")
+            || source.contains("// WARNING:")
+            || source.contains("// CAUTION:")
+            || source.contains("/// @notice")
+            || source.contains("/// @dev");
+
+        if !has_comment {
+            return false;
+        }
+
+        // Check for bypass documentation
+        source_lower.contains("constructor")
+            && (source_lower.contains("bypass")
+                || source_lower.contains("code size is 0")
+                || source_lower.contains("codesize is zero")
+                || source_lower.contains("returns 0 during")
+                || source_lower.contains("during construction"))
+    }
+
+    /// Phase 54 FP Reduction: Check for companion isInConstruction function
+    fn has_construction_check_companion(&self, source: &str, source_lower: &str) -> bool {
+        // Check for functions that handle the construction case
+        source_lower.contains("isinconstruction")
+            || source_lower.contains("is_in_construction")
+            || source_lower.contains("inconstructor")
+            || source_lower.contains("in_constructor")
+            || source_lower.contains("isbeingconstructed")
+            // Also check for tx.origin pattern which handles this
+            || (source.contains("tx.origin") && source.contains("msg.sender"))
     }
 }
 

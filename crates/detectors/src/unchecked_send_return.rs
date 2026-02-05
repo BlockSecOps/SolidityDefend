@@ -176,6 +176,16 @@ impl Detector for UncheckedSendReturnDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Phase 52 FP Reduction: Skip test contracts
+        if crate::utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip if contract uses Address library
+        if source.contains("Address.sendValue") || source.contains("using Address for address") {
+            return Ok(findings);
+        }
+
         // Find unchecked send calls
         let unchecked = self.find_unchecked_send(source);
         for (line, func_name) in &unchecked {
