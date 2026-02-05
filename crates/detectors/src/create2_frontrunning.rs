@@ -40,6 +40,26 @@ impl Create2FrontrunningDetector {
             return findings;
         }
 
+        // Phase 54 FP Reduction: Skip well-known library patterns
+        if self.is_safe_clone_library(source) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if using salt commitment + time delay pattern
+        if self.has_salt_commitment_pattern(source, &source_lower) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip EIP-1167 minimal proxy clone factories
+        if self.is_eip1167_clone_factory(source) {
+            return findings;
+        }
+
+        // Phase 54 FP Reduction: Skip if contract has used salts tracking
+        if self.has_salt_tracking(source, &source_lower) {
+            return findings;
+        }
+
         // Pattern 1: Predictable salt from msg.sender or simple counter
         let has_sender_salt = source_lower.contains("create2")
             && (source_lower.contains("msg.sender")
@@ -191,6 +211,96 @@ impl Create2FrontrunningDetector {
         // if source_lower.contains("create2") { ... }
 
         findings
+    }
+
+    /// Phase 54 FP Reduction: Detect OpenZeppelin Clones library usage
+    /// Clones library is well-audited and handles CREATE2 safely
+    fn is_safe_clone_library(&self, source: &str) -> bool {
+        // OpenZeppelin Clones library
+        if source.contains("import") && source.contains("Clones") {
+            return true;
+        }
+
+        // Using Clones for address
+        if source.contains("using Clones for") {
+            return true;
+        }
+
+        // Direct Clones library calls
+        if source.contains("Clones.clone(")
+            || source.contains("Clones.cloneDeterministic(")
+            || source.contains("Clones.predictDeterministicAddress(")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Detect salt commitment + time delay pattern
+    /// This is a secure pattern for preventing frontrunning
+    fn has_salt_commitment_pattern(&self, source: &str, source_lower: &str) -> bool {
+        // Check for commitment mapping
+        let has_commitment = source_lower.contains("commitment")
+            || source_lower.contains("saltcommit")
+            || source_lower.contains("commitsalt");
+
+        // Check for time delay
+        let has_delay = source.contains("block.timestamp")
+            && (source_lower.contains("delay")
+                || source_lower.contains("timelock")
+                || source_lower.contains("wait")
+                || source.contains("days")
+                || source.contains("hours"));
+
+        has_commitment && has_delay
+    }
+
+    /// Phase 54 FP Reduction: Detect EIP-1167 minimal proxy clone factory
+    /// These are standard proxy patterns that don't need frontrunning protection
+    fn is_eip1167_clone_factory(&self, source: &str) -> bool {
+        // EIP-1167 bytecode patterns
+        let has_eip1167_bytecode = source.contains("3d602d80600a3d3981f3363d3d373d3d3d363d73")
+            || source.contains("363d3d373d3d3d363d73")
+            || source.contains("0x3d602d80600a3d3981f3")
+            || source.contains("// EIP-1167")
+            || source.contains("EIP1167")
+            || source.contains("minimal proxy");
+
+        // Check for clone-specific patterns
+        let is_clone_factory = source.contains("LibClone")
+            || source.contains("CloneFactory")
+            || source.contains("createClone");
+
+        has_eip1167_bytecode || is_clone_factory
+    }
+
+    /// Phase 54 FP Reduction: Detect salt tracking mechanisms
+    /// If contract tracks used salts, it's protected against address reuse
+    fn has_salt_tracking(&self, source: &str, source_lower: &str) -> bool {
+        // Check for salt tracking mappings
+        let has_salt_mapping = (source_lower.contains("usedsalts")
+            || source_lower.contains("used_salts")
+            || source_lower.contains("deployedsalts")
+            || source_lower.contains("deployed_salts")
+            || source_lower.contains("saltused")
+            || source_lower.contains("salt_used"))
+            && source_lower.contains("mapping");
+
+        // Check for salt validation in require
+        let has_salt_validation = source_lower.contains("require")
+            && (source_lower.contains("salt")
+                && (source_lower.contains("!") || source_lower.contains("not")));
+
+        has_salt_mapping || has_salt_validation
+    }
+
+    /// Phase 54 FP Reduction: Check if function is a view/pure computeAddress function
+    /// These are standard helper functions and not vulnerabilities
+    fn is_compute_address_view(&self, source: &str) -> bool {
+        // computeAddress is a standard view helper
+        source.contains("function computeAddress")
+            && (source.contains("view") || source.contains("pure"))
     }
 }
 

@@ -153,6 +153,40 @@ impl TimestampManipulationDetector {
             || (has_deadline_var && is_signature_function)
     }
 
+    /// Phase 52 FP Reduction: Check if timestamp is used for non-critical purposes
+    /// UI display, logging, event emission, metadata updates are not manipulatable for gain
+    fn is_non_critical_timestamp_use(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+        let func_name_lower = function.name.name.to_lowercase();
+
+        // Event-only functions (logging, metadata updates)
+        let is_event_function = func_name_lower.contains("log")
+            || func_name_lower.contains("emit")
+            || func_name_lower.contains("record")
+            || func_name_lower.contains("track");
+
+        // Timestamp only used in events (emit statements)
+        let only_used_in_events = func_source.contains("emit ")
+            && func_source.contains("block.timestamp")
+            && !func_source.contains("if (block.timestamp")
+            && !func_source.contains("require(block.timestamp");
+
+        // Timestamp stored but not used for critical decisions
+        let is_metadata_update = (func_source.contains("lastUpdate")
+            || func_source.contains("timestamp =")
+            || func_source.contains("updatedAt")
+            || func_source.contains("createdAt"))
+            && !func_source.contains("require(block.timestamp");
+
+        // Grace period patterns - long enough to not matter
+        // e.g., block.timestamp + 1 days, block.timestamp + 7 days
+        let has_long_grace = func_source.contains("days")
+            || func_source.contains("weeks")
+            || func_source.contains("* 86400")  // 1 day in seconds
+            || func_source.contains("* 604800"); // 1 week in seconds
+
+        is_event_function || only_used_in_events || is_metadata_update || has_long_grace
+    }
+
     /// Check for timestamp manipulation vulnerabilities
     fn check_timestamp_manipulation(
         &self,
@@ -171,6 +205,12 @@ impl TimestampManipulationDetector {
         // Phase 52 FP Reduction: Skip deadline/expiry validation functions
         // Functions like delegateBySig, permit use timestamp for expiry checks, not manipulation
         if self.is_deadline_or_expiry_check(&func_source, function) {
+            return None;
+        }
+
+        // Phase 52 FP Reduction: Skip non-critical timestamp usage
+        // UI display, logging, event emission, long grace periods are not exploitable
+        if self.is_non_critical_timestamp_use(&func_source, function) {
             return None;
         }
 

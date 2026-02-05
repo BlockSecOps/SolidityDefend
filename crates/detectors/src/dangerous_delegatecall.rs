@@ -70,6 +70,17 @@ impl Detector for DangerousDelegatecallDetector {
             return Ok(findings);
         }
 
+        // Phase 52 FP Reduction: Skip Diamond pattern (EIP-2535) contracts
+        // Diamond contracts use delegatecall to facets by design
+        if self.is_diamond_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip known safe library delegatecall patterns
+        if self.uses_safe_library_delegatecall(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(risk_description) = self.has_dangerous_delegatecall(function, ctx) {
                 let message = format!(
@@ -259,6 +270,60 @@ impl DangerousDelegatecallDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Phase 52 FP Reduction: Check if contract is a Diamond pattern (EIP-2535)
+    /// Diamond contracts use delegatecall to facets by design
+    fn is_diamond_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Check for Diamond-specific patterns
+        let has_diamond_cut = source.contains("diamondCut")
+            || source.contains("DiamondCut")
+            || source.contains("IDiamondCut");
+
+        let has_diamond_loupe = source.contains("DiamondLoupe")
+            || source.contains("IDiamondLoupe")
+            || source.contains("facets()")
+            || source.contains("facetAddress(");
+
+        let has_facet_mapping = lower.contains("facets")
+            && (lower.contains("mapping") || lower.contains("selectortoface"));
+
+        let has_diamond_storage = source.contains("DiamondStorage")
+            || source.contains("DIAMOND_STORAGE_POSITION")
+            || source.contains("keccak256(\"diamond.standard.");
+
+        let has_diamond_inheritance = source.contains("Diamond")
+            && (source.contains("is ") || source.contains("contract Diamond"));
+
+        // Diamond contracts have specific patterns
+        (has_diamond_cut && has_diamond_loupe)
+            || (has_diamond_storage && has_facet_mapping)
+            || (has_diamond_inheritance && (has_diamond_cut || has_diamond_loupe))
+    }
+
+    /// Phase 52 FP Reduction: Check if contract uses known safe library delegatecall
+    /// OpenZeppelin Address library and similar use delegatecall safely
+    fn uses_safe_library_delegatecall(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // OpenZeppelin Address library pattern
+        let uses_oz_address = source.contains("Address.functionDelegateCall")
+            || source.contains("functionDelegateCall(")
+            || source.contains("using Address for address");
+
+        // Check if it's a library itself (libraries are internal, not exploitable)
+        let is_library = source.contains("library ")
+            && source.contains("delegatecall");
+
+        // Solmate/Solady libraries
+        let uses_solmate_library = source.contains("@solmate/")
+            || source.contains("@solady/")
+            || source.contains("library SafeTransferLib");
+
+        uses_oz_address || is_library || uses_solmate_library
     }
 }
 

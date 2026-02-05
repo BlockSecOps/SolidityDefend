@@ -225,6 +225,21 @@ impl UnsafeTypeCastingDetector {
                 continue;
             }
 
+            // Phase 54 FP Reduction: Skip assembly blocks with explicit size validation
+            if self.is_in_assembly_with_validation(&lines, line_idx) {
+                continue;
+            }
+
+            // Phase 54 FP Reduction: Skip Chainlink latestRoundData pattern
+            if self.is_chainlink_round_data_pattern(line, &lines, line_idx) {
+                continue;
+            }
+
+            // Phase 54 FP Reduction: Skip enum casts (compiler validates)
+            if self.is_enum_cast(line, ctx) {
+                continue;
+            }
+
             // Pattern 1: Downcasting (larger type to smaller type)
             if self.is_downcast(line) {
                 let has_validation = self.has_range_check(&lines, line_idx);
@@ -310,9 +325,15 @@ impl UnsafeTypeCastingDetector {
     }
 
     fn is_address_cast(&self, line: &str) -> bool {
-        line.contains("address(uint160(")
-            || line.contains("address(bytes20(")
-            || (line.contains("address(") && line.contains("uint"))
+        // Phase 54 FP Reduction: address <-> uint160 is SAFE (same size: 160 bits)
+        // Only flag other address conversions
+        if line.contains("address(uint160(") || line.contains("uint160(address(") {
+            // This is safe - address and uint160 are the same size
+            return false;
+        }
+
+        line.contains("address(bytes20(")
+            || (line.contains("address(") && line.contains("uint") && !line.contains("uint160"))
     }
 
     fn has_range_check(&self, lines: &[&str], current_line: usize) -> bool {
@@ -389,6 +410,109 @@ impl UnsafeTypeCastingDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Phase 54 FP Reduction: Check if cast is inside assembly block with validation
+    fn is_in_assembly_with_validation(&self, lines: &[&str], current_line: usize) -> bool {
+        let mut in_assembly = false;
+        let mut has_validation = false;
+
+        // Scan backwards to check if we're in an assembly block
+        for i in (0..=current_line).rev() {
+            let line = lines[i].trim();
+
+            if line.contains("assembly") && line.contains("{") {
+                in_assembly = true;
+                break;
+            }
+
+            // Check for size/bounds validation in assembly
+            if line.contains("and(")
+                || line.contains("shr(")
+                || line.contains("shl(")
+                || line.contains("mod(")
+                || line.contains("lt(")
+                || line.contains("gt(")
+            {
+                has_validation = true;
+            }
+        }
+
+        in_assembly && has_validation
+    }
+
+    /// Phase 54 FP Reduction: Check for Chainlink latestRoundData pattern
+    /// Chainlink returns int256 for answer which needs to be converted
+    fn is_chainlink_round_data_pattern(
+        &self,
+        line: &str,
+        lines: &[&str],
+        current_line: usize,
+    ) -> bool {
+        // Check if this line or nearby lines have latestRoundData
+        let context_start = current_line.saturating_sub(5);
+        let context_end = std::cmp::min(current_line + 2, lines.len());
+
+        for i in context_start..context_end {
+            if lines[i].contains("latestRoundData")
+                || lines[i].contains("AggregatorV3Interface")
+                || lines[i].contains("priceFeed")
+            {
+                // Check if we're converting the answer (int256 -> uint256)
+                if line.contains("uint256(") && line.contains("answer") {
+                    return true;
+                }
+                // Also safe if there's a positive check before
+                if lines[i].contains("answer >") || lines[i].contains("answer >=") {
+                    return true;
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check if this is an enum cast
+    /// Enum casts are validated by the compiler
+    fn is_enum_cast(&self, line: &str, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Check if source defines enums
+        if !source.contains("enum ") {
+            return false;
+        }
+
+        // Look for enum type cast patterns
+        // e.g., Status(uint8Value), MyEnum(value)
+        // These are safe as the compiler validates the value range
+
+        // Extract potential enum type from cast
+        let patterns = ["uint8(", "uint16(", "uint32("];
+        for pattern in &patterns {
+            if let Some(idx) = line.find(pattern) {
+                // Check if casting from an enum value
+                let before = &line[..idx];
+                if before.ends_with("= ") || before.ends_with("return ") {
+                    // Check if the variable being cast is an enum
+                    if source.contains("enum") {
+                        // Check for enum cast pattern (EnumType(value))
+                        let after = &line[idx + pattern.len()..];
+                        if after.contains(")") {
+                            let cast_content = &after[..after.find(')').unwrap_or(after.len())];
+                            // If casting an enum member or simple variable, likely safe
+                            if !cast_content.contains("msg.")
+                                && !cast_content.contains("block.")
+                                && !cast_content.contains("tx.")
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        false
     }
 }
 

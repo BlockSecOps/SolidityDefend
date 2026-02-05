@@ -42,6 +42,37 @@ impl DosFailedTransferDetector {
             return false;
         }
 
+        // Phase 52 FP Reduction: Skip if using proper call with success check
+        // Pattern: (bool success, ) = payable(addr).call{value: ...}(""); require(success);
+        let has_proper_call_check = function_source.contains("(bool success")
+            && function_source.contains(".call{value:")
+            && (function_source.contains("require(success")
+                || function_source.contains("if (!success")
+                || function_source.contains("if(!success"));
+
+        if has_proper_call_check {
+            return false;
+        }
+
+        // Phase 52 FP Reduction: Skip if using Address.sendValue (OZ pattern)
+        if function_source.contains("Address.sendValue")
+            || function_source.contains("sendValue(")
+        {
+            return false;
+        }
+
+        // Phase 52 FP Reduction: Skip pull pattern implementations
+        // These are safe: mapping-based withdrawals
+        let is_pull_pattern = (function_source.contains("pendingWithdraw")
+            || function_source.contains("pendingReturns")
+            || function_source.contains("balances[msg.sender]")
+            || function_source.contains("owed[msg.sender]"))
+            && function_source.contains("msg.sender");
+
+        if is_pull_pattern {
+            return false;
+        }
+
         // Pattern 2: Transfer happens before state updates (push pattern)
         // Look for transfer followed by state changes (assignments, storage writes)
         let lines: Vec<&str> = function_source.lines().collect();

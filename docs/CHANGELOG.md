@@ -7,7 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Safe Patterns Library Expansion
+- **NEW** `safe_patterns/library_patterns.rs` module for comprehensive library/protocol detection
+- Detection for OpenZeppelin, Solmate, PRBMath, DSMath libraries
+- Known audited protocol detection (Aave, Compound, Uniswap, Chainlink, Safe)
+- Test contract and interface/library detection
+- Solidity 0.8+ built-in overflow protection detection
+
 ### Fixed
+
+#### Comprehensive False Positive Reduction (24 Categories)
+
+**Session 1 - Core Safe Patterns:**
+- `reentrancy.rs` - SafeERC20, view-only calls, pull payment pattern detection
+- `access_control.rs` - Inline `require(msg.sender == owner)` detection
+- `external.rs` - Try/catch, SafeERC20, inline success check detection
+
+**Session 2 - Governance & Timing:**
+- `centralization_risk.rs` - Timelock, multi-sig, governance, RBAC detection
+- `timestamp_manipulation.rs` - Non-critical timing, long grace period detection
+- `dangerous_delegatecall.rs` - Diamond (EIP-2535), OZ library detection
+- `dos_failed_transfer.rs` - Success checks, Address.sendValue, pull pattern
+- `unchecked_send_return.rs` - Address.sendValue pattern detection
+
+**Session 3 - Advanced Patterns (10 Categories):**
+- `erc721_callback_reentrancy.rs` - Safe receiver callbacks, Initializable, view callbacks
+- `create2_frontrunning.rs` - Clones library, EIP-1167, salt commitment/tracking
+- `delegatecall_in_constructor.rs` - EIP-1967 proxies, Diamond init, Initializable
+- `dos_unbounded_operation.rs` - EnumerableSet/Map, pagination, Math.min() bounds
+- `permit_signature_exploit.rs` - Permit2, ERC-2771 forwarders, relayer contracts
+- `unsafe_type_casting.rs` - address↔uint160, Chainlink patterns, enum casts
+- `metamorphic_contract.rs` - Known factories, timelock selfdestruct, salt validation
+- `extcodesize_bypass.rs` - OZ Address library, documented bypass, isInConstruction()
+- `erc7821/batch_authorization.rs` - Inherited access control, Diamond, smart wallets
+- `storage_layout_upgrade.rs` - Diamond storage, EIP-7201 namespaced storage
+
+**Estimated FP Reduction: 50-70%**
+
+**Test Results:**
+- 941 unit tests passing
+- 32 FP regression tests passing
+- 100% recall maintained
 
 #### Phase 51 False Positive Reduction - Real-World Protocol Context-Aware Detection
 

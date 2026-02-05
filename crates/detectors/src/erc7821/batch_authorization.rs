@@ -81,6 +81,116 @@ impl ERC7821BatchAuthorizationDetector {
 
         issues
     }
+
+    /// Phase 54 FP Reduction: Check if contract inherits access control patterns
+    fn has_inherited_access_control(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // OpenZeppelin Ownable
+        if source.contains("is Ownable")
+            || source.contains("Ownable,")
+            || source.contains("OwnableUpgradeable")
+        {
+            return true;
+        }
+
+        // OpenZeppelin AccessControl
+        if source.contains("is AccessControl")
+            || source.contains("AccessControl,")
+            || source.contains("AccessControlUpgradeable")
+        {
+            return true;
+        }
+
+        // Check for role-based patterns
+        if source.contains("onlyRole(") || source.contains("hasRole(") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check for Diamond proxy patterns
+    fn is_diamond_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Diamond standard patterns
+        source.contains("IDiamondCut")
+            || source.contains("IDiamondLoupe")
+            || source.contains("DiamondCutFacet")
+            || source_lower.contains("diamond")
+            || source_lower.contains("facet")
+    }
+
+    /// Phase 54 FP Reduction: Check for smart contract wallet patterns
+    fn is_smart_contract_wallet(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Safe (Gnosis Safe) patterns
+        if source.contains("GnosisSafe")
+            || source.contains("Safe")
+            || source.contains("execTransaction")
+        {
+            return true;
+        }
+
+        // Account abstraction patterns
+        if source.contains("IAccount")
+            || source.contains("UserOperation")
+            || source.contains("validateUserOp")
+            || source.contains("ERC4337")
+        {
+            return true;
+        }
+
+        // General smart wallet patterns
+        if source_lower.contains("smartwallet")
+            || source_lower.contains("smart_wallet")
+            || source_lower.contains("smartaccount")
+            || source_lower.contains("smart_account")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Phase 54 FP Reduction: Check for trusted automation executors
+    fn is_trusted_automation_executor(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Gelato automation
+        if source.contains("Gelato")
+            || source.contains("IOps")
+            || source_lower.contains("gelato")
+        {
+            return true;
+        }
+
+        // Chainlink automation (Keepers)
+        if source.contains("AutomationCompatible")
+            || source.contains("KeeperCompatible")
+            || source.contains("checkUpkeep")
+            || source.contains("performUpkeep")
+        {
+            return true;
+        }
+
+        // Keep3r network
+        if source.contains("Keep3r") || source.contains("IKeep3r") {
+            return true;
+        }
+
+        // OpenZeppelin Defender
+        if source.contains("Defender") || source_lower.contains("relayer") {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl Default for ERC7821BatchAuthorizationDetector {
@@ -118,6 +228,26 @@ impl Detector for ERC7821BatchAuthorizationDetector {
         let mut findings = Vec::new();
 
         if !is_erc7821_executor(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip if contract inherits access control
+        if self.has_inherited_access_control(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip Diamond proxy patterns
+        if self.is_diamond_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip smart contract wallet patterns
+        if self.is_smart_contract_wallet(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip trusted automation executors
+        if self.is_trusted_automation_executor(ctx) {
             return Ok(findings);
         }
 

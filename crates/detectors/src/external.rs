@@ -50,13 +50,53 @@ impl Detector for UncheckedCallDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 15 FP Reduction: Skip test contracts
+        if crate::utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 15 FP Reduction: Skip contracts using SafeERC20 or Address library
+        // These libraries handle return value checking
+        let source_lower = ctx.source_code.to_lowercase();
+        if source_lower.contains("safeerc20") || source_lower.contains("using address for") {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip proxy contracts
+        // Proxy contracts need unchecked delegatecalls in fallback
+        if crate::utils::is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Phase 52 FP Reduction: Skip interfaces
+        if crate::utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(body) = &function.body {
+                // Phase 15 FP Reduction: Get function source for context checks
+                let func_source = self.get_function_source(function, ctx);
+
+                // Skip if function uses try/catch (handles errors properly)
+                if func_source.contains("try ") && func_source.contains("catch") {
+                    continue;
+                }
+
+                // Skip if function uses SafeERC20 methods
+                if func_source.contains("safeTransfer")
+                    || func_source.contains("safeTransferFrom")
+                    || func_source.contains("safeApprove")
+                {
+                    continue;
+                }
+
                 self.check_statements_for_unchecked_calls(
                     &body.statements,
                     ctx,
                     &mut findings,
                     function,
+                    &func_source,
                 );
             }
         }
@@ -70,6 +110,19 @@ impl Detector for UncheckedCallDetector {
 }
 
 impl UncheckedCallDetector {
+    /// Get function source code for analysis
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
     /// Check statements for unchecked external calls
     fn check_statements_for_unchecked_calls(
         &self,
@@ -77,6 +130,7 @@ impl UncheckedCallDetector {
         ctx: &AnalysisContext<'_>,
         findings: &mut Vec<Finding>,
         function: &ast::Function<'_>,
+        func_source: &str,
     ) {
         for stmt in statements {
             match stmt {
@@ -85,6 +139,22 @@ impl UncheckedCallDetector {
                     ..
                 }) => {
                     if self.is_external_call(call_expr) && !self.return_value_checked(stmt) {
+                        // Phase 15 FP Reduction: Check if return value is checked inline
+                        // e.g., (bool success, ) = addr.call{...}(...); require(success);
+                        if self.has_inline_success_check(func_source) {
+                            continue;
+                        }
+
+                        // Phase 52 FP Reduction: Skip chained call patterns
+                        if self.is_chained_call_pattern(func_source) {
+                            continue;
+                        }
+
+                        // Phase 52 FP Reduction: Skip known safe function patterns
+                        if self.is_known_safe_function(func_source) {
+                            continue;
+                        }
+
                         let message = format!(
                             "External call in function '{}' does not check return value",
                             function.name.name
@@ -114,11 +184,72 @@ impl UncheckedCallDetector {
                         ctx,
                         findings,
                         function,
+                        func_source,
                     );
                 }
                 _ => {}
             }
         }
+    }
+
+    /// Phase 15 FP Reduction: Check if function has inline success check after call
+    fn has_inline_success_check(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Pattern: (bool success, ) = ... followed by require(success)
+        let has_success_var = lower.contains("bool success")
+            || lower.contains("(bool success,")
+            || lower.contains("(bool ok,")
+            || lower.contains("bool ok =")
+            || lower.contains("(bool sent,")
+            || lower.contains("bool sent =");
+
+        let has_success_require = lower.contains("require(success")
+            || lower.contains("require(ok")
+            || lower.contains("require(sent")
+            || lower.contains("if (!success")
+            || lower.contains("if(!success")
+            || lower.contains("if (!ok")
+            || lower.contains("if(!ok")
+            || lower.contains("if (!sent")
+            || lower.contains("if(!sent")
+            || lower.contains("assert(success")
+            || lower.contains("assert(ok")
+            || lower.contains("assert(sent");
+
+        has_success_var && has_success_require
+    }
+
+    /// Phase 52 FP Reduction: Check if this is a chained call where return isn't needed
+    /// e.g., address(token).call(...) where we use the result
+    fn is_chained_call_pattern(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Chained event emission
+        let has_event_after = lower.contains("emit ") && lower.contains(".call");
+
+        // Return value destructuring with only bytes (data processing)
+        let processes_return_data = lower.contains("(, bytes memory data)")
+            || lower.contains("(,bytes memory data)")
+            || lower.contains("abi.decode(");
+
+        has_event_after || processes_return_data
+    }
+
+    /// Phase 52 FP Reduction: Check if this is a known safe function pattern
+    fn is_known_safe_function(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // ERC20 approve that returns bool but is often ignored
+        // (it's a design choice - some tokens don't return bool)
+        let is_approve_pattern = lower.contains(".approve(")
+            && (lower.contains("0xffffffff") || lower.contains("type(uint256).max"));
+
+        // transferFrom where SafeERC20 wrapping might not be needed
+        // if success is checked elsewhere
+        let has_approval_check = lower.contains("allowance") || lower.contains("approve");
+
+        is_approve_pattern || has_approval_check
     }
 
     /// Check if expression is an external call
