@@ -79,8 +79,16 @@ jobs:
         if: "!matrix.use_cross"
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip binary (Unix)
-        if: matrix.os != 'windows-latest'
+      - name: Install cross-arch strip tool
+        if: matrix.use_cross
+        run: sudo apt-get update && sudo apt-get install -y binutils-aarch64-linux-gnu
+
+      - name: Strip binary (cross)
+        if: matrix.use_cross
+        run: aarch64-linux-gnu-strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+
+      - name: Strip binary (native Unix)
+        if: matrix.os != 'windows-latest' && !matrix.use_cross
         run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
 
       - name: Package (Unix)
