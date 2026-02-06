@@ -46,14 +46,92 @@ impl DiamondFacetCodeExistenceDetector {
         }
     }
 
-    /// Check if contract is a Diamond pattern
-    fn is_diamond_pattern(&self, source: &str) -> bool {
-        source.contains("Diamond")
-            || source.contains("IDiamond")
-            || source.contains("diamondCut")
-            || source.contains("DiamondCut")
-            || source.contains("facets")
-            || (source.contains("selectors") && source.contains("delegatecall"))
+    /// Extract source code for only the current contract (not the whole file)
+    fn get_contract_source(&self, ctx: &AnalysisContext) -> String {
+        let start = ctx.contract.location.start().line();
+        let end = ctx.contract.location.end().line();
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
+    /// Check if the contract itself is a Diamond EIP-2535 pattern.
+    /// Requires strong indicators in the contract-level source, not just the file.
+    fn is_diamond_pattern(&self, contract_source: &str) -> bool {
+        // Strong EIP-2535 Diamond indicators (any one is sufficient)
+        let strong_indicators = [
+            "diamondCut",
+            "DiamondCut",
+            "FacetCut",
+            "IDiamond",
+            "IDiamondCut",
+            "IDiamondLoupe",
+            "LibDiamond",
+            "selectorToFacet",
+            "facetAddress",
+        ];
+
+        if strong_indicators
+            .iter()
+            .any(|ind| contract_source.contains(ind))
+        {
+            return true;
+        }
+
+        // Combined indicator: must have both facet-related AND selector-related terms
+        // in actual code (not just comments), plus delegatecall
+        let has_facet_term = contract_source.contains("facet")
+            && (contract_source.contains("address facet")
+                || contract_source.contains("facetAddress")
+                || contract_source.contains("_facet")
+                || contract_source.contains("Facet"));
+        let has_selector_dispatch =
+            contract_source.contains("msg.sig") || contract_source.contains("msg.selector");
+        let has_delegatecall = contract_source.contains("delegatecall");
+
+        has_facet_term && has_selector_dispatch && has_delegatecall
+    }
+
+    /// Check if this contract is a known non-Diamond proxy pattern that should be skipped.
+    fn is_non_diamond_proxy(&self, contract_source: &str, contract_name: &str) -> bool {
+        let name_lower = contract_name.to_lowercase();
+
+        // Known non-Diamond proxy name patterns
+        let non_diamond_names = [
+            "transparentproxy",
+            "uupsproxy",
+            "beaconproxy",
+            "eip1967",
+            "minimalproxy",
+            "upgradeableproxy",
+        ];
+        if non_diamond_names.iter().any(|n| name_lower.contains(n)) {
+            return true;
+        }
+
+        // EIP-1967 proxy pattern: uses implementation slot, no facet routing
+        let has_eip1967_slot = contract_source.contains("eip1967.proxy.implementation")
+            || contract_source.contains("IMPLEMENTATION_SLOT");
+        let lacks_facet_routing = !contract_source.contains("selectorToFacet")
+            && !contract_source.contains("facetAddress")
+            && !contract_source.contains("FacetCut");
+
+        if has_eip1967_slot && lacks_facet_routing {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if the contract has a contract-level code existence check
+    /// (extcodesize/isContract anywhere in the contract body, protecting all calls).
+    fn has_contract_level_code_check(&self, contract_source: &str) -> bool {
+        contract_source.contains("extcodesize")
+            || contract_source.contains("isContract")
+            || contract_source.contains(".code.length")
     }
 
     /// Find delegatecall without code existence check
@@ -200,16 +278,26 @@ impl Detector for DiamondFacetCodeExistenceDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
-        let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+        let contract_source = self.get_contract_source(ctx);
 
-        // Only check Diamond patterns
-        if !self.is_diamond_pattern(source) {
+        // Skip non-Diamond proxy patterns (Transparent, UUPS, EIP-1967, Beacon)
+        if self.is_non_diamond_proxy(&contract_source, &contract_name) {
             return Ok(findings);
         }
 
-        // Check for unsafe delegatecalls
-        let unsafe_calls = self.find_unsafe_delegatecalls(source);
+        // Only check actual Diamond EIP-2535 patterns (using contract source, not file source)
+        if !self.is_diamond_pattern(&contract_source) {
+            return Ok(findings);
+        }
+
+        // Skip if the contract already has code existence checks anywhere
+        if self.has_contract_level_code_check(&contract_source) {
+            return Ok(findings);
+        }
+
+        // Check for unsafe delegatecalls (using contract source, not file source)
+        let unsafe_calls = self.find_unsafe_delegatecalls(&contract_source);
         for (line, func_name) in unsafe_calls {
             let message = format!(
                 "Function '{}' in Diamond contract '{}' performs delegatecall without verifying \
@@ -240,8 +328,8 @@ impl Detector for DiamondFacetCodeExistenceDetector {
             findings.push(finding);
         }
 
-        // Check for unsafe fallback
-        if let Some(line) = self.find_unsafe_fallback(source) {
+        // Check for unsafe fallback (using contract source)
+        if let Some(line) = self.find_unsafe_fallback(&contract_source) {
             let message = format!(
                 "Fallback function in Diamond contract '{}' performs delegatecall without \
                  checking facet code existence. This can cause silent failures for any call \
@@ -268,8 +356,8 @@ impl Detector for DiamondFacetCodeExistenceDetector {
             findings.push(finding);
         }
 
-        // Check for unsafe facet registration
-        if let Some(line) = self.find_unsafe_facet_registration(source) {
+        // Check for unsafe facet registration (using contract source)
+        if let Some(line) = self.find_unsafe_facet_registration(&contract_source) {
             let message = format!(
                 "Facet registration in Diamond contract '{}' doesn't verify code exists at \
                  the facet address. This allows registering non-existent or destroyed facets.",
@@ -316,13 +404,74 @@ mod tests {
     }
 
     #[test]
-    fn test_is_diamond_pattern() {
+    fn test_is_diamond_pattern_strong_indicators() {
         let detector = DiamondFacetCodeExistenceDetector::new();
 
-        assert!(detector.is_diamond_pattern("contract MyDiamond {}"));
+        // Strong EIP-2535 indicators should match
         assert!(detector.is_diamond_pattern("function diamondCut() external {}"));
         assert!(detector.is_diamond_pattern("IDiamond.FacetCut[] memory cuts"));
+        assert!(detector.is_diamond_pattern("IDiamondCut.FacetCut[] memory cut"));
+        assert!(detector.is_diamond_pattern("mapping(bytes4 => address) selectorToFacet;"));
+        assert!(detector.is_diamond_pattern("LibDiamond.diamondStorage()"));
+        assert!(detector.is_diamond_pattern("IDiamondLoupe.Facet[] memory facets"));
+    }
+
+    #[test]
+    fn test_is_diamond_pattern_combined_indicators() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // Combined indicator: facet term + selector dispatch + delegatecall
+        let diamond_fallback = r#"
+            address facet = ds.selectorToFacet[msg.sig];
+            assembly { let r := delegatecall(gas(), facet, 0, calldatasize(), 0, 0) }
+        "#;
+        assert!(detector.is_diamond_pattern(diamond_fallback));
+    }
+
+    #[test]
+    fn test_is_diamond_pattern_rejects_non_diamond() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // Generic terms should NOT match without strong indicators
         assert!(!detector.is_diamond_pattern("contract SimpleToken {}"));
+        assert!(!detector.is_diamond_pattern("contract MyDiamond {}"));
+        // "selectors" + delegatecall alone is not enough (common in regular proxies)
+        assert!(!detector.is_diamond_pattern(
+            "// route selectors\nassembly { delegatecall(gas(), impl, 0, 0, 0, 0) }"
+        ));
+        // "facets" alone is not enough
+        assert!(!detector.is_diamond_pattern("// multiple facets of the system"));
+    }
+
+    #[test]
+    fn test_is_non_diamond_proxy() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // Transparent proxy by name
+        assert!(detector.is_non_diamond_proxy("contract body", "TransparentProxy"));
+        // UUPS proxy by name
+        assert!(detector.is_non_diamond_proxy("contract body", "UUPSProxy"));
+        // EIP-1967 proxy by storage slot pattern
+        let eip1967_source = r#"
+            bytes32 constant IMPLEMENTATION_SLOT = keccak256("eip1967.proxy.implementation");
+            fallback() { delegatecall(gas(), impl, 0, 0, 0, 0) }
+        "#;
+        assert!(detector.is_non_diamond_proxy(eip1967_source, "MyProxy"));
+        // Diamond proxy should NOT be excluded
+        assert!(!detector.is_non_diamond_proxy(
+            "mapping(bytes4 => address) selectorToFacet;",
+            "DiamondProxy"
+        ));
+    }
+
+    #[test]
+    fn test_has_contract_level_code_check() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        assert!(detector.has_contract_level_code_check("size := extcodesize(facet)"));
+        assert!(detector.has_contract_level_code_check("require(isContract(facet))"));
+        assert!(detector.has_contract_level_code_check("require(facet.code.length > 0)"));
+        assert!(!detector.has_contract_level_code_check("delegatecall(gas(), facet, 0, 0, 0, 0)"));
     }
 
     #[test]
@@ -371,5 +520,86 @@ mod tests {
             }
         "#;
         assert!(detector.find_unsafe_fallback(unsafe_fallback).is_some());
+    }
+
+    #[test]
+    fn test_transparent_proxy_not_flagged() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // A typical transparent proxy should NOT be flagged as Diamond
+        let transparent_proxy = r#"
+            contract TransparentProxy {
+                bytes32 constant IMPLEMENTATION_SLOT = keccak256("eip1967.proxy.implementation");
+                fallback() external payable {
+                    address impl = _getImplementation();
+                    assembly {
+                        let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+                    }
+                }
+            }
+        "#;
+        assert!(detector.is_non_diamond_proxy(transparent_proxy, "TransparentProxy"));
+        assert!(!detector.is_diamond_pattern(transparent_proxy));
+    }
+
+    #[test]
+    fn test_eip1967_proxy_not_flagged() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        let eip1967 = r#"
+            contract EIP1967CompliantProxy {
+                bytes32 constant IMPLEMENTATION_SLOT = keccak256("eip1967.proxy.implementation");
+                function _delegate(address impl) private {
+                    assembly {
+                        let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+                    }
+                }
+            }
+        "#;
+        assert!(detector.is_non_diamond_proxy(eip1967, "EIP1967CompliantProxy"));
+    }
+
+    #[test]
+    fn test_real_diamond_still_detected() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // A real Diamond proxy without code checks should still be detected
+        let diamond = r#"
+            contract DiamondProxy {
+                mapping(bytes4 => address) selectorToFacet;
+                fallback() external payable {
+                    address facet = selectorToFacet[msg.sig];
+                    assembly {
+                        let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
+                    }
+                }
+            }
+        "#;
+        assert!(!detector.is_non_diamond_proxy(diamond, "DiamondProxy"));
+        assert!(detector.is_diamond_pattern(diamond));
+        assert!(!detector.has_contract_level_code_check(diamond));
+        assert!(detector.find_unsafe_fallback(diamond).is_some());
+        assert!(!detector.find_unsafe_delegatecalls(diamond).is_empty());
+    }
+
+    #[test]
+    fn test_diamond_with_code_check_not_flagged() {
+        let detector = DiamondFacetCodeExistenceDetector::new();
+
+        // Diamond proxy WITH extcodesize should not be flagged
+        let safe_diamond = r#"
+            contract DiamondProxy {
+                mapping(bytes4 => address) selectorToFacet;
+                fallback() external payable {
+                    address facet = selectorToFacet[msg.sig];
+                    assembly {
+                        if iszero(extcodesize(facet)) { revert(0, 0) }
+                        let result := delegatecall(gas(), facet, 0, calldatasize(), 0, 0)
+                    }
+                }
+            }
+        "#;
+        assert!(detector.is_diamond_pattern(safe_diamond));
+        assert!(detector.has_contract_level_code_check(safe_diamond));
     }
 }

@@ -4,6 +4,7 @@ use std::any::Any;
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::safe_patterns::{modern_eip_patterns, reentrancy_patterns};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for ERC-4626 vault reentrancy via token callback hooks
 pub struct VaultHookReentrancyDetector {
@@ -27,6 +28,149 @@ impl VaultHookReentrancyDetector {
                 Severity::High,
             ),
         }
+    }
+
+    /// Check whether the contract exhibits vault-like patterns.
+    ///
+    /// A vault contract typically has:
+    /// - ERC-4626 inheritance or interface references
+    /// - A share/token accounting system (totalSupply, shares mapping, balanceOf mapping)
+    /// - An underlying asset token (IERC20 asset, token state variable)
+    /// - Vault-specific function names alongside token operations
+    ///
+    /// Contracts that are simple ETH wallets, ZK verifiers, or generic contracts
+    /// with withdraw() but no vault accounting should NOT match.
+    fn is_vault_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = utils::clean_source_for_search(&ctx.source_code);
+        let lower = source.to_lowercase();
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Direct ERC-4626 indicators
+        if lower.contains("erc4626") || lower.contains("erc-4626") || lower.contains("ierc4626") {
+            return true;
+        }
+
+        // Contract name suggests a vault
+        let name_suggests_vault = contract_name.contains("vault")
+            || contract_name.contains("strategy")
+            || contract_name.contains("yearn")
+            || contract_name.contains("cellar");
+
+        // Has token asset reference (IERC20 asset, ERC20 token, etc.)
+        let has_token_asset = lower.contains("ierc20")
+            || lower.contains("erc20")
+            || (lower.contains("asset") && lower.contains("token"));
+
+        // Has share accounting (shares mapping, totalSupply with balanceOf mapping)
+        let has_share_accounting = (lower.contains("shares[") || lower.contains("balanceof["))
+            && lower.contains("totalsupply");
+
+        // Has vault-specific function pairs (deposit+withdraw or mint+redeem with token ops)
+        let has_deposit = lower.contains("function deposit");
+        let has_withdraw = lower.contains("function withdraw");
+        let has_mint = lower.contains("function mint");
+        let has_redeem = lower.contains("function redeem");
+        let has_vault_function_pair = (has_deposit && has_withdraw)
+            || (has_mint && has_redeem)
+            || (has_deposit && has_redeem);
+
+        // Has ERC-4626 specific functions
+        let has_erc4626_functions = lower.contains("totalassets")
+            || lower.contains("converttoassets")
+            || lower.contains("converttoshares")
+            || lower.contains("previewdeposit")
+            || lower.contains("previewmint")
+            || lower.contains("previewwithdraw")
+            || lower.contains("previewredeem");
+
+        // Require multiple vault signals to reduce noise
+        if name_suggests_vault && has_token_asset {
+            return true;
+        }
+        if has_share_accounting && has_token_asset {
+            return true;
+        }
+        if has_vault_function_pair && has_share_accounting {
+            return true;
+        }
+        if has_erc4626_functions {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if a function source contains ERC-20 token transfer calls
+    /// (as opposed to native ETH transfers via payable().transfer()).
+    ///
+    /// Token transfers: asset.transfer(), token.transferFrom(), IERC20(...).transfer()
+    /// ETH transfers:   payable(msg.sender).transfer(), payable(owner).transfer()
+    fn has_token_transfer(func_source: &str) -> bool {
+        // ERC-20 token transfer patterns
+        if func_source.contains(".transferFrom(")
+            || func_source.contains(".safeTransferFrom(")
+            || func_source.contains("transferAndCall")
+            || func_source.contains("transferFromAndCall")
+        {
+            return true;
+        }
+
+        // For .transfer( and .safeTransfer(, distinguish from payable().transfer()
+        if func_source.contains(".transfer(") || func_source.contains(".safeTransfer(") {
+            // Check if this is a native ETH transfer: payable(...).transfer(...)
+            // ETH transfers use: payable(address).transfer(amount)
+            if Self::has_non_eth_transfer(func_source) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if the source has .transfer() calls that are NOT native ETH payable transfers.
+    /// Native ETH: payable(x).transfer(y)
+    /// Token: asset.transfer(to, amount), token.transfer(...)
+    fn has_non_eth_transfer(source: &str) -> bool {
+        let mut search_from = 0;
+        while let Some(pos) = source[search_from..].find(".transfer(") {
+            let abs_pos = search_from + pos;
+
+            // Check what precedes the .transfer( -- is it payable(...)?
+            let before = &source[..abs_pos];
+            let trimmed = before.trim_end();
+
+            // payable(...).transfer( is ETH, not token
+            if trimmed.ends_with(')') {
+                // Walk backwards to find the matching opening paren
+                let bytes = trimmed.as_bytes();
+                let mut depth = 1;
+                let mut i = bytes.len() - 2; // start before the closing paren
+                while i > 0 && depth > 0 {
+                    if bytes[i] == b')' {
+                        depth += 1;
+                    } else if bytes[i] == b'(' {
+                        depth -= 1;
+                    }
+                    if depth > 0 {
+                        i -= 1;
+                    }
+                }
+                // Check if 'payable' precedes the opening paren
+                if depth == 0 && i >= 7 {
+                    let keyword_start = i.saturating_sub(7);
+                    let before_paren = trimmed[keyword_start..i].trim();
+                    if before_paren.ends_with("payable") {
+                        // This is payable(...).transfer() -- skip it
+                        search_from = abs_pos + ".transfer(".len();
+                        continue;
+                    }
+                }
+            }
+
+            // Not an ETH transfer -- this is a token transfer
+            return true;
+        }
+        false
     }
 }
 
@@ -57,6 +201,13 @@ impl Detector for VaultHookReentrancyDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+
+        // FP Reduction: Skip contracts that are not vaults
+        // This detector is specifically for ERC-4626 vault hook reentrancy.
+        // Generic withdraw/deposit functions in non-vault contracts are not relevant.
+        if !self.is_vault_contract(ctx) {
+            return Ok(findings);
+        }
 
         // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
 
@@ -93,6 +244,22 @@ impl Detector for VaultHookReentrancyDetector {
         }
 
         for function in ctx.get_functions() {
+            // FP Reduction: Skip view/pure functions -- they cannot modify state
+            if matches!(
+                function.mutability,
+                ast::StateMutability::View | ast::StateMutability::Pure
+            ) {
+                continue;
+            }
+
+            // FP Reduction: Skip internal/private functions -- cannot be entry points
+            if matches!(
+                function.visibility,
+                ast::Visibility::Internal | ast::Visibility::Private
+            ) {
+                continue;
+            }
+
             if let Some(reentrancy_issue) = self.check_hook_reentrancy(function, ctx) {
                 let message = format!(
                     "Function '{}' may be vulnerable to hook reentrancy attack. {} \
@@ -157,37 +324,45 @@ impl VaultHookReentrancyDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
-        let func_source = self.get_function_source(function, ctx);
+        let raw_source = self.get_function_source(function, ctx);
+        let func_source = utils::clean_source_for_search(&raw_source);
 
         // Identify vault operations that interact with tokens
-        let is_vault_operation = function.name.name.to_lowercase().contains("deposit")
-            || function.name.name.to_lowercase().contains("withdraw")
-            || function.name.name.to_lowercase().contains("mint")
-            || function.name.name.to_lowercase().contains("redeem")
-            || function.name.name.to_lowercase().contains("claim");
+        let func_name_lower = function.name.name.to_lowercase();
+        let is_vault_operation = func_name_lower.contains("deposit")
+            || func_name_lower.contains("withdraw")
+            || func_name_lower.contains("mint")
+            || func_name_lower.contains("redeem")
+            || func_name_lower.contains("claim");
 
         if !is_vault_operation {
             return None;
         }
 
-        // Check for reentrancy guard
+        // Check for reentrancy guard on this specific function
         let has_reentrancy_guard = func_source.contains("nonReentrant")
             || function.modifiers.iter().any(|m| {
                 m.name.name.to_lowercase().contains("nonreentrant")
                     || m.name.name.to_lowercase().contains("reentrant")
             });
 
-        // Pattern 1: Token transfer with potential callback (ERC-777/ERC-1363)
-        let has_token_transfer = func_source.contains(".transferFrom(")
-            || func_source.contains(".transfer(")
-            || func_source.contains(".safeTransfer")
-            || func_source.contains("transferAndCall")
-            || func_source.contains("transferFromAndCall");
+        if has_reentrancy_guard {
+            return None;
+        }
 
-        // Pattern 2: State changes after token transfer
-        let state_changes_after_transfer = self.has_state_change_after_call(&func_source);
+        // Check for ERC-20 token transfers (not ETH transfers)
+        let has_token_transfer = Self::has_token_transfer(&func_source);
 
-        if has_token_transfer && state_changes_after_transfer && !has_reentrancy_guard {
+        // If there are no token transfers, this function cannot be vulnerable to
+        // ERC-777/ERC-1363 hook reentrancy (ETH transfers do not trigger token hooks)
+        if !has_token_transfer {
+            return None;
+        }
+
+        // Pattern 1: State changes after token transfer
+        let state_changes_after_transfer = self.has_state_change_after_token_call(&func_source);
+
+        if state_changes_after_transfer {
             return Some(
                 "State changes after token transfer without reentrancy guard. \
                 ERC-777/ERC-1363 callbacks can re-enter before state updates complete"
@@ -195,11 +370,11 @@ impl VaultHookReentrancyDetector {
             );
         }
 
-        // Pattern 3: totalAssets() or totalSupply() read after transfer
-        let reads_accounting_after_transfer = has_token_transfer
-            && (func_source.contains("totalAssets()") || func_source.contains("totalSupply()"));
+        // Pattern 2: totalAssets() or totalSupply() read after transfer
+        let reads_accounting_after_transfer =
+            func_source.contains("totalAssets()") || func_source.contains("totalSupply()");
 
-        if reads_accounting_after_transfer && !has_reentrancy_guard {
+        if reads_accounting_after_transfer {
             return Some(
                 "Accounting reads (totalAssets/totalSupply) after token transfer. \
                 Hook callbacks can manipulate state during reentrancy"
@@ -207,14 +382,13 @@ impl VaultHookReentrancyDetector {
             );
         }
 
-        // Pattern 4: Balance updates after transfer
-        let updates_balance_after = has_token_transfer
-            && (func_source.contains("balanceOf[")
-                || func_source.contains("shares[")
-                || func_source.contains("balance +=")
-                || func_source.contains("balance -="));
+        // Pattern 3: Balance updates after transfer
+        let updates_balance_after = func_source.contains("balanceOf[")
+            || func_source.contains("shares[")
+            || func_source.contains("balance +=")
+            || func_source.contains("balance -=");
 
-        if updates_balance_after && !has_reentrancy_guard {
+        if updates_balance_after {
             return Some(
                 "Balance updates after token transfer. \
                 Reentrancy via hooks can occur before balances are updated"
@@ -222,11 +396,11 @@ impl VaultHookReentrancyDetector {
             );
         }
 
-        // Pattern 5: Multiple external calls in same function
-        let transfer_count =
-            func_source.matches(".transfer").count() + func_source.matches(".safeTransfer").count();
+        // Pattern 4: Multiple token transfers in same function
+        let transfer_count = func_source.matches(".transferFrom(").count()
+            + Self::count_non_eth_transfers(&func_source);
 
-        if transfer_count > 1 && !has_reentrancy_guard {
+        if transfer_count > 1 {
             return Some(
                 "Multiple token transfers without reentrancy protection. \
                 Each transfer is a potential reentrancy point via ERC-777/ERC-1363 hooks"
@@ -234,10 +408,10 @@ impl VaultHookReentrancyDetector {
             );
         }
 
-        // Pattern 6: Checks-effects-interactions violation
+        // Pattern 5: Checks-effects-interactions violation
         let violates_cei = self.violates_checks_effects_interactions(&func_source);
 
-        if violates_cei && has_token_transfer && !has_reentrancy_guard {
+        if violates_cei {
             return Some(
                 "Violates checks-effects-interactions pattern. \
                 Effects occur after interactions, vulnerable to reentrancy via token hooks"
@@ -245,35 +419,22 @@ impl VaultHookReentrancyDetector {
             );
         }
 
-        // Pattern 7: SafeERC20 not used (doesn't prevent hooks but good practice)
-        let uses_safe_erc20 =
-            func_source.contains("safeTransfer") || func_source.contains("SafeERC20");
+        // Pattern 6: Deposit/mint with balance update after transfer
+        let is_deposit_mint =
+            func_name_lower.contains("deposit") || func_name_lower.contains("mint");
 
-        let uses_raw_transfer =
-            func_source.contains(".transfer(") && !func_source.contains("safeTransfer");
-
-        if uses_raw_transfer && !uses_safe_erc20 && !has_reentrancy_guard {
-            return Some(
-                "Uses raw transfer() instead of SafeERC20. \
-                No protection against malicious token implementations with callback hooks"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 8: Deposit/mint before state update
-        let is_deposit_mint = function.name.name.to_lowercase().contains("deposit")
-            || function.name.name.to_lowercase().contains("mint");
-
-        if is_deposit_mint && has_token_transfer {
-            // Check if shares/balances updated before transfer
-            let transfer_pos = func_source.find(".transfer");
+        if is_deposit_mint {
+            // Check if shares/balances updated after transfer
+            let transfer_pos = func_source
+                .find(".transferFrom(")
+                .or_else(|| func_source.find(".transfer("));
             let balance_update_pos = func_source
                 .find("balanceOf[")
                 .or_else(|| func_source.find("shares +="))
                 .or_else(|| func_source.find("totalSupply +="));
 
             if let (Some(t_pos), Some(b_pos)) = (transfer_pos, balance_update_pos) {
-                if b_pos > t_pos && !has_reentrancy_guard {
+                if b_pos > t_pos {
                     return Some(
                         "Balance/shares updated after token transfer. \
                         Hook reentrancy can read stale state before updates"
@@ -283,7 +444,7 @@ impl VaultHookReentrancyDetector {
             }
         }
 
-        // Pattern 9: Explicit vulnerability marker
+        // Pattern 7: Explicit vulnerability marker (for test contracts)
         if func_source.contains("VULNERABILITY")
             && (func_source.contains("reentrancy")
                 || func_source.contains("hook")
@@ -295,21 +456,30 @@ impl VaultHookReentrancyDetector {
         None
     }
 
-    /// Check if state changes occur after external calls
-    fn has_state_change_after_call(&self, source: &str) -> bool {
-        // Simplified check: look for state changes after transfer calls
+    /// Check if state changes occur after token transfer calls.
+    /// Only considers ERC-20 token transfers, not ETH payable transfers.
+    fn has_state_change_after_token_call(&self, source: &str) -> bool {
         let lines: Vec<&str> = source.lines().collect();
-        let mut found_transfer = false;
+        let mut found_token_transfer = false;
 
-        for line in lines {
-            if line.contains(".transfer") {
-                found_transfer = true;
+        for line in &lines {
+            // Look for ERC-20 token transfer patterns specifically
+            if line.contains(".transferFrom(")
+                || line.contains(".safeTransferFrom(")
+                || line.contains("transferAndCall")
+                || line.contains("transferFromAndCall")
+            {
+                found_token_transfer = true;
+            } else if line.contains(".transfer(") || line.contains(".safeTransfer(") {
+                // Only count as token transfer if not payable().transfer()
+                if !line.contains("payable(") {
+                    found_token_transfer = true;
+                }
             }
 
-            if found_transfer
+            if found_token_transfer
                 && (line.contains(" = ") || line.contains("+=") || line.contains("-="))
             {
-                // Found assignment after transfer
                 return true;
             }
         }
@@ -317,19 +487,25 @@ impl VaultHookReentrancyDetector {
         false
     }
 
-    /// Check if checks-effects-interactions pattern is violated
+    /// Check if checks-effects-interactions pattern is violated.
+    /// Only considers ERC-20 token calls, not ETH transfers.
     fn violates_checks_effects_interactions(&self, source: &str) -> bool {
-        // Simplified check: external call before state changes
         let lines: Vec<&str> = source.lines().collect();
-        let mut found_external_call = false;
+        let mut found_token_call = false;
 
-        for line in lines {
-            if line.contains(".transfer") || line.contains(".call") {
-                found_external_call = true;
+        for line in &lines {
+            // Token transfer calls (not ETH)
+            if line.contains(".transferFrom(")
+                || line.contains(".safeTransferFrom(")
+                || line.contains("transferAndCall")
+                || line.contains("transferFromAndCall")
+            {
+                found_token_call = true;
+            } else if line.contains(".transfer(") && !line.contains("payable(") {
+                found_token_call = true;
             }
 
-            if found_external_call {
-                // Check for state changes after external call
+            if found_token_call {
                 if (line.contains("totalSupply") && line.contains("="))
                     || (line.contains("balanceOf") && line.contains("="))
                     || (line.contains("shares") && (line.contains("+=") || line.contains("-=")))
@@ -342,7 +518,50 @@ impl VaultHookReentrancyDetector {
         false
     }
 
-    /// Get function source code
+    /// Count non-ETH .transfer( calls in source
+    fn count_non_eth_transfers(source: &str) -> usize {
+        let mut count = 0;
+        let mut search_from = 0;
+        while let Some(pos) = source[search_from..].find(".transfer(") {
+            let abs_pos = search_from + pos;
+            let before = &source[..abs_pos];
+            let trimmed = before.trim_end();
+            // Skip payable(...).transfer()
+            if !trimmed.ends_with(')') || !Self::preceded_by_payable(trimmed) {
+                count += 1;
+            }
+            search_from = abs_pos + ".transfer(".len();
+        }
+        count
+    }
+
+    /// Check if source ending with ')' is preceded by payable(...)
+    fn preceded_by_payable(trimmed: &str) -> bool {
+        let bytes = trimmed.as_bytes();
+        if bytes.is_empty() || bytes[bytes.len() - 1] != b')' {
+            return false;
+        }
+        let mut depth = 1;
+        let mut i = bytes.len() - 2;
+        while i > 0 && depth > 0 {
+            if bytes[i] == b')' {
+                depth += 1;
+            } else if bytes[i] == b'(' {
+                depth -= 1;
+            }
+            if depth > 0 {
+                i -= 1;
+            }
+        }
+        if depth == 0 && i >= 7 {
+            let keyword_start = i.saturating_sub(7);
+            trimmed[keyword_start..i].trim().ends_with("payable")
+        } else {
+            false
+        }
+    }
+
+    /// Get function source code (cleaned to avoid FPs from comments/strings)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
@@ -366,5 +585,114 @@ mod tests {
         assert_eq!(detector.name(), "Vault Hook Reentrancy");
         assert_eq!(detector.default_severity(), Severity::High);
         assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_has_token_transfer_detects_erc20() {
+        assert!(VaultHookReentrancyDetector::has_token_transfer(
+            "asset.transferFrom(msg.sender, address(this), amount)"
+        ));
+        assert!(VaultHookReentrancyDetector::has_token_transfer(
+            "token.safeTransferFrom(from, to, amount)"
+        ));
+        assert!(VaultHookReentrancyDetector::has_token_transfer(
+            "token.transferAndCall(to, amount, data)"
+        ));
+        assert!(VaultHookReentrancyDetector::has_token_transfer(
+            "asset.transfer(msg.sender, assets)"
+        ));
+    }
+
+    #[test]
+    fn test_has_token_transfer_skips_eth() {
+        assert!(!VaultHookReentrancyDetector::has_token_transfer(
+            "payable(msg.sender).transfer(amount)"
+        ));
+        assert!(!VaultHookReentrancyDetector::has_token_transfer(
+            "payable(owner).transfer(address(this).balance)"
+        ));
+    }
+
+    #[test]
+    fn test_has_non_eth_transfer() {
+        // Token transfer should be detected
+        assert!(VaultHookReentrancyDetector::has_non_eth_transfer(
+            "asset.transfer(to, amount)"
+        ));
+
+        // ETH transfer should be skipped
+        assert!(!VaultHookReentrancyDetector::has_non_eth_transfer(
+            "payable(msg.sender).transfer(amount)"
+        ));
+
+        // Mixed: has both ETH and token
+        assert!(VaultHookReentrancyDetector::has_non_eth_transfer(
+            "payable(x).transfer(1); asset.transfer(to, 2)"
+        ));
+    }
+
+    #[test]
+    fn test_count_non_eth_transfers() {
+        assert_eq!(
+            VaultHookReentrancyDetector::count_non_eth_transfers(
+                "payable(x).transfer(1); token.transfer(a, b); asset.transfer(c, d)"
+            ),
+            2
+        );
+        assert_eq!(
+            VaultHookReentrancyDetector::count_non_eth_transfers(
+                "payable(msg.sender).transfer(amount)"
+            ),
+            0
+        );
+    }
+
+    #[test]
+    fn test_state_change_after_token_call() {
+        let detector = VaultHookReentrancyDetector::new();
+
+        // Token transfer followed by state change
+        assert!(detector.has_state_change_after_token_call(
+            "asset.transferFrom(msg.sender, address(this), amount);\nbalanceOf[msg.sender] += shares;"
+        ));
+
+        // ETH transfer followed by state change should NOT match
+        assert!(!detector.has_state_change_after_token_call(
+            "payable(msg.sender).transfer(amount);\nbalance -= amount;"
+        ));
+    }
+
+    #[test]
+    fn test_violates_cei() {
+        let detector = VaultHookReentrancyDetector::new();
+
+        // Token transfer before state update
+        assert!(detector.violates_checks_effects_interactions(
+            "asset.transfer(msg.sender, assets);\nbalanceOf[msg.sender] = 0;"
+        ));
+
+        // State update before token transfer
+        assert!(!detector.violates_checks_effects_interactions(
+            "balanceOf[msg.sender] = 0;\nasset.transfer(msg.sender, assets);"
+        ));
+
+        // ETH transfer before state update should NOT match
+        assert!(!detector.violates_checks_effects_interactions(
+            "payable(msg.sender).transfer(assets);\nbalanceOf[msg.sender] = 0;"
+        ));
+    }
+
+    #[test]
+    fn test_preceded_by_payable() {
+        assert!(VaultHookReentrancyDetector::preceded_by_payable(
+            "payable(msg.sender)"
+        ));
+        assert!(VaultHookReentrancyDetector::preceded_by_payable(
+            "payable(owner)"
+        ));
+        assert!(!VaultHookReentrancyDetector::preceded_by_payable("asset"));
+        assert!(!VaultHookReentrancyDetector::preceded_by_payable(
+            "token.something(addr)"
+        ));
     }
 }

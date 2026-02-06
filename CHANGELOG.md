@@ -7,6 +7,46 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.20] - 2026-02-06
+
+### Fixed
+
+#### False Positive Reduction v6 (30 detectors, 585 FPs eliminated)
+
+Ground truth validation: 1585 → 1000 findings across 18 test targets (36.9% reduction), clean contract FPs: 42 → 26, 0 TP regressions.
+Cumulative from v1.10.14: 6 rounds, 80 detectors improved.
+
+- **zk-proof-bypass**: EIP-4844 blob/DA function exclusion; tightened proof verification matching; consolidated sub-issues per function; view/pure skip (71→39)
+- **defi-yield-farming-exploits**: Non-yield-farming contract exclusion; admin function skip; super delegation detection; queue/batch function skip (73→45)
+- **validator-griefing**: Contract-level staking gate; non-staking contract exclusion; view/pure/internal/private skip; access control modifier check (52→3)
+- **cross-chain-replay-protection**: Cross-chain context gate; contract-wide chain protection detection; non-entry function skip (54→2)
+- **cross-chain-replay**: Cross-chain context gate; contract-wide EIP-712 protection; view/pure/internal/private skip; narrowed function indicators (52→3)
+- **timelock-bypass-delegatecall**: Strong timelock context requirement with comment stripping; function access control detection; transparent proxy pattern recognition (38→0)
+- **slashing-mechanism**: Staking contract context gate; function name must contain "slash"; getter name skip; stake modification requirement (35→3)
+- **amm-k-invariant-violation**: Fixed off-by-one in source extraction; revert-based K invariant recognition; _update() reserve sync recognition; AST-aware reentrancy detection (3 clean FPs eliminated)
+- **diamond-facet-code-existence**: Contract-scoped source extraction; stricter EIP-2535 indicators; non-Diamond proxy exclusion; contract-level extcodesize check (32→2)
+- **price-impact-manipulation**: Well-protected AMM contract detection; view/pure/internal skip; slippage+deadline+invariant protection counting (1 clean FP eliminated, 63% reduction)
+- **excessive-gas-usage**: Constructor skip; admin function skip; improved storage write detection; standard token op skip; gas optimization awareness (1 clean FP eliminated, 45.6% reduction)
+- **vault-hook-reentrancy**: Vault contract context gate; ETH vs token transfer discrimination; view/pure/internal/private skip (28→4, 100% FP elimination)
+- **sandwich-conditional-swap**: Expanded slippage parameter recognition; proper deadline comparison detection; K-invariant detection; view/pure skip; AMM pool early-exit (2 clean FPs eliminated)
+- **withdrawal-delay**: Fixed "lock" matching "block" substring; function name-based withdrawal detection; contract-level delay enforcement recognition; non-staking context exclusion (38→7)
+- **nonce-reuse**: Contract-level nonce context gate; expanded nonce invalidation patterns; EIP-2612 post-increment recognition; fixed operator precedence bug (31→2)
+- **token-supply-manipulation**: AMM pool detection (3-layer); view/pure skip; AMM function skip; proportional mint pattern detection (1 clean FP eliminated)
+- **vault-withdrawal-dos**: Standard ERC-4626 early return; view/pure skip; individual pull withdrawal detection (2 clean FPs eliminated)
+- **dos-block-gas-limit**: Multi-line function signature handling for view/pure; keccak256+encodePacked Merkle proof skip; function call return value recognition; fixed-size array iteration detection (31→10)
+- **fallback-delegatecall-unprotected**: Standard proxy pattern recognition (EIP-1967, immutable impl, beacon); Diamond proxy detection; transparent proxy admin checks (21→2)
+- **missing-transaction-deadline**: Fixed-price purchase skip; non-trading execution skip; AMM pool function skip; alternative timing protection recognition (44→33)
+- **dangerous-delegatecall**: View/pure skip; fallback proxy forwarding skip; immutable address target skip; AST-level modifier check (20→1)
+- **test-governance**: Non-governance contract exclusion (restaking, proxy, metamorphic, EIP-7702); tightened function name matching; two-tier governance token detection (54→0)
+- **dos-unbounded-operation**: Constructor skip; pure function skip; internal/private memory parameter analysis; standard view pattern recognition (1 clean FP eliminated, 71% reduction)
+- **defi-liquidity-pool-manipulation**: Strengthened AMM pool detection; non-pool contract exclusion; per-function source extraction; pool mint/burn gate; lock modifier recognition (52→25)
+- **blockhash-randomness**: Fixed "withdraw" matching "draw"; randomness context check; removed "nonce" from seed keywords; contract-scoped source extraction; view/pure skip (19→1)
+- **price-manipulation-frontrun**: AMM pool infrastructure detection; slippage protection recognition; skip AMM self-accounting balanceOf (2 clean FPs eliminated)
+- **upgrade-event-missing**: Exact function name matching; caller-aware analysis for private helpers; body-only delegation checks; view/pure skip (18→8)
+- **dos-push-pattern**: Admin-only push skip; constructor skip; bounds check detection; removal mechanism detection; caller-controlled param loop skip (45→16)
+- **missing-input-validation**: View/pure/internal/private skip; revert-as-validation recognition; AMM K-invariant pattern detection; improved address parameter parsing (1 clean FP eliminated)
+- **dos-failed-transfer**: ETH vs ERC20 transfer distinction; skip transfers to msg.sender; flash loan provider pattern skip; internal/private/view/pure skip (33→7)
+
 ## [1.10.19] - 2026-02-06
 
 ### Fixed
