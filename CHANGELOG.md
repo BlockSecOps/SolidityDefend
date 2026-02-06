@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.19] - 2026-02-06
+
+### Fixed
+
+#### False Positive Reduction v5 (20 detectors, 191 FPs eliminated)
+
+Ground truth validation: 1776 → 1585 findings across 18 test targets (10.8% reduction), 0 TP regressions.
+Cumulative from v1.10.14: 5 rounds, 50 detectors improved.
+
+- **mev-extractable-value**: Skip flash loan callback functions; tighter value extraction pattern matching
+- **redundant-checks**: Condition-aware analysis replacing naive consecutive-require count; skip functions with complex guard logic
+- **front-running-mitigation**: Skip ERC-4626 vault functions, flash loan callbacks, and internal functions
+- **price-oracle-stale**: Skip view/pure functions; require actual oracle call patterns; detect staleness validation
+- **proposal-frontrunning**: Gate to governance contracts only; skip flash loan functions; detect EIP-712 patterns and time unit validation
+- **challenge-period-bypass**: Gate to bridge/rollup contracts; skip standard withdrawal patterns
+- **flashmint-token-inflation** (round 2): Distinguish flash mint from flash loan; detect flash loan consumer patterns
+- **block-stuffing-vulnerable**: Skip view/pure functions, ERC-4626 vaults, governance timelocks, and access-controlled functions; comment-aware matching
+- **l2-bridge-message-validation**: Skip governance contracts; require L2 indicators; recognize validation patterns; strip comments before analysis
+- **swc105-unprotected-ether-withdrawal**: Detect governance execution context; recognize mapping-based sender validation
+- **transaction-ordering-dependence**: Skip flash loan/governance/view functions; require DEX interaction indicators
+- **sandwich-resistant-swap**: Skip view/pure/flash callback/price helper functions; require swap indicators
+- **time-locked-admin-bypass**: Strip comments before analysis; exclude vault/flash loan/DEX contracts; require timelock indicators
+- **mev-toxic-flow-exposure**: Structural AMM detection (require internal swap + pool state); skip flash loan functions
+- **l2-mev-sequencer-leak**: Tighten L2 context detection; skip flash loan/proxy/view/pure functions
+- **multisig-bypass**: Require multisig structure (owners + threshold + confirmations); skip AA/proxy/recovery contracts
+- **dos-revert-bomb** (round 2): Fix brace-depth tracking bug in `is_in_loop`; skip governance/access-controlled functions; require msg.sender targeting
+- **missing-access-modifiers**: Catch-all for `only*` modifier prefix; detect proxy implementation context
+- **aa-session-key-vulnerabilities**: Contract-scoped session key detection; blocklist ERC-4337 standard functions
+- **signature-replay**: Skip delegatecall proxy/ERC-4337/governance contracts; require actual signature verification patterns
+
 ## [1.10.18] - 2026-02-06
 
 ### Fixed

@@ -150,6 +150,18 @@ impl MevExtractableValueDetector {
             return None;
         }
 
+        // FP Reduction: Skip flash loan provider/consumer functions
+        // Flash loan functions (flashLoan, flashMint, onFlashLoan, nestedFlashLoan) are standard
+        // DeFi infrastructure operations that execute atomically within a single transaction.
+        // They are not "MEV-extractable" in the traditional sense because:
+        // 1. Flash loan callbacks (onFlashLoan) execute atomically -- cannot be front-run independently
+        // 2. Flash loan provider functions (flashLoan, flashMint) are lending infrastructure
+        // 3. Nested flash loans are just recursive calls to the provider
+        // 4. Liquidation functions in flash loan contracts are part of the lending protocol
+        if self.is_flash_loan_function(&func_name_lower, &func_source, ctx) {
+            return None;
+        }
+
         // Skip if this is an ERC-4337 paymaster/account abstraction contract
         // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
         // They're administrative operations that don't involve extractable value
@@ -207,13 +219,14 @@ impl MevExtractableValueDetector {
 
         // Phase 16 Recall Recovery: Check trading functions first for better recall
         // Trading functions by name require slippage protection regardless of other protections
+        // NOTE: "flash" and "flashloan" are intentionally excluded -- flash loan functions are
+        // DeFi infrastructure (lending), not trading operations. They are skipped earlier via
+        // is_flash_loan_function(). "liquidat" is also excluded here because liquidation in
+        // flash loan contexts is handled above, and standalone liquidation is checked in Pattern 2.
         let is_trading_by_name = func_name_lower.contains("swap")
             || func_name_lower.contains("trade")
             || func_name_lower.contains("exchange")
-            || func_name_lower.contains("arbitrage")
-            || func_name_lower.contains("liquidat")
-            || func_name_lower.contains("flashloan")
-            || func_name_lower.contains("flash");
+            || func_name_lower.contains("arbitrage");
 
         // For trading functions, ALWAYS require slippage protection
         // Access control alone doesn't protect against sandwich attacks
@@ -620,6 +633,107 @@ impl MevExtractableValueDetector {
         name_indicates_trading || source_indicates_trading
     }
 
+    /// Check if function is a flash loan provider/consumer function
+    ///
+    /// Flash loan functions are standard DeFi infrastructure that should NOT be flagged
+    /// as MEV-extractable. They include:
+    /// - flashLoan / flashMint: Provider functions that lend assets atomically
+    /// - onFlashLoan: ERC-3156 callback executed atomically within the flash loan
+    /// - nestedFlashLoan: Recursive flash loan calls
+    /// - liquidate: When in a flash loan provider contract, liquidation is part of the
+    ///   lending protocol and not an MEV extraction vector
+    fn is_flash_loan_function(
+        &self,
+        func_name_lower: &str,
+        func_source: &str,
+        ctx: &AnalysisContext,
+    ) -> bool {
+        // Direct flash loan function names (ERC-3156 and common patterns)
+        let is_flash_loan_func = func_name_lower == "flashloan"
+            || func_name_lower == "flashmint"
+            || func_name_lower == "onflashloan"
+            || func_name_lower == "nestedflashloan"
+            || func_name_lower == "executeflash"
+            || func_name_lower == "_flashloan"
+            || func_name_lower == "_flashmint";
+
+        if is_flash_loan_func {
+            return true;
+        }
+
+        // onFlashLoan callbacks should always be skipped -- they execute atomically
+        // within a flash loan and cannot be independently front-run
+        if func_name_lower.contains("onflashloan") || func_name_lower.contains("flashloancallback")
+        {
+            return true;
+        }
+
+        // Functions that contain "flash" in the name AND are in a flash loan context
+        // (e.g., executeFlashLoan, _processFlashLoan)
+        if func_name_lower.contains("flash")
+            && (func_name_lower.contains("loan") || func_name_lower.contains("mint"))
+        {
+            return true;
+        }
+
+        // Check if this is a liquidation function in a flash loan provider contract
+        // Flash loan providers often have liquidate functions as part of their lending protocol.
+        // These are not MEV targets in the same way as standalone liquidation functions.
+        if func_name_lower.contains("liquidat") && self.is_flash_loan_contract(ctx) {
+            return true;
+        }
+
+        // Functions in contracts implementing IFlashLoanReceiver/IFlashBorrower
+        // that handle flash loan callbacks
+        let is_flash_borrower_contract = ctx.source_code.contains("IFlashBorrower")
+            || ctx.source_code.contains("IFlashLoanReceiver")
+            || ctx.source_code.contains("IERC3156FlashBorrower")
+            || ctx.source_code.contains("IFlashLoanSimpleReceiver");
+
+        // In flash borrower contracts, the onFlashLoan-like functions and functions that
+        // reference flash loan state are atomic operations
+        if is_flash_borrower_contract
+            && (func_source.contains("onFlashLoan")
+                || func_source.contains("IFlashBorrower")
+                || func_source.contains("flashLoan")
+                || func_source.contains("inFlashLoan"))
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if the contract is a flash loan provider or consumer
+    ///
+    /// Used to determine whether liquidation and other functions in the contract
+    /// are part of flash loan infrastructure (and should be exempted from MEV detection)
+    fn is_flash_loan_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Check for flash loan provider patterns
+        let has_flash_loan_function = source.contains("function flashLoan(")
+            || source.contains("function flashMint(")
+            || source.contains("function flash(");
+
+        // Check for flash loan callback patterns
+        let has_callback = source.contains("onFlashLoan")
+            || source.contains("IFlashBorrower")
+            || source.contains("IERC3156FlashBorrower")
+            || source.contains("IFlashLoanReceiver")
+            || source.contains("executeOperation");
+
+        // Check for flash loan interface implementations
+        let has_flash_interface = source.contains("IFlashLoan")
+            || source.contains("IERC3156")
+            || source.contains("IFlashLoanProvider");
+
+        // A contract is a flash loan contract if it has flash loan functions + callbacks/interfaces
+        (has_flash_loan_function && has_callback)
+            || has_flash_interface
+            || (has_flash_loan_function && source.contains("balanceBefore"))
+    }
+
     /// Check if function involves price-sensitive operations
     fn is_price_sensitive(&self, func_source: &str) -> bool {
         func_source.contains("price")
@@ -639,6 +753,7 @@ impl MevExtractableValueDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::test_utils;
 
     #[test]
     fn test_detector_properties() {
@@ -646,5 +761,266 @@ mod tests {
         assert_eq!(detector.name(), "MEV Extractable Value");
         assert_eq!(detector.default_severity(), Severity::High);
         assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_direct_names() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // Direct flash loan function names should be recognized
+        assert!(detector.is_flash_loan_function("flashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("flashmint", "", &ctx));
+        assert!(detector.is_flash_loan_function("onflashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("nestedflashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("executeflash", "", &ctx));
+        assert!(detector.is_flash_loan_function("_flashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("_flashmint", "", &ctx));
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_callback_patterns() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // Callback patterns should be recognized
+        assert!(detector.is_flash_loan_function("onflashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("flashloancallback", "", &ctx));
+        assert!(detector.is_flash_loan_function("myonflashloan", "", &ctx));
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_compound_names() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // Compound flash loan names should be recognized
+        assert!(detector.is_flash_loan_function("executeflashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("processflashmint", "", &ctx));
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_non_flash_loan() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // Non-flash-loan functions should NOT be recognized
+        assert!(!detector.is_flash_loan_function("swap", "", &ctx));
+        assert!(!detector.is_flash_loan_function("trade", "", &ctx));
+        assert!(!detector.is_flash_loan_function("deposit", "", &ctx));
+        assert!(!detector.is_flash_loan_function("withdraw", "", &ctx));
+        assert!(!detector.is_flash_loan_function("arbitrage", "", &ctx));
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_liquidate_in_flash_loan_contract() {
+        let detector = MevExtractableValueDetector::new();
+
+        // Liquidate in a flash loan provider contract should be recognized
+        let flash_loan_contract_source = r#"
+            contract VulnerableFlashLoan {
+                function flashLoan(address receiver, uint256 amount, bytes calldata data) external {
+                    uint256 balanceBefore = address(this).balance;
+                    payable(receiver).transfer(amount);
+                    IFlashBorrower(receiver).onFlashLoan(msg.sender, address(this), amount, 0, data);
+                    require(address(this).balance >= balanceBefore, "Not repaid");
+                }
+                function liquidate(address borrower) external {
+                    // liquidation logic
+                }
+            }
+        "#;
+        let ctx = test_utils::create_test_context(flash_loan_contract_source);
+        assert!(detector.is_flash_loan_function("liquidate", "", &ctx));
+
+        // Liquidate in a NON-flash-loan contract should NOT be recognized
+        let non_flash_contract_source = r#"
+            contract LendingPool {
+                function borrow(uint256 amount) external {
+                    // borrow logic
+                }
+                function liquidate(address borrower) external {
+                    // liquidation logic
+                }
+            }
+        "#;
+        let ctx2 = test_utils::create_test_context(non_flash_contract_source);
+        assert!(!detector.is_flash_loan_function("liquidate", "", &ctx2));
+    }
+
+    #[test]
+    fn test_is_flash_loan_contract() {
+        let detector = MevExtractableValueDetector::new();
+
+        // Contract with flashLoan + callback is a flash loan contract
+        let flash_provider = r#"
+            contract FlashLender {
+                function flashLoan(address receiver, uint256 amount, bytes calldata data) external {
+                    IFlashBorrower(receiver).onFlashLoan(msg.sender, address(this), amount, 0, data);
+                }
+            }
+        "#;
+        let ctx1 = test_utils::create_test_context(flash_provider);
+        assert!(detector.is_flash_loan_contract(&ctx1));
+
+        // Contract with IERC3156 interface
+        let erc3156 = r#"
+            contract FlashLender is IERC3156FlashLender {
+                function maxFlashLoan(address token) external view returns (uint256) {}
+            }
+        "#;
+        let ctx2 = test_utils::create_test_context(erc3156);
+        assert!(detector.is_flash_loan_contract(&ctx2));
+
+        // Non-flash-loan contract
+        let regular = r#"
+            contract SimpleToken {
+                function transfer(address to, uint256 amount) external {}
+            }
+        "#;
+        let ctx3 = test_utils::create_test_context(regular);
+        assert!(!detector.is_flash_loan_contract(&ctx3));
+    }
+
+    #[test]
+    fn test_is_flash_loan_function_in_borrower_contract() {
+        let detector = MevExtractableValueDetector::new();
+
+        // Functions in IFlashBorrower contracts that reference flash loan state
+        let borrower_source = r#"
+            contract FlashLoanArbitrage is ReentrancyGuard, Ownable {
+                bool private inFlashLoan;
+                function onFlashLoan(address asset, uint256 amount, uint256 fee, bytes calldata data)
+                    external nonReentrant returns (bool) {
+                    inFlashLoan = true;
+                    // execute trades
+                    inFlashLoan = false;
+                    return true;
+                }
+                interface IFlashBorrower {}
+            }
+        "#;
+        let ctx = test_utils::create_test_context(borrower_source);
+
+        // onFlashLoan callback should be recognized regardless of contract context
+        assert!(detector.is_flash_loan_function("onflashloan", "inFlashLoan = true;", &ctx));
+    }
+
+    #[test]
+    fn test_no_fp_on_flash_loan_provider_functions() {
+        let detector = MevExtractableValueDetector::new();
+
+        // VulnerableFlashLoan.sol pattern - flash loan provider
+        let source = r#"
+            contract VulnerableFlashLoanCallback {
+                mapping(address => uint256) public deposits;
+                function flashLoan(address receiver, uint256 amount, bytes calldata data) external {
+                    uint256 balanceBefore = address(this).balance;
+                    payable(receiver).transfer(amount);
+                    IFlashBorrower(receiver).onFlashLoan(msg.sender, address(this), amount, 0, data);
+                    uint256 balanceAfter = address(this).balance;
+                    require(balanceAfter >= balanceBefore, "Flash loan not repaid");
+                }
+                function nestedFlashLoan(address receiver, uint256 amount) external {
+                    this.flashLoan(receiver, amount, "");
+                }
+                function liquidate(address borrower, address collateralToken) external {
+                    // liquidation using oracle price
+                }
+            }
+        "#;
+        let ctx = test_utils::create_test_context(source);
+
+        // All these should be recognized as flash loan functions
+        assert!(detector.is_flash_loan_function("flashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("nestedflashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("liquidate", "", &ctx));
+    }
+
+    #[test]
+    fn test_no_fp_on_flash_mint_functions() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // flashMint should be recognized
+        assert!(detector.is_flash_loan_function("flashmint", "", &ctx));
+    }
+
+    #[test]
+    fn test_no_fp_on_secure_flash_loan_functions() {
+        let detector = MevExtractableValueDetector::new();
+
+        // SecureFlashLoan.sol pattern
+        let source = r#"
+            contract SecureFlashLoanCallback {
+                modifier nonReentrant() { _; }
+                function flashLoan(address receiver, uint256 amount, bytes calldata data) external nonReentrant {
+                    uint256 balanceBefore = address(this).balance;
+                    payable(receiver).transfer(amount);
+                    bytes32 result = IFlashBorrower(receiver).onFlashLoan(msg.sender, address(this), amount, 0, data);
+                    require(result == keccak256("ERC3156FlashBorrower.onFlashLoan"), "Invalid callback");
+                    require(address(this).balance >= balanceBefore, "Flash loan not repaid");
+                }
+                function nestedFlashLoan(address receiver, uint256 amount) external nonReentrant {
+                    this.flashLoan(receiver, amount, "");
+                }
+            }
+        "#;
+        let ctx = test_utils::create_test_context(source);
+
+        // Secure flash loan functions should also be skipped
+        assert!(detector.is_flash_loan_function("flashloan", "", &ctx));
+        assert!(detector.is_flash_loan_function("nestedflashloan", "", &ctx));
+    }
+
+    #[test]
+    fn test_trading_by_name_excludes_flash_loan() {
+        // Verify that the is_trading_by_name logic no longer matches flash/flashloan
+        let trading_names = ["swap", "trade", "exchange", "arbitrage"];
+        let non_trading_names = ["flashloan", "flash", "flashmint", "onflashloan"];
+
+        for name in &trading_names {
+            let matches = name.contains("swap")
+                || name.contains("trade")
+                || name.contains("exchange")
+                || name.contains("arbitrage");
+            assert!(matches, "Expected '{}' to match as trading function", name);
+        }
+
+        for name in &non_trading_names {
+            let matches = name.contains("swap")
+                || name.contains("trade")
+                || name.contains("exchange")
+                || name.contains("arbitrage");
+            assert!(
+                !matches,
+                "Expected '{}' NOT to match as trading function",
+                name
+            );
+        }
+    }
+
+    #[test]
+    fn test_standard_token_functions_still_skipped() {
+        let detector = MevExtractableValueDetector::new();
+
+        // Standard token functions should still be skipped
+        assert!(detector.is_standard_token_function("transfer"));
+        assert!(detector.is_standard_token_function("approve"));
+        assert!(detector.is_standard_token_function("mint"));
+        assert!(detector.is_standard_token_function("burn"));
+    }
+
+    #[test]
+    fn test_real_trading_functions_not_skipped() {
+        let detector = MevExtractableValueDetector::new();
+        let ctx = test_utils::create_test_context("");
+
+        // Real trading functions should NOT be recognized as flash loan functions
+        assert!(!detector.is_flash_loan_function("swap", "", &ctx));
+        assert!(!detector.is_flash_loan_function("executetrade", "", &ctx));
+        assert!(!detector.is_flash_loan_function("arbitrage", "", &ctx));
+        assert!(!detector.is_flash_loan_function("exchange", "", &ctx));
+        assert!(!detector.is_flash_loan_function("buytokens", "", &ctx));
     }
 }

@@ -508,6 +508,121 @@ impl SignatureReplayDetector {
         Self
     }
 
+    /// Phase 55 FP Reduction: Check if contract is a delegatecall proxy pattern.
+    /// Delegatecall proxies forward calls to implementation contracts and do not
+    /// perform signature verification themselves -- flagging them is a false positive.
+    fn is_delegatecall_proxy_contract(&self, source: &str) -> bool {
+        let cleaned = utils::clean_source_for_search(source);
+        let lower = cleaned.to_lowercase();
+
+        // Must actually use delegatecall
+        let uses_delegatecall =
+            lower.contains("delegatecall(") || lower.contains("delegatecall(gas()");
+
+        if !uses_delegatecall {
+            return false;
+        }
+
+        // Must NOT have actual signature verification (ecrecover / ECDSA.recover)
+        let has_sig_verification = lower.contains("ecrecover") || lower.contains("ecdsa.recover");
+
+        // Delegatecall proxy patterns: user-controlled target, fallback delegation, etc.
+        let proxy_patterns = [
+            "target.delegatecall",
+            "lib.delegatecall",
+            "impl.delegatecall",
+            "implementation.delegatecall",
+            "fallback()",
+            ".delegatecall(data",
+        ];
+        let is_proxy = proxy_patterns.iter().any(|&p| lower.contains(p));
+
+        is_proxy && !has_sig_verification
+    }
+
+    /// Phase 55 FP Reduction: Check if contract is an ERC-4337 account abstraction contract.
+    /// ERC-4337 contracts have built-in nonce management via the EntryPoint contract,
+    /// so signature replay is handled at the protocol level.
+    fn is_erc4337_contract(&self, source: &str) -> bool {
+        let cleaned = utils::clean_source_for_search(source);
+        let lower = cleaned.to_lowercase();
+
+        // ERC-4337 contract indicators
+        let erc4337_patterns = [
+            "validatepaymasteruserop",
+            "validateuserop",
+            "ientrypoint",
+            "entrypoint",
+            "useroperation",
+            "iaccountexecution",
+            "ipaymaster",
+        ];
+
+        let has_erc4337 = erc4337_patterns.iter().any(|&p| lower.contains(p));
+
+        // Must have at least one ERC-4337 indicator
+        has_erc4337
+    }
+
+    /// Phase 55 FP Reduction: Check if contract has contract-level replay protection.
+    /// Many contracts track nonces or used signatures at the contract level (state variables),
+    /// not inside individual functions. This checks the full contract source for such patterns.
+    fn has_contract_level_replay_protection(&self, source: &str) -> bool {
+        let cleaned = utils::clean_source_for_search(source);
+        let lower = cleaned.to_lowercase();
+
+        // Nonce tracking patterns at contract level
+        let nonce_patterns = [
+            "mapping", // needs to be combined with nonce
+            "nonces[",
+            "usednonces[",
+            "usedsignatures[",
+            "usedhashes[",
+            "invalidatenonce",
+            "_usenonce",
+            "nonce++",
+            "nonces[msg.sender]",
+            "nonces[signer]",
+            "nonces[owner]",
+        ];
+
+        // Check for nonce mapping declarations or usage
+        let has_nonce_mapping = (lower.contains("mapping") && lower.contains("nonce"))
+            || nonce_patterns.iter().any(|&p| lower.contains(p));
+
+        // Governance vote tracking (hasVoted, receipts mapping) prevents replay by design
+        let has_vote_tracking = lower.contains("hasvoted")
+            || lower.contains("receipts[")
+            || (lower.contains("hasvotedonproposal") && lower.contains("mapping"));
+
+        has_nonce_mapping || has_vote_tracking
+    }
+
+    /// Phase 55 FP Reduction: Check if function actually performs signature verification.
+    /// Requires ecrecover or ECDSA.recover in the function body (not just "verify" or "signature"
+    /// which match too many unrelated patterns like abi.encodeWithSignature).
+    fn has_actual_signature_verification(
+        &self,
+        func: &ast::Function,
+        ctx: &AnalysisContext,
+    ) -> bool {
+        let func_start = func.location.start().line();
+        let func_end = func.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if func_start >= source_lines.len() || func_end >= source_lines.len() {
+            return false;
+        }
+
+        let raw_source = source_lines[func_start..=func_end].join("\n");
+        let func_source = utils::clean_source_for_search(&raw_source);
+
+        // Require actual cryptographic signature verification calls
+        func_source.contains("ecrecover")
+            || func_source.contains("ECDSA.recover")
+            || func_source.contains("SignatureChecker.isValidSignatureNow")
+    }
+
     fn has_signature_replay_vulnerability(
         &self,
         func: &ast::Function,
@@ -518,41 +633,33 @@ impl SignatureReplayDetector {
             return false;
         }
 
-        // Enhanced signature function detection
-        let signature_patterns = [
+        let func_name = func.name.as_str();
+
+        // Phase 55 FP Reduction: Tightened signature function name detection.
+        // Only match names that clearly indicate signature-based operations,
+        // not generic names like "Signature" which match aggregateSignatures, etc.
+        let sig_verification_name_patterns = [
             "BySig",
             "bySignature",
             "WithSignature",
-            "Signature",
-            "ecrecover",
-            "recover",
+            "verifySig",
+            "verifySignature",
+            "recoverSigner",
         ];
 
-        let is_signature_function = signature_patterns
+        let is_signature_function_by_name = sig_verification_name_patterns
             .iter()
-            .any(|&pattern| func.name.as_str().contains(pattern));
+            .any(|&pattern| func_name.contains(pattern));
 
-        if !is_signature_function {
-            // Also check if function body contains signature verification
-            let func_start = func.location.start().line();
-            let func_end = func.location.end().line();
+        // Phase 55 FP Reduction: Always require actual signature verification in the body.
+        // This prevents FPs on functions like aggregateSignatures, encodeWithSignature, etc.
+        if !self.has_actual_signature_verification(func, ctx) {
+            return false;
+        }
 
-            let source_lines: Vec<&str> = ctx.source_code.lines().collect();
-            if func_start < source_lines.len() && func_end < source_lines.len() {
-                // Clean source to avoid FPs from comments/strings
-                let raw_source = source_lines[func_start..=func_end].join("\n");
-                let func_source = utils::clean_source_for_search(&raw_source);
-                let contains_signature_verification = func_source.contains("ecrecover")
-                    || func_source.contains("ECDSA.recover")
-                    || func_source.contains("verify")
-                    || func_source.contains("signature");
-
-                if !contains_signature_verification {
-                    return false;
-                }
-            } else {
-                return false;
-            }
+        if !is_signature_function_by_name {
+            // Function name doesn't match -- only proceed if body has ecrecover/ECDSA.recover
+            // (already confirmed above) AND function has signature params
         }
 
         // Check function parameters for signature components (v, r, s)
@@ -562,31 +669,43 @@ impl SignatureReplayDetector {
                 .as_ref()
                 .map(|n| n.as_str().to_lowercase())
                 .unwrap_or_default();
-            param_name == "v"
-                || param_name == "r"
-                || param_name == "s"
-                || param_name.contains("signature")
+            param_name == "v" || param_name == "r" || param_name == "s" || param_name == "signature"
         });
 
-        // Check if function lacks nonce protection
+        // Must have signature parameters to be a signature verification function
+        if !has_signature_params {
+            return false;
+        }
+
+        // Check if function has nonce protection in its own body
         let func_start = func.location.start().line();
         let func_end = func.location.end().line();
 
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
         if func_start < source_lines.len() && func_end < source_lines.len() {
-            // Clean source to avoid FPs from comments/strings
             let raw_source = source_lines[func_start..=func_end].join("\n");
             let func_source = utils::clean_source_for_search(&raw_source);
+            let func_lower = func_source.to_lowercase();
 
             let nonce_patterns = ["nonce", "nonces", "_nonce", "counter", "replay", "used"];
             let has_nonce_protection = nonce_patterns
                 .iter()
-                .any(|&pattern| func_source.to_lowercase().contains(pattern));
+                .any(|&pattern| func_lower.contains(pattern));
 
-            has_signature_params && !has_nonce_protection
-        } else {
-            has_signature_params
+            if has_nonce_protection {
+                return false;
+            }
         }
+
+        // Phase 55 FP Reduction: Check contract-level replay protection.
+        // If the contract has nonce tracking, vote tracking, or similar patterns
+        // at the state variable level, the function likely delegates replay
+        // protection to those mechanisms (even if not visible in this function body).
+        if self.has_contract_level_replay_protection(&ctx.source_code) {
+            return false;
+        }
+
+        true
     }
 }
 
@@ -626,6 +745,18 @@ impl Detector for SignatureReplayDetector {
             || source.contains("@openzeppelin");
 
         if is_signature_library {
+            return Ok(findings);
+        }
+
+        // Phase 55 FP Reduction: Skip delegatecall proxy contracts.
+        // These forward calls to implementation contracts and do not verify signatures.
+        if self.is_delegatecall_proxy_contract(source) {
+            return Ok(findings);
+        }
+
+        // Phase 55 FP Reduction: Skip ERC-4337 account abstraction contracts.
+        // ERC-4337 has built-in nonce management via the EntryPoint contract.
+        if self.is_erc4337_contract(source) {
             return Ok(findings);
         }
 
@@ -807,5 +938,307 @@ impl Detector for EmergencyPauseCentralizationDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::test_utils::*;
+
+    // ============ SignatureReplayDetector Tests ============
+
+    #[test]
+    fn test_signature_replay_detector_properties() {
+        let detector = SignatureReplayDetector::new();
+        assert_eq!(detector.id().to_string(), "signature-replay");
+        assert_eq!(detector.name(), "Signature Replay Attack");
+        assert_eq!(detector.default_severity(), Severity::High);
+        assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_fp_reduction_delegatecall_proxy_not_flagged() {
+        // UserControlledDelegatecall.sol: delegatecall proxy should not be flagged
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract DirectUserControlled {
+                address public owner;
+                mapping(address => uint256) public balances;
+
+                function execute(address target, bytes calldata data) external payable {
+                    (bool success, ) = target.delegatecall(data);
+                    require(success, "Delegatecall failed");
+                }
+
+                function deposit() external payable {
+                    balances[msg.sender] += msg.value;
+                }
+            }
+        "#;
+
+        assert!(
+            detector.is_delegatecall_proxy_contract(source),
+            "Should recognize delegatecall proxy contract"
+        );
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Delegatecall proxy should not trigger signature replay findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_reduction_erc4337_paymaster_not_flagged() {
+        // VulnerablePaymaster.sol: ERC-4337 paymaster should not be flagged
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract VulnerablePaymaster {
+                mapping(address => uint256) public deposits;
+
+                function validatePaymasterUserOp(
+                    bytes calldata userOp,
+                    bytes32 userOpHash,
+                    uint256 maxCost
+                ) external returns (bytes memory context, uint256 validationData) {
+                    return ("", 0);
+                }
+            }
+        "#;
+
+        assert!(
+            detector.is_erc4337_contract(source),
+            "Should recognize ERC-4337 contract"
+        );
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "ERC-4337 paymaster should not trigger signature replay findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_reduction_secure_paymaster_not_flagged() {
+        // SecurePaymaster.sol: ERC-4337 paymaster with nonce management
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract SecurePaymaster {
+                mapping(address => uint256) public deposits;
+                mapping(address => mapping(uint256 => bool)) public usedNonces;
+
+                function validatePaymasterUserOp(
+                    bytes calldata userOp,
+                    bytes32 userOpHash,
+                    uint256 maxCost
+                ) external returns (bytes memory context, uint256 validationData) {
+                    (address sender, uint256 nonce) = abi.decode(userOp, (address, uint256));
+                    require(!usedNonces[sender][nonce], "Nonce already used");
+                    usedNonces[sender][nonce] = true;
+                    return ("", 0);
+                }
+            }
+        "#;
+
+        assert!(
+            detector.is_erc4337_contract(source),
+            "Should recognize ERC-4337 contract"
+        );
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Secure ERC-4337 paymaster should not trigger signature replay findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_reduction_governance_with_vote_tracking_not_flagged() {
+        // DAOGovernance.sol: governance with hasVoted tracking prevents replay
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract DAOGovernance {
+                struct Receipt {
+                    bool hasVoted;
+                    uint8 support;
+                    uint256 votes;
+                }
+                mapping(uint256 => mapping(address => Receipt)) public receipts;
+                mapping(address => mapping(uint256 => bool)) public hasVotedOnProposal;
+
+                function castVoteBySig(
+                    uint256 proposalId,
+                    uint8 support,
+                    uint8 v,
+                    bytes32 r,
+                    bytes32 s
+                ) external returns (uint256) {
+                    bytes32 digest = keccak256(abi.encode(proposalId, support));
+                    address signer = ecrecover(digest, v, r, s);
+                    require(signer != address(0), "Invalid signature");
+                    return _castVote(signer, proposalId, support);
+                }
+            }
+        "#;
+
+        assert!(
+            detector.has_contract_level_replay_protection(source),
+            "Should recognize vote tracking as replay protection"
+        );
+    }
+
+    #[test]
+    fn test_fp_reduction_contract_with_nonce_mapping() {
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract TokenWithPermit {
+                mapping(address => uint256) public nonces;
+
+                function permit(
+                    address owner,
+                    address spender,
+                    uint256 value,
+                    uint8 v,
+                    bytes32 r,
+                    bytes32 s
+                ) external {
+                    bytes32 digest = keccak256(abi.encode(owner, spender, value));
+                    address signer = ecrecover(digest, v, r, s);
+                    require(signer == owner, "Invalid signature");
+                }
+            }
+        "#;
+
+        assert!(
+            detector.has_contract_level_replay_protection(source),
+            "Should recognize nonce mapping as replay protection"
+        );
+    }
+
+    #[test]
+    fn test_fp_reduction_signature_aggregator_not_flagged() {
+        // aggregateSignatures should not be flagged - it's not signature verification
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract SignatureAggregator {
+                function aggregateSignatures(
+                    bytes[] calldata signatures
+                ) external pure returns (bytes memory) {
+                    bytes memory aggregated;
+                    for (uint i = 0; i < signatures.length; i++) {
+                        aggregated = abi.encodePacked(aggregated, signatures[i]);
+                    }
+                    return aggregated;
+                }
+            }
+        "#;
+
+        // This function has "signatures" param but no ecrecover, so should not be flagged
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Signature aggregation (no ecrecover) should not trigger signature replay findings"
+        );
+    }
+
+    #[test]
+    fn test_not_delegatecall_proxy_when_has_ecrecover() {
+        // Contract with both delegatecall AND ecrecover should NOT be skipped
+        let detector = SignatureReplayDetector::new();
+        let source = r#"
+            contract HybridContract {
+                function execute(address target, bytes calldata data) external {
+                    (bool success, ) = target.delegatecall(data);
+                    require(success);
+                }
+
+                function verifySig(bytes32 hash, uint8 v, bytes32 r, bytes32 s) external {
+                    address signer = ecrecover(hash, v, r, s);
+                    require(signer != address(0));
+                }
+            }
+        "#;
+
+        assert!(
+            !detector.is_delegatecall_proxy_contract(source),
+            "Contract with ecrecover should not be classified as pure delegatecall proxy"
+        );
+    }
+
+    #[test]
+    fn test_erc4337_detection() {
+        let detector = SignatureReplayDetector::new();
+
+        assert!(detector.is_erc4337_contract("function validateUserOp(UserOperation calldata)"));
+        assert!(detector.is_erc4337_contract("IEntryPoint public entryPoint"));
+        assert!(detector.is_erc4337_contract("function validatePaymasterUserOp(bytes calldata)"));
+        assert!(!detector.is_erc4337_contract("contract SimpleToken { function transfer() {} }"));
+    }
+
+    #[test]
+    fn test_contract_level_replay_protection_patterns() {
+        let detector = SignatureReplayDetector::new();
+
+        // usedNonces mapping
+        assert!(detector.has_contract_level_replay_protection(
+            "mapping(address => mapping(uint256 => bool)) public usedNonces;"
+        ));
+
+        // usedSignatures mapping
+        assert!(detector.has_contract_level_replay_protection(
+            "mapping(bytes32 => bool) public usedSignatures;"
+        ));
+
+        // hasVoted pattern
+        assert!(
+            detector
+                .has_contract_level_replay_protection("mapping(address => bool) public hasVoted;")
+        );
+
+        // _useNonce pattern
+        assert!(detector.has_contract_level_replay_protection(
+            "function _useNonce(address owner) internal returns (uint256)"
+        ));
+
+        // No replay protection
+        assert!(
+            !detector
+                .has_contract_level_replay_protection("contract Simple { uint256 public value; }")
+        );
+    }
+
+    // ============ GovernanceDetector Tests ============
+
+    #[test]
+    fn test_governance_detector_properties() {
+        let detector = GovernanceDetector::new();
+        assert_eq!(detector.id().to_string(), "test-governance");
+        assert_eq!(detector.name(), "Governance Attacks");
+        assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    // ============ ExternalCallsLoopDetector Tests ============
+
+    #[test]
+    fn test_external_calls_loop_detector_properties() {
+        let detector = ExternalCallsLoopDetector::new();
+        assert_eq!(detector.id().to_string(), "external-calls-loop");
+        assert_eq!(detector.name(), "External Calls in Loop");
+        assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    // ============ EmergencyPauseCentralizationDetector Tests ============
+
+    #[test]
+    fn test_emergency_pause_detector_properties() {
+        let detector = EmergencyPauseCentralizationDetector::new();
+        assert_eq!(detector.id().to_string(), "emergency-pause-centralization");
+        assert_eq!(detector.name(), "Emergency Pause Centralization");
+        assert_eq!(detector.default_severity(), Severity::Medium);
     }
 }

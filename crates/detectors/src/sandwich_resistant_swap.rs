@@ -107,6 +107,98 @@ impl Detector for SandwichResistantSwapDetector {
 }
 
 impl SandwichResistantSwapDetector {
+    /// Returns true if the function is a view or pure function.
+    /// View/pure functions cannot perform state-changing swaps and should never
+    /// be flagged for missing sandwich protection.
+    fn is_view_or_pure(&self, function: &ast::Function<'_>) -> bool {
+        matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        )
+    }
+
+    /// Returns true if the function is a flash loan callback.
+    /// Flash loan callbacks execute atomically within a single transaction,
+    /// so they cannot be sandwiched by MEV bots (the entire borrow+execute+repay
+    /// sequence is atomic).
+    fn is_flash_loan_callback(&self, function: &ast::Function<'_>) -> bool {
+        let name_lower = function.name.name.to_lowercase();
+        // ERC-3156 callback
+        name_lower == "onflashloan"
+            // Aave V2/V3 callback
+            || name_lower == "executeoperation"
+            // Aave V3 simple variant
+            || name_lower == "executesimpleoperation"
+            // dYdX callback
+            || name_lower == "callfunction"
+            // Generic flash loan callback patterns
+            || name_lower == "onflashloanreceived"
+            || name_lower == "flashloancallback"
+    }
+
+    /// Returns true if the function name indicates a price-reading or calculation
+    /// helper that does not perform actual swaps. These functions read data or
+    /// compute values and should not be flagged.
+    fn is_price_or_calc_helper(&self, function: &ast::Function<'_>) -> bool {
+        let name_lower = function.name.name.to_lowercase();
+
+        // Price-reading patterns: getPrice*, get*Price, *price*from*, *price*for*
+        let is_price_reader = (name_lower.starts_with("get") && name_lower.contains("price"))
+            || (name_lower.starts_with("get") && name_lower.contains("rate"))
+            || (name_lower.starts_with("get") && name_lower.contains("quote"))
+            || (name_lower.starts_with("fetch") && name_lower.contains("price"))
+            || (name_lower.starts_with("read") && name_lower.contains("price"))
+            || (name_lower.starts_with("query") && name_lower.contains("price"));
+
+        // Calculation helper patterns: calculate*, compute*, estimate*
+        let is_calc_helper = name_lower.starts_with("calculate")
+            || name_lower.starts_with("compute")
+            || name_lower.starts_with("estimate")
+            || name_lower.starts_with("_calculate")
+            || name_lower.starts_with("_compute")
+            || name_lower.starts_with("_estimate");
+
+        is_price_reader || is_calc_helper
+    }
+
+    /// Returns true if the function body contains indicators that an actual swap
+    /// is being performed (calling swap functions on routers, DEX interactions, etc.).
+    /// Merely containing the word "swap" in a comment or variable name is not enough.
+    fn has_actual_swap_indicators(&self, func_source: &str) -> bool {
+        // Direct swap function calls on routers or pools
+        let has_swap_call = func_source.contains(".swap(")
+            || func_source.contains(".swapExactTokensForTokens(")
+            || func_source.contains(".swapTokensForExactTokens(")
+            || func_source.contains(".swapExactETHForTokens(")
+            || func_source.contains(".swapExactTokensForETH(")
+            || func_source.contains(".swapTokensForExactETH(")
+            || func_source.contains(".swapExactETHForTokensSupportingFeeOnTransferTokens(")
+            || func_source.contains(".swapExactTokensForTokensSupportingFeeOnTransferTokens(")
+            || func_source.contains(".exactInputSingle(")
+            || func_source.contains(".exactInput(")
+            || func_source.contains(".exactOutputSingle(")
+            || func_source.contains(".exactOutput(")
+            || func_source.contains(".exchange(")
+            || func_source.contains(".exchange_underlying(");
+
+        // Router interaction patterns
+        let has_router_interaction = func_source.contains("IUniswapV2Router")
+            || func_source.contains("IUniswapV3Router")
+            || func_source.contains("ISwapRouter")
+            || func_source.contains("router.swap")
+            || func_source.contains("dex.swap")
+            || func_source.contains("pool.swap");
+
+        // Token transfer patterns that indicate a swap (transferFrom + transfer in same function)
+        let has_token_in =
+            func_source.contains(".transferFrom(") || func_source.contains(".safeTransferFrom(");
+        let has_token_out =
+            func_source.contains(".transfer(") || func_source.contains(".safeTransfer(");
+        let has_bidirectional_transfer = has_token_in && has_token_out;
+
+        has_swap_call || has_router_interaction || has_bidirectional_transfer
+    }
+
     /// Check for sandwich attack protection
     fn check_sandwich_protection(
         &self,
@@ -115,16 +207,45 @@ impl SandwichResistantSwapDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        // FP Fix: Skip view/pure functions -- they cannot perform state-changing swaps
+        if self.is_view_or_pure(function) {
+            return None;
+        }
+
+        // FP Fix: Skip flash loan callbacks -- they execute atomically in a single
+        // transaction and cannot be sandwiched
+        if self.is_flash_loan_callback(function) {
+            return None;
+        }
+
+        // FP Fix: Skip price-reading and calculation helper functions
+        if self.is_price_or_calc_helper(function) {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx);
 
-        // Identify swap functions
-        let is_swap_function = func_source.contains("swap")
-            || function.name.name.to_lowercase().contains("swap")
-            || func_source.contains("exchange")
-            || func_source.contains("trade")
-            || function.name.name.to_lowercase().contains("trade");
+        // Identify swap functions by name
+        let is_swap_function_by_name = function.name.name.to_lowercase().contains("swap")
+            || function.name.name.to_lowercase().contains("trade")
+            || function.name.name.to_lowercase().contains("exchange");
 
-        if !is_swap_function {
+        // Identify swap functions by body containing actual swap calls
+        let has_swap_in_body = self.has_actual_swap_indicators(&func_source);
+
+        // A function must either be named as a swap function OR contain actual swap
+        // operation indicators in its body. Simply containing the word "swap" in a
+        // string literal, variable name, or comment is not sufficient.
+        if !is_swap_function_by_name && !has_swap_in_body {
+            return None;
+        }
+
+        // For functions that are only identified by name (not by body swap calls),
+        // verify they actually perform swap operations
+        if is_swap_function_by_name && !has_swap_in_body {
+            // If the function name suggests a swap but the body has no actual swap
+            // indicators, skip it -- it may be a helper, getter, or view-like function
+            // that happens to reference swaps
             return None;
         }
 
@@ -237,7 +358,7 @@ impl SandwichResistantSwapDetector {
             && !func_source.contains("maxSlippage")
             && !func_source.contains("priceImpact");
 
-        if is_swap_function && lacks_max_price_movement && lacks_slippage {
+        if has_swap_in_body && lacks_max_price_movement && lacks_slippage {
             return Some(
                 "No maximum price impact or slippage percentage checks, \
                 allowing unlimited price movement during swap"
@@ -281,5 +402,408 @@ mod tests {
         assert_eq!(detector.name(), "Missing Sandwich Attack Protection");
         assert_eq!(detector.default_severity(), Severity::High);
         assert!(detector.is_enabled());
+    }
+
+    // ============================================================================
+    // FP Fix: View/pure function skip tests
+    // ============================================================================
+
+    #[test]
+    fn test_skip_view_function() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getPriceFromPool",
+            ast::Visibility::Public,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_view_or_pure(&func));
+    }
+
+    #[test]
+    fn test_skip_pure_function() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "calculateSwapAmount",
+            ast::Visibility::Public,
+            ast::StateMutability::Pure,
+        );
+        assert!(detector.is_view_or_pure(&func));
+    }
+
+    #[test]
+    fn test_do_not_skip_nonpayable_function() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "executeSwap",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(!detector.is_view_or_pure(&func));
+    }
+
+    #[test]
+    fn test_do_not_skip_payable_function() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "swapETHForTokens",
+            ast::Visibility::External,
+            ast::StateMutability::Payable,
+        );
+        assert!(!detector.is_view_or_pure(&func));
+    }
+
+    // ============================================================================
+    // FP Fix: Flash loan callback skip tests
+    // ============================================================================
+
+    #[test]
+    fn test_skip_on_flash_loan_callback() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "onFlashLoan",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(detector.is_flash_loan_callback(&func));
+    }
+
+    #[test]
+    fn test_skip_execute_operation_callback() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "executeOperation",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(detector.is_flash_loan_callback(&func));
+    }
+
+    #[test]
+    fn test_skip_call_function_callback() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "callFunction",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(detector.is_flash_loan_callback(&func));
+    }
+
+    #[test]
+    fn test_do_not_skip_regular_swap_function() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "swapTokens",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(!detector.is_flash_loan_callback(&func));
+    }
+
+    // ============================================================================
+    // FP Fix: Price-reading and calculation helper skip tests
+    // ============================================================================
+
+    #[test]
+    fn test_skip_get_price_from_pool() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getPriceFromPool",
+            ast::Visibility::Public,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_skip_get_price_from_dex() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getPriceFromDEX",
+            ast::Visibility::External,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_skip_calculate_potential_profit() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "calculatePotentialProfit",
+            ast::Visibility::External,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_skip_compute_swap_amount() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "computeSwapAmount",
+            ast::Visibility::Internal,
+            ast::StateMutability::Pure,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_skip_estimate_output() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "estimateOutputAmount",
+            ast::Visibility::Public,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_skip_get_exchange_rate() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getExchangeRate",
+            ast::Visibility::Public,
+            ast::StateMutability::View,
+        );
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_do_not_skip_swap_named_function_as_calc_helper() {
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "swapTokensForETH",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(!detector.is_price_or_calc_helper(&func));
+    }
+
+    // ============================================================================
+    // FP Fix: Actual swap indicator tests
+    // ============================================================================
+
+    #[test]
+    fn test_has_swap_indicators_uniswap_v2_router() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = "router.swapExactTokensForTokens(amountIn, amountOutMin, path, to, deadline);";
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_has_swap_indicators_uniswap_v3_exact_input() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = "swapRouter.exactInputSingle(params);";
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_has_swap_indicators_pool_swap_call() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = "pool.swap(recipient, zeroForOne, amountSpecified, sqrtPriceLimitX96, data);";
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_has_swap_indicators_bidirectional_transfer() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = r#"
+            tokenIn.transferFrom(msg.sender, address(this), amountIn);
+            tokenOut.transfer(msg.sender, amountOut);
+        "#;
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_has_swap_indicators_curve_exchange() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = "curvePool.exchange(i, j, dx, minDy);";
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_no_swap_indicators_price_reading() {
+        let detector = SandwichResistantSwapDetector::new();
+        // A function that reads swap pool prices but does not perform a swap
+        let source = r#"
+            (uint112 reserve0, uint112 reserve1,) = pair.getReserves();
+            uint256 price = reserve1 * 1e18 / reserve0;
+            return price;
+        "#;
+        assert!(!detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_no_swap_indicators_calculation_only() {
+        let detector = SandwichResistantSwapDetector::new();
+        // A pure calculation mentioning "swap" in a variable name
+        let source = r#"
+            uint256 swapFee = amount * fee / 10000;
+            return amount - swapFee;
+        "#;
+        assert!(!detector.has_actual_swap_indicators(source));
+    }
+
+    #[test]
+    fn test_no_swap_indicators_flash_loan_callback_body() {
+        let detector = SandwichResistantSwapDetector::new();
+        // A flash loan callback that reads prices but does not call a swap router
+        let source = r#"
+            uint256 profit = amountReceived - amountOwed;
+            require(profit > 0, "Not profitable");
+            return keccak256("ERC3156FlashBorrower.onFlashLoan");
+        "#;
+        assert!(!detector.has_actual_swap_indicators(source));
+    }
+
+    // ============================================================================
+    // Regression: True positives should still be detected
+    // ============================================================================
+
+    #[test]
+    fn test_tp_public_swap_with_router_no_slippage() {
+        let detector = SandwichResistantSwapDetector::new();
+        // A public, nonpayable function that actually calls a swap router
+        // without slippage protection -- this SHOULD be flagged
+        let source = r#"
+            uint256 amountOut = router.swapExactTokensForTokens(amountIn, 0, path, address(this), block.timestamp);
+            return amountOut;
+        "#;
+        assert!(detector.has_actual_swap_indicators(source));
+        // And it lacks slippage protection (amountOutMin is 0, no minAmountOut etc.)
+        assert!(!source.contains("amountOutMin"));
+        assert!(!source.contains("minAmountOut"));
+    }
+
+    #[test]
+    fn test_tp_swap_with_bidirectional_transfer_no_protection() {
+        let detector = SandwichResistantSwapDetector::new();
+        let source = r#"
+            token0.transferFrom(msg.sender, address(this), amount0In);
+            uint256 amount1Out = getAmountOut(amount0In);
+            token1.transfer(msg.sender, amount1Out);
+        "#;
+        assert!(detector.has_actual_swap_indicators(source));
+    }
+
+    // ============================================================================
+    // FP regression tests matching the exact reported false positives
+    // ============================================================================
+
+    #[test]
+    fn test_fp_get_price_from_pool_is_view_skipped() {
+        // VulnerableFlashLoan.sol:41 getPriceFromPool
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getPriceFromPool",
+            ast::Visibility::Public,
+            ast::StateMutability::View,
+        );
+
+        // This is a view function AND a price reading helper
+        assert!(detector.is_view_or_pure(&func));
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_fp_on_flash_loan_callback_skipped() {
+        // FlashLoanArbitrage.sol:104 onFlashLoan
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "onFlashLoan",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+
+        assert!(detector.is_flash_loan_callback(&func));
+    }
+
+    #[test]
+    fn test_fp_calculate_potential_profit_skipped() {
+        // FlashLoanArbitrage.sol:145 calculatePotentialProfit
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "calculatePotentialProfit",
+            ast::Visibility::External,
+            ast::StateMutability::View,
+        );
+
+        // This is a view function AND a calculation helper
+        assert!(detector.is_view_or_pure(&func));
+        assert!(detector.is_price_or_calc_helper(&func));
+    }
+
+    #[test]
+    fn test_fp_get_price_from_dex_skipped() {
+        // FlashLoanArbitrage.sol:195 getPriceFromDEX
+        let detector = SandwichResistantSwapDetector::new();
+        let arena = ast::AstArena::new();
+
+        let func = crate::types::test_utils::create_mock_ast_function(
+            &arena,
+            "getPriceFromDEX",
+            ast::Visibility::External,
+            ast::StateMutability::View,
+        );
+
+        // This is a view function AND a price reading helper
+        assert!(detector.is_view_or_pure(&func));
+        assert!(detector.is_price_or_calc_helper(&func));
     }
 }
