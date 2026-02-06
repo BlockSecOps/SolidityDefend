@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.16] - 2026-02-06
+
+### Fixed
+
+#### False Positive Reduction v2 (10 detectors, 37 FPs eliminated)
+
+Ground truth validation: 436 → 399 FPs across 18 test contracts (8.5% reduction), 0 TP regressions.
+
+- **parameter-consistency**: Skip internal/private and view/pure functions; recognize require/assert/if-revert validation patterns, compound conditions, and validation helper calls
+- **implementation-not-initialized**: Only flag contracts inheriting from known upgradeable bases (Initializable, UUPSUpgradeable, etc.); skip standalone, library, and abstract contracts
+- **circular-dependency**: Tighten all 10 detection patterns — require actual function calls instead of substring matching for "update", "delegate", "create", "transfer" keywords
+- **dos-revert-bomb**: Skip calls to msg.sender (self-withdrawal); skip single-call non-loop functions where the call is the last operation
+- **dos-unbounded-storage**: Skip per-user mappings (msg.sender-indexed); skip access-controlled functions; recognize bounds checks
+- **flashmint-token-inflation**: Expand fee detection from 1 check to 10 — recognize fee functions, state variables, ERC-3156 compliance, repayment validation
+- **mev-extractable-value**: Skip functions with access control, slippage parameters, or inline sender checks; tighten trading context and oracle update detection
+- **storage-collision**: Recognize EIP-1967 storage slots, computed slot patterns, and standard proxy forwarding assembly
+- **delegatecall-to-self**: Only flag genuine `address(this).delegatecall`; skip proxy forwarding, Diamond, Beacon, and EIP-1967 patterns
+- **erc20-transfer-return-bomb**: Skip SafeERC20 usage, Solidity-level interface calls, and ETH transfers; only flag low-level `.call()` with ERC-20 selectors
+
+#### Release Pipeline Fix
+
+- **release.yml**: Clean target dir before `cross` builds to prevent GLIBC mismatch from host-compiled build script cache
+
 ## [1.10.15] - 2026-02-05
 
 ### Fixed

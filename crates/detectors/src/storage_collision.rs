@@ -74,6 +74,21 @@ impl Detector for StorageCollisionDetector {
             return Ok(findings);
         }
 
+        // Phase 54 FP Reduction: Skip contracts that use EIP-1967 storage slot patterns
+        // Contracts using EIP-1967 compliant storage slots are safe from storage collisions
+        // because they store proxy state at pseudo-random, deterministic slot positions
+        // that cannot collide with sequential storage layout.
+        if self.uses_eip1967_storage_slots(source) {
+            return Ok(findings);
+        }
+
+        // Phase 54 FP Reduction: Skip contracts that use assembly sload/sstore with
+        // computed slot positions (keccak256-based). These contracts deliberately use
+        // unstructured storage patterns to avoid collisions.
+        if self.uses_computed_storage_slots(source) {
+            return Ok(findings);
+        }
+
         // Check for delegatecall storage collision in functions
         for function in ctx.get_functions() {
             if let Some(delegatecall_issue) = self.check_delegatecall_storage(function, ctx) {
@@ -130,6 +145,87 @@ impl StorageCollisionDetector {
                 && contract_source.contains("implementation"))
     }
 
+    /// Check if source uses EIP-1967 standard storage slot patterns
+    /// EIP-1967 defines specific pseudo-random slots for proxy state that cannot
+    /// collide with sequential storage layout used by implementation contracts.
+    fn uses_eip1967_storage_slots(&self, source: &str) -> bool {
+        // EIP-1967 implementation slot hex value
+        let has_impl_slot_hex =
+            source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
+
+        // EIP-1967 admin slot hex value
+        let has_admin_slot_hex =
+            source.contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103");
+
+        // EIP-1967 beacon slot hex value
+        let has_beacon_slot_hex =
+            source.contains("0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50");
+
+        // EIP-1967 slot calculation pattern:
+        // bytes32(uint256(keccak256("eip1967.proxy.implementation")) - 1)
+        let has_eip1967_calc = source.contains("keccak256(\"eip1967.proxy.")
+            || source.contains("keccak256('eip1967.proxy.");
+
+        // Named EIP-1967 slot constants
+        let has_named_slot = source.contains("IMPLEMENTATION_SLOT")
+            || source.contains("_IMPLEMENTATION_SLOT")
+            || source.contains("ADMIN_SLOT")
+            || source.contains("_ADMIN_SLOT")
+            || source.contains("BEACON_SLOT")
+            || source.contains("_BEACON_SLOT");
+
+        // OpenZeppelin ERC1967 utilities
+        let lower = source.to_lowercase();
+        let has_oz_pattern = lower.contains("erc1967upgrade")
+            || lower.contains("erc1967utils")
+            || source.contains("@openzeppelin")
+            || source.contains("openzeppelin-contracts");
+
+        // bytes32 constant with slot calculation pattern:
+        // bytes32 private constant SLOT = bytes32(uint256(keccak256(...)) - 1)
+        let has_bytes32_slot_pattern = source.contains("bytes32")
+            && source.contains("constant")
+            && source.contains("keccak256")
+            && (source.contains("uint256(keccak256") || source.contains("eip1967"));
+
+        has_impl_slot_hex
+            || has_admin_slot_hex
+            || has_beacon_slot_hex
+            || has_eip1967_calc
+            || has_named_slot
+            || has_oz_pattern
+            || has_bytes32_slot_pattern
+    }
+
+    /// Check if source uses computed storage slots via assembly sload/sstore
+    /// with keccak256-based slot positions. This is a safe unstructured storage
+    /// pattern used to avoid collisions (Diamond Storage, namespaced storage, etc.)
+    fn uses_computed_storage_slots(&self, source: &str) -> bool {
+        let has_assembly_storage = source.contains("sload") || source.contains("sstore");
+
+        if !has_assembly_storage {
+            return false;
+        }
+
+        // Check for keccak256-based slot computation alongside assembly storage ops
+        let has_keccak_slot = source.contains("keccak256")
+            && (source.contains(".slot") || source.contains("bytes32"));
+
+        // Check for bytes32 constant slot declaration (unstructured storage pattern)
+        let has_constant_slot = source.contains("bytes32")
+            && source.contains("constant")
+            && (source.contains("SLOT") || source.contains("POSITION"));
+
+        // Check for StorageSlot library pattern (OpenZeppelin)
+        let has_storage_slot_lib = source.contains("StorageSlot")
+            || source.contains("getAddressSlot")
+            || source.contains("getBooleanSlot")
+            || source.contains("getUint256Slot")
+            || source.contains("getBytes32Slot");
+
+        has_keccak_slot || has_constant_slot || has_storage_slot_lib
+    }
+
     /// Check delegatecall for storage collision risks
     fn check_delegatecall_storage(
         &self,
@@ -170,6 +266,16 @@ impl StorageCollisionDetector {
             );
         }
 
+        // Phase 54 FP Reduction: If the function uses delegatecall in a standard
+        // proxy delegation pattern (assembly block with calldatacopy + delegatecall +
+        // returndatacopy), this is the standard proxy forwarding pattern, not a
+        // storage collision risk. The contract-level EIP-1967 check already passed
+        // (we would have returned early), so this is a non-proxy contract with a
+        // legitimate delegatecall. Only flag if there is a clear storage conflict.
+        if self.is_standard_proxy_forwarding(&func_source) {
+            return None;
+        }
+
         if has_variable_target && !has_storage_check {
             return Some(
                 "Delegatecall to variable target without storage layout verification".to_string(),
@@ -177,6 +283,16 @@ impl StorageCollisionDetector {
         }
 
         None
+    }
+
+    /// Check if function source contains the standard proxy forwarding pattern
+    /// (calldatacopy + delegatecall + returndatacopy in assembly). This is the
+    /// canonical way proxies forward calls and is not itself a storage collision.
+    fn is_standard_proxy_forwarding(&self, func_source: &str) -> bool {
+        func_source.contains("calldatacopy")
+            && func_source.contains("delegatecall")
+            && func_source.contains("returndatacopy")
+            && func_source.contains("assembly")
     }
 
     /// Get contract source code

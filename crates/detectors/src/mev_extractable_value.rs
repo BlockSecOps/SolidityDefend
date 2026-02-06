@@ -158,8 +158,9 @@ impl MevExtractableValueDetector {
             return None; // Paymaster operations are not MEV targets
         }
 
-        // Phase 52 FP Reduction: Skip administrative functions with access control
-        // Functions with onlyOwner, onlyAdmin, onlyRole modifiers are not MEV targets
+        // FP Reduction: Skip ALL functions with access control modifiers (not just admin)
+        // Functions restricted by onlyOwner, onlyAdmin, onlyRole, etc. cannot be called by
+        // arbitrary MEV bots, so they are not MEV extraction targets.
         let has_access_control_modifier = function.modifiers.iter().any(|m| {
             let name_lower = m.name.name.to_lowercase();
             name_lower.contains("only")
@@ -169,24 +170,43 @@ impl MevExtractableValueDetector {
                 || name_lower.contains("auth")
                 || name_lower.contains("guardian")
                 || name_lower.contains("governance")
+                || name_lower.contains("restricted")
+                || name_lower.contains("authorized")
+                || name_lower.contains("keeper")
+                || name_lower.contains("operator")
+                || name_lower.contains("whitelisted")
+                || name_lower.contains("whennotpaused")
         });
 
-        // Phase 52: Check if function is administrative (not price-sensitive)
-        let is_admin_function = func_name_lower.contains("set")
-            || func_name_lower.contains("update")
-            || func_name_lower.contains("configure")
-            || func_name_lower.contains("pause")
-            || func_name_lower.contains("unpause")
-            || func_name_lower.contains("emergency");
+        // Any function with access control modifiers is not an MEV target.
+        // MEV requires permissionless access -- if only trusted parties can call it,
+        // there is no MEV extraction vector for third-party searchers.
+        if has_access_control_modifier {
+            return None;
+        }
 
-        // Admin functions with access control are not MEV targets
-        if has_access_control_modifier && is_admin_function {
+        // FP Reduction: Skip functions that check msg.sender against a trusted role
+        // Functions with inline access control (require(msg.sender == owner)) are also
+        // not exploitable by arbitrary MEV bots.
+        if self.has_inline_access_control(&func_source) {
+            return None;
+        }
+
+        // FP Reduction: Skip functions that have slippage protection parameters
+        // Functions with minAmountOut, deadline, etc. already have MEV protection built in.
+        if self.has_slippage_parameters(function) {
+            return None;
+        }
+
+        // Skip standard ERC20/ERC721/ERC1155 token functions EARLY - these are NOT MEV targets
+        // MEV occurs when these are USED in price-sensitive contexts, not in the token itself.
+        // Check this before trading-name detection to avoid false matches on "transferFrom" etc.
+        if self.is_standard_token_function(&func_name_lower) {
             return None;
         }
 
         // Phase 16 Recall Recovery: Check trading functions first for better recall
         // Trading functions by name require slippage protection regardless of other protections
-        let func_name_lower = function.name.name.to_lowercase();
         let is_trading_by_name = func_name_lower.contains("swap")
             || func_name_lower.contains("trade")
             || func_name_lower.contains("exchange")
@@ -213,24 +233,6 @@ impl MevExtractableValueDetector {
             }
         }
 
-        // Skip standard ERC20/ERC721 token functions - these are NOT MEV targets by themselves
-        // MEV occurs when these are USED in price-sensitive contexts, not in the token itself
-        let is_standard_token_function = func_name_lower == "transfer"
-            || func_name_lower == "transferfrom"
-            || func_name_lower == "approve"
-            || func_name_lower == "safetransfer"
-            || func_name_lower == "safetransferfrom"
-            || func_name_lower == "mint"     // Minting to user balance
-            || func_name_lower == "burn"     // Burning user balance
-            || func_name_lower == "burnfrom"
-            || func_name_lower == "permit"   // ERC20 permit
-            || func_name_lower == "allowance"
-            || func_name_lower == "balanceof";
-
-        if is_standard_token_function {
-            return None; // Standard token operations are not MEV targets
-        }
-
         // Skip simple deposit/withdraw functions that don't involve price calculations
         // These are user operations that don't expose extractable MEV
         let is_simple_deposit_withdraw = (func_name_lower == "deposit"
@@ -245,39 +247,46 @@ impl MevExtractableValueDetector {
         // Operations on msg.sender's own balance are not MEV targets
         let is_user_specific_operation = func_name_lower == "claim"
             || func_name_lower == "claimrewards"
-            || func_name_lower == "harvest";
+            || func_name_lower == "harvest"
+            || func_name_lower == "stake"
+            || func_name_lower == "unstake"
+            || func_name_lower == "redeem";
 
         let operates_on_user_balance = func_source.contains("[msg.sender]")
             && (func_source.contains("balance")
                 || func_source.contains("reward")
-                || func_source.contains("earned"));
+                || func_source.contains("earned")
+                || func_source.contains("stake")
+                || func_source.contains("share"));
 
         if is_user_specific_operation && operates_on_user_balance {
             return None; // User claiming their own rewards is not MEV-vulnerable
         }
 
         // Pattern 1: Public DEX/trading function with value transfer without protection (TIGHTENED)
-        // Only flag if it looks like a DEX/trading operation
+        // Only flag if it looks like a DEX/trading operation with actual trading-context indicators
         let is_public = function.visibility == ast::Visibility::Public
             || function.visibility == ast::Visibility::External;
 
         let is_trading_context = self.is_trading_context(&func_source, &func_name_lower);
 
-        let has_value_transfer = func_source.contains("transfer")
-            || func_source.contains("send")
-            || func_source.contains("call{value:");
+        // Only flag if there is BOTH a trading context AND a value transfer
+        // The trading context check ensures we only flag actual DEX/swap operations,
+        // not standard token transfers or approvals
+        if is_public && is_trading_context {
+            let has_value_transfer = func_source.contains(".transfer(")
+                || func_source.contains(".send(")
+                || func_source.contains("call{value:");
 
-        // Only flag trading operations without protection
-        let lacks_mev_protection = is_public
-            && has_value_transfer
-            && is_trading_context
-            && !mev_protection_patterns::has_slippage_protection(&func_source)
-            && !mev_protection_patterns::has_deadline_protection(&func_source)
-            && !mev_protection_patterns::is_user_operation(&func_source, function.name.name);
+            let lacks_mev_protection = has_value_transfer
+                && !mev_protection_patterns::has_slippage_protection(&func_source)
+                && !mev_protection_patterns::has_deadline_protection(&func_source)
+                && !mev_protection_patterns::is_user_operation(&func_source, function.name.name);
 
-        if lacks_mev_protection {
-            return Some("DEX/trading function with value transfer lacks MEV protection (no slippage/deadline checks), \
-                enabling front-running and back-running attacks".to_string());
+            if lacks_mev_protection {
+                return Some("DEX/trading function with value transfer lacks MEV protection (no slippage/deadline checks), \
+                    enabling front-running and back-running attacks".to_string());
+            }
         }
 
         // Pattern 2: Profitable liquidation without auction mechanism
@@ -322,25 +331,24 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 4: State changes visible in mempool before execution (TIGHTENED)
-        // Only flag if it's NOT a user operation and affects global state
-        let changes_state =
-            func_source.contains("=") || func_source.contains("+=") || func_source.contains("-=");
-
-        let affects_global_state = (func_source.contains("totalSupply")
-            || func_source.contains("reserve0")
+        // Only flag if it modifies reserve/price state in a price-sensitive context.
+        // Standard token supply changes (totalSupply via mint/burn) are NOT MEV targets.
+        let changes_global_pricing_state = (func_source.contains("reserve0")
             || func_source.contains("reserve1")
             || func_source.contains("globalPrice"))
             && !func_source.contains("[msg.sender]");
 
+        // Only flag global pricing state changes, not totalSupply changes.
+        // totalSupply changes happen in normal mint/burn operations and are not
+        // inherently MEV-exploitable without a pricing mechanism.
         let is_mev_vulnerable_state_change = is_public
-            && changes_state
-            && affects_global_state
+            && changes_global_pricing_state
             && !mev_protection_patterns::is_user_operation(&func_source, function.name.name)
             && !func_source.contains("private")
             && !func_source.contains("encrypted");
 
         if is_mev_vulnerable_state_change {
-            return Some("State changes to global state (totalSupply/reserves/price) visible in public mempool, \
+            return Some("State changes to global pricing state (reserves/price) visible in public mempool, \
                 allowing MEV bots to react and extract value".to_string());
         }
 
@@ -401,18 +409,22 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 7: Oracle update function without access control (TIGHTENED)
-        let updates_oracle = func_source.contains("updatePrice")
+        // Only match functions that are actually oracle updaters, not any function
+        // whose name contains "update". Require both an oracle-update indicator AND
+        // price/rate modification in the source.
+        let is_oracle_update_function = func_source.contains("updatePrice")
             || func_source.contains("setPrice")
-            || function.name.name.to_lowercase().contains("update");
+            || func_source.contains("updateOracle")
+            || func_source.contains("submitPrice")
+            || (func_name_lower.contains("update")
+                && (func_name_lower.contains("price")
+                    || func_name_lower.contains("oracle")
+                    || func_name_lower.contains("rate")));
 
-        let affects_defi =
-            updates_oracle && (func_source.contains("price") || func_source.contains("rate"));
+        let modifies_pricing_state = is_oracle_update_function
+            && (func_source.contains("price") || func_source.contains("rate"));
 
-        // NEW: Check for access control
-        let lacks_access_control =
-            !mev_protection_patterns::has_mev_limiting_access_control(function);
-
-        if affects_defi && is_public && lacks_access_control {
+        if modifies_pricing_state && is_public {
             return Some("Public oracle update function without access control enables MEV through oracle manipulation, \
                 can be front-run or back-run for profit".to_string());
         }
@@ -457,6 +469,111 @@ impl MevExtractableValueDetector {
         }
     }
 
+    /// Check if function has inline access control (msg.sender checks against trusted roles)
+    /// Functions that verify msg.sender == owner/admin/etc. are not exploitable by MEV bots
+    fn has_inline_access_control(&self, func_source: &str) -> bool {
+        // Check for direct msg.sender comparisons against trusted roles
+        let has_sender_check = func_source.contains("require(msg.sender ==")
+            || func_source.contains("require(msg.sender!=") // inverted check with revert
+            || func_source.contains("if (msg.sender !=")
+            || func_source.contains("if(msg.sender !=")
+            || func_source.contains("msg.sender == owner")
+            || func_source.contains("msg.sender == admin")
+            || func_source.contains("msg.sender == governance")
+            || func_source.contains("msg.sender == controller")
+            || func_source.contains("msg.sender == manager")
+            || func_source.contains("msg.sender == guardian");
+
+        // Check for hasRole / isAuthorized patterns
+        let has_role_check = func_source.contains("hasRole(")
+            || func_source.contains("isAuthorized(")
+            || func_source.contains("_checkRole(")
+            || func_source.contains("_checkOwner(")
+            || func_source.contains("isOwner(")
+            || func_source.contains("isAdmin(");
+
+        has_sender_check || has_role_check
+    }
+
+    /// Check if function parameters include slippage/deadline protection
+    /// Functions that accept minAmountOut, deadline, etc. already have MEV protection
+    fn has_slippage_parameters(&self, function: &ast::Function<'_>) -> bool {
+        let slippage_param_names = [
+            "minamountout",
+            "amountoutmin",
+            "minoutput",
+            "minimumamount",
+            "minreturn",
+            "minreceived",
+            "minamountreceived",
+            "amountoutminimum",
+            "mintokensout",
+            "maxamountin",
+            "amountinmax",
+            "deadline",
+            "validuntil",
+            "expiry",
+            "expirationtime",
+            "maxslippage",
+            "slippagetolerance",
+        ];
+
+        for param in &function.parameters {
+            let param_name_lower = param
+                .name
+                .as_ref()
+                .map(|n| n.name.to_lowercase())
+                .unwrap_or_default();
+            if slippage_param_names
+                .iter()
+                .any(|&s| param_name_lower.contains(s))
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if function name matches standard ERC20/ERC721/ERC1155 token functions
+    /// These are NOT MEV targets by themselves -- MEV only occurs when they are
+    /// used in price-sensitive contexts (e.g., within a DEX swap)
+    fn is_standard_token_function(&self, func_name_lower: &str) -> bool {
+        matches!(
+            func_name_lower,
+            "transfer"
+                | "transferfrom"
+                | "approve"
+                | "safetransfer"
+                | "safetransferfrom"
+                | "mint"
+                | "burn"
+                | "burnfrom"
+                | "permit"
+                | "allowance"
+                | "balanceof"
+                | "totalsupply"
+                | "decimals"
+                | "name"
+                | "symbol"
+                // ERC721/ERC1155 specific
+                | "setapprovalforall"
+                | "isapprovedforall"
+                | "getapproved"
+                | "ownerof"
+                | "tokenuri"
+                | "safebatchtransferfrom"
+                | "batchtransfer"
+                | "supportsinterface"
+                // ERC721 enumerable
+                | "tokenbyindex"
+                | "tokenofownerbyindex"
+                // Common internal-like public helpers
+                | "increaseallowance"
+                | "decreaseallowance"
+        )
+    }
+
     /// Get function source code (cleaned to avoid FPs from comments/strings)
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
@@ -480,17 +597,14 @@ impl MevExtractableValueDetector {
             || func_name.contains("exchange")
             || func_name.contains("buy")
             || func_name.contains("sell")
-            || func_name.contains("liquidity")
             || func_name.contains("addliquidity")
             || func_name.contains("removeliquidity");
 
-        // Source code indicates trading context
+        // Source code indicates trading context -- require specific DEX/AMM indicators,
+        // not just generic terms like "reserves" that could appear in non-trading contexts
         let source_indicates_trading = func_source.contains("getAmountOut")
             || func_source.contains("getAmountsOut")
             || func_source.contains("getAmountIn")
-            || func_source.contains("reserve0")
-            || func_source.contains("reserve1")
-            || func_source.contains("reserves")
             || func_source.contains("swapExact")
             || func_source.contains("IUniswap")
             || func_source.contains("IPancake")

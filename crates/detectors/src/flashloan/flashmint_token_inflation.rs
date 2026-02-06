@@ -61,10 +61,114 @@ impl FlashmintTokenInflationDetector {
     fn has_flash_mint_fee(&self, function: &ast::Function, ctx: &AnalysisContext) -> bool {
         let func_source = self.get_function_source(function, ctx);
         let func_lower = func_source.to_lowercase();
+        let source_lower = ctx.source_code.to_lowercase();
 
-        // Check if function calculates a fee
-        func_lower.contains("fee")
+        // --- Function-level checks ---
+
+        // Check 1: Function body contains fee arithmetic (original check)
+        if func_lower.contains("fee")
             && (func_lower.contains("*") || func_lower.contains("/") || func_lower.contains("mul"))
+        {
+            return true;
+        }
+
+        // Check 2: Function calls a flashFee() or similar fee-computing function
+        if func_lower.contains("flashfee(")
+            || func_lower.contains("flash_fee(")
+            || func_lower.contains("getfee(")
+            || func_lower.contains("calculatefee(")
+            || func_lower.contains("_fee(")
+        {
+            return true;
+        }
+
+        // Check 3: Function body references fee state variables or constants
+        if func_lower.contains("flashloanfee")
+            || func_lower.contains("flashmintfee")
+            || func_lower.contains("flash_loan_fee")
+            || func_lower.contains("flash_mint_fee")
+            || func_lower.contains("flashloan_premium")
+            || func_lower.contains("flash_premium")
+            || func_lower.contains("feerate")
+            || func_lower.contains("fee_rate")
+            || func_lower.contains("basis_points")
+            || func_lower.contains("fee_bps")
+        {
+            return true;
+        }
+
+        // Check 4: Function has repayment validation that includes a fee
+        // e.g., amount + fee, balanceBefore + fee, require(repayment >= ...)
+        if func_lower.contains("amount + fee")
+            || func_lower.contains("amount +fee")
+            || func_lower.contains("amount+fee")
+            || (func_lower.contains("balancebefore") && func_lower.contains("+ fee"))
+            || (func_lower.contains("repay") && func_lower.contains("fee"))
+        {
+            return true;
+        }
+
+        // Check 5: Function has a fee parameter (e.g., onFlashLoan's fee param)
+        for param in function.parameters.iter() {
+            if let Some(ref name) = param.name {
+                let param_lower = name.name.to_lowercase();
+                if param_lower == "fee"
+                    || param_lower == "_fee"
+                    || param_lower.contains("flashfee")
+                    || param_lower.contains("flash_fee")
+                {
+                    return true;
+                }
+            }
+        }
+
+        // --- Contract-level checks ---
+
+        // Check 6: Contract has a flashFee() function (ERC-3156 standard)
+        if source_lower.contains("function flashfee(")
+            || source_lower.contains("function flash_fee(")
+        {
+            return true;
+        }
+
+        // Check 7: Contract has fee state variables or constants
+        if source_lower.contains("flashloanfee")
+            || source_lower.contains("flashmintfee")
+            || source_lower.contains("flash_loan_fee")
+            || source_lower.contains("flash_mint_fee")
+            || source_lower.contains("flashloan_premium")
+        {
+            return true;
+        }
+
+        // Check 8: Contract has fee-bounding constants (MAX_FEE, BASIS_POINTS)
+        if (source_lower.contains("max_fee")
+            || source_lower.contains("maxfee")
+            || source_lower.contains("maxflashloanfee")
+            || source_lower.contains("max_flash_loan_fee"))
+            && (source_lower.contains("basis_points")
+                || source_lower.contains("bps")
+                || source_lower.contains("10000")
+                || source_lower.contains("1e4"))
+        {
+            return true;
+        }
+
+        // Check 9: Contract is ERC-3156 compliant (inherently has fee handling)
+        if (ctx.source_code.contains("IERC3156FlashLender")
+            || ctx.source_code.contains("IERC3156FlashBorrower")
+            || ctx.source_code.contains("ERC3156"))
+            && ctx.source_code.contains("CALLBACK_SUCCESS")
+        {
+            return true;
+        }
+
+        // Check 10: Contract has explicit fee require/validation
+        if source_lower.contains("require(fee") || source_lower.contains("require(_fee") {
+            return true;
+        }
+
+        false
     }
 }
 

@@ -40,6 +40,22 @@ impl ParameterConsistencyDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip internal/private functions entirely -- they are called
+        // by trusted code within the same contract and do not represent an attack surface.
+        if function.visibility == ast::Visibility::Internal
+            || function.visibility == ast::Visibility::Private
+        {
+            return findings;
+        }
+
+        // FP Reduction: Skip view/pure functions -- they cannot modify state so
+        // missing parameter validation is not a security concern.
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return findings;
+        }
+
         // Extract parameter information
         let params = self.extract_parameter_info(function);
 
@@ -528,27 +544,107 @@ impl ParameterConsistencyDetector {
         let source_lower = source.to_lowercase();
         let param_lower = param_name.to_lowercase();
 
-        // Check for require statements with parameter
+        // Check for require statements with parameter (various spacing patterns)
         if source_lower.contains(&format!("require({}", param_lower))
             || source_lower.contains(&format!("require( {}", param_lower))
+            || source_lower.contains(&format!("require({} ", param_lower))
         {
             return true;
         }
 
-        // Check for if-revert patterns
-        if source_lower.contains(&format!("if ({}", param_lower))
+        // Check for parameter appearing inside any require() call (e.g. require(x > 0))
+        // Look for the parameter between require( ... )
+        if let Some(req_start) = source_lower.find("require(") {
+            let after_require = &source_lower[req_start..];
+            // Find matching closing paren (simplified: just look within a reasonable range)
+            if let Some(close_paren) = after_require.find(';') {
+                let require_body = &after_require[..close_paren];
+                if require_body.contains(&param_lower) {
+                    return true;
+                }
+            }
+        }
+
+        // Check for assert statements with parameter
+        if source_lower.contains(&format!("assert({}", param_lower))
+            || source_lower.contains(&format!("assert( {}", param_lower))
+        {
+            return true;
+        }
+
+        // Check for if-revert patterns (including custom errors)
+        if (source_lower.contains(&format!("if ({}", param_lower))
+            || source_lower.contains(&format!("if ({})", param_lower))
+            || source_lower.contains(&format!("if ({} ", param_lower))
+            || source_lower.contains(&format!("if ({} =", param_lower))
+            || source_lower.contains(&format!("if ({} !", param_lower))
+            || source_lower.contains(&format!("if ({} >", param_lower))
+            || source_lower.contains(&format!("if ({} <", param_lower))
+            || source_lower.contains(&format!("if (!{}", param_lower)))
             && (source_lower.contains("revert") || source_lower.contains("revert("))
         {
             return true;
         }
 
-        // Check for address(0) comparison with this parameter
+        // Check for address(0) comparison with this parameter (various patterns)
         if source_lower.contains(&format!("{} != address(0)", param_lower))
             || source_lower.contains(&format!("{} == address(0)", param_lower))
             || source_lower.contains(&format!("address(0) != {}", param_lower))
             || source_lower.contains(&format!("address(0) == {}", param_lower))
+            || source_lower.contains(&format!("{}!= address(0)", param_lower))
+            || source_lower.contains(&format!("{}== address(0)", param_lower))
         {
             return true;
+        }
+
+        // Check for validation helper function calls containing the parameter
+        // Common patterns: _validate(param), _check(param), _verify(param)
+        let validation_prefixes = [
+            "_validate",
+            "_check",
+            "_verify",
+            "_require",
+            "_assert",
+            "_ensure",
+        ];
+        for prefix in &validation_prefixes {
+            if source_lower.contains(&format!("{}({}", prefix, param_lower))
+                || source_lower.contains(&format!("{}( {}", prefix, param_lower))
+            {
+                return true;
+            }
+        }
+
+        // Check for parameter used as argument in common validation library calls
+        // e.g., SafeERC20, OpenZeppelin patterns
+        if source_lower.contains(&format!("safetransferfrom({}", param_lower))
+            || source_lower.contains(&format!("safetransfer({}", param_lower))
+        {
+            return true;
+        }
+
+        // Check for parameter compared to other values (>, <, >=, <=, !=, ==)
+        // inside require/assert context
+        let comparison_patterns = [
+            format!("{} >", param_lower),
+            format!("{} <", param_lower),
+            format!("{} >=", param_lower),
+            format!("{} <=", param_lower),
+            format!("{} !=", param_lower),
+            format!("{} ==", param_lower),
+        ];
+        for pattern in &comparison_patterns {
+            // Check if the comparison appears in a require/assert/if-revert context
+            if source_lower.contains(pattern.as_str()) {
+                // Look for the comparison being guarded
+                for guard in &["require", "assert", "if ("] {
+                    if source_lower.contains(*guard) {
+                        // Simple heuristic: if both the guard keyword and comparison exist,
+                        // the parameter is likely validated
+                        return true;
+                    }
+                }
+            }
         }
 
         false
@@ -759,6 +855,100 @@ impl ParameterConsistencyDetector {
                     self.collect_validated_parameters_from_stmt(inner_stmt, validated);
                 }
             }
+            // FP Reduction: Handle if-revert patterns
+            // e.g., if (param == address(0)) revert(); -- validates param
+            ast::Statement::If {
+                condition,
+                then_branch,
+                ..
+            } => {
+                // Check if the then-branch contains a revert/throw
+                if self.statement_contains_revert(then_branch) {
+                    // The condition validates the parameters it references
+                    self.extract_all_identifiers_from_expr(condition, validated);
+                }
+                // Recurse into branches too
+                self.collect_validated_parameters_from_stmt(then_branch, validated);
+            }
+            // Handle RevertStatement at the statement level
+            ast::Statement::RevertStatement { .. } => {}
+            _ => {}
+        }
+    }
+
+    /// Check if a statement contains a revert, throw, or return that would
+    /// indicate the if-condition is acting as a validation guard
+    fn statement_contains_revert(&self, stmt: &ast::Statement<'_>) -> bool {
+        match stmt {
+            ast::Statement::RevertStatement { .. } => true,
+            ast::Statement::Throw { .. } => true,
+            ast::Statement::Return { .. } => true,
+            ast::Statement::Expression(expr) => {
+                // Check for revert() function call or require(false)
+                if let ast::Expression::FunctionCall { function, .. } = expr {
+                    if let ast::Expression::Identifier(id) = function {
+                        return id.name == "revert" || id.name == "require" || id.name == "assert";
+                    }
+                }
+                false
+            }
+            ast::Statement::Block(block) => block
+                .statements
+                .iter()
+                .any(|s| self.statement_contains_revert(s)),
+            _ => false,
+        }
+    }
+
+    /// Extract all identifier names from an expression (for if-revert validation detection)
+    fn extract_all_identifiers_from_expr(
+        &self,
+        expr: &ast::Expression<'_>,
+        identifiers: &mut HashSet<String>,
+    ) {
+        match expr {
+            ast::Expression::Identifier(id) => {
+                identifiers.insert(id.name.to_string());
+            }
+            ast::Expression::BinaryOperation { left, right, .. } => {
+                self.extract_all_identifiers_from_expr(left, identifiers);
+                self.extract_all_identifiers_from_expr(right, identifiers);
+            }
+            ast::Expression::UnaryOperation { operand, .. } => {
+                self.extract_all_identifiers_from_expr(operand, identifiers);
+            }
+            ast::Expression::MemberAccess { expression, .. } => {
+                self.extract_all_identifiers_from_expr(expression, identifiers);
+            }
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
+                self.extract_all_identifiers_from_expr(function, identifiers);
+                for arg in arguments {
+                    self.extract_all_identifiers_from_expr(arg, identifiers);
+                }
+            }
+            ast::Expression::IndexAccess { base, index, .. } => {
+                self.extract_all_identifiers_from_expr(base, identifiers);
+                if let Some(idx) = index {
+                    self.extract_all_identifiers_from_expr(idx, identifiers);
+                }
+            }
+            ast::Expression::TypeCast { expression, .. } => {
+                self.extract_all_identifiers_from_expr(expression, identifiers);
+            }
+            ast::Expression::Conditional {
+                condition,
+                true_expression,
+                false_expression,
+                ..
+            } => {
+                self.extract_all_identifiers_from_expr(condition, identifiers);
+                self.extract_all_identifiers_from_expr(true_expression, identifiers);
+                self.extract_all_identifiers_from_expr(false_expression, identifiers);
+            }
             _ => {}
         }
     }
@@ -775,11 +965,18 @@ impl ParameterConsistencyDetector {
             ..
         } = expr
         {
-            // Check for require() calls
             if let ast::Expression::Identifier(id) = function {
+                // Check for require() calls
                 if id.name == "require" && !arguments.is_empty() {
                     self.extract_validated_params_from_condition(&arguments[0], validated);
                 }
+                // FP Reduction: Also handle assert() calls
+                if id.name == "assert" && !arguments.is_empty() {
+                    self.extract_validated_params_from_condition(&arguments[0], validated);
+                }
+                // FP Reduction: Handle revert() -- if we got here, the revert is
+                // unconditional in this branch, but parameters in args may be relevant
+                // (handled elsewhere via if-revert pattern)
             }
         }
     }
@@ -790,9 +987,39 @@ impl ParameterConsistencyDetector {
         condition: &ast::Expression<'_>,
         validated: &mut HashSet<String>,
     ) {
-        if let ast::Expression::BinaryOperation { left, right, .. } = condition {
-            self.extract_param_names_from_expr(left, validated);
-            self.extract_param_names_from_expr(right, validated);
+        match condition {
+            ast::Expression::BinaryOperation {
+                left,
+                right,
+                operator,
+                ..
+            } => {
+                // For logical AND/OR (&&, ||), recurse into both sides
+                // to catch compound validations like require(a != 0 && b != 0)
+                if matches!(operator, ast::BinaryOperator::And | ast::BinaryOperator::Or) {
+                    self.extract_validated_params_from_condition(left, validated);
+                    self.extract_validated_params_from_condition(right, validated);
+                } else {
+                    // For comparison operators, extract identifiers from both sides
+                    self.extract_param_names_from_expr(left, validated);
+                    self.extract_param_names_from_expr(right, validated);
+                }
+            }
+            ast::Expression::UnaryOperation { operand, .. } => {
+                // Handle negation: require(!condition)
+                self.extract_validated_params_from_condition(operand, validated);
+            }
+            ast::Expression::FunctionCall { arguments, .. } => {
+                // Handle nested function calls in conditions
+                for arg in arguments {
+                    self.extract_param_names_from_expr(arg, validated);
+                }
+            }
+            ast::Expression::Identifier(id) => {
+                // Direct boolean parameter: require(isValid)
+                validated.insert(id.name.to_string());
+            }
+            _ => {}
         }
     }
 
