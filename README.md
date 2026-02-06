@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.10.13-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.10.15-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 > Enterprise-grade static analysis for Solidity smart contracts
@@ -17,7 +17,7 @@ soliditydefend contract.sol
 ## Features
 
 - **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
-- **Context-Aware Analysis** - Safe Patterns Library with 24 FP reduction categories: ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound protocols, ERC-4626 vaults, Chainlink oracles, proxy patterns (UUPS, Diamond, EIP-1967), inline access control, timelocks, multi-sig, Permit2, and more
+- **Context-Aware Analysis** - Safe Patterns Library with 36+ FP reduction categories: ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, ERC-4626 vaults, Chainlink oracles, proxy patterns (UUPS, Diamond, EIP-1967), inline access control, timelocks, multi-sig, Permit2, transient storage locks, immutable address calls, and more
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
 - **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`
@@ -36,8 +36,14 @@ brew tap BlockSecOps/tap
 brew install soliditydefend
 ```
 
-### Pre-built Binaries
-Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest).
+### Pre-built Binaries (Recommended)
+Pre-built binaries are automatically built by GitHub Actions on each release. Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
+
+- Linux x86_64 / aarch64
+- macOS x86_64 / ARM64 (Apple Silicon)
+- Windows x86_64
+
+All binaries are stripped and include SHA256 checksums for verification.
 
 ### From Source
 
@@ -62,15 +68,17 @@ soliditydefend --version
 ```
 
 ### Docker
+Docker images are automatically built and published to Docker Hub by GitHub Actions on each release.
+
 ```bash
-# Build image
-docker build -t soliditydefend:latest .
+# Pull from Docker Hub (multi-platform: linux/amd64, linux/arm64)
+docker pull blocksecops/soliditydefend:latest
 
 # Run analysis (mount current directory)
-docker run --rm -v $(pwd):/workspace soliditydefend:latest contract.sol
+docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest contract.sol
 
-# Or pull from GitHub Container Registry (when available)
-# docker pull ghcr.io/blocksecops/soliditydefend:latest
+# Or build locally from source
+docker build -t soliditydefend:latest .
 ```
 
 See [docs/INSTALLATION.md](docs/INSTALLATION.md) for details.

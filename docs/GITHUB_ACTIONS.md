@@ -13,13 +13,13 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
 1. **Build and Test**
    - Install Rust toolchain (stable)
    - Run code formatting checks (`cargo fmt`)
-   - Run clippy linter (`cargo clippy`)
+   - Run clippy linter (`cargo clippy` with `-D warnings`, allowing `dead_code`, `unused_variables`, `unused_assignments`, `unused_parens`)
    - Build in debug and release modes
    - Run all tests
-   - Verify detector count (209 expected)
+   - Verify detector count (333+ expected)
    - Upload build artifacts
 
-2. **Docker Build**
+2. **Docker Build** *(pushes to `main` only — skipped on PRs)*
    - Build Docker image
    - Test Docker image functionality
 
@@ -36,23 +36,57 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
 
 **Triggers:** Git tags matching `v*`
 
+**Architecture:** 3-job pipeline: `build-release` → `create-release` → `publish-docker`
+
 **Jobs:**
 
-1. **Create Release**
-   - Extract version from tag
-   - Create GitHub release
+1. **Build Release** (Matrix Strategy — 5 targets)
 
-2. **Build Release** (Matrix Strategy)
-   - Build for multiple platforms:
-     - Linux (x86_64, aarch64)
-     - macOS (x86_64, aarch64)
-     - Windows (x86_64)
-   - Package binaries
-   - Upload to GitHub release
+   | Runner | Target | Strategy |
+   |--------|--------|----------|
+   | `ubuntu-latest` | `x86_64-unknown-linux-gnu` | Native build |
+   | `ubuntu-latest` | `aarch64-unknown-linux-gnu` | `cross` tool (Cross.toml) |
+   | `macos-latest` | `aarch64-apple-darwin` | Native (arm64 runner) |
+   | `macos-13` | `x86_64-apple-darwin` | Native (Intel runner) |
+   | `windows-latest` | `x86_64-pc-windows-msvc` | Native build |
 
-3. **Publish Docker**
-   - Build multi-platform Docker images
-   - Push to Docker Hub with version tags
+   Each target:
+   - Builds the release binary (using `cross` for Linux aarch64, native `cargo` otherwise)
+   - Strips the binary (Unix targets)
+   - Packages into `.tar.gz` (Unix) or `.zip` (Windows)
+   - Uploads as a GitHub Actions artifact
+
+2. **Create Release** (needs: build-release)
+   - Downloads all build artifacts
+   - Generates `SHA256SUMS.txt` with checksums for all binaries
+   - Extracts release notes from `CHANGELOG.md` for the tagged version
+   - Creates the GitHub Release using `softprops/action-gh-release@v2`
+   - Attaches all binaries and the checksums file
+
+3. **Publish Docker** (needs: create-release)
+   - Builds multi-platform Docker image (`linux/amd64`, `linux/arm64`)
+   - Pushes to Docker Hub with version tag and `latest` tag
+   - Includes OCI image labels and build-args
+
+**Runner Compatibility Notes:**
+- `macos-latest` is now **arm64** (Apple Silicon) — use `macos-13` for Intel x86_64 builds
+- `ubuntu-latest` is Ubuntu 22.04
+- `windows-latest` is Windows Server 2022
+
+### Detector Validation (`.github/workflows/validate.yml`)
+
+**Triggers:** PRs and pushes modifying `crates/detectors/**` or `tests/validation/**`, manual dispatch
+
+**Jobs:**
+
+1. **Validate Detectors**
+   - Builds release binary
+   - Runs validation suite against ground truth
+   - Reports precision, recall, and F1 score
+   - Comments results on PRs
+
+2. **Regression Tests**
+   - Runs detector regression test suite
 
 ## Local Testing with `act`
 
@@ -181,6 +215,11 @@ env:
 - Binary: `soliditydefend-linux-x86_64`
 - Retention: 7 days
 
+**Release Artifacts:**
+- Per-target binaries (5 platforms)
+- `SHA256SUMS.txt` with checksums
+- Retention: 1 day (consumed by create-release job)
+
 **Security Report:**
 - File: `security-report.json`
 - Retention: 30 days
@@ -192,15 +231,6 @@ For release workflows, configure these secrets in GitHub:
 - `DOCKER_USERNAME` - Docker Hub username
 - `DOCKER_PASSWORD` - Docker Hub access token
 - `GITHUB_TOKEN` - Automatically provided by GitHub Actions
-
-### GitHub Actions Runner Compatibility
-
-The workflows use:
-- `ubuntu-latest` (Ubuntu 22.04)
-- `macos-latest` (macOS 14)
-- `windows-latest` (Windows Server 2022)
-
-Local testing with `act` uses `catthehacker/ubuntu:act-latest` which closely matches GitHub's runner environment.
 
 ## Debugging
 
@@ -242,21 +272,21 @@ Check `.actrc` settings and ensure Docker has internet access.
 
 Recommended settings for `main` branch:
 
-- ✅ Require status checks to pass
+- Require status checks to pass
   - `build-and-test`
-  - `docker-build`
-- ✅ Require branches to be up to date
-- ✅ Require linear history
-- ✅ Include administrators
+- Require branches to be up to date
+- Require linear history
+- Include administrators
 
 ### Pull Request Checks
 
 All PRs to `main` automatically run:
 1. Format checking
-2. Linting (clippy)
+2. Linting (clippy — allows `dead_code`, `unused_variables`, `unused_assignments`, `unused_parens`)
 3. Tests
-4. Docker build
-5. Security scan
+4. Security scan
+
+Note: Docker build is skipped on PRs (runs only on pushes to `main`).
 
 ## Continuous Deployment
 
@@ -266,21 +296,22 @@ Create a release by pushing a tag:
 
 ```bash
 # Tag the release
-git tag -a v1.4.0 -m "Release v1.4.0"
-git push origin v1.4.0
+git tag -a v1.10.15 -m "Release v1.10.15"
+git push origin v1.10.15
 ```
 
 This triggers:
-1. Release creation
-2. Multi-platform binary builds
-3. Docker image publication
-4. GitHub release with downloadable artifacts
+1. Multi-platform binary builds (5 targets)
+2. Binary stripping and packaging
+3. SHA256 checksum generation
+4. Release creation with changelog notes
+5. Docker image publication
 
 ### Manual Workflow Dispatch
 
 Workflows can be manually triggered from GitHub Actions tab:
 
-1. Go to Actions → Select workflow
+1. Go to Actions -> Select workflow
 2. Click "Run workflow"
 3. Select branch
 4. Run
@@ -294,11 +325,24 @@ The CI pipeline runs jobs in parallel when possible:
 ```
 Stage 0 (Parallel):
 ├── build-and-test
-├── docker-build
+├── docker-build (main pushes only)
 └── coverage
 
 Stage 1 (Sequential):
 └── security-scan (needs: build-and-test)
+```
+
+The release pipeline:
+
+```
+Stage 0 (Parallel matrix):
+└── build-release (5 targets in parallel)
+
+Stage 1:
+└── create-release (needs: build-release)
+
+Stage 2:
+└── publish-docker (needs: create-release)
 ```
 
 ### Caching Strategy
@@ -346,6 +390,8 @@ gh run view <run-id> --log
 - [act GitHub Repository](https://github.com/nektos/act)
 - [Rust Toolchain Action](https://github.com/actions-rust-lang/setup-rust-toolchain)
 - [Docker Buildx Action](https://github.com/docker/setup-buildx-action)
+- [softprops/action-gh-release](https://github.com/softprops/action-gh-release)
+- [cross-rs/cross](https://github.com/cross-rs/cross)
 
 ## Troubleshooting Guide
 
@@ -362,8 +408,8 @@ cargo fmt -- --check
 ### Workflow Fails on Clippy
 
 ```bash
-# Run clippy locally
-cargo clippy --all-targets --all-features -- -D warnings
+# Run clippy locally (matching CI configuration)
+cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables -A unused_assignments -A unused_parens
 
 # Auto-fix issues
 cargo clippy --all-targets --all-features --fix
@@ -381,6 +427,13 @@ cargo test <test_name>
 
 ## Version History
 
+- **2026-02-05**: Workflow fixes and improvements
+  - Rewrote release pipeline with `softprops/action-gh-release@v2`
+  - Added SHA256 checksums and changelog extraction
+  - Fixed `macos-latest` runner compatibility (now arm64)
+  - Added `cross` for Linux aarch64 builds
+  - Gated Docker build to main pushes only
+  - Fixed `dtolnay/rust-toolchain` action reference in validate.yml
 - **2025-11-03**: Initial workflow creation
   - CI/CD pipeline with build, test, coverage
   - Release pipeline with multi-platform builds
