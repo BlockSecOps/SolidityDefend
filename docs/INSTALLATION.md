@@ -41,7 +41,7 @@ Download from the [releases page](https://github.com/BlockSecOps/SolidityDefend/
 | Linux x86_64 | `soliditydefend-vX.X.X-linux-x86_64.tar.gz` | `ubuntu-latest` (native) |
 | Linux aarch64 | `soliditydefend-vX.X.X-linux-aarch64.tar.gz` | `ubuntu-latest` via [`cross`](https://github.com/cross-rs/cross) |
 | macOS ARM64 (Apple Silicon) | `soliditydefend-vX.X.X-macos-aarch64.tar.gz` | `macos-latest` (native arm64) |
-| macOS Intel | `soliditydefend-vX.X.X-macos-x86_64.tar.gz` | `macos-13` (native x86_64) |
+| macOS Intel | `soliditydefend-vX.X.X-macos-x86_64.tar.gz` | `macos-latest` (cross-compile x86_64) |
 | Windows x86_64 | `soliditydefend-vX.X.X-windows-x86_64.zip` | `windows-latest` (native) |
 
 **Installation steps:**
