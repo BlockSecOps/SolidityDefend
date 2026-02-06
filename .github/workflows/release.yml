@@ -61,6 +61,7 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+          rustflags: ""
 
       - name: Install cross (Linux aarch64)
         if: matrix.use_cross

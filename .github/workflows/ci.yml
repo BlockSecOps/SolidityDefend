@@ -24,6 +24,7 @@ jobs:
         with:
           toolchain: stable
           cache: true
+          rustflags: ""
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -120,6 +121,7 @@ jobs:
         with:
           toolchain: stable
           components: llvm-tools-preview
+          rustflags: ""
 
       - name: Install cargo-llvm-cov
         run: cargo install cargo-llvm-cov
