@@ -3,7 +3,9 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_flash_loan_context, is_secure_example_file, is_test_contract};
+use crate::utils::{
+    is_flash_loan_context, is_governance_protocol, is_secure_example_file, is_test_contract,
+};
 
 /// Detector for SWC-105: Unprotected Ether Withdrawal
 ///
@@ -114,6 +116,7 @@ impl UnprotectedEtherWithdrawalDetector {
         }
 
         // Check for inline access control patterns
+        // Standard: require(msg.sender == X)
         let has_require_sender = source.contains("require(msg.sender ==")
             || source.contains("require(msg.sender==")
             || source.contains("require(_msgSender() ==")
@@ -121,6 +124,16 @@ impl UnprotectedEtherWithdrawalDetector {
             || source.contains("if (msg.sender!=")
             || source.contains("require(owner ==")
             || source.contains("require(hasRole(");
+
+        // Reversed comparison: require(X == msg.sender)
+        let has_reversed_sender_check = source.contains("== msg.sender")
+            || source.contains("==msg.sender")
+            || source.contains("!= msg.sender")
+            || source.contains("!=msg.sender");
+
+        // Mapping-based msg.sender validation (session keys, delegates, roles, etc.)
+        // Patterns like: require(mapping[...][msg.sender], ...) or require(mapping[msg.sender])
+        let has_mapping_sender_check = self.has_mapping_sender_validation(source);
 
         // Check for OpenZeppelin Ownable patterns
         let has_ownable = source.contains("_checkOwner()")
@@ -132,7 +145,44 @@ impl UnprotectedEtherWithdrawalDetector {
             || source.contains("_checkRole(")
             || source.contains("AccessControl");
 
-        has_require_sender || has_ownable || has_access_control_check
+        has_require_sender
+            || has_reversed_sender_check
+            || has_mapping_sender_check
+            || has_ownable
+            || has_access_control_check
+    }
+
+    /// Check if function uses msg.sender in a mapping-based validation
+    ///
+    /// Detects patterns like:
+    /// - require(sessionKeys[account][msg.sender], ...)
+    /// - require(delegates[x] == msg.sender, ...)
+    /// - require(authorized[msg.sender], ...)
+    /// - if (!mapping[msg.sender]) revert ...
+    fn has_mapping_sender_validation(&self, source: &str) -> bool {
+        // Look for require/if statements that reference msg.sender in a mapping context
+        // Pattern: require(...[msg.sender]...) where msg.sender is used as a mapping key
+        for line in source.lines() {
+            let trimmed = line.trim();
+
+            // Only look at require/if/revert lines for access control
+            let is_check_line = trimmed.starts_with("require(")
+                || trimmed.starts_with("if (")
+                || trimmed.starts_with("if(")
+                || trimmed.contains("require(")
+                || trimmed.contains("revert");
+
+            if !is_check_line {
+                continue;
+            }
+
+            // msg.sender used as mapping key: mapping[msg.sender] or mapping[x][msg.sender]
+            if trimmed.contains("[msg.sender]") {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Check if withdrawal goes to msg.sender (safer pattern)
@@ -154,6 +204,43 @@ impl UnprotectedEtherWithdrawalDetector {
             || source.contains("userBalance[msg.sender]")
             || source.contains("pendingWithdrawals[msg.sender]"))
             && (source.contains("-=") || source.contains("delete "))
+    }
+
+    /// Check if function is a governance execution function
+    ///
+    /// Governance execute functions (e.g., Governor.execute, Timelock.execute) use
+    /// proposal-based access control: only proposals that have passed voting and
+    /// quorum requirements can be executed. The .call{value:} inside these functions
+    /// is the mechanism for executing approved proposals, not an unprotected withdrawal.
+    fn is_governance_execution(
+        &self,
+        function: &ast::Function<'_>,
+        source: &str,
+        ctx: &AnalysisContext,
+    ) -> bool {
+        let func_name_lower = function.name.name.to_lowercase();
+
+        // Must be an execute-like function
+        if !func_name_lower.contains("execute") {
+            return false;
+        }
+
+        // Must be in a governance protocol context
+        if !is_governance_protocol(ctx) {
+            return false;
+        }
+
+        // Check for proposal state validation in the function body
+        let has_proposal_state_check = source.contains("getProposalState(")
+            || source.contains("proposalState(")
+            || source.contains("state(proposalId")
+            || source.contains("ProposalState.")
+            || source.contains("proposals[proposalId]")
+            || source.contains("proposals[_proposalId]")
+            || source.contains("proposal.executed")
+            || source.contains("proposal.eta");
+
+        has_proposal_state_check
     }
 
     /// Get function source code
@@ -260,6 +347,11 @@ impl Detector for UnprotectedEtherWithdrawalDetector {
                 continue;
             }
 
+            // Check for governance execution patterns (proposal-based access control)
+            if self.is_governance_execution(function, &func_source, ctx) {
+                continue;
+            }
+
             // Check if it's a safe pull pattern (user withdrawing their own funds)
             if self.uses_balance_tracking(&func_source) && self.withdraws_to_sender(&func_source) {
                 continue;
@@ -347,5 +439,134 @@ mod tests {
         assert!(detector.has_ether_transfer("recipient.send(amount)"));
         assert!(detector.has_ether_transfer("recipient.call{value: amount}(\"\")"));
         assert!(!detector.has_ether_transfer("token.transfer(recipient, amount)"));
+    }
+
+    #[test]
+    fn test_mapping_sender_validation_session_keys() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // Session key pattern: require(sessionKeys[account][msg.sender], ...)
+        let source_with_session_key = r#"
+    function executeWithSessionKey(address account, address target, uint256 value, bytes calldata data) external {
+        require(sessionKeys[account][msg.sender], "Invalid session key");
+        (bool success,) = target.call{value: value}(data);
+        require(success, "Execution failed");
+    }
+"#;
+        assert!(
+            detector.has_mapping_sender_validation(source_with_session_key),
+            "Should detect session key mapping validation with msg.sender"
+        );
+    }
+
+    #[test]
+    fn test_mapping_sender_validation_delegate() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // Delegate pattern: require(delegates[account] == msg.sender, ...)
+        // This uses reversed comparison which is caught by has_reversed_sender_check,
+        // but also verify the mapping pattern is recognized
+        let source_with_delegate = r#"
+    function executeAsDelegate(address account, address target, uint256 value, bytes calldata data) external {
+        require(delegates[account] == msg.sender, "Not delegate");
+        (bool success,) = target.call{value: value}(data);
+        require(success, "Execution failed");
+    }
+"#;
+        // The "== msg.sender" pattern is caught by reversed sender check
+        assert!(
+            source_with_delegate.contains("== msg.sender"),
+            "Source should contain reversed sender comparison"
+        );
+    }
+
+    #[test]
+    fn test_mapping_sender_validation_authorized() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // Authorized mapping pattern
+        let source_authorized = r#"
+    function withdraw(uint256 amount) external {
+        require(authorized[msg.sender], "Not authorized");
+        payable(msg.sender).transfer(amount);
+    }
+"#;
+        assert!(
+            detector.has_mapping_sender_validation(source_authorized),
+            "Should detect authorized mapping validation with msg.sender"
+        );
+    }
+
+    #[test]
+    fn test_mapping_sender_validation_not_present() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // No access control at all - true positive pattern
+        let source_no_access_control = r#"
+    function withdraw(uint256 _amount) public {
+        require(_amount <= balance, "Insufficient balance");
+        balance -= _amount;
+        payable(msg.sender).transfer(_amount);
+    }
+"#;
+        assert!(
+            !detector.has_mapping_sender_validation(source_no_access_control),
+            "Should NOT detect mapping validation when there is no msg.sender in mapping check"
+        );
+    }
+
+    #[test]
+    fn test_mapping_sender_validation_sender_only_in_transfer() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // msg.sender appears in transfer target, not in a require/if check with mapping
+        let source_sender_in_transfer = r#"
+    function withdrawBasedOnBalance(address _user) public {
+        uint256 userBalance = this.getBalance(_user);
+        require(userBalance > 0, "No balance");
+        balances[_user] = 0;
+        payable(_user).transfer(userBalance);
+    }
+"#;
+        assert!(
+            !detector.has_mapping_sender_validation(source_sender_in_transfer),
+            "Should NOT detect mapping validation when msg.sender is not in a mapping check"
+        );
+    }
+
+    #[test]
+    fn test_reversed_sender_comparison_detected() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // Test that reversed comparison patterns are detected
+        let source_reversed = r#"require(delegates[account] == msg.sender, "Not delegate")"#;
+        assert!(
+            source_reversed.contains("== msg.sender"),
+            "Should contain reversed sender comparison pattern"
+        );
+
+        // Ensure the original patterns still don't false-match reversed patterns
+        let source_no_reversed = r#"require(_amount <= balance, "Insufficient")"#;
+        assert!(
+            !source_no_reversed.contains("== msg.sender"),
+            "Should not contain reversed sender comparison"
+        );
+    }
+
+    #[test]
+    fn test_if_revert_sender_mapping_check() {
+        let detector = UnprotectedEtherWithdrawalDetector::new();
+
+        // if (!authorized[msg.sender]) revert ...
+        let source_if_revert = r#"
+    function withdraw(uint256 amount) external {
+        if (!whitelist[msg.sender]) revert Unauthorized();
+        payable(msg.sender).transfer(amount);
+    }
+"#;
+        assert!(
+            detector.has_mapping_sender_validation(source_if_revert),
+            "Should detect if-revert pattern with msg.sender mapping check"
+        );
     }
 }

@@ -30,18 +30,119 @@ impl MultisigBypassDetector {
         }
     }
 
+    /// Check if the contract is an ERC-4337 paymaster or account abstraction contract.
+    /// These contracts have their own signature/validation patterns that are not multisig.
+    fn is_erc4337_or_aa_contract(source_lower: &str) -> bool {
+        // ERC-4337 paymaster indicators
+        let is_paymaster = source_lower.contains("validatepaymasteruserop")
+            || source_lower.contains("paymaster")
+            || source_lower.contains("userop")
+            || source_lower.contains("userophash");
+
+        // Account abstraction indicators
+        let is_aa = source_lower.contains("entrypoint")
+            || source_lower.contains("validateuserop")
+            || source_lower.contains("iaccountexecution")
+            || source_lower.contains("sessionkey");
+
+        is_paymaster || is_aa
+    }
+
+    /// Check if the contract is a delegatecall proxy pattern.
+    /// Proxies use delegatecall for upgradeability, not for multisig execution.
+    fn is_delegatecall_proxy(source_lower: &str) -> bool {
+        let has_delegatecall = source_lower.contains("delegatecall");
+        let has_proxy_indicators = source_lower.contains("implementation")
+            || source_lower.contains("proxy")
+            || source_lower.contains("fallback()")
+            || source_lower.contains("calldatacopy");
+
+        // Strong proxy signal: delegatecall + proxy patterns without multisig-specific state
+        has_delegatecall && has_proxy_indicators
+    }
+
+    /// Check if the contract is a social recovery contract.
+    /// Social recovery uses guardians, not multiple owner signatures.
+    fn is_social_recovery_contract(source_lower: &str) -> bool {
+        let has_recovery =
+            source_lower.contains("recovery") || source_lower.contains("socialrecovery");
+        let has_guardians = source_lower.contains("guardian");
+
+        has_recovery && has_guardians
+    }
+
+    /// Determine if the contract has actual multisig structural indicators.
+    /// A true multisig contract requires multiple owners to sign transactions
+    /// before execution. This is distinct from simple signature verification,
+    /// social recovery, paymasters, or proxy patterns.
+    fn has_multisig_structure(source_lower: &str) -> bool {
+        // Explicit multisig naming (strong signal)
+        let has_multisig_name = source_lower.contains("multisig")
+            || source_lower.contains("multi_sig")
+            || source_lower.contains("multi-sig")
+            || source_lower.contains("multisigwallet")
+            || source_lower.contains("gnosis");
+
+        // Structural indicators: multisig contracts track owners and require
+        // multiple signatures to reach a threshold for execution
+        let has_owners_state = source_lower.contains("isowner[")
+            || source_lower.contains("isowner(")
+            || source_lower.contains("mapping(address => bool)")
+                && (source_lower.contains("owner") || source_lower.contains("signer"))
+            || source_lower.contains("address[] public owners")
+            || source_lower.contains("address[] owners")
+            || source_lower.contains("ownercount")
+            || source_lower.contains("numowners");
+
+        let has_threshold_state = source_lower.contains("threshold")
+            || source_lower.contains("required")
+            || source_lower.contains("numconfirmations")
+            || source_lower.contains("minsignatures");
+
+        let has_signature_collection = source_lower.contains("signatures")
+            || source_lower.contains("confirmations")
+            || source_lower.contains("approvals");
+
+        // A multisig needs either:
+        // 1. Explicit multisig naming, OR
+        // 2. Both owner tracking AND threshold/required state AND signature collection
+        if has_multisig_name {
+            return true;
+        }
+
+        // Require at least 2 of the 3 structural indicators for implicit detection
+        let indicator_count = [
+            has_owners_state,
+            has_threshold_state,
+            has_signature_collection,
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+        indicator_count >= 2
+    }
+
     fn check_multisig_patterns(&self, ctx: &AnalysisContext) -> Vec<(String, u32, String)> {
         let mut findings = Vec::new();
         let source = &ctx.source_code;
         let source_lower = source.to_lowercase();
 
-        // Check if contract is multi-sig related
-        let is_multisig = source_lower.contains("multisig")
-            || source_lower.contains("threshold")
-            || (source_lower.contains("signature") && source_lower.contains("owner"))
-            || (source_lower.contains("execute") && source_lower.contains("signatures"));
+        // Early exit: skip non-multisig contract types that share superficial keywords
+        if Self::is_erc4337_or_aa_contract(&source_lower) {
+            return findings;
+        }
 
-        if !is_multisig {
+        if Self::is_delegatecall_proxy(&source_lower) {
+            return findings;
+        }
+
+        if Self::is_social_recovery_contract(&source_lower) {
+            return findings;
+        }
+
+        // Require actual multisig structural indicators
+        if !Self::has_multisig_structure(&source_lower) {
             return findings;
         }
 
@@ -381,6 +482,8 @@ mod tests {
         let detector = MultisigBypassDetector::new();
         let source = r#"
             contract MultiSig {
+                mapping(address => bool) public isOwner;
+                uint256 public ownerCount;
                 uint256 public threshold;
 
                 function execute(bytes[] memory signatures) external {
@@ -597,5 +700,343 @@ mod tests {
         let ctx = create_test_context(source);
         let result = detector.detect(&ctx).unwrap();
         // Should have minimal findings due to comprehensive protections
+    }
+
+    // ========================================================================
+    // False positive regression tests
+    // ========================================================================
+
+    #[test]
+    fn test_no_fp_delegatecall_proxy_contract() {
+        // UserControlledDelegatecall.sol - delegatecall proxy, not a multisig
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract DirectUserControlled {
+                address public owner;
+                mapping(address => uint256) public balances;
+
+                function execute(address target, bytes calldata data) external payable {
+                    (bool success, ) = target.delegatecall(data);
+                    require(success, "Delegatecall failed");
+                }
+
+                function deposit() external payable {
+                    balances[msg.sender] += msg.value;
+                }
+            }
+
+            contract VulnerableProxyPattern {
+                address public implementation;
+
+                function setImplementation(address newImpl) external {
+                    implementation = newImpl;
+                }
+
+                fallback() external payable {
+                    address impl = implementation;
+                    assembly {
+                        calldatacopy(0, 0, calldatasize())
+                        let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)
+                        returndatacopy(0, 0, returndatasize())
+                        switch result
+                        case 0 { revert(0, returndatasize()) }
+                        default { return(0, returndatasize()) }
+                    }
+                }
+            }
+
+            contract AttackDemo {
+                function exploit(address victim) external {
+                    DirectUserControlled target = DirectUserControlled(payable(victim));
+                    bytes memory data = abi.encodeWithSignature("takeOwnership()");
+                    target.execute(address(this), data);
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Delegatecall proxy contracts should not trigger multisig-bypass findings, got: {:?}",
+            result.iter().map(|f| &f.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_no_fp_erc4337_vulnerable_paymaster() {
+        // VulnerablePaymaster.sol - ERC-4337 paymaster, not a multisig
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract VulnerablePaymaster {
+                mapping(address => uint256) public deposits;
+
+                function validatePaymasterUserOp(
+                    bytes calldata userOp,
+                    bytes32 userOpHash,
+                    uint256 maxCost
+                ) external returns (bytes memory context, uint256 validationData) {
+                    return ("", 0);
+                }
+
+                function sponsorTransaction(address user, uint256 cost) external {
+                    require(deposits[msg.sender] >= cost, "Insufficient deposit");
+                    deposits[msg.sender] -= cost;
+                }
+
+                function executeUserOp(bytes calldata userOp) external {
+                }
+            }
+
+            contract VulnerableSignatureAggregator {
+                function aggregateSignatures(
+                    bytes[] calldata signatures
+                ) external pure returns (bytes memory) {
+                    bytes memory aggregated;
+                    for (uint i = 0; i < signatures.length; i++) {
+                        aggregated = abi.encodePacked(aggregated, signatures[i]);
+                    }
+                    return aggregated;
+                }
+            }
+
+            contract VulnerableSocialRecovery {
+                mapping(address => address[]) public guardians;
+                mapping(address => uint256) public threshold;
+
+                function initiateRecovery(address account, address newOwner) external {
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "ERC-4337 paymaster contracts should not trigger multisig-bypass findings, got: {:?}",
+            result.iter().map(|f| &f.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_no_fp_erc4337_secure_paymaster() {
+        // SecurePaymaster.sol - ERC-4337 paymaster, not a multisig
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract SecurePaymaster {
+                mapping(address => uint256) public deposits;
+                mapping(address => mapping(uint256 => bool)) public usedNonces;
+                uint256 public immutable chainId;
+
+                function validatePaymasterUserOp(
+                    bytes calldata userOp,
+                    bytes32 userOpHash,
+                    uint256 maxCost
+                ) external returns (bytes memory context, uint256 validationData) {
+                    return ("", 0);
+                }
+            }
+
+            contract SecureSessionKey {
+                mapping(address => mapping(address => bool)) public sessionKeys;
+
+                function executeWithSessionKey(
+                    address account,
+                    address target,
+                    uint256 value,
+                    bytes calldata data
+                ) external {
+                    require(sessionKeys[account][msg.sender], "Invalid session key");
+                    (bool success,) = target.call{value: value}(data);
+                    require(success, "Execution failed");
+                }
+            }
+
+            contract SecureSocialRecovery {
+                mapping(address => address[]) public guardians;
+                mapping(address => uint256) public threshold;
+
+                function initiateRecovery(address account, address newOwner) external {
+                }
+
+                function completeRecovery(address account) external {
+                    require(block.timestamp >= request.initiatedAt + RECOVERY_TIMELOCK);
+                    require(request.approvalCount >= threshold[account]);
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "ERC-4337 secure paymaster contracts should not trigger multisig-bypass findings, got: {:?}",
+            result.iter().map(|f| &f.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_no_fp_social_recovery_contract() {
+        // test_social_recovery.sol - social recovery, not a multisig
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract VulnerableSocialRecovery {
+                mapping(address => address[]) public guardians;
+
+                function initiateRecovery(address account, address newOwner) external {
+                    // No timelock delay
+                }
+
+                function approveRecovery(address account) external {
+                    // Missing guardian validation
+                }
+
+                function completeRecovery(address account) external {
+                    // No replay protection
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Social recovery contracts should not trigger multisig-bypass findings, got: {:?}",
+            result.iter().map(|f| &f.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_no_fp_hardware_wallet_delegation() {
+        // Hardware wallet delegation is not a multisig pattern
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract HardwareWalletDelegation {
+                mapping(address => address) public delegates;
+
+                function setDelegate(address delegate) external {
+                    delegates[msg.sender] = delegate;
+                }
+
+                function executeAsDelegate(
+                    address account,
+                    address target,
+                    uint256 value,
+                    bytes calldata data
+                ) external {
+                    require(delegates[account] == msg.sender, "Not delegate");
+                    (bool success,) = target.call{value: value}(data);
+                    require(success, "Execution failed");
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Hardware wallet delegation should not trigger multisig-bypass findings, got: {:?}",
+            result.iter().map(|f| &f.message).collect::<Vec<_>>()
+        );
+    }
+
+    #[test]
+    fn test_still_detects_real_multisig_issues() {
+        // Ensure the detector still finds real multisig vulnerabilities
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract VulnerableMultisigWallet {
+                mapping(address => bool) public isOwner;
+                uint256 public ownerCount;
+                uint256 public threshold;
+
+                function executeTransaction(
+                    address target,
+                    uint256 value,
+                    bytes[] memory signatures
+                ) external {
+                    bytes32 hash = keccak256(abi.encodePacked(target, value));
+                    for (uint i = 0; i < signatures.length; i++) {
+                        address signer = ecrecover(hash, v, r, s);
+                        require(isOwner[signer]);
+                    }
+                    (bool success,) = target.call{value: value}("");
+                    require(success);
+                }
+
+                function removeOwner(address owner) external {
+                    require(isOwner[owner]);
+                    isOwner[owner] = false;
+                    ownerCount--;
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            !result.is_empty(),
+            "Real multisig contracts with vulnerabilities should still be detected"
+        );
+        // Should find multiple issues: missing nonce, missing deadline, threshold issues, etc.
+        assert!(
+            result.len() >= 2,
+            "Expected multiple findings for vulnerable multisig, got {}",
+            result.len()
+        );
+    }
+
+    #[test]
+    fn test_multisig_name_in_contract_is_sufficient() {
+        // A contract explicitly named "multisig" should be analyzed
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract SimpleMultisig {
+                function execute(address target, bytes calldata data) external {
+                    (bool success,) = target.call(data);
+                    require(success);
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        // Named multisig should be checked; execute without signature verification should trigger
+        assert!(
+            result
+                .iter()
+                .any(|f| f.message.contains("signature verification")),
+            "Contract named multisig with public execute should trigger signature verification finding"
+        );
+    }
+
+    #[test]
+    fn test_no_fp_simple_token_with_owner() {
+        // A simple token contract with owner should not be flagged
+        let detector = MultisigBypassDetector::new();
+        let source = r#"
+            contract SimpleToken {
+                address public owner;
+                mapping(address => uint256) public balances;
+
+                function transfer(address to, uint256 amount) external {
+                    require(balances[msg.sender] >= amount);
+                    balances[msg.sender] -= amount;
+                    balances[to] += amount;
+                }
+
+                function mint(address to, uint256 amount) external {
+                    require(msg.sender == owner);
+                    balances[to] += amount;
+                }
+            }
+        "#;
+
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Simple token contracts should not trigger multisig-bypass findings"
+        );
     }
 }
