@@ -103,34 +103,54 @@ impl GasGriefingDetector {
 
         let func_source = self.get_function_source(function, ctx);
 
+        // Skip functions with access control modifiers -- trusted callers cannot grief themselves
+        if self.has_access_control(function, &func_source) {
+            return None;
+        }
+
+        // Skip functions with reentrancy guards -- indicates protected execution context
+        if self.has_reentrancy_guard(function, &func_source) {
+            return None;
+        }
+
         // Pattern 1: External .call{} in loop without explicit gas limit
         // Note: .transfer() is SAFE - it has built-in 2300 gas stipend and reverts on failure
         // Note: .send() is SAFE - it has built-in 2300 gas stipend and returns false on failure
         // Only .call{} without gas limits is vulnerable to gas griefing
-        let has_loop = func_source.contains("for") || func_source.contains("while");
+        let has_loop = self.has_loop_construct(&func_source);
         let has_unsafe_call = func_source.contains(".call{") || func_source.contains(".call(");
 
         // .call{} without gas: specification forwards all gas - vulnerable to griefing
         if has_loop && has_unsafe_call {
-            // Check if gas limit is specified
-            let has_gas_limit = func_source.contains("gas:")
-                || func_source.contains("gas(")
-                || func_source.contains(".call{value:") && func_source.contains("gas:");
+            // Verify the .call{} is actually inside the loop body, not just co-existing
+            // in the same function. A comparison loop followed by a single .call{} is not
+            // a gas griefing vector.
+            if !self.is_call_inside_loop(&func_source) {
+                // The call exists in the function but not within the loop body -- not vulnerable
+            } else {
+                // Check if gas limit is specified
+                let has_gas_limit = func_source.contains("gas:")
+                    || func_source.contains("gas(")
+                    || func_source.contains(".call{value:") && func_source.contains("gas:");
 
-            if !has_gas_limit {
-                return Some(
-                    "External .call{} in loop without gas limit forwards all gas to recipient, \
-                    attacker can grief by consuming all gas in fallback function. \
-                    Use .call{value: amount, gas: 10000}(\"\") or .transfer() instead"
-                        .to_string(),
-                );
+                if !has_gas_limit {
+                    // Skip governance execute patterns where call targets are from approved proposals
+                    if !self.is_governance_execute_pattern(function, &func_source) {
+                        return Some(
+                            "External .call{} in loop without gas limit forwards all gas to recipient, \
+                            attacker can grief by consuming all gas in fallback function. \
+                            Use .call{value: amount, gas: 10000}(\"\") or .transfer() instead"
+                                .to_string(),
+                        );
+                    }
+                }
             }
         }
 
         // Pattern 2: Push pattern for mass ETH distribution with .call{}
         // Only flag if using .call{} (not .transfer() which is safe)
         // .transfer() has built-in 2300 gas limit and reverts on failure - not a griefing vector
-        if has_loop && has_unsafe_call {
+        if has_loop && has_unsafe_call && self.is_call_inside_loop(&func_source) {
             let distributes_to_many = func_source.contains("recipients")
                 || func_source.contains("addresses")
                 || func_source.contains("payees")
@@ -151,15 +171,144 @@ impl GasGriefingDetector {
         }
 
         // Pattern 3: Delegatecall in loop (extremely dangerous)
-        if has_loop && func_source.contains("delegatecall") {
-            return Some(
-                "Delegatecall in loop is extremely dangerous. \
-                Malicious contract can consume all gas or manipulate storage"
-                    .to_string(),
-            );
-        }
+        // Note: Skip this pattern -- delegatecall vulnerabilities are covered by dedicated
+        // detectors (delegatecall-in-loop, delegatecall-user-controlled, etc.)
+        // Flagging here is redundant and produces misleading "gas griefing" findings
+        // when the real issue is arbitrary code execution via delegatecall.
 
         None
+    }
+
+    /// Check if the function source contains actual loop constructs (for/while statements).
+    /// Uses word-boundary-aware matching to avoid false positives from substrings
+    /// like "Transfer" containing "for", or "information" containing "for".
+    fn has_loop_construct(&self, func_source: &str) -> bool {
+        // Match "for " (for statement) or "for(" (for with no space before paren)
+        // This avoids matching substrings in words like "Transfer", "information", "perform", etc.
+        let has_for = func_source.contains("for ") || func_source.contains("for(");
+        let has_while = func_source.contains("while ") || func_source.contains("while(");
+        has_for || has_while
+    }
+
+    /// Check if the .call{} is actually inside a loop body, not just co-existing
+    /// in the same function. For example, a function with a comparison loop followed
+    /// by a single .call{} at the end is not vulnerable to gas griefing.
+    fn is_call_inside_loop(&self, func_source: &str) -> bool {
+        // Strategy: find the loop construct, then check if .call{ appears
+        // within its brace-delimited body.
+        let lines: Vec<&str> = func_source.lines().collect();
+        let mut in_loop = false;
+        let mut brace_depth: i32 = 0;
+        let mut loop_start_depth: i32 = 0;
+
+        for line in &lines {
+            let trimmed = line.trim();
+
+            // Detect loop start
+            if !in_loop {
+                if (trimmed.contains("for ")
+                    || trimmed.contains("for(")
+                    || trimmed.contains("while ")
+                    || trimmed.contains("while("))
+                    && (trimmed.contains("{") || trimmed.ends_with(")"))
+                {
+                    in_loop = true;
+                    loop_start_depth = brace_depth;
+                }
+            }
+
+            // Track braces
+            for ch in line.chars() {
+                if ch == '{' {
+                    brace_depth += 1;
+                } else if ch == '}' {
+                    brace_depth -= 1;
+                    // If we drop back to or below the loop start depth, loop body ended
+                    if in_loop && brace_depth <= loop_start_depth {
+                        in_loop = false;
+                    }
+                }
+            }
+
+            // Check if .call{ appears inside the loop body
+            if in_loop && (trimmed.contains(".call{") || trimmed.contains(".call(")) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if the function has access control modifiers (onlyOwner, onlyAdmin, etc.)
+    /// Trusted callers cannot grief themselves, so these are not gas griefing vulnerabilities.
+    fn has_access_control(&self, function: &ast::Function<'_>, func_source: &str) -> bool {
+        // Check AST modifiers
+        let has_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("authorized")
+                || name_lower.contains("guardian")
+                || name_lower.contains("operator")
+                || name_lower.contains("governance")
+        });
+
+        if has_modifier {
+            return true;
+        }
+
+        // Check inline access control in source
+        func_source.contains("require(msg.sender ==")
+            || func_source.contains("require(hasRole")
+            || func_source.contains("if (msg.sender !=")
+    }
+
+    /// Check if the function has a reentrancy guard modifier.
+    /// Functions protected by reentrancy guards are in controlled execution contexts.
+    fn has_reentrancy_guard(&self, function: &ast::Function<'_>, func_source: &str) -> bool {
+        let has_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("nonreentrant")
+                || name_lower.contains("noreentrancy")
+                || name_lower == "lock"
+        });
+
+        if has_modifier {
+            return true;
+        }
+
+        // Check source-level patterns
+        func_source.contains("nonReentrant") || func_source.contains("noReentrancy")
+    }
+
+    /// Check if this is a governance execute pattern where call targets come from
+    /// governance-approved proposals (e.g., Compound Governor, OpenZeppelin Governor).
+    /// In these patterns, the targets array is set during proposal creation and approved
+    /// through voting -- they are not attacker-controlled at execution time.
+    fn is_governance_execute_pattern(
+        &self,
+        function: &ast::Function<'_>,
+        func_source: &str,
+    ) -> bool {
+        let func_name = function.name.name.to_lowercase();
+
+        // Function name is "execute" or similar governance execution function
+        let is_execute_func = func_name == "execute"
+            || func_name == "executeproposal"
+            || func_name == "executetransaction"
+            || func_name == "executebatch";
+
+        if !is_execute_func {
+            return false;
+        }
+
+        // Has governance indicators: proposal state checks, proposal storage access
+        func_source.contains("proposal")
+            || func_source.contains("Proposal")
+            || func_source.contains("proposalId")
+            || func_source.contains("timelock")
+            || func_source.contains("Queued")
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

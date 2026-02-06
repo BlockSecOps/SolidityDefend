@@ -292,11 +292,14 @@ impl CircularDependencyDetector {
             return None;
         }
 
-        // NEW: Tighter external call detection (not just any parentheses!)
+        // Tighter external call detection
+        // FP Reduction (v1.10.15 round 2): Removed the overly broad
+        // (contains("external") && contains("()")) check, which matched any
+        // external function with empty parens anywhere in the body (constructors,
+        // comments, etc.). Only match actual low-level calls or delegatecall.
         let makes_external_call = func_source.contains(".call(")
             || func_source.contains(".call{")
-            || func_source.contains("delegatecall")
-            || (func_source.contains("external") && func_source.contains("()"));
+            || func_source.contains("delegatecall");
 
         if !makes_external_call {
             return None;
@@ -328,17 +331,46 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 2: Recursive or self-calling patterns without depth limit
-        // Only flag when there's actual evidence of recursive/circular patterns
-        let has_self_call = func_source.contains("address(this)")
-            && (func_source.contains(".call(") || func_source.contains("delegatecall"));
-
+        // Only flag when there's actual evidence of recursive/circular patterns.
+        //
+        // FP Reduction (v1.10.15 round 2):
+        // - address(this).call(payload) is a self-dispatch pattern (bridge message execution,
+        //   proxy forwarding), NOT circular recursion unless the function calls itself by name.
+        //   Require evidence that the function actually recurses into itself.
+        // - For fallback/receive (empty name), calls_same_function must be skipped since
+        //   searching for "(" matches everything.
+        // - Standard proxy fallbacks that forward via assembly delegatecall are intentional
+        //   forwarding, not circular dependencies.
+        // - The function's own declaration line is excluded from the self-call search,
+        //   since get_function_source() includes the signature.
         let has_recursive_name = function.name.name.to_lowercase().contains("recursive")
             || function.name.name.to_lowercase().contains("traverse")
             || function.name.name.to_lowercase().contains("walk");
 
-        let calls_same_function = func_source.contains(&format!("{}(", function.name.name));
+        // Only check calls_same_function for named functions (not fallback/receive).
+        // Also exclude the function's own declaration line.
+        let calls_same_function = if function.name.name.is_empty() {
+            false
+        } else {
+            let call_pattern = format!("{}(", function.name.name);
+            // Skip the function signature: look only in lines after the first
+            if let Some(first_newline) = func_source.find('\n') {
+                let body = &func_source[first_newline..];
+                body.contains(&call_pattern)
+            } else {
+                false
+            }
+        };
 
-        let is_recursive_pattern = has_self_call || has_recursive_name || calls_same_function;
+        // address(this).call() alone is a self-dispatch pattern, not recursion.
+        // Only flag as recursive if the function also calls itself by name or has
+        // a recursive function name.
+        let has_self_recursive_call = func_source.contains("address(this)")
+            && (func_source.contains(".call(") || func_source.contains("delegatecall"))
+            && (calls_same_function || has_recursive_name);
+
+        let is_recursive_pattern =
+            has_self_recursive_call || has_recursive_name || calls_same_function;
 
         let no_depth_limit = is_recursive_pattern
             && !func_source.contains("depth")
@@ -413,14 +445,34 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 5: Delegation chain without cycle detection
-        // TIGHTENED: Only flag actual proxy delegation patterns (delegatecall usage,
-        // _delegate() calls, proxy forwarding), NOT governance delegation like
-        // delegateVotes() or delegateAction().
-        let is_proxy_delegation = func_source.contains("delegatecall")
-            || func_source.contains("_delegate(")
-            || (func_source.contains("proxy") && func_source.contains("implementation"));
+        // TIGHTENED (v1.10.15 round 2): Only flag when there's evidence of actual
+        // delegation CHAINING (multi-hop delegation that could form cycles), not
+        // simple one-hop delegatecall to a user-provided or stored address.
+        //
+        // A simple `target.delegatecall(data)` is a user-controlled delegatecall
+        // vulnerability (caught by delegatecall-user-controlled detector), NOT a
+        // circular dependency. Circular dependency requires evidence that the
+        // delegated-to contract can delegate back, forming a cycle.
+        //
+        // Evidence of chaining:
+        // - _delegate() helper (OpenZeppelin proxy internal forwarding)
+        // - Multiple delegatecall targets or a delegation registry
+        // - Proxy + implementation pattern with mutual references
+        // - Function iterates over a list of delegates
+        let has_delegate_helper = func_source.contains("_delegate(");
+        let has_delegation_registry = func_source.contains("delegates[")
+            || func_source.contains("delegateList[")
+            || func_source.contains("delegationChain");
+        let has_proxy_cycle_risk = func_source.contains("proxy")
+            && func_source.contains("implementation")
+            && func_source.contains("delegatecall");
+        let has_multi_hop = func_source.contains("_delegate(")
+            && (func_source.contains("for ") || func_source.contains("while "));
 
-        let no_cycle_detection = is_proxy_delegation
+        let is_delegation_chain =
+            has_delegate_helper || has_delegation_registry || has_proxy_cycle_risk || has_multi_hop;
+
+        let no_cycle_detection = is_delegation_chain
             && !func_source.contains("visited")
             && !func_source.contains("checked");
 

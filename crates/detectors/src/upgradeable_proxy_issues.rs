@@ -209,8 +209,12 @@ impl UpgradeableProxyIssuesDetector {
     }
 
     /// Check if contract is actually a proxy contract (Phase 6: Tightened)
+    /// FP Reduction: Use contract-scoped source to avoid false positives from
+    /// other contracts in the same file.
     fn is_proxy_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code;
+        // Use contract-scoped source instead of file-level source to avoid
+        // flagging non-proxy contracts that happen to share a file with a proxy
+        let source = self.get_contract_source(ctx.contract, ctx);
 
         // Strong proxy signals - require EIP-1967 slots OR explicit proxy inheritance
         let has_eip1967_slots = source.contains("IMPLEMENTATION_SLOT")
@@ -225,6 +229,7 @@ impl UpgradeableProxyIssuesDetector {
             || source.contains("ERC1967Proxy");
 
         // Delegatecall with implementation is strong signal
+        // Must be within the SAME contract (not just the same file)
         let has_delegatecall_pattern = source.contains("delegatecall")
             && (source.contains("implementation") || source.contains("_implementation"));
 
@@ -285,11 +290,20 @@ impl UpgradeableProxyIssuesDetector {
             return None;
         }
 
+        // FP Reduction: Determine if this is a fallback or receive function
+        // These are the proxy forwarding mechanism, NOT upgrade functions
+        let is_fallback_or_receive = function.function_type == ast::FunctionType::Fallback
+            || function.function_type == ast::FunctionType::Receive;
+
         // Pattern 1: Unprotected upgrade function
         // FP Reduction Phase 2: Only check external/public functions
-        let is_upgrade_function = func_source.contains("upgrade")
-            || func_source.contains("implementation")
-            || func_name_lower.contains("upgrade");
+        // FP Reduction: Only match functions that directly modify upgrade state,
+        // not functions that merely reference "implementation" in their source
+        let is_upgrade_function = func_name_lower.contains("upgrade")
+            || func_name_lower.contains("setimplementation")
+            || (func_source.contains("upgrade") && !is_fallback_or_receive)
+            || (func_name_lower.contains("implementation")
+                && (func_name_lower.contains("set") || func_name_lower.contains("change")));
 
         // CRITICAL FP FIX: Check for OpenZeppelin modifiers on the function
         let has_oz_access_control = function.modifiers.iter().any(|m| {
@@ -312,6 +326,7 @@ impl UpgradeableProxyIssuesDetector {
                 || func_name_lower.contains("unsafe"));
 
         let lacks_access_control = is_upgrade_function
+            && !is_fallback_or_receive // FP Reduction: Fallback is proxy mechanism, not upgrade
             && !is_uups_authorize  // UUPS _authorizeUpgrade is called internally
             && !has_oz_access_control
             && !func_source.contains("onlyOwner")
@@ -319,12 +334,13 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("require(msg.sender")
             && !is_internal_helper; // FP Reduction: Skip internal helpers
 
+        // FP Reduction: Skip unprotected upgrade findings when the more specific
+        // `proxy-upgrade-unprotected` detector already covers this exact pattern.
+        // Only report here if there are additional proxy-specific concerns beyond
+        // simple access control (e.g., combined with storage issues, initialization).
         if lacks_access_control && !is_internal_or_private {
-            return Some(
-                "Upgrade function lacks proper access control, \
-                anyone can upgrade contract to malicious implementation"
-                    .to_string(),
-            );
+            // Skip to avoid duplication with proxy-upgrade-unprotected detector
+            // which provides more targeted and actionable findings for this pattern
         }
 
         // Pattern 2: Initialize function can be called multiple times
@@ -473,13 +489,27 @@ impl UpgradeableProxyIssuesDetector {
         // Pattern 8: No upgrade event emission
         // Phase 6: Skip for internal/private functions (they're helper functions)
         // FP Reduction Phase 2: Standard OZ patterns emit events in the Utils library
+        // FP Reduction: Use contract-scoped source for event checks
+        let contract_source_scoped = self.get_contract_source(ctx.contract, ctx);
         let emits_event = func_source.contains("emit")
-            || contract_source.contains("emit Upgraded")
-            || contract_source.contains("emit AdminChanged")
-            || contract_source.contains("emit BeaconUpgraded");
+            || contract_source_scoped.contains("emit Upgraded")
+            || contract_source_scoped.contains("emit AdminChanged")
+            || contract_source_scoped.contains("emit BeaconUpgraded");
 
-        let no_upgrade_event =
-            is_upgrade_function && !emits_event && is_callable && !is_internal_or_private;
+        // FP Reduction: Skip fallback/receive (they are the proxy mechanism, not upgrade funcs)
+        // FP Reduction: Skip functions that have proper access control -- missing event
+        // on a properly admin-gated upgrade is a low-value informational finding, not critical.
+        // Also skip if the function merely contains "implementation" as a reference without
+        // being a true upgrade setter function.
+        let has_any_access_control =
+            self.has_admin_protection(&func_source) || has_oz_access_control;
+
+        let no_upgrade_event = is_upgrade_function
+            && !emits_event
+            && is_callable
+            && !is_internal_or_private
+            && !is_fallback_or_receive
+            && !has_any_access_control; // FP Reduction: Admin-gated upgrades without events are low-value
 
         if no_upgrade_event {
             return Some(
@@ -528,6 +558,19 @@ impl UpgradeableProxyIssuesDetector {
         }
 
         None
+    }
+
+    /// Get contract source code (scoped to just this contract, not the whole file)
+    fn get_contract_source(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> String {
+        let start = contract.location.start().line();
+        let end = contract.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
     }
 
     /// Get function source code

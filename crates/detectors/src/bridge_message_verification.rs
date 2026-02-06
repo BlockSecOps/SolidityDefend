@@ -4,6 +4,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::contract_classification;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct MessageVerificationDetector {
@@ -23,9 +24,143 @@ impl MessageVerificationDetector {
         }
     }
 
+    /// Determine whether this contract is primarily a bridge contract and
+    /// should be subject to bridge-message-verification checks.
+    ///
+    /// Uses the shared contract classification as a baseline, then applies
+    /// additional heuristics to exclude contracts that merely *interact* with
+    /// bridges (e.g. governance contracts with a cross-chain execution helper)
+    /// but are not bridges themselves.
     fn is_bridge_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code.to_lowercase();
-        source.contains("bridge") || source.contains("relay")
+        // First gate: must pass shared bridge classification (>= 2 indicators)
+        if !contract_classification::is_bridge_contract(ctx) {
+            return false;
+        }
+
+        // Exclude contracts whose primary purpose is clearly NOT bridging.
+        // A governance / DAO / token / vault contract that happens to mention
+        // "bridge" or "cross-chain" should not be treated as a bridge.
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let non_bridge_names = [
+            "governance",
+            "governor",
+            "dao",
+            "voting",
+            "token",
+            "vault",
+            "staking",
+            "lending",
+            "pool",
+            "factory",
+            "registry",
+        ];
+        if non_bridge_names
+            .iter()
+            .any(|kw| contract_name_lower.contains(kw))
+        {
+            return false;
+        }
+
+        // Require the contract name itself to contain a bridge-related keyword,
+        // OR require strong structural indicators (3+) from the shared
+        // classifier. This prevents contracts that only mention "bridge" in
+        // comments from being classified as bridges.
+        let has_bridge_name = contract_name_lower.contains("bridge")
+            || contract_name_lower.contains("relay")
+            || contract_name_lower.contains("messenger")
+            || contract_name_lower.contains("crosschain");
+
+        if has_bridge_name {
+            return true;
+        }
+
+        // If the contract name is generic, require stronger evidence:
+        // must have at least one bridge-specific function pattern in
+        // the source to count as a bridge.
+        let source_lower = ctx.source_code.to_lowercase();
+        let has_bridge_functions = source_lower.contains("function relaymessage")
+            || source_lower.contains("function finalize")
+            || source_lower.contains("function bridgetokens")
+            || source_lower.contains("function sendmessage")
+            || source_lower.contains("mapping(bytes32 => bool) public processedmessages")
+            || (source_lower.contains("stateroot") && source_lower.contains("merkle"));
+
+        has_bridge_functions
+    }
+
+    /// Check whether a function has an access-control modifier that indicates
+    /// a trusted relayer / admin pattern (e.g. onlyAuthorized, onlyOwner,
+    /// onlyRelayer, onlyRole). When present, the bridge relies on
+    /// authentication of the caller rather than cryptographic message proofs,
+    /// which is a valid verification strategy.
+    fn has_access_control_modifier(&self, function: &ast::Function<'_>) -> bool {
+        function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("authorized")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("relayer")
+                || name_lower.contains("role")
+                || name_lower.contains("trusted")
+                || name_lower.contains("guardian")
+                || name_lower.contains("operator")
+        })
+    }
+
+    /// Check whether the function body contains inline access control checks
+    /// such as require(msg.sender == ...) or require(authorizedRelayers[msg.sender]).
+    fn has_inline_access_control(&self, func_source: &str) -> bool {
+        let src = func_source.to_lowercase();
+        // require(msg.sender == someAddress) pattern
+        (src.contains("require") && src.contains("msg.sender"))
+            // Direct mapping lookup of msg.sender for authorization
+            || (src.contains("authorized") && src.contains("[msg.sender]"))
+            || (src.contains("relayer") && src.contains("[msg.sender]"))
+            || (src.contains("trusted") && src.contains("[msg.sender]"))
+    }
+
+    /// Check whether the function signature includes parameters that suggest
+    /// it is designed to perform cryptographic verification (signature bytes,
+    /// proof arrays, v/r/s components). Functions without such parameters are
+    /// "bare executors" that lack any verification by design -- these are
+    /// better caught by more specific detectors (bridge-merkle-bypass,
+    /// l2-bridge-message-validation, missing-chainid-validation).
+    fn has_verification_related_params(&self, function: &ast::Function<'_>) -> bool {
+        function.parameters.iter().any(|param| {
+            if let Some(ref name) = param.name {
+                let name_lower = name.name.to_lowercase();
+                name_lower.contains("signature")
+                    || name_lower.contains("sig")
+                    || name_lower.contains("proof")
+                    || name_lower == "v"
+                    || name_lower == "r"
+                    || name_lower == "s"
+            } else {
+                false
+            }
+        })
+    }
+
+    /// Check whether the function has message hash verification (hash
+    /// comparison via require(hash == ...)) combined with replay protection,
+    /// which together form a valid verification scheme even without ecrecover
+    /// or merkle proofs.
+    fn has_hash_verification_with_replay(&self, func_source: &str) -> bool {
+        let src = func_source.to_lowercase();
+        let has_hash_check = src.contains("require(hash ==")
+            || src.contains("require(messagehash ==")
+            || src.contains("== messagehash")
+            || src.contains("== hash");
+        let has_replay = src.contains("processedmessages[")
+            || src.contains("executedmessages[")
+            || src.contains("usedmessages[")
+            || src.contains("processednonces[")
+            || src.contains("usednonces[")
+            || src.contains("processed[")
+            || src.contains("used[")
+            || src.contains("nonces[");
+        has_hash_check && has_replay
     }
 
     fn check_function(
@@ -54,13 +189,41 @@ impl MessageVerificationDetector {
             return issues;
         }
 
-        // Get function source with comments stripped
-        let func_source = self.get_function_source(function, ctx).to_lowercase();
+        // Skip functions with access-control modifiers — trusted relayer pattern
+        // is a valid verification strategy for bridge message handling
+        if self.has_access_control_modifier(function) {
+            return issues;
+        }
 
-        let has_sig = func_source.contains("ecrecover")
-            || (func_source.contains("verify") && func_source.contains("sig"));
-        let has_merkle = func_source.contains("merkle")
-            && (func_source.contains("verify") || func_source.contains("proof"));
+        // Get function source with comments stripped
+        let func_source = self.get_function_source(function, ctx);
+        let func_source_lower = func_source.to_lowercase();
+
+        // Skip functions with inline access control (require(msg.sender == ...))
+        if self.has_inline_access_control(&func_source) {
+            return issues;
+        }
+
+        let has_sig = func_source_lower.contains("ecrecover")
+            || (func_source_lower.contains("verify") && func_source_lower.contains("sig"));
+        let has_merkle = func_source_lower.contains("merkle")
+            && (func_source_lower.contains("verify") || func_source_lower.contains("proof"));
+
+        // Check for hash verification combined with replay protection -- this is
+        // a valid verification pattern (e.g. comparing keccak256 of message
+        // parameters against a provided hash, then marking it processed)
+        if self.has_hash_verification_with_replay(&func_source) {
+            return issues;
+        }
+
+        // If the function has NO verification-related parameters (no signature,
+        // proof, v/r/s) AND no verification logic in the body, this is a "bare
+        // executor" function. More specific detectors (bridge-merkle-bypass,
+        // l2-bridge-message-validation, missing-chainid-validation) provide
+        // better, more actionable findings for these cases.
+        if !has_sig && !has_merkle && !self.has_verification_related_params(function) {
+            return issues;
+        }
 
         // Check for replay protection more specifically - look for mapping/array access patterns
         // Need to be more specific than just "executed" + "[" because that matches:
@@ -69,16 +232,16 @@ impl MessageVerificationDetector {
         // We want actual state variable access like "processedMessages[hash]"
         let has_replay =
             // Specific mapping names
-            func_source.contains("processedmessages[") ||
-            func_source.contains("executedmessages[") ||
-            func_source.contains("usedmessages[") ||
-            func_source.contains("processednonces[") ||
-            func_source.contains("usednonces[") ||
+            func_source_lower.contains("processedmessages[") ||
+            func_source_lower.contains("executedmessages[") ||
+            func_source_lower.contains("usedmessages[") ||
+            func_source_lower.contains("processednonces[") ||
+            func_source_lower.contains("usednonces[") ||
             // Generic pattern: "processed" or "used" followed by "[" within reasonable distance
             // But not "emit SomethingExecuted" - check for actual state variable patterns
-            (func_source.contains("processed[") ||
-             func_source.contains("used[") ||
-             func_source.contains("nonces["));
+            (func_source_lower.contains("processed[") ||
+             func_source_lower.contains("used[") ||
+             func_source_lower.contains("nonces["));
 
         if !has_sig && !has_merkle {
             issues.push((

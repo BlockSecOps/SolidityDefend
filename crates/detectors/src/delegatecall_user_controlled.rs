@@ -3,6 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
+use crate::utils;
 
 /// Detector for user-controlled delegatecall targets
 ///
@@ -20,6 +21,12 @@ use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 /// 2. Modify any state variable
 /// 3. Drain all funds from the contract
 /// 4. Take complete control of the contract
+///
+/// ## FP Reduction
+///
+/// This detector defers to `dangerous-delegatecall` for patterns it already covers,
+/// including direct address-parameter delegatecall, proxy/diamond patterns, and
+/// owner-managed storage lookups. It avoids double-reporting on the same function.
 ///
 pub struct DelegatecallUserControlledDetector {
     base: BaseDetector,
@@ -74,6 +81,23 @@ impl Detector for DelegatecallUserControlledDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip proxy contracts - delegatecall is by design in proxies
+        // The dangerous-delegatecall detector handles proxy-specific risks separately.
+        if utils::is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip interface-only contracts (no implementation to analyze)
+        if utils::is_interface_only(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip Diamond pattern (EIP-2535) contracts
+        // Diamond contracts use delegatecall to facets by design
+        if self.is_diamond_contract(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(risk_description) = self.has_user_controlled_delegatecall(function, ctx) {
                 let message = format!(
@@ -126,25 +150,67 @@ impl DelegatecallUserControlledDetector {
         // Get function source
         let func_source = self.get_function_source(function, ctx);
 
+        // FP Reduction: Skip modifier definitions that the parser may have included
+        // as functions. Modifiers are not direct attack surface in the same way as
+        // public/external functions. Check if the source starts with "modifier ".
+        if func_source.trim_start().starts_with("modifier ") {
+            return None;
+        }
+
         // Check for delegatecall
         if !func_source.contains("delegatecall") {
             return None;
         }
 
-        // Check if target is user-controlled
-        if self.is_target_user_controlled(&func_source, function) {
-            return Some(format!(
+        // FP Reduction: Skip functions with access control modifiers.
+        // If the function is protected by onlyOwner/onlyAdmin/etc., the delegatecall
+        // target is restricted to authorized callers. The dangerous-delegatecall
+        // detector handles access-controlled delegatecall separately.
+        if utils::has_access_control_modifier(&func_source)
+            || func_source.contains("require(msg.sender ==")
+            || func_source.contains("require(msg.sender==")
+            || func_source.contains("if (msg.sender != ")
+            || func_source.contains("if(msg.sender != ")
+        {
+            return None;
+        }
+
+        // FP Reduction: Defer to dangerous-delegatecall for direct address-parameter patterns.
+        // When a function has a direct address parameter that flows into delegatecall,
+        // the dangerous-delegatecall detector already covers this exact pattern.
+        // This detector should not double-report.
+        if self.is_direct_address_param_delegatecall(&func_source, function) {
+            return None;
+        }
+
+        // FP Reduction: Skip owner-managed storage lookup patterns.
+        // When the delegatecall target comes from an array/mapping that is populated
+        // exclusively by an owner function, the user only controls the index/key,
+        // not the actual target address.
+        if self.is_owner_managed_storage_lookup(&func_source, ctx) {
+            return None;
+        }
+
+        // Check if target is user-controlled via indirect/non-obvious paths
+        // (patterns NOT already covered by dangerous-delegatecall)
+        if self.is_target_user_controlled_indirect(&func_source) {
+            return Some(
                 "Delegatecall target is derived from function parameters or user input, \
                 allowing callers to specify arbitrary code to execute."
-            ));
+                    .to_string(),
+            );
         }
 
         None
     }
 
-    /// Check if delegatecall target is user-controlled
-    fn is_target_user_controlled(&self, source: &str, function: &ast::Function<'_>) -> bool {
-        // Check if any function parameter is used as target
+    /// Check if function has a direct address parameter used in delegatecall.
+    /// This is the primary pattern that dangerous-delegatecall already detects.
+    fn is_direct_address_param_delegatecall(
+        &self,
+        source: &str,
+        function: &ast::Function<'_>,
+    ) -> bool {
         for param in &function.parameters {
             if let Some(param_name) = &param.name {
                 let param_str = param_name.name;
@@ -155,44 +221,99 @@ impl DelegatecallUserControlledDetector {
                     continue;
                 }
 
-                // Check if this parameter is used in delegatecall
+                // Direct address param used in delegatecall - dangerous-delegatecall covers this
                 if source.contains(&format!("{}.delegatecall", param_str))
                     || source.contains(&format!("delegatecall({}", param_str))
-                    || source.contains(&format!("target = {}", param_str))
-                    || source.contains(&format!("_target = {}", param_str))
-                    || source.contains(&format!("to = {}", param_str))
-                    || source.contains(&format!("_to = {}", param_str))
                 {
+                    return true;
+                }
+
+                // Address param assigned to local variable that is then used in delegatecall
+                // e.g., `address target = customLib != address(0) ? customLib : defaultLib;`
+                // then `target.delegatecall(...)`
+                if source.contains(&format!("= {}", param_str)) && source.contains("delegatecall") {
                     return true;
                 }
             }
         }
 
-        // Check for msg.sender delegatecall (less common but still user-controlled)
-        if source.contains("msg.sender.delegatecall") || source.contains("msg.sender).delegatecall")
+        // Check for implementation parameter patterns in the function signature
+        // These are always covered by dangerous-delegatecall
+        let sig_lines: Vec<&str> = source.lines().take(5).collect();
+        let sig_area = sig_lines.join(" ");
+        if (sig_area.contains("address _implementation")
+            || sig_area.contains("address implementation")
+            || sig_area.contains("address target")
+            || sig_area.contains("address _target")
+            || sig_area.contains("address to")
+            || sig_area.contains("address _to")
+            || sig_area.contains("address lib")
+            || sig_area.contains("address _lib")
+            || sig_area.contains("address customLib"))
+            && source.contains("delegatecall")
         {
             return true;
         }
 
-        // Check for implementation parameter patterns
-        if (source.contains("address _implementation")
-            || source.contains("address implementation")
-            || source.contains("address target")
-            || source.contains("address _target")
-            || source.contains("address to")
-            || source.contains("address _to"))
-            && source.contains("delegatecall")
-        {
-            // Check if it's a function parameter (appears before function body)
-            if source.lines().take(5).any(|line| {
-                line.contains("address _implementation")
-                    || line.contains("address target")
-                    || line.contains("address _target")
-                    || line.contains("address to")
-                    || line.contains("address _to")
-            }) {
+        false
+    }
+
+    /// Check if delegatecall target comes from owner-managed storage.
+    /// When an array or mapping is populated by an owner-only function, the user
+    /// only controls the index/key but cannot inject arbitrary addresses.
+    fn is_owner_managed_storage_lookup(&self, func_source: &str, ctx: &AnalysisContext) -> bool {
+        let contract_source = &ctx.source_code;
+
+        // Pattern: target = someArray[index] where someArray is owner-managed
+        // Look for array indexing into delegatecall target
+        let has_array_lookup = func_source.contains("[index]")
+            || func_source.contains("[_index]")
+            || func_source.contains("[idx]")
+            || func_source.contains("[i]");
+
+        if has_array_lookup && func_source.contains("delegatecall") {
+            // Check if the contract has owner-only functions that populate the array
+            let has_owner_managed_push = (contract_source.contains(".push(")
+                || contract_source.contains("libraries[")
+                || contract_source.contains("approvedLibraries["))
+                && (contract_source.contains("onlyOwner")
+                    || contract_source.contains("require(msg.sender == owner")
+                    || contract_source.contains("onlyAdmin"));
+
+            if has_owner_managed_push {
                 return true;
             }
+        }
+
+        // Pattern: target = mapping[key] where mapping is owner-managed
+        // e.g., libraries[name] where setLibrary is owner-only
+        let has_mapping_lookup = func_source.contains("libraries[")
+            || func_source.contains("implementations[")
+            || func_source.contains("facets[")
+            || func_source.contains("modules[");
+
+        if has_mapping_lookup && func_source.contains("delegatecall") {
+            let has_owner_managed_setter = contract_source.contains("onlyOwner")
+                || contract_source.contains("require(msg.sender == owner")
+                || contract_source.contains("onlyAdmin");
+
+            if has_owner_managed_setter {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if delegatecall target is user-controlled through indirect paths
+    /// that are NOT already covered by dangerous-delegatecall.
+    /// This catches more subtle patterns like msg.sender-based delegatecall.
+    fn is_target_user_controlled_indirect(&self, source: &str) -> bool {
+        // Check for msg.sender delegatecall (less common but still user-controlled)
+        // This is a rare pattern not well covered by dangerous-delegatecall
+        if source.contains("msg.sender.delegatecall") || source.contains("msg.sender).delegatecall")
+        {
+            return true;
         }
 
         false
@@ -209,6 +330,36 @@ impl DelegatecallUserControlledDetector {
         } else {
             String::new()
         }
+    }
+
+    /// Check if contract is a Diamond pattern (EIP-2535)
+    /// Diamond contracts use delegatecall to facets by design
+    fn is_diamond_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        let has_diamond_cut = source.contains("diamondCut")
+            || source.contains("DiamondCut")
+            || source.contains("IDiamondCut");
+
+        let has_diamond_loupe = source.contains("DiamondLoupe")
+            || source.contains("IDiamondLoupe")
+            || source.contains("facets()")
+            || source.contains("facetAddress(");
+
+        let has_facet_mapping = lower.contains("facets")
+            && (lower.contains("mapping") || lower.contains("selectortoface"));
+
+        let has_diamond_storage = source.contains("DiamondStorage")
+            || source.contains("DIAMOND_STORAGE_POSITION")
+            || source.contains("keccak256(\"diamond.standard.");
+
+        let has_diamond_inheritance = source.contains("Diamond")
+            && (source.contains("is ") || source.contains("contract Diamond"));
+
+        (has_diamond_cut && has_diamond_loupe)
+            || (has_diamond_storage && has_facet_mapping)
+            || (has_diamond_inheritance && (has_diamond_cut || has_diamond_loupe))
     }
 }
 

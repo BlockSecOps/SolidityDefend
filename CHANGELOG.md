@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.17] - 2026-02-06
+
+### Fixed
+
+#### False Positive Reduction v3 (10 detectors, 88 FPs eliminated)
+
+Ground truth validation: 399 → 311 FPs across 18 test contracts (22% reduction), 0 TP regressions.
+Cumulative from v1.10.14: 436 → 311 (29% total reduction across 20 detectors in 3 rounds).
+
+- **parameter-consistency** (round 2): Skip functions with <3 params, standard callbacks (onFlashLoan, onERC721Received), flash loan amount params, execution function value/target params, and struct-stored arrays
+- **missing-zero-address-check**: Skip functions with access control modifiers, recovery functions, empty bodies, initialize/setter functions, and inline sender checks
+- **circular-dependency** (round 2): Fix `address(this).call()` false recursion detection, restrict recursive pattern to function body only, require delegation chaining evidence for Pattern 5
+- **unsafe-type-casting**: Fix `address(this).balance` false match on `address(` + `uint` co-occurrence; tighten to require `address(uint` pattern
+- **nonce-reuse**: Skip view/pure functions, nonce utility functions (increment/invalidate/get), use contract-level scope for mapping detection, remove comment-matching pattern
+- **gas-griefing**: Fix `"for"` substring matching `"Transfer failed"`; verify `.call{}` is actually inside loops; skip reentrancy-guarded functions; remove redundant delegatecall pattern
+- **bridge-message-verification**: Require 2+ bridge indicators for identification; blocklist non-bridge contracts (governance, vault, token); recognize access control modifiers as valid verification
+- **delegatecall-user-controlled**: Skip proxy/Diamond contracts; deduplicate with dangerous-delegatecall for direct address params; skip owner-managed storage lookups and access-controlled functions
+- **erc7821-batch-authorization**: Require actual ERC-7821 signals (interface, canonical signature, opData); skip delegatecall-only functions; require batch semantics (loops, arrays)
+- **upgradeable-proxy-issues**: Contract-scoped proxy identification (not file-level); exclude fallback/receive from upgrade patterns; skip Pattern 1 (covered by proxy-upgrade-unprotected)
+
+#### Release Pipeline Fix
+
+- **release.yml**: Use `aarch64-linux-gnu-strip` for cross-compiled aarch64 binaries (host x86_64 strip cannot process aarch64 ELF)
+
 ## [1.10.16] - 2026-02-06
 
 ### Fixed
