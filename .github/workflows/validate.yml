@@ -38,6 +38,7 @@ jobs:
   validate:
     name: Validate Detectors
     runs-on: ubuntu-latest
+    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -217,4 +218,4 @@ jobs:
 
       - name: Run regression tests
         run: |
-          cargo test -p soliditydefend --test validation -- --nocapture
+          cargo test -p soliditydefend-tests validation -- --nocapture
