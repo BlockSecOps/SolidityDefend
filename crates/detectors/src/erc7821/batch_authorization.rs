@@ -49,6 +49,29 @@ impl ERC7821BatchAuthorizationDetector {
 
         let func_lower = func_text.to_lowercase();
 
+        // FP Reduction: Skip generic delegatecall wrappers.
+        // ERC-7821 batch executors use call (not delegatecall) to execute batched operations.
+        // Functions that only do delegatecall to a single user-controlled target are plain
+        // delegatecall patterns, not batch executors. These are already caught by the
+        // delegatecall-user-controlled detector.
+        if func_lower.contains("delegatecall") && !func_lower.contains(".call(") {
+            return issues;
+        }
+
+        // FP Reduction: Skip functions that are clearly single-target delegatecall/call
+        // wrappers without batch semantics (no loop, no array iteration).
+        let has_batch_semantics = func_lower.contains("for (")
+            || func_lower.contains("for(")
+            || func_lower.contains("while (")
+            || func_lower.contains("while(")
+            || func_lower.contains(".length");
+        let is_batch_name = func_name.contains("batch") || func_name == "executebatch";
+
+        if !has_batch_semantics && !is_batch_name {
+            // Single execution function without batch semantics - not an ERC-7821 pattern
+            return issues;
+        }
+
         // Check for authorization
         let has_auth = func_lower.contains("require")
             && (func_lower.contains("msg.sender")

@@ -59,10 +59,11 @@ impl ZeroAddressDetector {
             return findings;
         }
 
-        // Skip standard token interface functions - zero address behavior is by design
+        // Skip standard token/vault interface functions - zero address behavior is by design
         // ERC20: transfer to address(0) burns tokens (allowed by spec)
         // ERC20: approve address(0) revokes approval (allowed by spec)
         // ERC721: transferFrom to address(0) burns NFT (allowed by spec)
+        // ERC-4626: redeem/withdraw have `owner` param meaning share-owner, not access control
         let func_name_lower = function.name.name.to_lowercase();
         let is_standard_token_function = func_name_lower == "transfer"
             || func_name_lower == "transferfrom"
@@ -72,9 +73,51 @@ impl ZeroAddressDetector {
             || func_name_lower == "burn"  // Burn explicitly sends to zero
             || func_name_lower == "burnfrom"
             || func_name_lower == "mint"  // Mint often allows flexible recipient
-            || func_name_lower == "mintto";
+            || func_name_lower == "mintto"
+            || func_name_lower == "redeem"  // ERC-4626 vault function
+            || func_name_lower == "deposit"; // ERC-4626 vault function
 
         if is_standard_token_function {
+            return findings;
+        }
+
+        // FP Reduction: Skip social recovery / multi-step governance functions
+        // These functions use guardian validation, timelocks, and multi-approval processes
+        // rather than parameter-level zero-address checks
+        let is_recovery_function =
+            func_name_lower.contains("recovery") || func_name_lower.contains("recover");
+
+        if is_recovery_function {
+            return findings;
+        }
+
+        // FP Reduction: Skip functions with empty bodies
+        // Functions with no statements have no state changes to protect
+        if let Some(body) = &function.body {
+            if body.statements.is_empty() {
+                return findings;
+            }
+        } else {
+            // No body at all (interface/abstract function)
+            return findings;
+        }
+
+        // FP Reduction: Skip functions with access control modifiers
+        // Functions protected by onlyOwner, onlyAdmin, etc. have trusted callers
+        // who are expected to provide valid addresses
+        let has_access_control_modifier = function.modifiers.iter().any(|m| {
+            let mod_name = m.name.name.to_lowercase();
+            mod_name.contains("only")
+                || mod_name.contains("auth")
+                || mod_name.contains("restrict")
+                || mod_name.contains("admin")
+                || mod_name.contains("owner")
+                || mod_name.contains("guard")
+                || mod_name == "initializer"
+                || mod_name == "reinitializer"
+        });
+
+        if has_access_control_modifier {
             return findings;
         }
 
@@ -91,6 +134,46 @@ impl ZeroAddressDetector {
 
             // Extract function source code for string-based checking
             let function_source = self.extract_function_source(&ctx.source_code, function);
+
+            // FP Reduction: Skip functions with inline access control (require(msg.sender == ...))
+            // When a function has access control, the caller is trusted to provide valid addresses.
+            // This covers patterns like: require(msg.sender == owner), require(msg.sender == admin)
+            let has_inline_access_control = function_source.contains("msg.sender ==")
+                || function_source.contains("== msg.sender")
+                || function_source.contains("isGuardian")
+                || function_source.contains("isAuthorized");
+
+            if has_inline_access_control {
+                return findings;
+            }
+
+            // FP Reduction: Skip initialize/init functions entirely
+            // Initialize functions are either:
+            // 1. Protected by initializer modifier (already caught above)
+            // 2. Protected by an init guard (require(!initialized), etc.)
+            // 3. Completely unprotected (the bigger issue is unprotected-initializer)
+            // In all cases, the zero-address check is a secondary concern compared to
+            // the initialization protection issue. The unprotected-initializer detector
+            // handles the primary security concern.
+            if func_name_lower == "initialize" || func_name_lower == "init" {
+                return findings;
+            }
+
+            // FP Reduction: Skip owner/admin-setting functions that lack access control entirely
+            // If a function like setOwner() has NO access control (no modifier, no msg.sender check),
+            // the missing access control is a far more critical vulnerability than missing zero-address
+            // check. The access control detectors (enhanced-access-control, swc105, etc.) handle this.
+            // Reporting zero-address here adds noise without actionable value.
+            // Note: If the function had access control, we would have already returned above.
+            let is_owner_setter = func_name_lower == "setowner"
+                || func_name_lower == "changeowner"
+                || func_name_lower == "transferownership"
+                || func_name_lower == "setadmin"
+                || func_name_lower == "changeadmin";
+
+            if is_owner_setter {
+                return findings;
+            }
 
             // Report unchecked parameters - but ONLY for truly critical parameters
             for param in &address_params {

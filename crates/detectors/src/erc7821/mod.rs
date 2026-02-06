@@ -44,10 +44,44 @@ pub use token_approval::ERC7821TokenApprovalDetector;
 
 /// Helper function to detect if contract implements ERC-7821
 pub fn is_erc7821_executor(ctx: &crate::types::AnalysisContext) -> bool {
-    let source = &ctx.source_code.to_lowercase();
+    let source = &ctx.source_code;
+    let source_lower = source.to_lowercase();
 
-    // Check for ERC-7821 specific patterns
-    source.contains("execute") && source.contains("batch")
-        || source.contains("ierc7821")
-        || source.contains("executebatch")
+    // Strong signal: explicit ERC-7821 interface reference
+    if source.contains("IERC7821")
+        || source.contains("ERC7821")
+        || source_lower.contains("erc-7821")
+        || source_lower.contains("eip-7821")
+    {
+        return true;
+    }
+
+    // Strong signal: ERC-7821 specific function signature patterns
+    // ERC-7821 defines execute(bytes32 mode, bytes calldata executionData)
+    if source.contains("execute(bytes32") && source_lower.contains("executiondata") {
+        return true;
+    }
+
+    // Strong signal: opData pattern specific to ERC-7821
+    if source_lower.contains("opdata") && source_lower.contains("executebatch") {
+        return true;
+    }
+
+    // Moderate signal: executeBatch with call/delegatecall patterns (batch executor)
+    // but NOT plain delegatecall wrappers. Require executeBatch as an actual function name
+    // combined with array-based execution (multiple targets/calls)
+    if source_lower.contains("executebatch") {
+        // Must also have batch execution patterns (arrays of targets or calls)
+        let has_batch_pattern = source_lower.contains("targets.length")
+            || source_lower.contains("calls.length")
+            || source_lower.contains("operations.length")
+            || source_lower.contains("executions.length")
+            || (source.contains("[]") && source_lower.contains("executebatch"));
+
+        if has_batch_pattern {
+            return true;
+        }
+    }
+
+    false
 }

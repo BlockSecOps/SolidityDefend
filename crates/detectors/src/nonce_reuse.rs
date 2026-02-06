@@ -103,7 +103,24 @@ impl NonceReuseDetector {
     ) -> Option<String> {
         function.body.as_ref()?;
 
+        // Skip view/pure functions -- they are read-only and cannot have nonce reuse issues
+        if matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) {
+            return None;
+        }
+
+        // Skip simple nonce utility/management functions by name.
+        // These are nonce lifecycle helpers (increment, get, invalidate, use, revoke),
+        // not functions that consume nonces for authorization purposes.
+        let func_name_lower = function.name.name.to_lowercase();
+        if self.is_nonce_utility_function(&func_name_lower) {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx);
+        let contract_source = &ctx.source_code;
 
         // Check if function uses nonces
         let uses_nonce = func_source.contains("nonce") || func_source.contains("Nonce");
@@ -174,10 +191,20 @@ impl NonceReuseDetector {
         }
 
         // Pattern 4: Global nonce instead of per-user
+        // Check both function source AND contract-level source for per-user mapping declarations,
+        // since mapping declarations are typically at contract scope (state variables).
         let uses_global_nonce =
             func_source.contains("uint256 nonce") || func_source.contains("uint256 public nonce");
 
-        let not_per_user = uses_global_nonce && !func_source.contains("mapping(address");
+        let has_per_user_mapping = func_source.contains("mapping(address")
+            || contract_source.contains("mapping(address => mapping")
+            || contract_source.contains("mapping(address => uint256) public nonce")
+            || contract_source.contains("mapping(address => uint256) nonce")
+            || contract_source.contains("nonces[msg.sender]")
+            || contract_source.contains("nonces[sender]")
+            || contract_source.contains("usedNonces[");
+
+        let not_per_user = uses_global_nonce && !has_per_user_mapping;
 
         if not_per_user {
             return Some(
@@ -205,12 +232,16 @@ impl NonceReuseDetector {
         }
 
         // Pattern 6: Missing nonce cancellation mechanism
+        // Check the entire contract source for cancellation functions, not just this function.
+        // Cancellation is typically in a separate dedicated function within the same contract.
         let has_nonce_logic = func_source.contains("nonces[") || func_source.contains("nonce ==");
 
-        let no_cancellation = has_nonce_logic
-            && !func_source.contains("cancel")
-            && !func_source.contains("invalidate")
-            && !func_source.contains("revoke");
+        let contract_has_cancellation = contract_source.contains("cancel")
+            || contract_source.contains("invalidate")
+            || contract_source.contains("revoke")
+            || contract_source.contains("usedNonces");
+
+        let no_cancellation = has_nonce_logic && !contract_has_cancellation;
 
         if no_cancellation {
             return Some(
@@ -257,14 +288,60 @@ impl NonceReuseDetector {
             );
         }
 
-        // Pattern 10: Explicit vulnerability marker
-        if func_source.contains("VULNERABILITY")
-            && (func_source.contains("nonce") || func_source.contains("replay"))
-        {
-            return Some("Nonce reuse vulnerability marker detected".to_string());
-        }
+        // Pattern 10 removed: Detecting "VULNERABILITY" in comments is unreliable.
+        // It matches developer documentation and comments rather than actual code patterns,
+        // producing false positives on contracts that document known issues in comments.
 
         None
+    }
+
+    /// Check if a function is a simple nonce utility/management helper.
+    /// These functions manage the nonce lifecycle (increment, get, invalidate, use, revoke)
+    /// and should not be flagged for nonce reuse -- they ARE the nonce management mechanism.
+    fn is_nonce_utility_function(&self, func_name_lower: &str) -> bool {
+        // Direct nonce management function names
+        let nonce_utility_names = [
+            "incrementnonce",
+            "getnonce",
+            "invalidatenonce",
+            "usenonce",
+            "revokenonce",
+            "cancelnonce",
+            "consumenance",
+            "_usenonce",
+            "_incrementnonce",
+        ];
+
+        if nonce_utility_names
+            .iter()
+            .any(|name| func_name_lower == *name)
+        {
+            return true;
+        }
+
+        // Also match patterns like "nonceIncrement", "nonceInvalidate", etc.
+        if func_name_lower.starts_with("nonce") || func_name_lower.ends_with("nonce") {
+            let nonce_action_words = [
+                "increment",
+                "invalidate",
+                "revoke",
+                "cancel",
+                "consume",
+                "use",
+                "get",
+                "set",
+                "reset",
+                "bump",
+            ];
+            if nonce_action_words
+                .iter()
+                .any(|word| func_name_lower.contains(word))
+            {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Get function source code

@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.10.16-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.10.17-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 > Enterprise-grade static analysis for Solidity smart contracts
@@ -17,7 +17,7 @@ soliditydefend contract.sol
 ## Features
 
 - **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
-- **Context-Aware Analysis** - Safe Patterns Library with 46+ FP reduction categories: ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, ERC-4626 vaults, Chainlink oracles, proxy patterns (UUPS, Diamond, EIP-1967, Beacon), inline access control, timelocks, multi-sig, Permit2, transient storage locks, immutable address calls, ERC-3156 flash loans, per-user storage patterns, and more
+- **Context-Aware Analysis** - Safe Patterns Library with 56+ FP reduction categories: ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, ERC-4626 vaults, Chainlink oracles, proxy patterns (UUPS, Diamond, EIP-1967, Beacon), inline access control, timelocks, multi-sig, Permit2, transient storage locks, immutable address calls, ERC-3156 flash loans, per-user storage patterns, nonce management, type cast safety, gas griefing guards, bridge verification, batch authorization, and more
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
 - **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`

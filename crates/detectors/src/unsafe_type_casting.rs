@@ -337,8 +337,52 @@ impl UnsafeTypeCastingDetector {
             return false;
         }
 
+        // FP Reduction: address(this) is NOT a type cast - it returns the contract's
+        // own address, which is always valid and never zero. Skip any line where
+        // the only address() usage is address(this).
+        if self.is_only_address_this(line) {
+            return false;
+        }
+
+        // FP Reduction: Require that the uint type is actually INSIDE the address()
+        // call (e.g., address(uint256(x))), not merely co-occurring on the same line
+        // (e.g., uint256 x = address(this).balance). Use "address(uint" to ensure
+        // the uint is the direct argument to address().
         line.contains("address(bytes20(")
-            || (line.contains("address(") && line.contains("uint") && !line.contains("uint160"))
+            || (line.contains("address(uint") && !line.contains("uint160"))
+    }
+
+    /// Check if all address() occurrences on a line are address(this)
+    /// address(this) is a built-in Solidity expression, not a type cast
+    fn is_only_address_this(&self, line: &str) -> bool {
+        let mut search_from = 0;
+        let mut found_any = false;
+
+        while let Some(pos) = line[search_from..].find("address(") {
+            let abs_pos = search_from + pos;
+            let after = &line[abs_pos + 8..]; // skip "address("
+
+            // Check if this is address(this) or address(this).something
+            let trimmed = after.trim_start();
+            if trimmed.starts_with("this)") || trimmed.starts_with("this).") {
+                found_any = true;
+                search_from = abs_pos + 8;
+                continue;
+            }
+
+            // Check if this is address(0) - also not a cast
+            if trimmed.starts_with("0)") || trimmed.starts_with("0x") {
+                found_any = true;
+                search_from = abs_pos + 8;
+                continue;
+            }
+
+            // Found a non-this, non-zero address() usage - this IS a potential cast
+            return false;
+        }
+
+        // Return true only if we found at least one address(this) and no other address() usage
+        found_any
     }
 
     fn has_range_check(&self, lines: &[&str], current_line: usize) -> bool {
