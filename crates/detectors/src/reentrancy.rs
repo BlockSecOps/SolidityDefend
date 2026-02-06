@@ -371,6 +371,8 @@ impl ClassicReentrancyDetector {
     }
 
     /// Phase 15 FP Reduction: Check if function only calls view/pure functions
+    /// FP-10 Fix: Also detect typed interface calls (e.g., IERC20(token).transfer(...))
+    /// which can trigger reentrancy via ERC-777 hooks or other callback mechanisms.
     fn only_calls_view_functions(&self, func_source: &str) -> bool {
         // If there's no .call{ or .transfer or .send, likely only view calls
         let has_value_transfer = func_source.contains(".call{value")
@@ -380,7 +382,197 @@ impl ClassicReentrancyDetector {
         // Check for delegatecall which can cause reentrancy
         let has_delegatecall = func_source.contains(".delegatecall(");
 
-        !has_value_transfer && !has_delegatecall
+        if has_value_transfer || has_delegatecall {
+            return false;
+        }
+
+        // FP-10: Check for typed interface calls that can trigger reentrancy
+        // e.g., IERC20(token).transfer(...), IPool(pool).swap(...)
+        if self.has_typed_interface_call(func_source) {
+            return false;
+        }
+
+        // FP-10: Check for state-changing method calls on external contracts
+        // e.g., token.transfer(...), pool.swap(...)
+        if self.has_state_changing_external_method(func_source) {
+            return false;
+        }
+
+        true
+    }
+
+    /// FP-10: Detect typed interface call patterns like `ISomething(addr).method(`
+    /// These are external calls that can trigger callbacks (e.g., ERC-777 hooks).
+    fn has_typed_interface_call(&self, func_source: &str) -> bool {
+        // Match patterns like: I<Name>(<expr>).<method>(
+        // We look for `I` followed by an uppercase letter, then `(`, then `).<method>(`
+        let bytes = func_source.as_bytes();
+        let len = bytes.len();
+        let mut i = 0;
+
+        while i < len.saturating_sub(4) {
+            // Look for 'I' followed by an uppercase ASCII letter
+            if bytes[i] == b'I' && i + 1 < len && bytes[i + 1].is_ascii_uppercase() {
+                // Walk forward to find the opening paren of the cast
+                let mut j = i + 2;
+                while j < len && (bytes[j].is_ascii_alphanumeric() || bytes[j] == b'_') {
+                    j += 1;
+                }
+                if j < len && bytes[j] == b'(' {
+                    // Found potential interface cast like `IERC20(`
+                    // Now find the matching closing paren, accounting for nesting
+                    let mut depth = 1;
+                    let mut k = j + 1;
+                    while k < len && depth > 0 {
+                        if bytes[k] == b'(' {
+                            depth += 1;
+                        } else if bytes[k] == b')' {
+                            depth -= 1;
+                        }
+                        k += 1;
+                    }
+                    // k is now past the closing paren; check for `.method(`
+                    if depth == 0 && k < len && bytes[k] == b'.' {
+                        // Skip the dot, read the method name
+                        let mut m = k + 1;
+                        while m < len && (bytes[m].is_ascii_alphanumeric() || bytes[m] == b'_') {
+                            m += 1;
+                        }
+                        if m > k + 1 && m < len && bytes[m] == b'(' {
+                            // Extract interface name for allowlist check
+                            let iface_name = &func_source[i..j];
+                            if !Self::is_safe_library_name(iface_name) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            i += 1;
+        }
+
+        false
+    }
+
+    /// FP-10: Detect state-changing method calls on external contract variables
+    /// e.g., `token.transfer(`, `pool.swap(`, `vault.deposit(`
+    fn has_state_changing_external_method(&self, func_source: &str) -> bool {
+        // Methods that are known to be state-changing and can trigger callbacks
+        const STATE_CHANGING_METHODS: &[&str] = &[
+            ".transfer(",
+            ".transferFrom(",
+            ".safeTransfer(",
+            ".safeTransferFrom(",
+            ".swap(",
+            ".deposit(",
+            ".withdraw(",
+            ".mint(",
+            ".burn(",
+            ".approve(",
+            ".permit(",
+            ".flash(",
+            ".flashLoan(",
+            ".execute(",
+            ".multicall(",
+            ".onERC721Received(",
+            ".onERC1155Received(",
+            ".tokensReceived(",
+            ".tokensToSend(",
+        ];
+
+        // Builtin/safe prefixes -- calls on these are NOT external contract calls
+        const SAFE_PREFIXES: &[&str] = &[
+            "this.",
+            "msg.",
+            "abi.",
+            "type(",
+            "block.",
+            "tx.",
+            "super.",
+        ];
+
+        for method in STATE_CHANGING_METHODS {
+            let mut search_from = 0;
+            while let Some(pos) = func_source[search_from..].find(method) {
+                let abs_pos = search_from + pos;
+
+                // We need to check what is before the dot to determine
+                // if this is an external call or a safe builtin.
+                // Walk backwards from the dot to find the caller token.
+                if abs_pos > 0 {
+                    let prefix_region = &func_source[..abs_pos + 1]; // includes the dot
+
+                    // Check if this is a safe prefix (e.g., "this.", "msg.", etc.)
+                    let is_safe = SAFE_PREFIXES
+                        .iter()
+                        .any(|safe| prefix_region.ends_with(safe));
+
+                    if !is_safe {
+                        // Extract the identifier before the dot to check against safe libraries
+                        let before_dot = &func_source[..abs_pos];
+                        let caller_name = Self::extract_trailing_identifier(before_dot);
+                        if !caller_name.is_empty()
+                            && !Self::is_safe_library_name(caller_name)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                search_from = abs_pos + method.len();
+            }
+        }
+
+        false
+    }
+
+    /// Check if a name is a known safe library that does not make external calls
+    /// that could trigger reentrancy.
+    fn is_safe_library_name(name: &str) -> bool {
+        const SAFE_LIBRARIES: &[&str] = &[
+            "SafeERC20",
+            "SafeMath",
+            "Math",
+            "Address",
+            "Strings",
+            "EnumerableSet",
+            "EnumerableMap",
+            "Counters",
+            "ECDSA",
+            "MerkleProof",
+            "SignatureChecker",
+            "EIP712",
+            "Base64",
+            "Clones",
+            "StorageSlot",
+            "Arrays",
+            "Context",
+            "Multicall",
+        ];
+        SAFE_LIBRARIES.iter().any(|lib| name == *lib)
+    }
+
+    /// Extract the trailing identifier from a string (e.g., "foo.bar.baz" -> "baz",
+    /// "token" -> "token", "IERC20(addr)" -> "").
+    /// Returns an empty string if the string does not end with a valid identifier.
+    fn extract_trailing_identifier(s: &str) -> &str {
+        let bytes = s.as_bytes();
+        if bytes.is_empty() {
+            return "";
+        }
+        // Walk backwards while we see identifier chars
+        let end = bytes.len();
+        let mut start = end;
+        while start > 0
+            && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_')
+        {
+            start -= 1;
+        }
+        if start == end {
+            ""
+        } else {
+            &s[start..end]
+        }
     }
 
     /// Phase 15 FP Reduction: Check if this is a pull payment pattern
