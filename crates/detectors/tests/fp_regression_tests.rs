@@ -14,7 +14,6 @@
  * Note: These tests verify pattern detection at the source level. For full detector
  * integration tests, use the validation suite (soliditydefend --validate).
  */
-
 use std::fs;
 use std::path::PathBuf;
 
@@ -458,15 +457,13 @@ fn test_restaking_patterns() {
         "Restaking contract should have request withdrawal"
     );
     assert!(
-        source_lower.contains("completewithdrawal")
-            || source_lower.contains("complete_withdrawal"),
+        source_lower.contains("completewithdrawal") || source_lower.contains("complete_withdrawal"),
         "Restaking contract should have complete withdrawal"
     );
 
     // Should have withdrawal delay
     assert!(
-        restaking_source.contains("WITHDRAWAL_DELAY")
-            || source_lower.contains("withdrawaldelay"),
+        restaking_source.contains("WITHDRAWAL_DELAY") || source_lower.contains("withdrawaldelay"),
         "Restaking contract should have withdrawal delay"
     );
 }
@@ -548,8 +545,14 @@ fn test_reentrancy_guard_source_patterns() {
             }
         }
     "#;
-    assert!(oz_guard.contains("ReentrancyGuard"), "Should have ReentrancyGuard import");
-    assert!(oz_guard.contains("nonReentrant"), "Should have nonReentrant modifier");
+    assert!(
+        oz_guard.contains("ReentrancyGuard"),
+        "Should have ReentrancyGuard import"
+    );
+    assert!(
+        oz_guard.contains("nonReentrant"),
+        "Should have nonReentrant modifier"
+    );
 
     // Contract with custom lock modifier
     let custom_lock = r#"
@@ -566,8 +569,14 @@ fn test_reentrancy_guard_source_patterns() {
             }
         }
     "#;
-    assert!(custom_lock.contains("modifier lock"), "Should have lock modifier");
-    assert!(custom_lock.contains("unlocked == 1"), "Should have unlock check");
+    assert!(
+        custom_lock.contains("modifier lock"),
+        "Should have lock modifier"
+    );
+    assert!(
+        custom_lock.contains("unlocked == 1"),
+        "Should have unlock check"
+    );
 }
 
 /// Test access control source patterns
@@ -583,7 +592,10 @@ fn test_access_control_source_patterns() {
         }
     "#;
     assert!(ownable.contains("Ownable"), "Should have Ownable import");
-    assert!(ownable.contains("onlyOwner"), "Should have onlyOwner modifier");
+    assert!(
+        ownable.contains("onlyOwner"),
+        "Should have onlyOwner modifier"
+    );
 
     // Contract with AccessControl pattern
     let access_control = r#"
@@ -595,9 +607,18 @@ fn test_access_control_source_patterns() {
             }
         }
     "#;
-    assert!(access_control.contains("AccessControl"), "Should have AccessControl import");
-    assert!(access_control.contains("onlyRole"), "Should have onlyRole modifier");
-    assert!(access_control.contains("_ROLE"), "Should have role constant");
+    assert!(
+        access_control.contains("AccessControl"),
+        "Should have AccessControl import"
+    );
+    assert!(
+        access_control.contains("onlyRole"),
+        "Should have onlyRole modifier"
+    );
+    assert!(
+        access_control.contains("_ROLE"),
+        "Should have role constant"
+    );
 
     // Contract with timelock
     let timelock = r#"
@@ -615,8 +636,10 @@ fn test_access_control_source_patterns() {
         }
     "#;
     assert!(timelock.contains("delay"), "Should have delay variable");
-    assert!(timelock.contains("queueTransaction") && timelock.contains("executeTransaction"),
-            "Should have queue and execute functions");
+    assert!(
+        timelock.contains("queueTransaction") && timelock.contains("executeTransaction"),
+        "Should have queue and execute functions"
+    );
     assert!(timelock.contains("block.timestamp"), "Should use timestamp");
 }
 
@@ -633,9 +656,18 @@ fn test_library_source_patterns() {
             }
         }
     "#;
-    assert!(safe_erc20.contains("SafeERC20"), "Should have SafeERC20 import");
-    assert!(safe_erc20.contains("safeTransferFrom"), "Should use safeTransferFrom");
-    assert!(safe_erc20.contains("@openzeppelin"), "Should be from OpenZeppelin");
+    assert!(
+        safe_erc20.contains("SafeERC20"),
+        "Should have SafeERC20 import"
+    );
+    assert!(
+        safe_erc20.contains("safeTransferFrom"),
+        "Should use safeTransferFrom"
+    );
+    assert!(
+        safe_erc20.contains("@openzeppelin"),
+        "Should be from OpenZeppelin"
+    );
 
     // Contract using ECDSA
     let ecdsa = r#"
@@ -659,7 +691,10 @@ fn test_library_source_patterns() {
             }
         }
     "#;
-    assert!(sol_08.contains("pragma solidity ^0.8"), "Should have Solidity 0.8+ pragma");
+    assert!(
+        sol_08.contains("pragma solidity ^0.8"),
+        "Should have Solidity 0.8+ pragma"
+    );
 }
 
 /// Test inline protection detection (string-based)
@@ -672,7 +707,10 @@ fn test_inline_protection_detection() {
             payable(owner).transfer(address(this).balance);
         }
     "#;
-    assert!(has_inline_sender_check(with_sender_check), "Should detect inline sender check");
+    assert!(
+        has_inline_sender_check(with_sender_check),
+        "Should detect inline sender check"
+    );
 
     // Function with inline zero check
     let with_zero_check = r#"
@@ -681,7 +719,10 @@ fn test_inline_protection_detection() {
             recipient = _recipient;
         }
     "#;
-    assert!(has_inline_zero_check(with_zero_check), "Should detect inline zero address check");
+    assert!(
+        has_inline_zero_check(with_zero_check),
+        "Should detect inline zero address check"
+    );
 
     // Function with try/catch
     let with_try_catch = r#"
@@ -693,7 +734,10 @@ fn test_inline_protection_detection() {
             }
         }
     "#;
-    assert!(has_try_catch(with_try_catch), "Should detect try/catch pattern");
+    assert!(
+        has_try_catch(with_try_catch),
+        "Should detect try/catch pattern"
+    );
 }
 
 /// Test contract type source patterns
@@ -706,7 +750,10 @@ fn test_contract_type_source_patterns() {
             function balanceOf(address account) external view returns (uint256);
         }
     "#;
-    assert!(interface.contains("interface "), "Should have interface keyword");
+    assert!(
+        interface.contains("interface "),
+        "Should have interface keyword"
+    );
 
     // Library contract
     let library = r#"
@@ -727,9 +774,15 @@ fn test_contract_type_source_patterns() {
             }
         }
     "#;
-    assert!(test_source.contains("forge-std"), "Should have forge-std import");
+    assert!(
+        test_source.contains("forge-std"),
+        "Should have forge-std import"
+    );
     assert!(test_source.contains("Test"), "Should inherit from Test");
-    assert!(test_source.to_lowercase().contains("test"), "Should have test in name");
+    assert!(
+        test_source.to_lowercase().contains("test"),
+        "Should have test in name"
+    );
 }
 
 // ============================================================================
@@ -749,8 +802,14 @@ fn test_centralization_timelock_patterns() {
             }
         }
     "#;
-    assert!(with_timelock.contains("TimelockController"), "Should have timelock");
-    assert!(with_timelock.contains("schedule"), "Should use schedule function");
+    assert!(
+        with_timelock.contains("TimelockController"),
+        "Should have timelock"
+    );
+    assert!(
+        with_timelock.contains("schedule"),
+        "Should use schedule function"
+    );
 
     // Contract with multisig should not be flagged
     let with_multisig = r#"
@@ -763,7 +822,10 @@ fn test_centralization_timelock_patterns() {
             }
         }
     "#;
-    assert!(with_multisig.contains("GnosisSafe") || with_multisig.contains("Safe"), "Should have multisig");
+    assert!(
+        with_multisig.contains("GnosisSafe") || with_multisig.contains("Safe"),
+        "Should have multisig"
+    );
     assert!(with_multisig.contains("threshold"), "Should have threshold");
 }
 
@@ -777,8 +839,14 @@ fn test_timestamp_deadline_patterns() {
             // verify signature
         }
     "#;
-    assert!(permit_function.contains("deadline"), "Should have deadline parameter");
-    assert!(permit_function.contains("block.timestamp <="), "Should have timestamp check");
+    assert!(
+        permit_function.contains("deadline"),
+        "Should have deadline parameter"
+    );
+    assert!(
+        permit_function.contains("block.timestamp <="),
+        "Should have timestamp check"
+    );
 
     // Grace period should not be flagged
     let with_grace = r#"
@@ -818,8 +886,14 @@ fn test_delegatecall_diamond_pattern() {
             }
         }
     "#;
-    assert!(diamond.contains("DiamondCut") || diamond.contains("diamondCut"), "Should have diamond cut");
-    assert!(diamond.contains("DiamondLoupe") || diamond.contains("facets"), "Should have diamond loupe");
+    assert!(
+        diamond.contains("DiamondCut") || diamond.contains("diamondCut"),
+        "Should have diamond cut"
+    );
+    assert!(
+        diamond.contains("DiamondLoupe") || diamond.contains("facets"),
+        "Should have diamond loupe"
+    );
     assert!(diamond.contains("facet"), "Should use facets");
 }
 
@@ -833,8 +907,14 @@ fn test_lowlevel_call_success_check() {
             require(success, "Transfer failed");
         }
     "#;
-    assert!(with_check.contains("(bool success"), "Should capture success");
-    assert!(with_check.contains("require(success"), "Should check success");
+    assert!(
+        with_check.contains("(bool success"),
+        "Should capture success"
+    );
+    assert!(
+        with_check.contains("require(success"),
+        "Should check success"
+    );
 
     // Using Address.sendValue should not be flagged
     let with_library = r#"
@@ -844,7 +924,10 @@ fn test_lowlevel_call_success_check() {
             payable(to).sendValue(amount);
         }
     "#;
-    assert!(with_library.contains("Address.sendValue") || with_library.contains("sendValue"), "Should use sendValue");
+    assert!(
+        with_library.contains("Address.sendValue") || with_library.contains("sendValue"),
+        "Should use sendValue"
+    );
 }
 
 /// Test unused return value FP reduction
@@ -856,7 +939,10 @@ fn test_unused_return_value_patterns() {
             token.approve(spender, type(uint256).max);
         }
     "#;
-    assert!(approve_max.contains("type(uint256).max"), "Should have max approval");
+    assert!(
+        approve_max.contains("type(uint256).max"),
+        "Should have max approval"
+    );
 
     // With try-catch
     let with_try = r#"
@@ -868,7 +954,10 @@ fn test_unused_return_value_patterns() {
             }
         }
     "#;
-    assert!(with_try.contains("try ") && with_try.contains("catch"), "Should have try-catch");
+    assert!(
+        with_try.contains("try ") && with_try.contains("catch"),
+        "Should have try-catch"
+    );
 }
 
 // ============================================================================
@@ -889,10 +978,14 @@ fn test_erc721_callback_safe_patterns() {
             return this.onERC721Received.selector;
         }
     "#;
-    assert!(safe_receiver.contains("onERC721Received.selector"),
-            "Safe receiver should return magic selector");
-    assert!(!safe_receiver.contains(".call"),
-            "Safe receiver should not make external calls");
+    assert!(
+        safe_receiver.contains("onERC721Received.selector"),
+        "Safe receiver should return magic selector"
+    );
+    assert!(
+        !safe_receiver.contains(".call"),
+        "Safe receiver should not make external calls"
+    );
 
     // Safe ERC1155 receiver
     let safe_1155_receiver = r#"
@@ -906,8 +999,10 @@ fn test_erc721_callback_safe_patterns() {
             return 0xf23a6e61; // Magic value
         }
     "#;
-    assert!(safe_1155_receiver.contains("0xf23a6e61"),
-            "ERC1155 receiver should return magic value");
+    assert!(
+        safe_1155_receiver.contains("0xf23a6e61"),
+        "ERC1155 receiver should return magic value"
+    );
 
     // OpenZeppelin Initializable pattern
     let initializable = r#"
@@ -918,8 +1013,10 @@ fn test_erc721_callback_safe_patterns() {
             }
         }
     "#;
-    assert!(initializable.contains("Initializable"),
-            "Should detect Initializable pattern");
+    assert!(
+        initializable.contains("Initializable"),
+        "Should detect Initializable pattern"
+    );
 }
 
 /// Category 2: CREATE2 Frontrunning FP Reduction
@@ -935,8 +1032,14 @@ fn test_create2_safe_patterns() {
             }
         }
     "#;
-    assert!(clones_library.contains("Clones"), "Should use Clones library");
-    assert!(clones_library.contains("cloneDeterministic"), "Should use deterministic clone");
+    assert!(
+        clones_library.contains("Clones"),
+        "Should use Clones library"
+    );
+    assert!(
+        clones_library.contains("cloneDeterministic"),
+        "Should use deterministic clone"
+    );
 
     // Salt commitment pattern
     let salt_commitment = r#"
@@ -951,7 +1054,10 @@ fn test_create2_safe_patterns() {
             // Deploy with CREATE2
         }
     "#;
-    assert!(salt_commitment.contains("saltCommitments"), "Should have salt commitment");
+    assert!(
+        salt_commitment.contains("saltCommitments"),
+        "Should have salt commitment"
+    );
     assert!(salt_commitment.contains("1 days"), "Should have time delay");
 
     // EIP-1167 minimal proxy
@@ -962,7 +1068,10 @@ fn test_create2_safe_patterns() {
             // Deploy minimal proxy
         }
     "#;
-    assert!(eip1167.contains("3d602d80600a3d3981f3"), "Should have EIP-1167 bytecode");
+    assert!(
+        eip1167.contains("3d602d80600a3d3981f3"),
+        "Should have EIP-1167 bytecode"
+    );
 }
 
 /// Category 3: Delegatecall in Constructor FP Reduction
@@ -977,7 +1086,10 @@ fn test_delegatecall_constructor_safe_patterns() {
             StorageSlot.getAddressSlot(IMPLEMENTATION_SLOT).value = impl;
         }
     "#;
-    assert!(eip1967_proxy.contains("IMPLEMENTATION_SLOT"), "Should have EIP-1967 slot");
+    assert!(
+        eip1967_proxy.contains("IMPLEMENTATION_SLOT"),
+        "Should have EIP-1967 slot"
+    );
 
     // Diamond proxy pattern
     let diamond_proxy = r#"
@@ -988,7 +1100,10 @@ fn test_delegatecall_constructor_safe_patterns() {
             }
         }
     "#;
-    assert!(diamond_proxy.contains("IDiamondCut"), "Should have Diamond interface");
+    assert!(
+        diamond_proxy.contains("IDiamondCut"),
+        "Should have Diamond interface"
+    );
 
     // OpenZeppelin Initializable
     let initializable = r#"
@@ -997,7 +1112,10 @@ fn test_delegatecall_constructor_safe_patterns() {
             function initialize() external initializer {}
         }
     "#;
-    assert!(initializable.contains("Initializable"), "Should use Initializable");
+    assert!(
+        initializable.contains("Initializable"),
+        "Should use Initializable"
+    );
 }
 
 /// Category 4: DOS Unbounded Operation FP Reduction
@@ -1013,7 +1131,10 @@ fn test_dos_unbounded_safe_patterns() {
             return _members.values();
         }
     "#;
-    assert!(enumerable_set.contains("EnumerableSet"), "Should use EnumerableSet");
+    assert!(
+        enumerable_set.contains("EnumerableSet"),
+        "Should use EnumerableSet"
+    );
 
     // Paginated view function
     let paginated = r#"
@@ -1026,9 +1147,14 @@ fn test_dos_unbounded_safe_patterns() {
             return result;
         }
     "#;
-    assert!(paginated.contains("offset") && paginated.contains("limit"),
-            "Should have pagination params");
-    assert!(paginated.contains("Math.min"), "Should use Math.min for bounds");
+    assert!(
+        paginated.contains("offset") && paginated.contains("limit"),
+        "Should have pagination params"
+    );
+    assert!(
+        paginated.contains("Math.min"),
+        "Should use Math.min for bounds"
+    );
 
     // Multicall with size validation
     let multicall = r#"
@@ -1041,8 +1167,14 @@ fn test_dos_unbounded_safe_patterns() {
             }
         }
     "#;
-    assert!(multicall.contains("MAX_CALLS"), "Should have max calls constant");
-    assert!(multicall.contains("require(data.length <="), "Should validate array length");
+    assert!(
+        multicall.contains("MAX_CALLS"),
+        "Should have max calls constant"
+    );
+    assert!(
+        multicall.contains("require(data.length <="),
+        "Should validate array length"
+    );
 }
 
 /// Category 5: Permit Signature Exploit FP Reduction
@@ -1058,7 +1190,10 @@ fn test_permit_safe_patterns() {
             }
         }
     "#;
-    assert!(permit2.contains("IAllowanceTransfer"), "Should use Permit2 interface");
+    assert!(
+        permit2.contains("IAllowanceTransfer"),
+        "Should use Permit2 interface"
+    );
     assert!(permit2.contains("permit2"), "Should reference permit2");
 
     // ERC-2771 trusted forwarder
@@ -1071,8 +1206,14 @@ fn test_permit_safe_patterns() {
             }
         }
     "#;
-    assert!(forwarder.contains("ERC2771Context"), "Should use ERC2771Context");
-    assert!(forwarder.contains("trustedForwarder"), "Should have trusted forwarder");
+    assert!(
+        forwarder.contains("ERC2771Context"),
+        "Should use ERC2771Context"
+    );
+    assert!(
+        forwarder.contains("trustedForwarder"),
+        "Should have trusted forwarder"
+    );
 
     // Permit consumer (not implementer)
     let consumer = r#"
@@ -1081,8 +1222,14 @@ fn test_permit_safe_patterns() {
             token.transferFrom(msg.sender, address(this), amount);
         }
     "#;
-    assert!(consumer.contains("IERC20Permit("), "Should call external permit");
-    assert!(!consumer.contains("ecrecover"), "Consumer should not implement ecrecover");
+    assert!(
+        consumer.contains("IERC20Permit("),
+        "Should call external permit"
+    );
+    assert!(
+        !consumer.contains("ecrecover"),
+        "Consumer should not implement ecrecover"
+    );
 }
 
 /// Category 6: Unsafe Type Casting FP Reduction
@@ -1097,8 +1244,14 @@ fn test_type_casting_safe_patterns() {
             return address(num);
         }
     "#;
-    assert!(address_uint160.contains("uint160(addr)"), "Should have address to uint160");
-    assert!(address_uint160.contains("address(num)"), "Should have uint160 to address");
+    assert!(
+        address_uint160.contains("uint160(addr)"),
+        "Should have address to uint160"
+    );
+    assert!(
+        address_uint160.contains("address(num)"),
+        "Should have uint160 to address"
+    );
 
     // Chainlink latestRoundData pattern
     let chainlink = r#"
@@ -1108,16 +1261,28 @@ fn test_type_casting_safe_patterns() {
             return uint256(answer);
         }
     "#;
-    assert!(chainlink.contains("latestRoundData"), "Should call latestRoundData");
-    assert!(chainlink.contains("answer > 0"), "Should validate answer is positive");
+    assert!(
+        chainlink.contains("latestRoundData"),
+        "Should call latestRoundData"
+    );
+    assert!(
+        chainlink.contains("answer > 0"),
+        "Should validate answer is positive"
+    );
 
     // Literal value cast (safe)
     let literal = r#"
         uint8 constant DECIMALS = uint8(18);
         uint16 constant MAX_BPS = uint16(10000);
     "#;
-    assert!(literal.contains("uint8(18)"), "Should have literal uint8 cast");
-    assert!(literal.contains("uint16(10000)"), "Should have literal uint16 cast");
+    assert!(
+        literal.contains("uint8(18)"),
+        "Should have literal uint8 cast"
+    );
+    assert!(
+        literal.contains("uint16(10000)"),
+        "Should have literal uint16 cast"
+    );
 
     // Enum cast (compiler validated)
     let enum_cast = r#"
@@ -1126,7 +1291,10 @@ fn test_type_casting_safe_patterns() {
             return uint8(s);
         }
     "#;
-    assert!(enum_cast.contains("enum Status"), "Should have enum definition");
+    assert!(
+        enum_cast.contains("enum Status"),
+        "Should have enum definition"
+    );
     assert!(enum_cast.contains("uint8(s)"), "Should cast enum to uint8");
 }
 
@@ -1142,7 +1310,10 @@ fn test_metamorphic_safe_patterns() {
             }
         }
     "#;
-    assert!(uniswap.contains("IUniswapV3Factory"), "Should use Uniswap factory");
+    assert!(
+        uniswap.contains("IUniswapV3Factory"),
+        "Should use Uniswap factory"
+    );
 
     // Long selfdestruct timelock (>7 days)
     let long_timelock = r#"
@@ -1157,8 +1328,14 @@ fn test_metamorphic_safe_patterns() {
             selfdestruct(payable(owner));
         }
     "#;
-    assert!(long_timelock.contains("30 days"), "Should have 30 day delay");
-    assert!(long_timelock.contains("selfdestruct"), "Should have selfdestruct");
+    assert!(
+        long_timelock.contains("30 days"),
+        "Should have 30 day delay"
+    );
+    assert!(
+        long_timelock.contains("selfdestruct"),
+        "Should have selfdestruct"
+    );
 
     // Salt validation pattern
     let salt_validation = r#"
@@ -1170,8 +1347,14 @@ fn test_metamorphic_safe_patterns() {
             // CREATE2 deployment
         }
     "#;
-    assert!(salt_validation.contains("usedSalts"), "Should track used salts");
-    assert!(salt_validation.contains("require(!usedSalts[salt]"), "Should validate salt");
+    assert!(
+        salt_validation.contains("usedSalts"),
+        "Should track used salts"
+    );
+    assert!(
+        salt_validation.contains("require(!usedSalts[salt]"),
+        "Should validate salt"
+    );
 }
 
 /// Category 8: EXTCODESIZE Bypass FP Reduction
@@ -1186,7 +1369,10 @@ fn test_extcodesize_safe_patterns() {
             return target.isContract();
         }
     "#;
-    assert!(oz_address.contains("Address.sol"), "Should import Address library");
+    assert!(
+        oz_address.contains("Address.sol"),
+        "Should import Address library"
+    );
     assert!(oz_address.contains("isContract()"), "Should use isContract");
 
     // Documented bypass limitation
@@ -1198,8 +1384,14 @@ fn test_extcodesize_safe_patterns() {
             return account.code.length > 0;
         }
     "#;
-    assert!(documented.contains("WARNING"), "Should have warning comment");
-    assert!(documented.contains("during construction"), "Should document bypass");
+    assert!(
+        documented.contains("WARNING"),
+        "Should have warning comment"
+    );
+    assert!(
+        documented.contains("during construction"),
+        "Should document bypass"
+    );
 
     // Companion isInConstruction function
     let companion = r#"
@@ -1211,7 +1403,10 @@ fn test_extcodesize_safe_patterns() {
             return account.code.length == 0 && tx.origin != account;
         }
     "#;
-    assert!(companion.contains("isInConstruction"), "Should have companion function");
+    assert!(
+        companion.contains("isInConstruction"),
+        "Should have companion function"
+    );
 }
 
 /// Category 9: ERC-7821 Batch Authorization FP Reduction
@@ -1231,8 +1426,14 @@ fn test_erc7821_batch_safe_patterns() {
             }
         }
     "#;
-    assert!(access_control.contains("AccessControl"), "Should inherit AccessControl");
-    assert!(access_control.contains("onlyRole"), "Should use onlyRole modifier");
+    assert!(
+        access_control.contains("AccessControl"),
+        "Should inherit AccessControl"
+    );
+    assert!(
+        access_control.contains("onlyRole"),
+        "Should use onlyRole modifier"
+    );
 
     // Smart contract wallet pattern
     let smart_wallet = r#"
@@ -1243,8 +1444,10 @@ fn test_erc7821_batch_safe_patterns() {
             }
         }
     "#;
-    assert!(smart_wallet.contains("GnosisSafe") || smart_wallet.contains("Safe"),
-            "Should use Safe wallet");
+    assert!(
+        smart_wallet.contains("GnosisSafe") || smart_wallet.contains("Safe"),
+        "Should use Safe wallet"
+    );
 
     // Chainlink automation executor
     let automation = r#"
@@ -1258,9 +1461,14 @@ fn test_erc7821_batch_safe_patterns() {
             }
         }
     "#;
-    assert!(automation.contains("AutomationCompatible"), "Should use Chainlink automation");
-    assert!(automation.contains("checkUpkeep") && automation.contains("performUpkeep"),
-            "Should implement automation interface");
+    assert!(
+        automation.contains("AutomationCompatible"),
+        "Should use Chainlink automation"
+    );
+    assert!(
+        automation.contains("checkUpkeep") && automation.contains("performUpkeep"),
+        "Should implement automation interface"
+    );
 }
 
 /// Category 10: Storage Layout Upgrade FP Reduction
@@ -1284,7 +1492,10 @@ fn test_storage_layout_safe_patterns() {
             }
         }
     "#;
-    assert!(eip1967.contains("IMPLEMENTATION_SLOT"), "Should have EIP-1967 slot");
+    assert!(
+        eip1967.contains("IMPLEMENTATION_SLOT"),
+        "Should have EIP-1967 slot"
+    );
     assert!(eip1967.contains("ERC1967Proxy"), "Should be ERC1967 proxy");
 
     // Diamond storage library
@@ -1304,8 +1515,14 @@ fn test_storage_layout_safe_patterns() {
             }
         }
     "#;
-    assert!(diamond_storage.contains("LibDiamond"), "Should be LibDiamond");
-    assert!(diamond_storage.contains("DIAMOND_STORAGE_POSITION"), "Should have storage position");
+    assert!(
+        diamond_storage.contains("LibDiamond"),
+        "Should be LibDiamond"
+    );
+    assert!(
+        diamond_storage.contains("DIAMOND_STORAGE_POSITION"),
+        "Should have storage position"
+    );
 
     // EIP-7201 namespaced storage
     let eip7201 = r#"
@@ -1317,8 +1534,14 @@ fn test_storage_layout_safe_patterns() {
 
         bytes32 constant MAIN_STORAGE_SLOT = keccak256(abi.encode(uint256(keccak256("erc7201:myapp.storage.main")) - 1));
     "#;
-    assert!(eip7201.contains("@custom:storage-location"), "Should have EIP-7201 annotation");
-    assert!(eip7201.contains("erc7201:"), "Should use EIP-7201 namespace");
+    assert!(
+        eip7201.contains("@custom:storage-location"),
+        "Should have EIP-7201 annotation"
+    );
+    assert!(
+        eip7201.contains("erc7201:"),
+        "Should use EIP-7201 namespace"
+    );
 
     // Contract with constructor (not upgradeable)
     let with_constructor = r#"
@@ -1330,5 +1553,8 @@ fn test_storage_layout_safe_patterns() {
             }
         }
     "#;
-    assert!(with_constructor.contains("constructor("), "Should have constructor");
+    assert!(
+        with_constructor.contains("constructor("),
+        "Should have constructor"
+    );
 }

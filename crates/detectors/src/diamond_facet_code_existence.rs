@@ -262,7 +262,7 @@ impl Detector for DiamondFacetCodeExistenceDetector {
                          require(facet.code.length > 0, \"Facet destroyed\");\n\
                          // delegatecall...\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -289,7 +289,7 @@ impl Detector for DiamondFacetCodeExistenceDetector {
                              selectorToFacet[selectors[i]] = facet;\n\
                          }\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

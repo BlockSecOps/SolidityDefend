@@ -32,7 +32,10 @@ impl UupsUpgradeUnsafeDetector {
                 "Detects UUPS contracts with empty or unprotected _authorizeUpgrade, \
                  allowing unauthorized contract upgrades"
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::Critical,
             ),
         }

@@ -130,11 +130,14 @@ impl SignatureMalleabilityDetector {
 
         // Check for malleability protection
         let has_max_s_value = func_source.contains("MAX_S_VALUE");
-        let has_s_validation = func_source.contains("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
+        let has_s_validation = func_source
+            .contains("0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0")
             || func_source.contains("secp256k1")
             || func_source.contains("malleability")
-            || (func_source.contains("require") && (func_source.contains("s <=") || func_source.contains("s) <=")))
-            || (func_source.contains("require") && (func_source.contains("s <") || func_source.contains("s) <")));
+            || (func_source.contains("require")
+                && (func_source.contains("s <=") || func_source.contains("s) <=")))
+            || (func_source.contains("require")
+                && (func_source.contains("s <") || func_source.contains("s) <")));
 
         let has_s_check = has_s_validation || has_max_s_value;
 

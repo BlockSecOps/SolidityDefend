@@ -41,8 +41,7 @@ impl OrderFlowAuctionAbuseDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("function ")
-                && (trimmed.contains("bid") || trimmed.contains("Bid"))
+            if trimmed.contains("function ") && (trimmed.contains("bid") || trimmed.contains("Bid"))
             {
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");

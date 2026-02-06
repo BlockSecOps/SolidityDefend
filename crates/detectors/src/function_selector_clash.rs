@@ -70,12 +70,7 @@ impl FunctionSelectorClashDetector {
                     // Simplify params to just types
                     let param_types: Vec<&str> = params
                         .split(',')
-                        .map(|p| {
-                            p.trim()
-                                .split_whitespace()
-                                .next()
-                                .unwrap_or("")
-                        })
+                        .map(|p| p.trim().split_whitespace().next().unwrap_or(""))
                         .filter(|p| !p.is_empty())
                         .collect();
 
@@ -193,10 +188,12 @@ mod tests {
     fn test_extract_function_signature() {
         let detector = FunctionSelectorClashDetector::new();
 
-        let sig = detector.extract_function_signature("function transfer(address to, uint256 amount)");
+        let sig =
+            detector.extract_function_signature("function transfer(address to, uint256 amount)");
         assert_eq!(sig, Some("transfer(address,uint256)".to_string()));
 
-        let sig = detector.extract_function_signature("function admin() external view returns (address)");
+        let sig =
+            detector.extract_function_signature("function admin() external view returns (address)");
         assert_eq!(sig, Some("admin()".to_string()));
     }
 

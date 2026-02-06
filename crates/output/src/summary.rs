@@ -72,12 +72,8 @@ impl ProjectSummary {
         let info_count = *severity_counts.get(&Severity::Info).unwrap_or(&0);
 
         // Calculate risk score
-        let risk_score = Self::calculate_risk_score(
-            critical_count,
-            high_count,
-            medium_count,
-            low_count,
-        );
+        let risk_score =
+            Self::calculate_risk_score(critical_count, high_count, medium_count, low_count);
 
         Self {
             contracts_analyzed: source_contracts + dependency_contracts,
@@ -99,12 +95,7 @@ impl ProjectSummary {
     }
 
     /// Calculate a risk score from 0.0 to 10.0
-    fn calculate_risk_score(
-        critical: usize,
-        high: usize,
-        medium: usize,
-        low: usize,
-    ) -> f32 {
+    fn calculate_risk_score(critical: usize, high: usize, medium: usize, low: usize) -> f32 {
         let score = (critical as f32 * 5.0)
             + (high as f32 * 3.0)
             + (medium as f32 * 1.5)
@@ -134,10 +125,16 @@ impl ProjectSummary {
 
         output.push_str("\nFindings Overview:\n");
         if self.critical_count > 0 {
-            output.push_str(&format!("  Critical: {} (IMMEDIATE ACTION REQUIRED)\n", self.critical_count));
+            output.push_str(&format!(
+                "  Critical: {} (IMMEDIATE ACTION REQUIRED)\n",
+                self.critical_count
+            ));
         }
         if self.high_count > 0 {
-            output.push_str(&format!("  High:     {} (should be addressed)\n", self.high_count));
+            output.push_str(&format!(
+                "  High:     {} (should be addressed)\n",
+                self.high_count
+            ));
         }
         if self.medium_count > 0 {
             output.push_str(&format!("  Medium:   {}\n", self.medium_count));
@@ -150,7 +147,10 @@ impl ProjectSummary {
         }
 
         if self.cross_contract_findings > 0 {
-            output.push_str(&format!("\n  Cross-Contract Issues: {}\n", self.cross_contract_findings));
+            output.push_str(&format!(
+                "\n  Cross-Contract Issues: {}\n",
+                self.cross_contract_findings
+            ));
         }
 
         if !self.files_with_critical.is_empty() {
@@ -162,7 +162,8 @@ impl ProjectSummary {
 
         output.push_str(&format!(
             "\nProtocol Risk Score: {:.1}/10 ({})\n",
-            self.risk_score, self.risk_level()
+            self.risk_score,
+            self.risk_level()
         ));
 
         output.push_str(&format!(
@@ -212,7 +213,9 @@ impl CategorizedFindings {
     pub fn from_findings(findings: Vec<Finding>, dep_paths: &[std::path::PathBuf]) -> Self {
         let (dep, src): (Vec<_>, Vec<_>) = findings.into_iter().partition(|f| {
             dep_paths.iter().any(|p| {
-                f.primary_location.file.contains(&p.to_string_lossy().to_string())
+                f.primary_location
+                    .file
+                    .contains(&p.to_string_lossy().to_string())
                     || p.to_string_lossy().contains(&f.primary_location.file)
             })
         });
@@ -252,15 +255,7 @@ mod tests {
             create_test_finding(Severity::Medium, "src/Utils.sol"),
         ];
 
-        let summary = ProjectSummary::from_findings(
-            &findings,
-            &findings,
-            &[],
-            3,
-            0,
-            0,
-            1.5,
-        );
+        let summary = ProjectSummary::from_findings(&findings, &findings, &[], 3, 0, 0, 1.5);
 
         assert_eq!(summary.total_findings, 3);
         assert_eq!(summary.critical_count, 1);

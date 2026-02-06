@@ -228,7 +228,11 @@ impl ConsoleFormatter {
         // CWE line if available
         if let Some(&cwe) = finding.cwe_ids.first() {
             let cwe_line = if self.should_use_colors() {
-                format!("   {} CWE: {}", style("├─").dim(), style(format!("CWE-{}", cwe)).dim())
+                format!(
+                    "   {} CWE: {}",
+                    style("├─").dim(),
+                    style(format!("CWE-{}", cwe)).dim()
+                )
             } else {
                 format!("   ├─ CWE: CWE-{}", cwe)
             };

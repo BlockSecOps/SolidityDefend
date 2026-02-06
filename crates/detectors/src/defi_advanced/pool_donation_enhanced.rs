@@ -73,7 +73,11 @@ impl PoolDonationEnhancedDetector {
         }
 
         // Uniswap V2/V3 pools
-        if lower.contains("uniswap") || source.contains("IUniswap") || lower.contains("univ2") || lower.contains("univ3") {
+        if lower.contains("uniswap")
+            || source.contains("IUniswap")
+            || lower.contains("univ2")
+            || lower.contains("univ3")
+        {
             return true;
         }
 
@@ -88,7 +92,10 @@ impl PoolDonationEnhancedDetector {
         }
 
         // EigenLayer strategies
-        if lower.contains("eigenlayer") || lower.contains("strategymanager") || source.contains("IStrategy") {
+        if lower.contains("eigenlayer")
+            || lower.contains("strategymanager")
+            || source.contains("IStrategy")
+        {
             return true;
         }
 
@@ -177,7 +184,9 @@ impl PoolDonationEnhancedDetector {
             || lower.contains("stake")
             || lower.contains("lp")
             || (lower.contains("shares") && lower.contains("assets"))
-            || (lower.contains("deposit") && lower.contains("withdraw") && lower.contains("shares"))
+            || (lower.contains("deposit")
+                && lower.contains("withdraw")
+                && lower.contains("shares"))
             || lower.contains("converttoshares")
             || lower.contains("converttoassets")
             || lower.contains("totalassets")

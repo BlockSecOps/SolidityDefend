@@ -144,8 +144,7 @@ pub fn has_flash_loan_fee_validation(ctx: &AnalysisContext) -> bool {
     }
 
     // Pattern 5: Fee cap in flashLoan function
-    if source_lower.contains("flashloan")
-        && (source.contains("fee <=") || source.contains("fee <"))
+    if source_lower.contains("flashloan") && (source.contains("fee <=") || source.contains("fee <"))
     {
         return true;
     }
@@ -167,9 +166,7 @@ pub fn has_state_validation_after_callback(ctx: &AnalysisContext) -> bool {
 
     // Pattern 1: Balance validation after callback
     let has_balance_check = source_lower.contains("balance")
-        && (source.contains("require(")
-            || source.contains("assert(")
-            || source.contains("if ("));
+        && (source.contains("require(") || source.contains("assert(") || source.contains("if ("));
 
     // Pattern 2: Repayment verification
     let has_repayment_check = source_lower.contains("repay")

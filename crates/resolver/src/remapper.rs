@@ -74,7 +74,10 @@ mod tests {
         let remapper = ImportRemapper::new(
             "/project",
             vec![
-                ("@openzeppelin/".to_string(), "lib/openzeppelin-contracts/".to_string()),
+                (
+                    "@openzeppelin/".to_string(),
+                    "lib/openzeppelin-contracts/".to_string(),
+                ),
                 ("forge-std/".to_string(), "lib/forge-std/src/".to_string()),
             ],
         );
@@ -94,7 +97,10 @@ mod tests {
     fn test_no_matching_remapping() {
         let remapper = ImportRemapper::new(
             "/project",
-            vec![("@openzeppelin/".to_string(), "lib/openzeppelin/".to_string())],
+            vec![(
+                "@openzeppelin/".to_string(),
+                "lib/openzeppelin/".to_string(),
+            )],
         );
 
         // Should return original path when no remapping matches

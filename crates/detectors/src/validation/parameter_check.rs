@@ -5,7 +5,7 @@ use std::collections::HashSet;
 
 use crate::detector::{AstAnalyzer, BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_standard_token, is_zk_contract, is_deployment_tooling};
+use crate::utils::{is_deployment_tooling, is_standard_token, is_test_contract, is_zk_contract};
 
 /// Detector for parameter consistency and validation issues
 pub struct ParameterConsistencyDetector {
@@ -171,12 +171,17 @@ impl ParameterConsistencyDetector {
     }
 
     /// Phase 16 FP Reduction: Check if function is a standard ERC batch operation
-    fn is_standard_batch_function(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> bool {
+    fn is_standard_batch_function(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> bool {
         let func_name_lower = function.name.name.to_lowercase();
         let source = &ctx.source_code;
 
         // ERC1155 batch functions
-        let erc1155_batch = (func_name_lower.contains("batch") || func_name_lower.contains("safebatch"))
+        let erc1155_batch = (func_name_lower.contains("batch")
+            || func_name_lower.contains("safebatch"))
             && (source.contains("ERC1155") || source.contains("IERC1155"));
 
         // ERC721 batch mints/transfers
@@ -241,9 +246,18 @@ impl ParameterConsistencyDetector {
         // Check contract name patterns for Safe components
         let contract_name_lower = ctx.contract.name.name.to_lowercase();
         let safe_contracts = [
-            "safe", "multisend", "executor", "safeproxy", "modulemanager",
-            "ownermanager", "guardmanager", "fallbackmanager", "signatureverifier",
-            "transactionguard", "createcall", "simulatetxaccessor",
+            "safe",
+            "multisend",
+            "executor",
+            "safeproxy",
+            "modulemanager",
+            "ownermanager",
+            "guardmanager",
+            "fallbackmanager",
+            "signatureverifier",
+            "transactionguard",
+            "createcall",
+            "simulatetxaccessor",
         ];
         for name in &safe_contracts {
             if contract_name_lower.contains(name) {
@@ -455,10 +469,12 @@ impl ParameterConsistencyDetector {
             let func_source = self.get_function_source(function, ctx);
 
             for param in params {
-                if self.parameter_needs_validation(param, &func_source, function) && !validated_params.contains(&param.name)
+                if self.parameter_needs_validation(param, &func_source, function)
+                    && !validated_params.contains(&param.name)
                 {
                     // Additional source-based check for validation patterns
-                    let param_validated_in_source = self.check_source_validation(&func_source, &param.name);
+                    let param_validated_in_source =
+                        self.check_source_validation(&func_source, &param.name);
                     if param_validated_in_source {
                         continue;
                     }
@@ -491,7 +507,11 @@ impl ParameterConsistencyDetector {
     }
 
     /// Get function source code for text-based analysis
-    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext<'_>) -> String {
+    fn get_function_source(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext<'_>,
+    ) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
@@ -535,18 +555,31 @@ impl ParameterConsistencyDetector {
     }
 
     /// Check if parameter needs validation (context-aware)
-    fn parameter_needs_validation(&self, param: &ParameterInfo, func_source: &str, function: &ast::Function<'_>) -> bool {
+    fn parameter_needs_validation(
+        &self,
+        param: &ParameterInfo,
+        func_source: &str,
+        function: &ast::Function<'_>,
+    ) -> bool {
         match param.type_info {
             ParameterType::Address => {
                 // Skip standard ERC20/721/1155 parameter names - these follow established patterns
                 let param_lower = param.name.to_lowercase();
-                if param_lower == "to" || param_lower == "from" || param_lower == "spender"
-                    || param_lower == "operator" || param_lower == "recipient"
-                    || param_lower == "sender" || param_lower == "account" {
+                if param_lower == "to"
+                    || param_lower == "from"
+                    || param_lower == "spender"
+                    || param_lower == "operator"
+                    || param_lower == "recipient"
+                    || param_lower == "sender"
+                    || param_lower == "account"
+                {
                     // Only flag if used in privileged operations
                     let func_name_lower = function.name.name.to_lowercase();
-                    if !func_name_lower.contains("owner") && !func_name_lower.contains("admin")
-                        && !func_name_lower.contains("upgrade") && !func_name_lower.contains("set") {
+                    if !func_name_lower.contains("owner")
+                        && !func_name_lower.contains("admin")
+                        && !func_name_lower.contains("upgrade")
+                        && !func_name_lower.contains("set")
+                    {
                         return false;
                     }
                 }
@@ -576,16 +609,30 @@ impl ParameterConsistencyDetector {
         // These are the most dangerous patterns
         if source_lower.contains(&format!("{}.call", param_lower))
             || source_lower.contains(&format!("{}.delegatecall", param_lower))
-            || source_lower.contains(&format!("call{{value:")) && source_lower.contains(&param_lower)
+            || source_lower.contains(&format!("call{{value:"))
+                && source_lower.contains(&param_lower)
         {
             return true;
         }
 
         // High risk: Critical storage writes - ownership, admin, roles
         let critical_storage_patterns = [
-            "owner", "admin", "operator", "minter", "burner", "pauser",
-            "guardian", "controller", "manager", "governance", "role",
-            "allowance", "approve", "whitelist", "blacklist", "banned",
+            "owner",
+            "admin",
+            "operator",
+            "minter",
+            "burner",
+            "pauser",
+            "guardian",
+            "controller",
+            "manager",
+            "governance",
+            "role",
+            "allowance",
+            "approve",
+            "whitelist",
+            "blacklist",
+            "banned",
         ];
 
         for pattern in &critical_storage_patterns {

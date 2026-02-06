@@ -35,7 +35,10 @@ impl UpgradeEventMissingDetector {
                  Standard events (Upgraded, AdminChanged, BeaconUpgraded) are essential \
                  for monitoring tools, block explorers, and security monitoring."
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::BestPractices],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::Medium,
             ),
         }
@@ -258,7 +261,7 @@ impl Detector for UpgradeEventMissingDetector {
                          // authorization logic\n\
                          emit Upgraded(newImpl);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -283,7 +286,7 @@ impl Detector for UpgradeEventMissingDetector {
                          emit AdminChanged(_getAdmin(), newAdmin);\n\
                          _setAdmin(newAdmin);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

@@ -112,8 +112,7 @@ impl Eip4844BlobValidationDetector {
             }
 
             // Check for blob data processing without KZG verification
-            if (trimmed.contains("blobData") || trimmed.contains("blob_data"))
-                && !has_kzg_check {
+            if (trimmed.contains("blobData") || trimmed.contains("blob_data")) && !has_kzg_check {
                 findings.push((
                     line_num as u32 + 1,
                     "blob data processing".to_string(),
@@ -170,7 +169,8 @@ impl Eip4844BlobValidationDetector {
 
             // Check for batch submission without blob hash verification
             if (trimmed.contains("submitBatch") || trimmed.contains("postBatch"))
-                && source.contains("blob") {
+                && source.contains("blob")
+            {
                 if !source.contains("blobhash") && !source.contains("BLOBHASH") {
                     findings.push((
                         line_num as u32 + 1,

@@ -208,11 +208,7 @@ impl GroundTruthDataset {
     pub fn all_expected_findings(&self) -> Vec<(&str, &ExpectedFinding)> {
         self.contracts
             .iter()
-            .flat_map(|(path, gt)| {
-                gt.expected_findings
-                    .iter()
-                    .map(move |f| (path.as_str(), f))
-            })
+            .flat_map(|(path, gt)| gt.expected_findings.iter().map(move |f| (path.as_str(), f)))
             .collect()
     }
 
@@ -536,7 +532,8 @@ impl ValidationResult {
             report.push_str("\n\nPER-DETECTOR METRICS\n");
             report.push_str("════════════════════\n");
             report.push_str("  Detector                    TP    FP    FN   Prec   Recall   F1\n");
-            report.push_str("  ─────────────────────────────────────────────────────────────────\n");
+            report
+                .push_str("  ─────────────────────────────────────────────────────────────────\n");
 
             let mut sorted_metrics: Vec<_> = self.detector_metrics.values().collect();
             sorted_metrics.sort_by(|a, b| b.true_positives.cmp(&a.true_positives));

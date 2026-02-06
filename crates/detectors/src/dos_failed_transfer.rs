@@ -55,9 +55,7 @@ impl DosFailedTransferDetector {
         }
 
         // Phase 52 FP Reduction: Skip if using Address.sendValue (OZ pattern)
-        if function_source.contains("Address.sendValue")
-            || function_source.contains("sendValue(")
-        {
+        if function_source.contains("Address.sendValue") || function_source.contains("sendValue(") {
             return false;
         }
 

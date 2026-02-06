@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_eip7702_context};
+use crate::utils::{is_eip7702_context, is_test_contract};
 
 /// Detector for EIP-7702 authorization bypass vulnerabilities
 ///
@@ -327,7 +327,7 @@ impl Detector for Eip7702AuthorizationBypassDetector {
                          require(msg.sender == authorizedCaller, \"Unauthorized\");\n\
                          // ... forwarding logic\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

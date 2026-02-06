@@ -39,7 +39,9 @@ pub fn has_slippage_protection(func_source: &str) -> bool {
     // Also check for slippage tolerance patterns
     let has_slippage_calc = func_source.contains("slippage")
         || func_source.contains("tolerance")
-        || (func_source.contains("* 99") || func_source.contains("* 995") || func_source.contains("/ 100"));
+        || (func_source.contains("* 99")
+            || func_source.contains("* 995")
+            || func_source.contains("/ 100"));
 
     has_output_check || has_slippage_calc
 }
@@ -411,8 +413,15 @@ pub fn is_trading_function(func_source: &str, func_name: &str) -> bool {
 
     // Direct trading function names
     let trading_names = [
-        "swap", "trade", "exchange", "arbitrage", "liquidat",
-        "flashloan", "flash", "leverage", "margin",
+        "swap",
+        "trade",
+        "exchange",
+        "arbitrage",
+        "liquidat",
+        "flashloan",
+        "flash",
+        "leverage",
+        "margin",
     ];
 
     if trading_names.iter().any(|t| name_lower.contains(t)) {
@@ -421,11 +430,21 @@ pub fn is_trading_function(func_source: &str, func_name: &str) -> bool {
 
     // Source code patterns indicating trading
     let trading_patterns = [
-        "getAmountOut", "getAmountsOut", "getAmountIn",
-        "swapExact", "flashLoan", "arbitrage",
-        "liquidation", "leverage", "margin",
-        "IUniswap", "IPancake", "ISushiSwap",
-        "sandwich", "frontrun", "backrun",
+        "getAmountOut",
+        "getAmountsOut",
+        "getAmountIn",
+        "swapExact",
+        "flashLoan",
+        "arbitrage",
+        "liquidation",
+        "leverage",
+        "margin",
+        "IUniswap",
+        "IPancake",
+        "ISushiSwap",
+        "sandwich",
+        "frontrun",
+        "backrun",
     ];
 
     trading_patterns.iter().any(|p| func_source.contains(p))
@@ -434,7 +453,10 @@ pub fn is_trading_function(func_source: &str, func_name: &str) -> bool {
 /// Phase 16 Recall Recovery: Determines if trading function has sufficient protection
 /// Trading functions require higher protection score than regular functions
 /// CRITICAL: For trading functions, slippage protection is MANDATORY
-pub fn is_adequately_protected_for_trading(function: &ast::Function<'_>, func_source: &str) -> bool {
+pub fn is_adequately_protected_for_trading(
+    function: &ast::Function<'_>,
+    func_source: &str,
+) -> bool {
     // Phase 16 FN Recovery: Trading functions MUST have slippage protection
     // Deadline and access control alone don't protect against sandwich attacks
     if !has_slippage_protection(func_source) {
@@ -504,7 +526,10 @@ mod tests {
 
     #[test]
     fn test_is_trading_function() {
-        assert!(is_trading_function("IUniswapV2Router.swapExactTokensForTokens", "swap"));
+        assert!(is_trading_function(
+            "IUniswapV2Router.swapExactTokensForTokens",
+            "swap"
+        ));
         assert!(is_trading_function("flashLoan(amount)", "executeArbitrage"));
         assert!(is_trading_function("liquidation bonus", "liquidate"));
         assert!(!is_trading_function("transfer(to, amount)", "transfer"));

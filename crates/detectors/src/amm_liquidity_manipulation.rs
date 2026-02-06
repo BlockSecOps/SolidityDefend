@@ -358,14 +358,10 @@ mod tests {
         let has_mint = true;
 
         // OLD (broken): would match because `|| has_mint` is evaluated last
-        let old_broken_logic = is_liquidity_function
-            && !has_protections
-            && has_burn
-            || has_mint; // BUG: this matches any mint!
+        let old_broken_logic = is_liquidity_function && !has_protections && has_burn || has_mint; // BUG: this matches any mint!
 
         // NEW (fixed): properly groups burn/mint
-        let new_fixed_logic =
-            is_liquidity_function && !has_protections && (has_burn || has_mint);
+        let new_fixed_logic = is_liquidity_function && !has_protections && (has_burn || has_mint);
 
         // Old logic incorrectly returns true (FP)
         assert!(old_broken_logic);

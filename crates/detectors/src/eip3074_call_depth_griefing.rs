@@ -67,7 +67,10 @@ impl Eip3074CallDepthGriefingDetector {
             // Find AUTHCALL usage
             if trimmed.contains("authcall(") || trimmed.contains("AUTHCALL") {
                 if !has_depth_check {
-                    findings.push((line_num as u32 + 1, "AUTHCALL without depth check".to_string()));
+                    findings.push((
+                        line_num as u32 + 1,
+                        "AUTHCALL without depth check".to_string(),
+                    ));
                 }
             }
         }
@@ -114,8 +117,9 @@ impl Eip3074CallDepthGriefingDetector {
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check if function calls itself and uses authcall
-                if func_body.contains(&func_name) &&
-                   (func_body.contains("authcall") || func_body.contains("AUTHCALL")) {
+                if func_body.contains(&func_name)
+                    && (func_body.contains("authcall") || func_body.contains("AUTHCALL"))
+                {
                     findings.push((
                         line_num as u32 + 1,
                         "recursive function with AUTHCALL".to_string(),

@@ -38,7 +38,10 @@ impl BeaconSinglePointOfFailureDetector {
                  If the beacon contract is compromised, deleted, or has a bug, all proxies \
                  pointing to it will be affected simultaneously."
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::High,
             ),
         }
@@ -214,7 +217,7 @@ impl Detector for BeaconSinglePointOfFailureDetector {
                              require(block.timestamp >= upgradeTimestamp);\n\
                              _upgradeTo(pendingImplementation);\n\
                          }"
-                            .to_string(),
+                        .to_string(),
                     );
 
                 findings.push(finding);

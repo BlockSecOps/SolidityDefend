@@ -54,8 +54,8 @@ impl CommitRevealTimingDetector {
             }
 
             // Detect commit function
-            if trimmed.contains("function ") &&
-               (trimmed.contains("commit") || trimmed.contains("Commit"))
+            if trimmed.contains("function ")
+                && (trimmed.contains("commit") || trimmed.contains("Commit"))
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
@@ -69,16 +69,18 @@ impl CommitRevealTimingDetector {
             }
 
             // Detect reveal function
-            if trimmed.contains("function ") &&
-               (trimmed.contains("reveal") || trimmed.contains("Reveal"))
+            if trimmed.contains("function ")
+                && (trimmed.contains("reveal") || trimmed.contains("Reveal"))
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check for time validation
-                if !func_body.contains("block.timestamp") && !func_body.contains("block.number")
-                   && !func_body.contains("deadline") && !func_body.contains("expiry")
+                if !func_body.contains("block.timestamp")
+                    && !func_body.contains("block.number")
+                    && !func_body.contains("deadline")
+                    && !func_body.contains("expiry")
                 {
                     let issue = "Reveal without time validation".to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
@@ -102,8 +104,8 @@ impl CommitRevealTimingDetector {
             }
 
             // Detect reveal function
-            if trimmed.contains("function ") &&
-               (trimmed.contains("reveal") || trimmed.contains("Reveal"))
+            if trimmed.contains("function ")
+                && (trimmed.contains("reveal") || trimmed.contains("Reveal"))
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
@@ -111,19 +113,19 @@ impl CommitRevealTimingDetector {
 
                 // Check if it allows same-block reveal
                 // Look for proper time delay patterns
-                let has_block_check = func_body.contains("commitBlock") ||
-                    func_body.contains("block.number >") ||
-                    func_body.contains("block.number >=");
+                let has_block_check = func_body.contains("commitBlock")
+                    || func_body.contains("block.number >")
+                    || func_body.contains("block.number >=");
 
-                let has_timestamp_check = func_body.contains("block.timestamp >") ||
-                    func_body.contains("block.timestamp >=") ||
-                    func_body.contains("commitTime") ||
-                    func_body.contains("commit_time");
+                let has_timestamp_check = func_body.contains("block.timestamp >")
+                    || func_body.contains("block.timestamp >=")
+                    || func_body.contains("commitTime")
+                    || func_body.contains("commit_time");
 
-                let has_delay_pattern = func_body.contains("MIN_DELAY") ||
-                    func_body.contains("REVEAL_DELAY") ||
-                    func_body.contains("_DELAY") ||
-                    func_body.contains("DELAY");
+                let has_delay_pattern = func_body.contains("MIN_DELAY")
+                    || func_body.contains("REVEAL_DELAY")
+                    || func_body.contains("_DELAY")
+                    || func_body.contains("DELAY");
 
                 if !has_block_check && !has_timestamp_check && !has_delay_pattern {
                     // Check if there's any commit storage pattern
@@ -150,16 +152,18 @@ impl CommitRevealTimingDetector {
             }
 
             // Detect deadline assignments with small values
-            if (trimmed.contains("deadline") || trimmed.contains("Deadline") ||
-                trimmed.contains("revealPeriod") || trimmed.contains("commitPeriod"))
-               && trimmed.contains("=")
+            if (trimmed.contains("deadline")
+                || trimmed.contains("Deadline")
+                || trimmed.contains("revealPeriod")
+                || trimmed.contains("commitPeriod"))
+                && trimmed.contains("=")
             {
                 // Check for small constant values (less than 1 hour in seconds)
-                let has_small_value = trimmed.contains("= 60") ||
-                    trimmed.contains("= 120") ||
-                    trimmed.contains("= 300") ||
-                    trimmed.contains("= 600") ||
-                    trimmed.contains("minutes");
+                let has_small_value = trimmed.contains("= 60")
+                    || trimmed.contains("= 120")
+                    || trimmed.contains("= 300")
+                    || trimmed.contains("= 600")
+                    || trimmed.contains("minutes");
 
                 if has_small_value {
                     let func_name = self.find_containing_function(&lines, line_num);
@@ -184,8 +188,8 @@ impl CommitRevealTimingDetector {
             }
 
             // Detect reveal function
-            if trimmed.contains("function ") &&
-               (trimmed.contains("reveal") || trimmed.contains("Reveal"))
+            if trimmed.contains("function ")
+                && (trimmed.contains("reveal") || trimmed.contains("Reveal"))
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
@@ -322,7 +326,7 @@ impl Detector for CommitRevealTimingDetector {
                          block.number > commits[msg.sender].blockNumber,\n\
                          \"Must wait at least 1 block\"\n\
                      );"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -369,7 +373,7 @@ impl Detector for CommitRevealTimingDetector {
                          keccak256(abi.encodePacked(value, salt)) == commits[msg.sender].hash,\n\
                          \"Invalid reveal\"\n\
                      );"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

@@ -215,7 +215,7 @@ impl Detector for Create2AddressCollisionDetector {
                          nonce++,  // Incrementing nonce\n\
                          block.timestamp\n\
                      ));"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

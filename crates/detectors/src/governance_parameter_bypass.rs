@@ -72,8 +72,8 @@ impl GovernanceParameterBypassDetector {
                         || func_body.contains("_checkTimelock");
 
                     if !has_timelock_check && !has_timelock {
-                        let issue = "No timelock protection on governance parameter setter"
-                            .to_string();
+                        let issue =
+                            "No timelock protection on governance parameter setter".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
                     }
                 }
@@ -228,7 +228,7 @@ impl Detector for GovernanceParameterBypassDetector {
                      function setVotingDelay(uint256 newDelay) external onlyTimelock {\n\
                          _setVotingDelay(newDelay);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

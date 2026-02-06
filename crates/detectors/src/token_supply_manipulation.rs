@@ -121,7 +121,8 @@ impl TokenSupplyManipulationDetector {
             || contract_name.contains("yield");
 
         // Check for ERC-4626 function signatures
-        let has_erc4626_functions = (lower.contains("function deposit") && lower.contains("shares"))
+        let has_erc4626_functions = (lower.contains("function deposit")
+            && lower.contains("shares"))
             || lower.contains("converttoshares")
             || lower.contains("converttoassets")
             || lower.contains("previewdeposit")
@@ -233,8 +234,8 @@ impl TokenSupplyManipulationDetector {
 
         // Pattern 1: External/public mint function without max supply cap
         // Internal _mint calls in constructor don't count - that's fixed supply
-        let is_external_mint = func_name_lower.contains("mint")
-            && !func_name_lower.starts_with("_");
+        let is_external_mint =
+            func_name_lower.contains("mint") && !func_name_lower.starts_with("_");
 
         let is_mint = is_external_mint
             || (func_source.contains("_mint") && self.has_external_mint_function(ctx));
@@ -372,8 +373,7 @@ impl TokenSupplyManipulationDetector {
         let is_openzeppelin_extension = ctx.source_code.contains("OpenZeppelin Contracts")
             || ctx.source_code.contains("@openzeppelin")
             || ctx.source_code.contains("openzeppelin-contracts")
-            || (ctx.source_code.contains("import {ERC20}")
-                && ctx.source_code.contains("_burn("));
+            || (ctx.source_code.contains("import {ERC20}") && ctx.source_code.contains("_burn("));
 
         // FP Reduction: Check if function delegates to internal _burn/_mint which handles events
         // OpenZeppelin's ERC20Burnable, ERC721Burnable, ERC1155Burnable all use this pattern
@@ -510,8 +510,8 @@ impl TokenSupplyManipulationDetector {
             "function safemint(",
             "function safemint (",
             "function tokenmint(",
-            ") external",  // Check for external visibility with mint nearby
-            ") public",    // Check for public visibility with mint nearby
+            ") external", // Check for external visibility with mint nearby
+            ") public",   // Check for public visibility with mint nearby
         ];
 
         // Check for explicit external/public mint functions

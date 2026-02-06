@@ -155,8 +155,8 @@ impl UnsafeTypeCastingDetector {
         // Match patterns like uint8(18), uint16(255), int8(-1)
         // These are safe because literals are validated at compile time
         let patterns = [
-            "uint8(", "uint16(", "uint32(", "uint64(", "uint128(",
-            "int8(", "int16(", "int32(", "int64(", "int128(",
+            "uint8(", "uint16(", "uint32(", "uint64(", "uint128(", "int8(", "int16(", "int32(",
+            "int64(", "int128(",
         ];
 
         for pattern in &patterns {
@@ -164,7 +164,12 @@ impl UnsafeTypeCastingDetector {
                 let after = &line[start + pattern.len()..];
                 // Check if followed by a numeric literal (optionally negative)
                 let trimmed = after.trim_start_matches('-').trim_start();
-                if trimmed.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+                if trimmed
+                    .chars()
+                    .next()
+                    .map(|c| c.is_ascii_digit())
+                    .unwrap_or(false)
+                {
                     // Check it's a pure number followed by )
                     if let Some(end) = trimmed.find(')') {
                         let num_part = &trimmed[..end];

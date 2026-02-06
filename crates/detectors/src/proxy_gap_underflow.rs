@@ -34,12 +34,12 @@ impl ProxyGapUnderflowDetector {
     }
 
     fn is_upgradeable_contract(&self, source: &str) -> bool {
-        source.contains("Upgradeable") ||
-        source.contains("UUPS") ||
-        source.contains("Transparent") ||
-        source.contains("Initializable") ||
-        source.contains("__gap") ||
-        source.contains("ERC1967")
+        source.contains("Upgradeable")
+            || source.contains("UUPS")
+            || source.contains("Transparent")
+            || source.contains("Initializable")
+            || source.contains("__gap")
+            || source.contains("ERC1967")
     }
 
     fn find_gap_issues(&self, source: &str) -> Vec<(u32, String, String)> {
@@ -73,7 +73,8 @@ impl ProxyGapUnderflowDetector {
             if trimmed.contains("contract ") && trimmed.contains(" is ") {
                 if source.contains("Upgradeable") && !source.contains("__gap") {
                     let contract_name = self.extract_contract_name(trimmed);
-                    let issue = "Upgradeable contract missing __gap for future storage expansion".to_string();
+                    let issue = "Upgradeable contract missing __gap for future storage expansion"
+                        .to_string();
                     findings.push((line_num as u32 + 1, contract_name, issue));
                 }
             }
@@ -83,10 +84,7 @@ impl ProxyGapUnderflowDetector {
         if let (Some(size), Some(line)) = (gap_size, gap_line) {
             // Standard is 50 slots, warn if smaller
             if size < 50 {
-                let issue = format!(
-                    "__gap size {} is smaller than recommended 50 slots",
-                    size
-                );
+                let issue = format!("__gap size {} is smaller than recommended 50 slots", size);
                 findings.push((line, "__gap".to_string(), issue));
             }
 
@@ -128,9 +126,9 @@ impl ProxyGapUnderflowDetector {
 
             // Detect contracts inheriting from Upgradeable bases without gaps
             if trimmed.contains("contract ") && trimmed.contains(" is ") {
-                let inherits_upgradeable = trimmed.contains("Upgradeable") ||
-                    trimmed.contains("UUPS") ||
-                    trimmed.contains("Initializable");
+                let inherits_upgradeable = trimmed.contains("Upgradeable")
+                    || trimmed.contains("UUPS")
+                    || trimmed.contains("Initializable");
 
                 if inherits_upgradeable {
                     // Check if this contract adds state but parent might not have gap
@@ -160,15 +158,18 @@ impl ProxyGapUnderflowDetector {
 
     fn is_state_variable(&self, line: &str) -> bool {
         // Heuristic for state variable detection
-        let is_declaration = (line.contains("uint") || line.contains("int") ||
-            line.contains("address") || line.contains("bool") ||
-            line.contains("bytes") || line.contains("string") ||
-            line.contains("mapping")) &&
-            line.contains(";") &&
-            !line.contains("function") &&
-            !line.contains("memory") &&
-            !line.contains("calldata") &&
-            !line.contains("return");
+        let is_declaration = (line.contains("uint")
+            || line.contains("int")
+            || line.contains("address")
+            || line.contains("bool")
+            || line.contains("bytes")
+            || line.contains("string")
+            || line.contains("mapping"))
+            && line.contains(";")
+            && !line.contains("function")
+            && !line.contains("memory")
+            && !line.contains("calldata")
+            && !line.contains("return");
 
         is_declaration
     }

@@ -98,7 +98,8 @@ impl CrossDomainMevDetector {
             // Look for multi-chain operations
             if trimmed.contains("chainId") || trimmed.contains("destinationChain") {
                 let func_end = self.find_function_end(&lines, line_num);
-                let func_body: String = lines[line_num..std::cmp::min(func_end, line_num + 30)].join("\n");
+                let func_body: String =
+                    lines[line_num..std::cmp::min(func_end, line_num + 30)].join("\n");
 
                 // Check for price-sensitive cross-chain ops
                 if func_body.contains("swap")

@@ -90,8 +90,8 @@ impl MultiBlockRandomnessDetector {
             }
 
             // Detect abi.encodePacked/encode with block variables
-            if (trimmed.contains("abi.encodePacked") || trimmed.contains("abi.encode")) &&
-               trimmed.contains("block.")
+            if (trimmed.contains("abi.encodePacked") || trimmed.contains("abi.encode"))
+                && trimmed.contains("block.")
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
@@ -114,13 +114,14 @@ impl MultiBlockRandomnessDetector {
             }
 
             // Detect XOR or addition of block variables
-            if trimmed.contains("block.") &&
-               (trimmed.contains(" ^ ") || trimmed.contains(" + ") || trimmed.contains(" | "))
+            if trimmed.contains("block.")
+                && (trimmed.contains(" ^ ") || trimmed.contains(" + ") || trimmed.contains(" | "))
             {
                 // Check for multiple block references
                 let block_count = trimmed.matches("block.").count();
-                if block_count >= 2 ||
-                   (block_count >= 1 && (trimmed.contains("msg.sender") || trimmed.contains("tx.")))
+                if block_count >= 2
+                    || (block_count >= 1
+                        && (trimmed.contains("msg.sender") || trimmed.contains("tx.")))
                 {
                     let func_name = self.find_containing_function(&lines, line_num);
                     findings.push((line_num as u32 + 1, func_name));

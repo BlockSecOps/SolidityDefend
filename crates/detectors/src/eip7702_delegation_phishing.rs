@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_eip7702_context};
+use crate::utils::{is_eip7702_context, is_test_contract};
 
 /// Detector for EIP-7702 delegation phishing vulnerabilities
 ///

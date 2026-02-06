@@ -266,7 +266,7 @@ impl Detector for SelfdestructRecipientControlDetector {
                          // msg.sender is now guaranteed to be owner\n\
                          selfdestruct(payable(msg.sender));\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

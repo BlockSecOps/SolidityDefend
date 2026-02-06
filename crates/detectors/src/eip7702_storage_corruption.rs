@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_eip7702_context, is_standard_token};
+use crate::utils::{is_eip7702_context, is_standard_token, is_test_contract};
 
 /// Detector for EIP-7702 storage corruption vulnerabilities
 ///
@@ -130,7 +130,9 @@ impl Eip7702StorageCorruptionDetector {
                 continue;
             }
             // Check for state variable declarations (not in functions)
-            let storage_types = ["address", "uint", "int", "bool", "bytes", "string", "mapping"];
+            let storage_types = [
+                "address", "uint", "int", "bool", "bytes", "string", "mapping",
+            ];
             for stype in &storage_types {
                 if trimmed.starts_with(stype) || trimmed.contains(&format!(" {}", stype)) {
                     // Only safe if immutable or constant
@@ -205,11 +207,7 @@ impl Eip7702StorageCorruptionDetector {
                         // Extract variable name
                         let var_name = self.extract_variable_name(trimmed);
                         if !var_name.is_empty() && !var_name.contains("constant") {
-                            findings.push((
-                                line_num as u32 + 1,
-                                var_name,
-                                stype.to_string(),
-                            ));
+                            findings.push((line_num as u32 + 1, var_name, stype.to_string()));
                         }
                         break;
                     }
@@ -304,7 +302,11 @@ impl Eip7702StorageCorruptionDetector {
             }
 
             // Valid variable name: starts with letter or underscore, alphanumeric
-            if cleaned.chars().next().map(|c| c.is_alphabetic() || c == '_').unwrap_or(false)
+            if cleaned
+                .chars()
+                .next()
+                .map(|c| c.is_alphabetic() || c == '_')
+                .unwrap_or(false)
                 && cleaned.chars().all(|c| c.is_alphanumeric() || c == '_')
             {
                 candidate = cleaned.to_string();
@@ -461,7 +463,7 @@ impl Detector for Eip7702StorageCorruptionDetector {
                                  sstore(MY_SLOT, value)\n\
                              }\n\
                          }"
-                            .to_string(),
+                        .to_string(),
                     );
 
                 findings.push(finding);

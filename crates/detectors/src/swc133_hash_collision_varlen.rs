@@ -152,8 +152,18 @@ impl HashCollisionVarlenDetector {
 
         // Lower confidence patterns - only flag if combined with other evidence
         let medium_confidence_patterns = [
-            "str", "name", "symbol", "message", "data", "payload",
-            "text", "content", "description", "uri", "url", "path",
+            "str",
+            "name",
+            "symbol",
+            "message",
+            "data",
+            "payload",
+            "text",
+            "content",
+            "description",
+            "uri",
+            "url",
+            "path",
         ];
 
         // High confidence patterns - flag these
@@ -192,7 +202,10 @@ impl HashCollisionVarlenDetector {
         }
 
         // Numeric literals are fixed
-        if arg.chars().all(|c| c.is_ascii_digit() || c == 'x' || c == 'X') {
+        if arg
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == 'x' || c == 'X')
+        {
             return true;
         }
 
@@ -342,13 +355,7 @@ impl Detector for HashCollisionVarlenDetector {
 
             let mut finding = self
                 .base
-                .create_finding(
-                    ctx,
-                    message,
-                    line_num as u32,
-                    1,
-                    line.len() as u32,
-                )
+                .create_finding(ctx, message, line_num as u32, 1, line.len() as u32)
                 .with_swc("SWC-133")
                 .with_cwe(328) // CWE-328: Reversible One-Way Hash
                 .with_cwe(697) // CWE-697: Incorrect Comparison

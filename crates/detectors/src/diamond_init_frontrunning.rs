@@ -34,10 +34,10 @@ impl DiamondInitFrontrunningDetector {
     }
 
     fn is_diamond_contract(&self, source: &str) -> bool {
-        source.contains("diamondCut") ||
-        source.contains("DiamondCut") ||
-        source.contains("FacetCut") ||
-        source.contains("IDiamond")
+        source.contains("diamondCut")
+            || source.contains("DiamondCut")
+            || source.contains("FacetCut")
+            || source.contains("IDiamond")
     }
 
     fn find_frontrunning_risks(&self, source: &str) -> Vec<(u32, String, String)> {
@@ -58,11 +58,11 @@ impl DiamondInitFrontrunningDetector {
                 let func_body = self.get_function_body(&lines, func_start);
 
                 // Check for missing access control
-                let has_access_control = func_body.contains("onlyOwner") ||
-                    func_body.contains("onlyAdmin") ||
-                    func_body.contains("require(msg.sender") ||
-                    func_body.contains("_checkOwner") ||
-                    func_body.contains("onlyRole");
+                let has_access_control = func_body.contains("onlyOwner")
+                    || func_body.contains("onlyAdmin")
+                    || func_body.contains("require(msg.sender")
+                    || func_body.contains("_checkOwner")
+                    || func_body.contains("onlyRole");
 
                 if !has_access_control {
                     let issue = "diamondCut with init callable without access control".to_string();
@@ -78,25 +78,26 @@ impl DiamondInitFrontrunningDetector {
                     let func_body = self.get_function_body(&lines, func_start);
 
                     // Check for single-step initialization
-                    let has_pending_init = func_body.contains("pendingInit") ||
-                        func_body.contains("_pendingOwner") ||
-                        func_body.contains("pendingAdmin") ||
-                        func_body.contains("initDelay");
+                    let has_pending_init = func_body.contains("pendingInit")
+                        || func_body.contains("_pendingOwner")
+                        || func_body.contains("pendingAdmin")
+                        || func_body.contains("initDelay");
 
-                    let has_timelock = func_body.contains("timelock") ||
-                        func_body.contains("TimeLock") ||
-                        func_body.contains("block.timestamp >=");
+                    let has_timelock = func_body.contains("timelock")
+                        || func_body.contains("TimeLock")
+                        || func_body.contains("block.timestamp >=");
 
                     if !has_pending_init && !has_timelock {
-                        let issue = "Facet initialization without timelock or two-step process".to_string();
+                        let issue =
+                            "Facet initialization without timelock or two-step process".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
                     }
                 }
             }
 
             // Detect unprotected facet addition
-            if (trimmed.contains("FacetCutAction.Add") || trimmed.contains("Add")) &&
-               trimmed.contains("facet")
+            if (trimmed.contains("FacetCutAction.Add") || trimmed.contains("Add"))
+                && trimmed.contains("facet")
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 let func_start = self.find_function_start(&lines, line_num);
@@ -104,9 +105,9 @@ impl DiamondInitFrontrunningDetector {
 
                 // Check if in mempool-visible function
                 let is_external = func_body.contains("external") || func_body.contains("public");
-                let has_commit_reveal = func_body.contains("commit") ||
-                    func_body.contains("hash") ||
-                    func_body.contains("nonce");
+                let has_commit_reveal = func_body.contains("commit")
+                    || func_body.contains("hash")
+                    || func_body.contains("nonce");
 
                 if is_external && !has_commit_reveal {
                     let issue = "Facet addition exposed to mempool frontrunning".to_string();

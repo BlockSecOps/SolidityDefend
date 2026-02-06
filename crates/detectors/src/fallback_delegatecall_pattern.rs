@@ -224,7 +224,8 @@ impl Detector for FallbackDelegatecallPatternDetector {
             || source.contains("contract ERC1967Proxy")
             || source.contains("contract BeaconProxy")
             || source.contains("OpenZeppelin")
-            || (source.contains("function _implementation(") && source.contains("function _delegate("));
+            || (source.contains("function _implementation(")
+                && source.contains("function _delegate("));
 
         if is_standard_proxy {
             return Ok(findings);
@@ -260,7 +261,7 @@ impl Detector for FallbackDelegatecallPatternDetector {
                          require(msg.sender != admin, \"Admin cannot call impl\");\n\n\
                          _delegate(implementation);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -287,7 +288,7 @@ impl Detector for FallbackDelegatecallPatternDetector {
                      fallback() external payable {\n\
                          _delegate(implementation);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -315,7 +316,7 @@ impl Detector for FallbackDelegatecallPatternDetector {
                          calldatacopy(0, 0, calldatasize())\n\
                          // ...\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -355,7 +356,11 @@ mod tests {
                 }
             }
         "#;
-        assert!(detector.find_unfiltered_fallback_delegatecall(vulnerable).is_some());
+        assert!(
+            detector
+                .find_unfiltered_fallback_delegatecall(vulnerable)
+                .is_some()
+        );
 
         let filtered = r#"
             contract Proxy {
@@ -367,7 +372,11 @@ mod tests {
                 }
             }
         "#;
-        assert!(detector.find_unfiltered_fallback_delegatecall(filtered).is_none());
+        assert!(
+            detector
+                .find_unfiltered_fallback_delegatecall(filtered)
+                .is_none()
+        );
     }
 
     #[test]

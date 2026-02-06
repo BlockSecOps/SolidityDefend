@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_factory_contract};
+use crate::utils::{is_factory_contract, is_test_contract};
 
 /// Detector for contract recreation attack vulnerabilities
 ///
@@ -248,8 +248,8 @@ impl Detector for ContractRecreationAttackDetector {
         // Phase 9 FP Reduction: Context gate - only check contracts that are:
         // 1. Factory patterns (create/deploy other contracts)
         // 2. Have selfdestruct capability (required for recreation attack)
-        let has_selfdestruct = source_lower.contains("selfdestruct")
-            || source_lower.contains("suicide");
+        let has_selfdestruct =
+            source_lower.contains("selfdestruct") || source_lower.contains("suicide");
         let has_create2 = source_lower.contains("create2");
 
         // If not a factory and doesn't have selfdestruct, skip most checks
@@ -336,7 +336,7 @@ impl Detector for ContractRecreationAttackDetector {
                              deployed[salt] = true;\n\
                              // CREATE2 deployment\n\
                          }"
-                            .to_string(),
+                        .to_string(),
                     );
 
                 findings.push(finding);
@@ -366,7 +366,7 @@ impl Detector for ContractRecreationAttackDetector {
                          );\n\
                          // Safe to call\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

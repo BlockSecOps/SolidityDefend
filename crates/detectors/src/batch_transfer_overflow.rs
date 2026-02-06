@@ -62,7 +62,8 @@ impl BatchTransferOverflowDetector {
         }
 
         // Must be a batch/multi transfer function - stricter check
-        let is_batch_transfer_function = (func_lower.contains("batch") && func_lower.contains("transfer"))
+        let is_batch_transfer_function = (func_lower.contains("batch")
+            && func_lower.contains("transfer"))
             || (func_lower.contains("multi") && func_lower.contains("transfer"))
             || func_lower.contains("batchtransfer")
             || func_lower.contains("multitransfer")
@@ -145,17 +146,24 @@ impl BatchTransferOverflowDetector {
             if line.contains("pragma solidity") {
                 let lower = line.to_lowercase();
                 // Check for 0.8.x or higher
-                if lower.contains("0.8.") || lower.contains("^0.8")
-                    || lower.contains(">=0.8") || lower.contains(">= 0.8")
-                    || lower.contains("0.9.") || lower.contains("^0.9")
+                if lower.contains("0.8.")
+                    || lower.contains("^0.8")
+                    || lower.contains(">=0.8")
+                    || lower.contains(">= 0.8")
+                    || lower.contains("0.9.")
+                    || lower.contains("^0.9")
                 {
                     return true;
                 }
                 // If explicit old version, it's not 0.8+
-                if lower.contains("0.4.") || lower.contains("0.5.")
-                    || lower.contains("0.6.") || lower.contains("0.7.")
-                    || lower.contains("^0.4") || lower.contains("^0.5")
-                    || lower.contains("^0.6") || lower.contains("^0.7")
+                if lower.contains("0.4.")
+                    || lower.contains("0.5.")
+                    || lower.contains("0.6.")
+                    || lower.contains("0.7.")
+                    || lower.contains("^0.4")
+                    || lower.contains("^0.5")
+                    || lower.contains("^0.6")
+                    || lower.contains("^0.7")
                 {
                     return false;
                 }

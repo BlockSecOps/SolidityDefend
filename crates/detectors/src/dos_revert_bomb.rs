@@ -74,11 +74,15 @@ impl DosRevertBombDetector {
             // Detect send() without return check - returns false on failure but doesn't revert
             // This is a different issue (unchecked return) not a revert bomb
             // Only flag if the return value is truly unchecked
-            if trimmed.contains(".send(") && !trimmed.contains("require")
-                && !trimmed.contains("if (") && !trimmed.contains("if(")
-                && !trimmed.contains("bool ") && !trimmed.contains("success")
+            if trimmed.contains(".send(")
+                && !trimmed.contains("require")
+                && !trimmed.contains("if (")
+                && !trimmed.contains("if(")
+                && !trimmed.contains("bool ")
+                && !trimmed.contains("success")
             {
-                let issue = "send() return value unchecked - failure will be silently ignored".to_string();
+                let issue =
+                    "send() return value unchecked - failure will be silently ignored".to_string();
                 findings.push((line_num as u32 + 1, func_name, issue));
             }
         }
@@ -146,10 +150,13 @@ impl DosRevertBombDetector {
                     || self.has_interface_call(&func_body);
                 // Note: .transfer() is NOT included - it has 2300 gas stipend and is safe
 
-                let has_state_change_after = self.has_state_change_after_call(&lines, line_num, func_end);
+                let has_state_change_after =
+                    self.has_state_change_after_call(&lines, line_num, func_end);
 
-                if has_external_call && has_state_change_after
-                    && !func_body.contains("try ") && !func_body.contains("catch")
+                if has_external_call
+                    && has_state_change_after
+                    && !func_body.contains("try ")
+                    && !func_body.contains("catch")
                 {
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -282,8 +289,12 @@ impl DosRevertBombDetector {
 
     fn has_interface_call(&self, code: &str) -> bool {
         let patterns = [
-            "IERC20(", "IERC721(", "IContract(", "IToken(",
-            ".safeTransfer", ".safeTransferFrom",
+            "IERC20(",
+            "IERC721(",
+            "IContract(",
+            "IToken(",
+            ".safeTransfer",
+            ".safeTransferFrom",
         ];
 
         for pattern in patterns {
@@ -308,8 +319,11 @@ impl DosRevertBombDetector {
             }
 
             // Check for state changes after the call
-            if found_call && trimmed.contains("=") && !trimmed.contains("==")
-                && !trimmed.contains("memory") && !trimmed.contains("bool ")
+            if found_call
+                && trimmed.contains("=")
+                && !trimmed.contains("==")
+                && !trimmed.contains("memory")
+                && !trimmed.contains("bool ")
             {
                 return true;
             }
@@ -425,7 +439,7 @@ impl Detector for DosRevertBombDetector {
                          // Handle failure - store for later claim\n\
                          pendingWithdrawals[recipient] += amount;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -451,7 +465,7 @@ impl Detector for DosRevertBombDetector {
                          // failure path - handle gracefully\n\
                          emit CallbackFailed(target);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -482,7 +496,7 @@ impl Detector for DosRevertBombDetector {
                          pendingReturns[msg.sender] = 0;\n\
                          payable(msg.sender).transfer(amount);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

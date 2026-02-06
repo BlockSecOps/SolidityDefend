@@ -144,8 +144,7 @@ impl MulticallPartialRevertDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("function aggregate") || trimmed.contains("function tryAggregate")
-            {
+            if trimmed.contains("function aggregate") || trimmed.contains("function tryAggregate") {
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
                 let func_name = self.extract_function_name(trimmed);

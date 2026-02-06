@@ -914,7 +914,8 @@ impl DetectorRegistry {
             crate::delegatecall_user_controlled::DelegatecallUserControlledDetector::new(),
         ));
         self.register(Arc::new(
-            crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(),
+            crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(
+            ),
         ));
         self.register(Arc::new(
             crate::fallback_function_shadowing::FallbackFunctionShadowingDetector::new(),
@@ -1247,9 +1248,7 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::token_launch_mev::TokenLaunchMevDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::nft_mint_mev::NftMintMevDetector::new(),
-        ));
+        self.register(Arc::new(crate::nft_mint_mev::NftMintMevDetector::new()));
 
         // Phase 45: Metamorphic & CREATE2 Patterns (v1.8.2 - 2026)
         self.register(Arc::new(

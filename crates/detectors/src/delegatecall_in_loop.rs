@@ -113,9 +113,19 @@ impl DelegatecallInLoopDetector {
 
             // Check for delegatecall inside loop - require actual method call syntax
             if in_loop && code_part.contains(".delegatecall(") {
-                let loop_type = if source[..source.lines().take(line_num + 1).collect::<Vec<_>>().join("\n").len()]
+                let loop_type = if source[..source
+                    .lines()
+                    .take(line_num + 1)
+                    .collect::<Vec<_>>()
+                    .join("\n")
+                    .len()]
                     .rfind("for")
-                    > source[..source.lines().take(line_num + 1).collect::<Vec<_>>().join("\n").len()]
+                    > source[..source
+                        .lines()
+                        .take(line_num + 1)
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                        .len()]
                         .rfind("while")
                 {
                     "for"
@@ -279,7 +289,7 @@ impl Detector for DelegatecallInLoopDetector {
                      for (uint i = 0; i < targets.length; i++) {\n\
                          // ...\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

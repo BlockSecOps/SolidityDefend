@@ -406,12 +406,7 @@ impl UnusedStateVariablesDetector {
         }
 
         // Skip specific OpenZeppelin/Aave upgrade patterns
-        let upgrade_patterns = [
-            "STORAGE_SLOT",
-            "POSITION",
-            "_SLOT",
-            "RESERVED",
-        ];
+        let upgrade_patterns = ["STORAGE_SLOT", "POSITION", "_SLOT", "RESERVED"];
 
         for pattern in &upgrade_patterns {
             if var_name.contains(pattern) {

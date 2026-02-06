@@ -324,23 +324,27 @@ impl LendingBorrowBypassDetector {
         // Must have lending state tracking infrastructure
         // Look for state variables that track borrowed amounts or collateral
         let has_borrow_state = [
-            "borrowed[",           // borrowed[user] = amount
+            "borrowed[", // borrowed[user] = amount
             "mapping(address => uint256) borrowed",
             "mapping(address => uint256) debt",
             "mapping(address => uint256) loans",
-            "debt[",               // debt[user] = amount
-            "loans[",              // loans[user] = amount
-            "borrowbalance",       // borrowBalance mapping or variable
-            "borrowedamount",      // borrowedAmount tracking
-        ].iter().any(|p| lower.contains(p));
+            "debt[",          // debt[user] = amount
+            "loans[",         // loans[user] = amount
+            "borrowbalance",  // borrowBalance mapping or variable
+            "borrowedamount", // borrowedAmount tracking
+        ]
+        .iter()
+        .any(|p| lower.contains(p));
 
         let has_collateral_state = [
-            "collateral[",         // collateral[user] = amount
+            "collateral[", // collateral[user] = amount
             "mapping(address => uint256) collateral",
             "mapping(address => uint256) deposits",
-            "collateralbalance",   // collateralBalance mapping
-            "usercollateral",      // userCollateral tracking
-        ].iter().any(|p| lower.contains(p));
+            "collateralbalance", // collateralBalance mapping
+            "usercollateral",    // userCollateral tracking
+        ]
+        .iter()
+        .any(|p| lower.contains(p));
 
         // Must have at least borrow state OR (collateral + borrow function)
         if !has_borrow_state {
@@ -356,13 +360,13 @@ impl LendingBorrowBypassDetector {
 
         // Additional indicators that increase confidence
         let lending_indicators = [
-            "collateralfactor",    // LTV/collateral factor
-            "healthfactor",        // Health factor tracking
-            "liquidat",            // Liquidation logic
-            "interestrate",        // Interest calculations
-            "borrowlimit",         // Borrow limits
-            "maxborrow",           // Maximum borrow
-            "repay(",              // Repayment function
+            "collateralfactor", // LTV/collateral factor
+            "healthfactor",     // Health factor tracking
+            "liquidat",         // Liquidation logic
+            "interestrate",     // Interest calculations
+            "borrowlimit",      // Borrow limits
+            "maxborrow",        // Maximum borrow
+            "repay(",           // Repayment function
         ];
 
         let indicator_count = lending_indicators

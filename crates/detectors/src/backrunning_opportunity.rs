@@ -329,7 +329,10 @@ impl BackrunningOpportunityDetector {
 
         // Interface naming convention (IPool, IAToken, etc.)
         if contract_name.starts_with('I')
-            && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase())
+            && contract_name
+                .chars()
+                .nth(1)
+                .map_or(false, |c| c.is_uppercase())
         {
             return true;
         }

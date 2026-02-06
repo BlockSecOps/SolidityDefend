@@ -64,8 +64,8 @@ impl QuorumCalculationOverflowDetector {
                     let mul_pos = func_body.find('*');
                     if let (Some(d), Some(m)) = (div_pos, mul_pos) {
                         if d < m {
-                            let issue = "Division before multiplication causes precision loss"
-                                .to_string();
+                            let issue =
+                                "Division before multiplication causes precision loss".to_string();
                             findings.push((line_num as u32 + 1, func_name.clone(), issue));
                         }
                     }

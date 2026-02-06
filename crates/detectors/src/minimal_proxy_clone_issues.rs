@@ -42,7 +42,7 @@ impl MinimalProxyCloneIssuesDetector {
             || source.contains("Clones.cloneDeterministic")
             || source.contains("createClone")
             || source.contains("LibClone")
-            || source.contains("create(0,")  // Low-level clone pattern
+            || source.contains("create(0,") // Low-level clone pattern
     }
 
     /// Find clone-related issues
@@ -102,8 +102,7 @@ impl MinimalProxyCloneIssuesDetector {
                     let func_end = self.find_function_end(&lines, i);
                     let func_body: String = lines[i..=func_end].join("\n");
 
-                    if !func_body.contains("require(msg.sender")
-                        && !func_body.contains("hasRole(")
+                    if !func_body.contains("require(msg.sender") && !func_body.contains("hasRole(")
                     {
                         issues.push((
                             (i + 1) as u32,

@@ -176,7 +176,8 @@ impl InefficientStorageDetector {
                 && !trimmed.contains("index")    // indices can be intentionally small
                 && !trimmed.contains("count")    // counts can be intentionally bounded
                 && !trimmed.contains("id")       // IDs can be intentionally small
-                && !trimmed.contains("type")     // type codes are often uint8
+                && !trimmed.contains("type")
+            // type codes are often uint8
             {
                 issues.push((
                     (line_idx + 1) as u32,
@@ -192,7 +193,8 @@ impl InefficientStorageDetector {
                 && !trimmed.contains("immutable")
                 && !trimmed.contains("mapping")
                 && !trimmed.contains("address")  // addresses aren't constants
-                && !trimmed.contains("bool")     // bools set to false/true are state
+                && !trimmed.contains("bool")
+            // bools set to false/true are state
             {
                 // Check for common constant patterns (large round numbers)
                 let is_constant_like = (trimmed.contains("= 1000")
@@ -293,7 +295,9 @@ impl InefficientStorageDetector {
             .lines()
             .filter(|line| {
                 let trimmed = line.trim();
-                !trimmed.starts_with("//") && !trimmed.starts_with("*") && !trimmed.starts_with("/*")
+                !trimmed.starts_with("//")
+                    && !trimmed.starts_with("*")
+                    && !trimmed.starts_with("/*")
             })
             .collect::<Vec<_>>()
             .join("\n");

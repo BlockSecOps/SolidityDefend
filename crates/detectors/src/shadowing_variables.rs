@@ -145,7 +145,10 @@ impl ShadowingVariablesDetector {
             }
 
             // Track if we're entering a contract
-            if trimmed.contains("contract ") || trimmed.contains("library ") || trimmed.contains("interface ") {
+            if trimmed.contains("contract ")
+                || trimmed.contains("library ")
+                || trimmed.contains("interface ")
+            {
                 in_contract = true;
             }
 
@@ -154,7 +157,10 @@ impl ShadowingVariablesDetector {
             let close_braces = trimmed.matches('}').count();
 
             // Skip lines that start a function or modifier body (these increase depth)
-            if trimmed.contains("function") || trimmed.contains("modifier") || trimmed.contains("constructor") {
+            if trimmed.contains("function")
+                || trimmed.contains("modifier")
+                || trimmed.contains("constructor")
+            {
                 brace_depth += open_braces;
                 brace_depth = brace_depth.saturating_sub(close_braces);
                 continue;

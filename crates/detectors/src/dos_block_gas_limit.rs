@@ -75,7 +75,7 @@ impl DosBlockGasLimitDetector {
                         || loop_body.contains(".call{")
                         || loop_body.contains("delete ")
                         || loop_body.contains("emit ")  // Events cost gas
-                        || loop_body.contains("= ");    // Storage writes
+                        || loop_body.contains("= "); // Storage writes
 
                     if gas_intensive {
                         let issue = "Unbounded loop with gas-intensive operations (storage writes, transfers, or events)".to_string();
@@ -112,8 +112,7 @@ impl DosBlockGasLimitDetector {
                 && (func_body.contains("<=") || func_body.contains("<")));
 
         // Loop has early exit conditions
-        let has_early_exit = loop_body.contains("break")
-            || loop_body.contains("return");
+        let has_early_exit = loop_body.contains("break") || loop_body.contains("return");
 
         // Fixed iteration count (not .length)
         let has_fixed_count = loop_body.contains("< 10")
@@ -260,8 +259,11 @@ impl DosBlockGasLimitDetector {
             let in_view_or_pure = self.is_inside_view_or_pure(&lines, line_num);
 
             // Detect storage to memory copy of arrays (only in state-changing functions)
-            if !in_view_or_pure && trimmed.contains("memory") && trimmed.contains("=")
-                && (trimmed.contains("[]") || trimmed.contains(".copy")
+            if !in_view_or_pure
+                && trimmed.contains("memory")
+                && trimmed.contains("=")
+                && (trimmed.contains("[]")
+                    || trimmed.contains(".copy")
                     || trimmed.contains("abi.decode"))
             {
                 // Check if it's copying from storage (not creating new)
@@ -312,7 +314,8 @@ impl DosBlockGasLimitDetector {
             }
 
             // Detect string/bytes concatenation in loops
-            if trimmed.contains("string.concat") || trimmed.contains("bytes.concat")
+            if trimmed.contains("string.concat")
+                || trimmed.contains("bytes.concat")
                 || trimmed.contains("abi.encodePacked")
             {
                 // Check if we're in a loop
@@ -493,7 +496,7 @@ impl Detector for DosBlockGasLimitDetector {
                              // process items[i]\n\
                          }\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -521,7 +524,7 @@ impl Detector for DosBlockGasLimitDetector {
                          );\n\
                          // ...\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

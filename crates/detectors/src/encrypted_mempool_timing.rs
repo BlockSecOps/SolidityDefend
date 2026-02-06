@@ -52,11 +52,11 @@ impl EncryptedMempoolTimingDetector {
                     let func_name = self.extract_function_name(trimmed);
 
                     // Check for timing protection
-                    let has_random_delay = func_body.contains("randomDelay")
-                        || func_body.contains("minRevealTime");
+                    let has_random_delay =
+                        func_body.contains("randomDelay") || func_body.contains("minRevealTime");
 
-                    let has_batch_reveal = func_body.contains("batch")
-                        || func_body.contains("Batch");
+                    let has_batch_reveal =
+                        func_body.contains("batch") || func_body.contains("Batch");
 
                     if !has_random_delay && !has_batch_reveal {
                         findings.push((line_num as u32 + 1, func_name));
@@ -178,9 +178,8 @@ impl EncryptedMempoolTimingDetector {
             || lower.contains("sealed");
 
         // Voting/governance patterns
-        let has_voting = lower.contains("vote")
-            || lower.contains("ballot")
-            || lower.contains("proposal");
+        let has_voting =
+            lower.contains("vote") || lower.contains("ballot") || lower.contains("proposal");
 
         // Commit-reveal patterns
         let has_commit_reveal = (lower.contains("commit") && lower.contains("reveal"))

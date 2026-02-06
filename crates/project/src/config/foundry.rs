@@ -175,7 +175,11 @@ impl FoundryConfig {
                             let prefix = format!("{}@", lib_name);
                             let alt_prefix = format!("{}/", lib_name);
 
-                            if !config.remappings.iter().any(|(p, _)| p == &prefix || p == &alt_prefix) {
+                            if !config
+                                .remappings
+                                .iter()
+                                .any(|(p, _)| p == &prefix || p == &alt_prefix)
+                            {
                                 config.remappings.push((alt_prefix, target));
                             }
                         }
@@ -278,7 +282,16 @@ forge-std/=lib/forge-std/src/
 
         let parsed = parse_remappings(&remappings);
         assert_eq!(parsed.len(), 2);
-        assert_eq!(parsed[0], ("@openzeppelin/".to_string(), "lib/openzeppelin/".to_string()));
-        assert_eq!(parsed[1], ("forge-std/".to_string(), "lib/forge-std/src/".to_string()));
+        assert_eq!(
+            parsed[0],
+            (
+                "@openzeppelin/".to_string(),
+                "lib/openzeppelin/".to_string()
+            )
+        );
+        assert_eq!(
+            parsed[1],
+            ("forge-std/".to_string(), "lib/forge-std/src/".to_string())
+        );
     }
 }

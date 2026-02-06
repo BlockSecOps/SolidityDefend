@@ -81,9 +81,11 @@ impl Eip3074InvokerAuthorizationDetector {
             }
 
             // Find execute/invoke functions with AUTHCALL
-            if trimmed.contains("function") &&
-               (trimmed.contains("execute") || trimmed.contains("invoke") || trimmed.contains("call")) {
-
+            if trimmed.contains("function")
+                && (trimmed.contains("execute")
+                    || trimmed.contains("invoke")
+                    || trimmed.contains("call"))
+            {
                 // Look for authcall in function body
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
@@ -108,7 +110,8 @@ impl Eip3074InvokerAuthorizationDetector {
                     if (trimmed.contains("external") || trimmed.contains("public"))
                         && !trimmed.contains("onlyOwner")
                         && !trimmed.contains("onlyAuthorized")
-                        && !func_body.contains("msg.sender ==") {
+                        && !func_body.contains("msg.sender ==")
+                    {
                         missing.push("function access control".to_string());
                     }
 
@@ -145,7 +148,8 @@ impl Eip3074InvokerAuthorizationDetector {
                     && !func_body.contains("revert")
                     && !func_body.contains("if (")
                     && !func_body.contains("onlyOwner")
-                    && (func_body.contains("authcall") || func_body.contains("AUTHCALL")) {
+                    && (func_body.contains("authcall") || func_body.contains("AUTHCALL"))
+                {
                     findings.push((
                         line_num as u32 + 1,
                         "completely unrestricted AUTHCALL function".to_string(),
@@ -163,7 +167,8 @@ impl Eip3074InvokerAuthorizationDetector {
                     if !func_body.contains("require(to")
                         && !func_body.contains("require(_to")
                         && !func_body.contains("allowedTargets")
-                        && !func_body.contains("isValidTarget") {
+                        && !func_body.contains("isValidTarget")
+                    {
                         findings.push((
                             line_num as u32 + 1,
                             "AUTHCALL to unvalidated target address".to_string(),
@@ -259,7 +264,10 @@ impl Detector for Eip3074InvokerAuthorizationDetector {
         let contract_name = self.get_contract_name(ctx);
 
         // Only check EIP-3074 related contracts
-        if !source.contains("authcall") && !source.contains("AUTHCALL") && !source.contains("invoker") {
+        if !source.contains("authcall")
+            && !source.contains("AUTHCALL")
+            && !source.contains("invoker")
+        {
             return Ok(findings);
         }
 
@@ -270,7 +278,9 @@ impl Detector for Eip3074InvokerAuthorizationDetector {
                 "EIP-3074 invoker function '{}' in contract '{}' is missing: {}. \
                  Without proper authorization, attackers can abuse AUTH signatures \
                  for unintended actions.",
-                func_name, contract_name, missing.join(", ")
+                func_name,
+                contract_name,
+                missing.join(", ")
             );
 
             let finding = self

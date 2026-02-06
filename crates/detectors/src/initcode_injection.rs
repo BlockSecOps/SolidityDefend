@@ -70,8 +70,7 @@ impl InitcodeInjectionDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         // Skip if using trusted bytecode sources
-        let has_trusted_source = source.contains("type(")
-            && source.contains(").creationCode")
+        let has_trusted_source = source.contains("type(") && source.contains(").creationCode")
             || source.contains("clone")
             || source.contains("Clone");
 
@@ -162,8 +161,7 @@ impl InitcodeInjectionDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         // Skip if using trusted bytecode sources
-        let has_trusted_source = source.contains("type(")
-            && source.contains(").creationCode")
+        let has_trusted_source = source.contains("type(") && source.contains(").creationCode")
             || source.contains("clone")
             || source.contains("Clone");
 
@@ -304,7 +302,7 @@ impl Detector for InitcodeInjectionDetector {
                          );\n\
                          // Safe to deploy\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -355,7 +353,7 @@ impl Detector for InitcodeInjectionDetector {
                          );\n\
                          // CREATE2 deployment\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

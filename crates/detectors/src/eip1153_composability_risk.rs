@@ -166,7 +166,13 @@ impl Eip1153ComposabilityRiskDetector {
     fn has_interface_call(&self, body: &str) -> bool {
         // Pattern: SomeContract(address).someFunction(
         let patterns = [
-            "IERC20(", "IERC721(", "IERC1155(", "IUniswap", "IPancake", "IPool(", "IRouter(",
+            "IERC20(",
+            "IERC721(",
+            "IERC1155(",
+            "IUniswap",
+            "IPancake",
+            "IPool(",
+            "IRouter(",
         ];
 
         patterns.iter().any(|p| body.contains(p))

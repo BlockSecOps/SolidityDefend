@@ -227,17 +227,17 @@ impl MissingModifiersDetector {
 
         // Skip common user-facing patterns that should NOT require access control
         let user_facing_patterns = [
-            "transfer",     // ERC20/721 transfer
-            "approve",      // ERC20/721 approve
-            "send",         // User sends their own tokens
-            "claim",        // Users claim their rewards
-            "stake",        // Users stake their tokens
-            "unstake",      // Users unstake their tokens
-            "deposit",      // Users deposit their tokens
-            "redeem",       // Users redeem their tokens
-            "swap",         // Users swap tokens
-            "buy",          // Users buy
-            "sell",         // Users sell
+            "transfer", // ERC20/721 transfer
+            "approve",  // ERC20/721 approve
+            "send",     // User sends their own tokens
+            "claim",    // Users claim their rewards
+            "stake",    // Users stake their tokens
+            "unstake",  // Users unstake their tokens
+            "deposit",  // Users deposit their tokens
+            "redeem",   // Users redeem their tokens
+            "swap",     // Users swap tokens
+            "buy",      // Users buy
+            "sell",     // Users sell
         ];
 
         if user_facing_patterns.iter().any(|p| name_lower.contains(p)) {
@@ -768,12 +768,13 @@ impl StateVariableVisibilityDetector {
 
         // Check if line starts with a type declaration (state variable pattern)
         let type_prefixes = [
-            "address ", "uint", "int", "bool ", "bytes", "string ",
-            "mapping(", "struct ", "enum ",
+            "address ", "uint", "int", "bool ", "bytes", "string ", "mapping(", "struct ", "enum ",
         ];
 
         // Must start with type and not be inside a function (no memory/calldata)
-        let starts_with_type = type_prefixes.iter().any(|prefix| trimmed.starts_with(prefix));
+        let starts_with_type = type_prefixes
+            .iter()
+            .any(|prefix| trimmed.starts_with(prefix));
 
         // Variables inside functions have memory/calldata keywords
         let is_local_var = trimmed.contains("memory") || trimmed.contains("calldata");

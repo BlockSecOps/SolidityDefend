@@ -40,7 +40,10 @@ impl ClonesImmutableArgsBypassDetector {
                  spoofed via crafted calldata. These args are read from calldata at runtime, \
                  not stored in contract storage, making them vulnerable to manipulation."
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::High,
             ),
         }
@@ -208,7 +211,7 @@ impl Detector for ClonesImmutableArgsBypassDetector {
                      function owner() public view returns (address) {\n\
                          return _owner; // SAFE\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -235,7 +238,7 @@ impl Detector for ClonesImmutableArgsBypassDetector {
                      function validateArgs() internal view {\n\
                          require(_getArgAddress(0) == expectedAddress, \"Invalid arg\");\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

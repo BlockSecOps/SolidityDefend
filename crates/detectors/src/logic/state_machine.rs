@@ -556,11 +556,7 @@ impl StateMachineDetector {
                 );
                 if let Some(else_stmt) = else_branch {
                     self.check_stmt_for_unchecked_modifications(
-                        else_stmt,
-                        state_vars,
-                        findings,
-                        ctx,
-                        true, // guarded by condition
+                        else_stmt, state_vars, findings, ctx, true, // guarded by condition
                     );
                 }
             }

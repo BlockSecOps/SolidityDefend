@@ -206,11 +206,17 @@ impl RegressionTestSuite {
         );
         categories.insert(
             "cross-chain".to_string(),
-            vec!["tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/vulnerable_simple.sol".to_string()],
+            vec![
+                "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/vulnerable_simple.sol"
+                    .to_string(),
+            ],
         );
         categories.insert(
             "delegatecall".to_string(),
-            vec!["tests/contracts/delegatecall/vulnerable/UserControlledDelegatecall.sol".to_string()],
+            vec![
+                "tests/contracts/delegatecall/vulnerable/UserControlledDelegatecall.sol"
+                    .to_string(),
+            ],
         );
         categories.insert(
             "governance".to_string(),
@@ -218,7 +224,10 @@ impl RegressionTestSuite {
         );
         categories.insert(
             "account-abstraction".to_string(),
-            vec!["tests/contracts/account_abstraction/vulnerable/VulnerablePaymaster.sol".to_string()],
+            vec![
+                "tests/contracts/account_abstraction/vulnerable/VulnerablePaymaster.sol"
+                    .to_string(),
+            ],
         );
 
         Self {

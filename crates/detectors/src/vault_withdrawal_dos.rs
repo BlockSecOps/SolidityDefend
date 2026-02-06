@@ -194,13 +194,16 @@ impl VaultWithdrawalDosDetector {
             || source.contains("queuedWithdrawals");
 
         // Vault share mechanics
-        let has_share_mechanics = (source.contains("totalAssets") && source.contains("totalSupply"))
+        let has_share_mechanics = (source.contains("totalAssets")
+            && source.contains("totalSupply"))
             || source.contains("convertToShares")
             || source.contains("convertToAssets");
 
         // Staking/unstaking patterns with queues
         let has_staking_queue = (source.contains("stake") || source.contains("unstake"))
-            && (source.contains("queue") || source.contains("pending") || source.contains("cooldown"));
+            && (source.contains("queue")
+                || source.contains("pending")
+                || source.contains("cooldown"));
 
         has_queue || has_share_mechanics || has_staking_queue
     }

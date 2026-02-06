@@ -36,10 +36,7 @@ impl InitializerReentrancyDetector {
                 "Detects external calls in initializer functions that could enable reentrancy \
                  attacks during contract initialization"
                     .to_string(),
-                vec![
-                    DetectorCategory::Reentrancy,
-                    DetectorCategory::Upgradeable,
-                ],
+                vec![DetectorCategory::Reentrancy, DetectorCategory::Upgradeable],
                 Severity::High,
             ),
         }
@@ -59,7 +56,7 @@ impl InitializerReentrancyDetector {
         line.contains("initializer")
             || line.contains("onlyInitializing")
             || (line.contains("function initialize") && !line.contains("//"))
-            || line.contains("function __")  // OpenZeppelin internal initializers
+            || line.contains("function __") // OpenZeppelin internal initializers
     }
 
     /// Find external calls in function

@@ -82,7 +82,8 @@ impl LiquidationMevDetector {
                 || trimmed.starts_with("*")
                 || trimmed.starts_with("struct ")
                 || trimmed.contains("@param")
-                || trimmed.contains("uint256 liquidation") // parameter declaration
+                || trimmed.contains("uint256 liquidation")
+            // parameter declaration
             {
                 continue;
             }
@@ -93,7 +94,8 @@ impl LiquidationMevDetector {
                 || trimmed.contains("liquidationIncentive")
                 || trimmed.contains("liquidationPenalty"))
                 && (trimmed.contains("=") || trimmed.contains("*") || trimmed.contains("/"))
-                && !trimmed.contains("//") // Not a comment
+                && !trimmed.contains("//")
+            // Not a comment
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 // Only flag if in actual function, not struct or interface
@@ -147,7 +149,8 @@ impl LiquidationMevDetector {
                     // Check surrounding context for price oracle protection
                     let context_start = if line_num > 10 { line_num - 10 } else { 0 };
                     let context_end = std::cmp::min(line_num + 10, lines.len());
-                    let context: String = lines[context_start..context_end].join("\n").to_lowercase();
+                    let context: String =
+                        lines[context_start..context_end].join("\n").to_lowercase();
 
                     // Skip if context shows oracle protection
                     if !context.contains("twap")
@@ -265,7 +268,12 @@ impl LiquidationMevDetector {
         let contract_name = &ctx.contract.name.name;
 
         // Interface naming convention
-        if contract_name.starts_with('I') && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase()) {
+        if contract_name.starts_with('I')
+            && contract_name
+                .chars()
+                .nth(1)
+                .map_or(false, |c| c.is_uppercase())
+        {
             return true;
         }
 
@@ -275,9 +283,8 @@ impl LiquidationMevDetector {
         }
 
         // No function implementations (all functions end with ;)
-        let has_implementation = source.contains("function ")
-            && source.contains("{")
-            && !source.contains("interface ");
+        let has_implementation =
+            source.contains("function ") && source.contains("{") && !source.contains("interface ");
 
         !has_implementation
     }
@@ -302,8 +309,8 @@ impl LiquidationMevDetector {
         let is_library = source_lower.contains(&format!("library {}", contract_name));
 
         // Data types / structs only
-        let is_types_only = source_lower.contains("struct ")
-            && !source_lower.contains("function liquidate");
+        let is_types_only =
+            source_lower.contains("struct ") && !source_lower.contains("function liquidate");
 
         is_config_named || is_library || is_types_only
     }
@@ -314,15 +321,21 @@ impl LiquidationMevDetector {
         let lower = source.to_lowercase();
 
         // Aave patterns - uses Chainlink oracles and has proper protections
-        let is_aave = (lower.contains("aave") || lower.contains("atoken") || lower.contains("ipool"))
-            && (lower.contains("chainlink") || lower.contains("aggregator") || lower.contains("getassetprice"));
+        let is_aave =
+            (lower.contains("aave") || lower.contains("atoken") || lower.contains("ipool"))
+                && (lower.contains("chainlink")
+                    || lower.contains("aggregator")
+                    || lower.contains("getassetprice"));
 
         // Compound patterns - uses Chainlink and has proper protections
-        let is_compound = (lower.contains("compound") || lower.contains("ctoken") || lower.contains("comptroller"))
+        let is_compound = (lower.contains("compound")
+            || lower.contains("ctoken")
+            || lower.contains("comptroller"))
             && (lower.contains("pricefeed") || lower.contains("getunderlyingprice"));
 
         // MakerDAO patterns
-        let is_maker = lower.contains("makerdao") || lower.contains("dss") || lower.contains("vat.");
+        let is_maker =
+            lower.contains("makerdao") || lower.contains("dss") || lower.contains("vat.");
 
         // Check for Chainlink oracle usage (strong MEV protection)
         let uses_chainlink = lower.contains("aggregatorv3interface")

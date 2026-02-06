@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_bridge_contract, is_standard_token, is_zk_contract};
+use crate::utils::{is_bridge_contract, is_standard_token, is_test_contract, is_zk_contract};
 
 /// Detector for bridge merkle proof bypass vulnerabilities
 ///
@@ -74,7 +74,8 @@ impl BridgeMerkleBypassDetector {
 
                 // Only flag if neither merkle nor signature authentication is present
                 if !has_merkle && !has_signature {
-                    let issue = "Bridge function without merkle proof or signature verification".to_string();
+                    let issue = "Bridge function without merkle proof or signature verification"
+                        .to_string();
                     findings.push((line_num as u32 + 1, func_name.clone(), issue));
                 }
 
@@ -108,7 +109,8 @@ impl BridgeMerkleBypassDetector {
                     || func_lower.contains("require(msg.sender");
 
                 if !has_auth {
-                    let issue = "Message relay without cryptographic proof or sender validation".to_string();
+                    let issue = "Message relay without cryptographic proof or sender validation"
+                        .to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
                 }
             }
@@ -190,9 +192,8 @@ impl BridgeMerkleBypassDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         // Check if this is a bridge contract
-        let is_bridge = source.contains("Bridge")
-            || source.contains("bridge")
-            || source.contains("CrossChain");
+        let is_bridge =
+            source.contains("Bridge") || source.contains("bridge") || source.contains("CrossChain");
 
         if !is_bridge {
             return findings;

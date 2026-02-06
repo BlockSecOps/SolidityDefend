@@ -136,7 +136,10 @@ impl GasGriefingDetector {
                 || func_source.contains("payees")
                 || (func_source.contains("[") && func_source.contains("].length"));
 
-            if distributes_to_many && !func_source.contains("pull") && !func_source.contains("withdraw") {
+            if distributes_to_many
+                && !func_source.contains("pull")
+                && !func_source.contains("withdraw")
+            {
                 return Some(
                     "Push pattern for mass ETH distribution using .call{} in loop. \
                     Single recipient with malicious fallback can consume excessive gas. \

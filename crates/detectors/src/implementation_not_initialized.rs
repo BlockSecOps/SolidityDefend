@@ -56,8 +56,7 @@ impl ImplementationNotInitializedDetector {
 
     /// Check if contract has an initialize function
     fn has_initialize_function(&self, source: &str) -> bool {
-        source.contains("function initialize")
-            || source.contains("function __")  // OpenZeppelin __ContractName_init pattern
+        source.contains("function initialize") || source.contains("function __") // OpenZeppelin __ContractName_init pattern
     }
 
     /// Check if constructor calls _disableInitializers

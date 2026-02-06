@@ -127,28 +127,31 @@ impl TokenDecimalConfusionDetector {
     fn is_decimal_sensitive_contract(&self, source: &str) -> bool {
         // Must have actual multi-token infrastructure
         let token_indicators = [
-            "ierc20(",          // Token interface usage
-            "ierc20 ",          // Token interface declaration
-            ".transfer(",       // Token transfer
-            ".transferfrom(",   // Token transferFrom
-            ".balanceof(",      // Token balance check
+            "ierc20(",        // Token interface usage
+            "ierc20 ",        // Token interface declaration
+            ".transfer(",     // Token transfer
+            ".transferfrom(", // Token transferFrom
+            ".balanceof(",    // Token balance check
         ];
 
-        let token_count = token_indicators.iter().filter(|p| source.contains(*p)).count();
+        let token_count = token_indicators
+            .iter()
+            .filter(|p| source.contains(*p))
+            .count();
         if token_count < 2 {
             return false;
         }
 
         // Must have arithmetic operations between token amounts
         let arithmetic_indicators = [
-            " / ",              // Division
-            " * ",              // Multiplication
-            ".div(",            // SafeMath div
-            ".mul(",            // SafeMath mul
-            "amount *",         // Amount calculation
-            "* amount",         // Amount calculation
-            "amount /",         // Amount calculation
-            "/ amount",         // Amount calculation
+            " / ",      // Division
+            " * ",      // Multiplication
+            ".div(",    // SafeMath div
+            ".mul(",    // SafeMath mul
+            "amount *", // Amount calculation
+            "* amount", // Amount calculation
+            "amount /", // Amount calculation
+            "/ amount", // Amount calculation
         ];
 
         arithmetic_indicators.iter().any(|p| source.contains(p))
@@ -158,17 +161,17 @@ impl TokenDecimalConfusionDetector {
     fn handles_decimals_properly(&self, source: &str) -> bool {
         // Explicit decimal handling patterns
         let proper_handling = [
-            ".decimals()",                    // Calls decimals()
-            "tokendecimals",                  // Decimal tracking variable
-            "decimals[",                      // Decimal mapping
-            "10**decimals",                   // Dynamic decimal scaling
-            "10 ** decimals",                 // Dynamic decimal scaling
-            "scalefactor",                    // Scale factor pattern
-            "_decimals",                      // Stored decimals
-            "decimals1",                      // Multi-token decimal tracking
-            "decimals2",                      // Multi-token decimal tracking
-            "normalizeto18",                  // Explicit normalization
-            "scaleto18",                      // Scale function
+            ".decimals()",    // Calls decimals()
+            "tokendecimals",  // Decimal tracking variable
+            "decimals[",      // Decimal mapping
+            "10**decimals",   // Dynamic decimal scaling
+            "10 ** decimals", // Dynamic decimal scaling
+            "scalefactor",    // Scale factor pattern
+            "_decimals",      // Stored decimals
+            "decimals1",      // Multi-token decimal tracking
+            "decimals2",      // Multi-token decimal tracking
+            "normalizeto18",  // Explicit normalization
+            "scaleto18",      // Scale function
         ];
 
         proper_handling.iter().any(|p| source.contains(p))
@@ -196,9 +199,8 @@ impl TokenDecimalConfusionDetector {
         }
 
         // Or has swap/exchange function with amount calculations
-        let has_exchange = source.contains("swap(")
-            || source.contains("exchange(")
-            || source.contains("convert(");
+        let has_exchange =
+            source.contains("swap(") || source.contains("exchange(") || source.contains("convert(");
 
         let has_amount_calc = source.contains("amountin")
             || source.contains("amountout")
@@ -220,7 +222,10 @@ impl TokenDecimalConfusionDetector {
             "oracle.get",
         ];
 
-        let oracle_count = oracle_patterns.iter().filter(|p| source.contains(*p)).count();
+        let oracle_count = oracle_patterns
+            .iter()
+            .filter(|p| source.contains(*p))
+            .count();
 
         // Require at least 2 oracle indicators (not just "price" keyword)
         oracle_count >= 2
@@ -232,8 +237,8 @@ impl TokenDecimalConfusionDetector {
             "oracle.decimals()",
             "feeddecimals",
             "pricedecimals",
-            "10**8",            // Chainlink standard 8 decimals
-            "1e8",              // Chainlink standard
+            "10**8", // Chainlink standard 8 decimals
+            "1e8",   // Chainlink standard
             "oracledecimals",
         ];
 

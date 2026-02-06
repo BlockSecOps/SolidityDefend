@@ -24,18 +24,16 @@ impl ImportExtractor {
     /// Create a new import extractor
     pub fn new() -> Self {
         // Simple import: import "path";
-        let simple_import =
-            Regex::new(r#"^\s*import\s+["']([^"']+)["']\s*;"#).expect("Invalid simple import regex");
+        let simple_import = Regex::new(r#"^\s*import\s+["']([^"']+)["']\s*;"#)
+            .expect("Invalid simple import regex");
 
         // Named import: import {A, B as C} from "path";
-        let named_import =
-            Regex::new(r#"^\s*import\s+\{([^}]+)\}\s+from\s+["']([^"']+)["']\s*;"#)
-                .expect("Invalid named import regex");
+        let named_import = Regex::new(r#"^\s*import\s+\{([^}]+)\}\s+from\s+["']([^"']+)["']\s*;"#)
+            .expect("Invalid named import regex");
 
         // Aliased import: import "path" as X;
-        let aliased_import =
-            Regex::new(r#"^\s*import\s+["']([^"']+)["']\s+as\s+(\w+)\s*;"#)
-                .expect("Invalid aliased import regex");
+        let aliased_import = Regex::new(r#"^\s*import\s+["']([^"']+)["']\s+as\s+(\w+)\s*;"#)
+            .expect("Invalid aliased import regex");
 
         // Wildcard import: import * as X from "path";
         let wildcard_import =
@@ -164,7 +162,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
         assert_eq!(imports[0].path, "./Token.sol");
         assert_eq!(imports[0].kind, ImportKind::Simple);
 
-        assert_eq!(imports[1].path, "@openzeppelin/contracts/token/ERC20/ERC20.sol");
+        assert_eq!(
+            imports[1].path,
+            "@openzeppelin/contracts/token/ERC20/ERC20.sol"
+        );
         assert_eq!(imports[1].kind, ImportKind::Simple);
     }
 
@@ -222,7 +223,10 @@ import * as OpenZeppelin from "@openzeppelin/contracts/index.sol";
         assert_eq!(imports.len(), 1);
 
         assert_eq!(imports[0].path, "@openzeppelin/contracts/index.sol");
-        assert_eq!(imports[0].kind, ImportKind::Wildcard("OpenZeppelin".to_string()));
+        assert_eq!(
+            imports[0].kind,
+            ImportKind::Wildcard("OpenZeppelin".to_string())
+        );
     }
 
     #[test]

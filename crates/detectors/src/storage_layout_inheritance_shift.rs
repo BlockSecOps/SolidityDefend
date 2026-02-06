@@ -136,17 +136,10 @@ impl StorageLayoutInheritanceShiftDetector {
         // Handle patterns like "address admin;" or "uint256 public value;"
         let parts: Vec<&str> = line.split_whitespace().collect();
         for (i, part) in parts.iter().enumerate() {
-            if *part == "public"
-                || *part == "private"
-                || *part == "internal"
-                || part.ends_with(';')
+            if *part == "public" || *part == "private" || *part == "internal" || part.ends_with(';')
             {
                 let name = part.trim_end_matches(';').trim_end_matches('=');
-                if !name.is_empty()
-                    && name != "public"
-                    && name != "private"
-                    && name != "internal"
-                {
+                if !name.is_empty() && name != "public" && name != "private" && name != "internal" {
                     return Some(name.to_string());
                 }
                 // Check previous part

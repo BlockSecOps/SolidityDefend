@@ -58,14 +58,14 @@ impl DelegatecallToSelfDetector {
                 let func_body = self.get_function_body(&lines, func_start);
 
                 // Check for patterns like: address target = address(this); target.delegatecall
-                if func_body.contains("= address(this)") ||
-                   func_body.contains("selfAddress") ||
-                   func_body.contains("_self")
+                if func_body.contains("= address(this)")
+                    || func_body.contains("selfAddress")
+                    || func_body.contains("_self")
                 {
                     // Check if the delegatecall might use this variable
-                    if trimmed.contains("target.delegatecall") ||
-                       trimmed.contains("selfAddress.delegatecall") ||
-                       trimmed.contains("_self.delegatecall")
+                    if trimmed.contains("target.delegatecall")
+                        || trimmed.contains("selfAddress.delegatecall")
+                        || trimmed.contains("_self.delegatecall")
                     {
                         let issue = "Possible delegatecall to self via stored address".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
@@ -74,8 +74,8 @@ impl DelegatecallToSelfDetector {
             }
 
             // Multicall/batch patterns with self-delegation
-            if (trimmed.contains("multicall") || trimmed.contains("batch")) &&
-               trimmed.contains("delegatecall")
+            if (trimmed.contains("multicall") || trimmed.contains("batch"))
+                && trimmed.contains("delegatecall")
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 let issue = "Multicall with delegatecall may enable self-delegation".to_string();
@@ -106,9 +106,9 @@ impl DelegatecallToSelfDetector {
                 if func_body.contains("delegatecall") {
                     // Look for selector that matches this function
                     let selector_pattern = format!("{}(", func_name);
-                    if func_body.contains(&selector_pattern) ||
-                       func_body.contains("msg.sig") ||
-                       func_body.contains("this.") && func_body.contains(&func_name)
+                    if func_body.contains(&selector_pattern)
+                        || func_body.contains("msg.sig")
+                        || func_body.contains("this.") && func_body.contains(&func_name)
                     {
                         findings.push((line_num as u32 + 1, func_name));
                     }
@@ -131,16 +131,16 @@ impl DelegatecallToSelfDetector {
             }
 
             // Detect fallback/receive with delegatecall
-            if (trimmed.contains("fallback") || trimmed.contains("receive")) &&
-               trimmed.contains("function")
+            if (trimmed.contains("fallback") || trimmed.contains("receive"))
+                && trimmed.contains("function")
             {
                 let func_body = self.get_function_body(&lines, line_num);
 
                 if func_body.contains("delegatecall") {
                     // Check if target could be self
-                    if func_body.contains("address(this)") ||
-                       !func_body.contains("require(") ||
-                       func_body.contains("implementation")
+                    if func_body.contains("address(this)")
+                        || !func_body.contains("require(")
+                        || func_body.contains("implementation")
                     {
                         let func_name = if trimmed.contains("fallback") {
                             "fallback".to_string()
@@ -175,9 +175,9 @@ impl DelegatecallToSelfDetector {
     fn find_function_start(&self, lines: &[&str], line_num: usize) -> usize {
         for i in (0..line_num).rev() {
             let trimmed = lines[i].trim();
-            if trimmed.contains("function ") ||
-               trimmed.contains("fallback") ||
-               trimmed.contains("receive")
+            if trimmed.contains("function ")
+                || trimmed.contains("fallback")
+                || trimmed.contains("receive")
             {
                 return i;
             }
@@ -285,9 +285,16 @@ impl DelegatecallToSelfDetector {
         // Check contract name patterns for Safe components
         let contract_name_lower = ctx.contract.name.name.to_lowercase();
         let safe_contract_names = [
-            "multisend", "executor", "safeproxy", "safetol2setup",
-            "storageaccessible", "migration", "simulatetxaccessor",
-            "fallbackhandler", "compatibilityhandler", "signatureverifier",
+            "multisend",
+            "executor",
+            "safeproxy",
+            "safetol2setup",
+            "storageaccessible",
+            "migration",
+            "simulatetxaccessor",
+            "fallbackhandler",
+            "compatibilityhandler",
+            "signatureverifier",
         ];
         for name in &safe_contract_names {
             if contract_name_lower.contains(name) {

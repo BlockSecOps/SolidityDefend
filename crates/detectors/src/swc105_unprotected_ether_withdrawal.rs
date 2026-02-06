@@ -90,8 +90,8 @@ impl UnprotectedEtherWithdrawalDetector {
         };
 
         // Check for .send() (native ether send)
-        let has_send = source.contains(".send(")
-            && (source.contains("payable(") || !source.contains(", "));
+        let has_send =
+            source.contains(".send(") && (source.contains("payable(") || !source.contains(", "));
 
         has_call_value || has_ether_transfer || has_send
     }
@@ -323,10 +323,7 @@ mod tests {
     #[test]
     fn test_detector_properties() {
         let detector = UnprotectedEtherWithdrawalDetector::new();
-        assert_eq!(
-            detector.name(),
-            "Unprotected Ether Withdrawal (SWC-105)"
-        );
+        assert_eq!(detector.name(), "Unprotected Ether Withdrawal (SWC-105)");
         assert_eq!(detector.default_severity(), Severity::Critical);
         assert!(detector.is_enabled());
     }

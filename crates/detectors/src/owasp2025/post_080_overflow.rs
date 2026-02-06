@@ -41,9 +41,10 @@ impl Post080OverflowDetector {
             let trimmed = lines[i].trim();
 
             // Look for "unchecked {" or "unchecked{"
-            if trimmed.contains("unchecked") && (trimmed.contains("{") ||
-                (i + 1 < lines.len() && lines[i + 1].trim().starts_with("{"))) {
-
+            if trimmed.contains("unchecked")
+                && (trimmed.contains("{")
+                    || (i + 1 < lines.len() && lines[i + 1].trim().starts_with("{")))
+            {
                 let start_line = i;
                 let mut block_content = String::new();
                 let mut brace_count = 0;
@@ -63,8 +64,13 @@ impl Post080OverflowDetector {
                             brace_count -= 1;
                             if block_started && brace_count == 0 {
                                 // Check if the block contains dangerous operations
-                                let is_dangerous = self.is_dangerous_unchecked_block(&block_content);
-                                results.push((start_line as u32 + 1, block_content.clone(), is_dangerous));
+                                let is_dangerous =
+                                    self.is_dangerous_unchecked_block(&block_content);
+                                results.push((
+                                    start_line as u32 + 1,
+                                    block_content.clone(),
+                                    is_dangerous,
+                                ));
                                 i = j;
                                 break;
                             }
@@ -91,14 +97,34 @@ impl Post080OverflowDetector {
         // Skip blocks that are clearly just loop counter optimizations
         // These are the most common safe unchecked usage
         let safe_loop_patterns = [
-            "++i", "i++", "++j", "j++", "++k", "k++",
-            "--i", "i--", "--j", "j--", "--k", "k--",
-            "i += 1", "j += 1", "k += 1",
-            "i -= 1", "j -= 1", "k -= 1",
-            "++index", "index++",
-            "++counter", "counter++",
-            "++n", "n++", "++len", "len++",
-            "++offset", "offset++",
+            "++i",
+            "i++",
+            "++j",
+            "j++",
+            "++k",
+            "k++",
+            "--i",
+            "i--",
+            "--j",
+            "j--",
+            "--k",
+            "k--",
+            "i += 1",
+            "j += 1",
+            "k += 1",
+            "i -= 1",
+            "j -= 1",
+            "k -= 1",
+            "++index",
+            "index++",
+            "++counter",
+            "counter++",
+            "++n",
+            "n++",
+            "++len",
+            "len++",
+            "++offset",
+            "offset++",
         ];
 
         // Remove comments from the block for analysis
@@ -137,8 +163,7 @@ impl Post080OverflowDetector {
         // Dangerous operations: arithmetic on variables that aren't loop counters
         let dangerous_patterns = [
             // Compound assignment with potential overflow
-            "+= ", "-= ", "*= ", "/= ",
-            // Binary operations (but not in comments)
+            "+= ", "-= ", "*= ", "/= ", // Binary operations (but not in comments)
             " + ", " - ", " * ", " / ",
         ];
 
@@ -146,9 +171,9 @@ impl Post080OverflowDetector {
         for pattern in &dangerous_patterns {
             if block_no_comments.contains(pattern) {
                 // Check if this is a loop counter pattern
-                let is_loop_counter = safe_loop_patterns.iter().any(|safe| {
-                    block_lower.contains(safe)
-                });
+                let is_loop_counter = safe_loop_patterns
+                    .iter()
+                    .any(|safe| block_lower.contains(safe));
 
                 // If the only arithmetic is loop counter, it's safe
                 // Otherwise, flag it
@@ -183,21 +208,30 @@ impl Post080OverflowDetector {
         }
 
         // Bitwise operations are safe
-        if block_content.contains(" & ") || block_content.contains(" | ") || block_content.contains(" ^ ") {
+        if block_content.contains(" & ")
+            || block_content.contains(" | ")
+            || block_content.contains(" ^ ")
+        {
             return true;
         }
 
         // OZ-style return with type conversion (bounded by type)
         // e.g., return uint128(value)
-        if block_content.contains("return uint") &&
-           (block_content.contains("uint8(") || block_content.contains("uint16(") ||
-            block_content.contains("uint32(") || block_content.contains("uint64(") ||
-            block_content.contains("uint128(") || block_content.contains("uint160(")) {
+        if block_content.contains("return uint")
+            && (block_content.contains("uint8(")
+                || block_content.contains("uint16(")
+                || block_content.contains("uint32(")
+                || block_content.contains("uint64(")
+                || block_content.contains("uint128(")
+                || block_content.contains("uint160("))
+        {
             return true;
         }
 
         // OZ-style inverse/negation (bounded operation)
-        if block_content.contains("~") || (block_content.contains("type(uint") && block_content.contains("max")) {
+        if block_content.contains("~")
+            || (block_content.contains("type(uint") && block_content.contains("max"))
+        {
             return true;
         }
 
@@ -262,10 +296,26 @@ impl Post080OverflowDetector {
 
         // Pattern 2: Common fixed-point library function names
         let fixed_point_patterns = [
-            "mulDiv", "muldiv", "mulWad", "mulwad", "divWad", "divwad",
-            "mulDown", "mulUp", "divDown", "divUp",
-            "fmul", "fdiv", "rmul", "rdiv", "wmul", "wdiv",
-            "FullMath", "fullMath", "PRBMath", "FixedPoint",
+            "mulDiv",
+            "muldiv",
+            "mulWad",
+            "mulwad",
+            "divWad",
+            "divwad",
+            "mulDown",
+            "mulUp",
+            "divDown",
+            "divUp",
+            "fmul",
+            "fdiv",
+            "rmul",
+            "rdiv",
+            "wmul",
+            "wdiv",
+            "FullMath",
+            "fullMath",
+            "PRBMath",
+            "FixedPoint",
         ];
 
         for pattern in &fixed_point_patterns {
@@ -276,8 +326,15 @@ impl Post080OverflowDetector {
 
         // Pattern 3: WAD/RAY/PRECISION constants (common in DeFi)
         let precision_constants = [
-            "WAD", "RAY", "PRECISION", "SCALE", "UNIT",
-            "1e18", "1e27", "10**18", "10**27",
+            "WAD",
+            "RAY",
+            "PRECISION",
+            "SCALE",
+            "UNIT",
+            "1e18",
+            "1e27",
+            "10**18",
+            "10**27",
         ];
 
         for constant in &precision_constants {
@@ -296,24 +353,40 @@ impl Post080OverflowDetector {
         // Check for well-known math library imports/packages
         let math_library_indicators = [
             // Solmate library
-            "@solmate/", "solmate/", "library FixedPointMath",
+            "@solmate/",
+            "solmate/",
+            "library FixedPointMath",
             // OpenZeppelin SafeMath and Math utilities
-            "library SafeMath", "@openzeppelin/contracts/utils/math",
+            "library SafeMath",
+            "@openzeppelin/contracts/utils/math",
             "@openzeppelin/contracts/utils/math/Math.sol",
             "@openzeppelin/contracts/utils/math/SignedMath.sol",
             // PRBMath
-            "PRBMath", "library SD59x18", "library UD60x18",
+            "PRBMath",
+            "library SD59x18",
+            "library UD60x18",
             // Other common math libraries
-            "library FullMath", "library Math", "library SignedMath",
-            "library FixedPoint", "library ABDKMath",
+            "library FullMath",
+            "library Math",
+            "library SignedMath",
+            "library FixedPoint",
+            "library ABDKMath",
             // Gnosis Safe math
-            "GnosisSafe", "@safe-global/",
+            "GnosisSafe",
+            "@safe-global/",
             // Uniswap math libraries
-            "library UnsafeMath", "library LowGasSafeMath", "library BitMath",
-            "library TickMath", "library SqrtPriceMath", "library FixedPoint96",
-            "library FullMath", "library LiquidityMath",
+            "library UnsafeMath",
+            "library LowGasSafeMath",
+            "library BitMath",
+            "library TickMath",
+            "library SqrtPriceMath",
+            "library FixedPoint96",
+            "library FullMath",
+            "library LiquidityMath",
             // Aave math
-            "library WadRayMath", "library PercentageMath", "library MathUtils",
+            "library WadRayMath",
+            "library PercentageMath",
+            "library MathUtils",
             // EigenLayer
             "library Endian",
         ];
@@ -413,7 +486,10 @@ impl Post080OverflowDetector {
                     || trimmed.contains("if (")
                     || trimmed.contains("if(")
                     || trimmed.contains("assert(")
-                    || (trimmed.contains(">=") || trimmed.contains("<=") || trimmed.contains(">") || trimmed.contains("<"))
+                    || (trimmed.contains(">=")
+                        || trimmed.contains("<=")
+                        || trimmed.contains(">")
+                        || trimmed.contains("<"))
                 {
                     return true;
                 }
@@ -442,8 +518,11 @@ impl Post080OverflowDetector {
             }
 
             // Check for compound assignments that aren't loop counters
-            if (trimmed.contains("+=") || trimmed.contains("-=") ||
-                trimmed.contains("*=") || trimmed.contains("/=")) {
+            if (trimmed.contains("+=")
+                || trimmed.contains("-=")
+                || trimmed.contains("*=")
+                || trimmed.contains("/="))
+            {
                 // If it's not "i += 1" style, it's dangerous
                 if !trimmed.contains("+= 1") && !trimmed.contains("-= 1") {
                     return true;
@@ -451,8 +530,11 @@ impl Post080OverflowDetector {
             }
 
             // Check for binary arithmetic operations
-            if trimmed.contains(" + ") || trimmed.contains(" - ") ||
-               trimmed.contains(" * ") || trimmed.contains(" / ") {
+            if trimmed.contains(" + ")
+                || trimmed.contains(" - ")
+                || trimmed.contains(" * ")
+                || trimmed.contains(" / ")
+            {
                 // This is likely arithmetic on values
                 return true;
             }
@@ -471,9 +553,10 @@ impl Post080OverflowDetector {
             let trimmed = lines[i].trim();
 
             // Look for "assembly {" or "assembly{"
-            if trimmed.contains("assembly") && (trimmed.contains("{") ||
-                (i + 1 < lines.len() && lines[i + 1].trim().starts_with("{"))) {
-
+            if trimmed.contains("assembly")
+                && (trimmed.contains("{")
+                    || (i + 1 < lines.len() && lines[i + 1].trim().starts_with("{")))
+            {
                 // Phase 16 FP Reduction: Skip memory-safe assembly blocks
                 if self.is_memory_safe_assembly(source, i) {
                     i += 1;
@@ -502,7 +585,11 @@ impl Post080OverflowDetector {
                                 let unsafe_ops = self.find_unsafe_assembly_ops(&block_content);
                                 for (op, has_check) in unsafe_ops {
                                     if !has_check {
-                                        results.push((start_line as u32 + 1, op, block_content.clone()));
+                                        results.push((
+                                            start_line as u32 + 1,
+                                            op,
+                                            block_content.clone(),
+                                        ));
                                     }
                                 }
                                 i = j;
@@ -554,9 +641,9 @@ impl Post080OverflowDetector {
             }
             "sub(" => {
                 // Check for: if gt(b, a) { revert } or comparison before sub
-                block_lower.contains("if gt(") ||
-                block_lower.contains("if lt(") ||
-                (block_lower.contains("sub(") && block_lower.contains("revert"))
+                block_lower.contains("if gt(")
+                    || block_lower.contains("if lt(")
+                    || (block_lower.contains("sub(") && block_lower.contains("revert"))
             }
             "mul(" => {
                 // Check for: if div(result, a) != b { revert }
@@ -568,10 +655,10 @@ impl Post080OverflowDetector {
             }
             "div(" => {
                 // Check for: if iszero(b) { revert }
-                block_lower.contains("if iszero(") ||
-                (block_lower.contains("div(") && block_lower.contains("revert"))
+                block_lower.contains("if iszero(")
+                    || (block_lower.contains("div(") && block_lower.contains("revert"))
             }
-            _ => false
+            _ => false,
         }
     }
 
@@ -830,7 +917,10 @@ mod tests {
 
         let blocks = detector.find_unchecked_blocks(mul_code);
         let has_dangerous = blocks.iter().any(|(_, _, is_dangerous)| *is_dangerous);
-        assert!(has_dangerous, "Multiplication in unchecked should be flagged");
+        assert!(
+            has_dangerous,
+            "Multiplication in unchecked should be flagged"
+        );
     }
 
     #[test]
@@ -846,7 +936,10 @@ mod tests {
         "#;
 
         let unsafe_ops = detector.find_unsafe_assembly_arithmetic(unsafe_asm);
-        assert!(!unsafe_ops.is_empty(), "Unprotected assembly add should be flagged");
+        assert!(
+            !unsafe_ops.is_empty(),
+            "Unprotected assembly add should be flagged"
+        );
     }
 
     #[test]
@@ -863,7 +956,10 @@ mod tests {
         "#;
 
         let unsafe_ops = detector.find_unsafe_assembly_arithmetic(safe_asm);
-        assert!(unsafe_ops.is_empty(), "Protected assembly should not be flagged");
+        assert!(
+            unsafe_ops.is_empty(),
+            "Protected assembly should not be flagged"
+        );
     }
 
     #[test]
@@ -879,7 +975,10 @@ mod tests {
 
         let blocks = detector.find_unchecked_blocks(fixed_point_code);
         let has_dangerous = blocks.iter().any(|(_, _, is_dangerous)| *is_dangerous);
-        assert!(!has_dangerous, "Fixed-point arithmetic (mul/div) should not be flagged");
+        assert!(
+            !has_dangerous,
+            "Fixed-point arithmetic (mul/div) should not be flagged"
+        );
     }
 
     #[test]
@@ -893,7 +992,10 @@ mod tests {
             import {FixedPointMathLib} from "solmate/src/utils/FixedPointMathLib.sol";
             library FixedPointMath { ... }
         "#;
-        assert!(detector.is_math_library(solmate_source), "Solmate library should be detected");
+        assert!(
+            detector.is_math_library(solmate_source),
+            "Solmate library should be detected"
+        );
 
         // Regular contract should not be detected as math library
         let regular_source = r#"
@@ -901,7 +1003,10 @@ mod tests {
             pragma solidity ^0.8.0;
             contract MyContract { }
         "#;
-        assert!(!detector.is_math_library(regular_source), "Regular contract should not be detected as math library");
+        assert!(
+            !detector.is_math_library(regular_source),
+            "Regular contract should not be detected as math library"
+        );
     }
 
     #[test]
@@ -918,6 +1023,9 @@ mod tests {
         "#;
 
         // Line 4 is where unchecked starts (1-indexed)
-        assert!(detector.has_preceding_validation(code_with_validation, 4), "Preceding require should be detected");
+        assert!(
+            detector.has_preceding_validation(code_with_validation, 4),
+            "Preceding require should be detected"
+        );
     }
 }
