@@ -379,7 +379,18 @@ impl CliApp {
                     .help("Enable verbose output with detailed project information")
                     .action(ArgAction::SetTrue),
             )
-            .try_get_matches_from(args)?;
+            .try_get_matches_from(args)
+            .unwrap_or_else(|e| {
+                // Handle --version and --help: clap returns these as errors,
+                // but they should print and exit 0 (not propagate as anyhow errors).
+                if e.kind() == clap::error::ErrorKind::DisplayVersion
+                    || e.kind() == clap::error::ErrorKind::DisplayHelp
+                {
+                    e.print().ok();
+                    std::process::exit(0);
+                }
+                e.exit();
+            });
 
         // Handle configuration initialization first (doesn't need config loading)
         if matches.get_flag("init-config") {
