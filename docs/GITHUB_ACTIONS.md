@@ -47,7 +47,7 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
    | `ubuntu-latest` | `x86_64-unknown-linux-gnu` | Native build |
    | `ubuntu-latest` | `aarch64-unknown-linux-gnu` | `cross` tool (Cross.toml) |
    | `macos-latest` | `aarch64-apple-darwin` | Native (arm64 runner) |
-   | `macos-13` | `x86_64-apple-darwin` | Native (Intel runner) |
+   | `macos-latest` | `x86_64-apple-darwin` | Cross-compile (arm64 runner) |
    | `windows-latest` | `x86_64-pc-windows-msvc` | Native build |
 
    Each target:
@@ -69,7 +69,8 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
    - Includes OCI image labels and build-args
 
 **Runner Compatibility Notes:**
-- `macos-latest` is now **arm64** (Apple Silicon) — use `macos-13` for Intel x86_64 builds
+- `macos-latest` is **arm64** (Apple Silicon) — Intel x86_64 builds cross-compile via `--target x86_64-apple-darwin`
+- `macos-13` runners are **retired** — do not use
 - `ubuntu-latest` is Ubuntu 22.04
 - `windows-latest` is Windows Server 2022
 

@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 #### GitHub Actions Workflow Fixes
 
 - **release.yml**: Full rewrite — replaced deprecated `actions/create-release@v1` and `actions/upload-release-asset@v1` with `softprops/action-gh-release@v2`
-- **release.yml**: Fixed `macos-latest` runner now being arm64 — use `macos-13` for Intel x86_64 builds
+- **release.yml**: macOS Intel builds cross-compile on `macos-latest` (arm64) via `--target x86_64-apple-darwin` (`macos-13` runners are retired)
 - **release.yml**: Added `cross` tool for Linux aarch64 cross-compilation (previously would fail with no toolchain)
 - **release.yml**: Added SHA256 checksums (`SHA256SUMS.txt`) for all release binaries
 - **release.yml**: Release notes now auto-extracted from CHANGELOG.md

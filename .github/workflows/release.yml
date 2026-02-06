@@ -35,7 +35,7 @@ jobs:
             asset_name_suffix: macos-aarch64.tar.gz
             use_cross: false
 
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             artifact_name: soliditydefend
             asset_name_suffix: macos-x86_64.tar.gz
