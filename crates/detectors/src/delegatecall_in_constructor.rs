@@ -141,7 +141,8 @@ impl DelegatecallInConstructorDetector {
         }
 
         if issues.is_empty() {
-            "Delegatecall in constructor can lead to storage corruption during initialization".to_string()
+            "Delegatecall in constructor can lead to storage corruption during initialization"
+                .to_string()
         } else {
             format!("Constructor delegatecall issues: {}", issues.join(", "))
         }
@@ -156,7 +157,9 @@ impl DelegatecallInConstructorDetector {
             let trimmed = line.trim();
             if trimmed.contains(".delegatecall(") && trimmed.ends_with(';') {
                 // Check it's not in an assignment
-                if !trimmed.contains("=") || trimmed.find("=").unwrap() > trimmed.find(".delegatecall(").unwrap() {
+                if !trimmed.contains("=")
+                    || trimmed.find("=").unwrap() > trimmed.find(".delegatecall(").unwrap()
+                {
                     return true;
                 }
             }
@@ -178,9 +181,9 @@ impl DelegatecallInConstructorDetector {
                 // Found delegatecall with bool capture
                 // Check next few lines for require/if validation
                 let check_lines = &lines[i..std::cmp::min(i + 3, lines.len())];
-                let has_validation = check_lines.iter().any(|l| {
-                    l.contains("require(") || l.contains("if (") || l.contains("if(")
-                });
+                let has_validation = check_lines
+                    .iter()
+                    .any(|l| l.contains("require(") || l.contains("if (") || l.contains("if("));
 
                 if !has_validation {
                     return true;
@@ -204,12 +207,21 @@ impl DelegatecallInConstructorDetector {
                 let params_section = &source[params_start..params_start + params_end];
 
                 // Look for address parameters
-                let address_params = ["address", "initLogic", "initContract", "_init", "logic", "implementation"];
+                let address_params = [
+                    "address",
+                    "initLogic",
+                    "initContract",
+                    "_init",
+                    "logic",
+                    "implementation",
+                ];
 
                 for param in &address_params {
                     if params_section.contains(param) {
                         // Check if this parameter is used in delegatecall
-                        if source[params_start + params_end..].contains(&format!("{}.delegatecall", param)) {
+                        if source[params_start + params_end..]
+                            .contains(&format!("{}.delegatecall", param))
+                        {
                             return true;
                         }
                     }
@@ -226,16 +238,18 @@ impl DelegatecallInConstructorDetector {
         // Some known safe patterns:
 
         // Pattern 1: Only setting EIP-1967 storage slot (no actual delegatecall to user code)
-        if source.contains("IMPLEMENTATION_SLOT") &&
-           source.contains("sstore(slot, _implementation)") &&
-           !source.contains(".delegatecall(") {
+        if source.contains("IMPLEMENTATION_SLOT")
+            && source.contains("sstore(slot, _implementation)")
+            && !source.contains(".delegatecall(")
+        {
             return true;
         }
 
         // Pattern 2: Immutable-only constructor
-        if source.contains("constructor") &&
-           source.contains("immutable") &&
-           !source.contains("delegatecall") {
+        if source.contains("constructor")
+            && source.contains("immutable")
+            && !source.contains("delegatecall")
+        {
             return true;
         }
 
@@ -275,10 +289,7 @@ impl DelegatecallInConstructorDetector {
         }
 
         // Minimal proxy / clone patterns
-        if source.contains("Clones")
-            || source.contains("LibClone")
-            || source.contains("EIP1167")
-        {
+        if source.contains("Clones") || source.contains("LibClone") || source.contains("EIP1167") {
             return true;
         }
 
@@ -399,12 +410,10 @@ impl Detector for DelegatecallInConstructorDetector {
             if self.has_delegatecall(&source) {
                 let analysis = self.analyze_delegatecall_pattern(&source);
 
-                let message = format!(
-                    "Constructor performs delegatecall. {}",
-                    analysis
-                );
+                let message = format!("Constructor performs delegatecall. {}", analysis);
 
-                let finding = self.base
+                let finding = self
+                    .base
                     .create_finding(
                         ctx,
                         message,

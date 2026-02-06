@@ -100,7 +100,10 @@ impl TransactionOrderingDependenceDetector {
             if (trimmed.contains("block.timestamp")
                 || trimmed.contains("block.number")
                 || trimmed.contains("deadline"))
-                && (trimmed.contains(">=") || trimmed.contains("<=") || trimmed.contains(">") || trimmed.contains("<"))
+                && (trimmed.contains(">=")
+                    || trimmed.contains("<=")
+                    || trimmed.contains(">")
+                    || trimmed.contains("<"))
             {
                 // Check if this is part of a distribution
                 let func_end = self.find_function_end(&lines, line_num);
@@ -271,7 +274,7 @@ impl Detector for TransactionOrderingDependenceDetector {
                          require(commits[msg.sender] == keccak256(abi.encode(secret)));\n\
                          // Fair distribution logic\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -328,7 +331,7 @@ impl Detector for TransactionOrderingDependenceDetector {
                          // ... swap logic ...\n\
                          require(amountOut >= amountOutMin, \"Slippage\");\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

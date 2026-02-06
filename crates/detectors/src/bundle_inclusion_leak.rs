@@ -210,7 +210,7 @@ impl Detector for BundleInclusionLeakDetector {
                          msg.sender,\n\
                          userNonce[msg.sender]++\n\
                      ));"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -261,7 +261,7 @@ impl Detector for BundleInclusionLeakDetector {
                          // ... execute ...\n\
                          emit OrderExecuted(orderId);  // Post-execution only\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

@@ -218,7 +218,14 @@ impl Detector for ImmutableInUpgradeableDetector {
                      function initialize({} _value) public initializer {{\n\
                          {} = _value;\n\
                      }}",
-                    var_name, var_type, var_name, var_type, var_name, var_type, var_name, var_type,
+                    var_name,
+                    var_type,
+                    var_name,
+                    var_type,
+                    var_name,
+                    var_type,
+                    var_name,
+                    var_type,
                     var_name
                 ));
 

@@ -191,9 +191,8 @@ impl DosUnboundedOperationDetector {
         // Detect hardcoded numeric limits (e.g., i < 100)
         // Look for comparison with a number >= 10
         let numeric_patterns = [
-            "< 10", "< 20", "< 50", "< 100", "< 256", "< 1000",
-            "<= 10", "<= 20", "<= 50", "<= 100", "<= 256", "<= 1000",
-            "> 0 &&", ">= 1 &&", // combined with other checks
+            "< 10", "< 20", "< 50", "< 100", "< 256", "< 1000", "<= 10", "<= 20", "<= 50",
+            "<= 100", "<= 256", "<= 1000", "> 0 &&", ">= 1 &&", // combined with other checks
         ];
 
         for pattern in &numeric_patterns {
@@ -245,7 +244,10 @@ impl DosUnboundedOperationDetector {
 
         // EnumerableSet/Map iterations are bounded by set size
         if source.contains("EnumerableSet") || source.contains("EnumerableMap") {
-            if func_name.contains("values") || func_name.contains("keys") || func_name.contains("at(") {
+            if func_name.contains("values")
+                || func_name.contains("keys")
+                || func_name.contains("at(")
+            {
                 return true;
             }
         }
@@ -253,9 +255,7 @@ impl DosUnboundedOperationDetector {
         // View functions that enumerate are often getter patterns
         if func_name.contains("getall") || func_name.contains("list") {
             // Check if it's a view function
-            if source.contains(&format!("function {}(", func_name))
-                && source.contains("view")
-            {
+            if source.contains(&format!("function {}(", func_name)) && source.contains("view") {
                 return true;
             }
         }
@@ -276,11 +276,7 @@ impl DosUnboundedOperationDetector {
     }
 
     /// Phase 54 FP Reduction: Check if function is a view/pure with pagination parameters
-    fn is_paginated_view_function(
-        &self,
-        function: &ast::Function<'_>,
-        func_source: &str,
-    ) -> bool {
+    fn is_paginated_view_function(&self, function: &ast::Function<'_>, func_source: &str) -> bool {
         // Must be view or pure
         if function.mutability != ast::StateMutability::View
             && function.mutability != ast::StateMutability::Pure

@@ -325,8 +325,7 @@ impl ClassicReentrancyDetector {
             || contract_name.contains("debttoken");
 
         // Compound protocol
-        let is_compound = lower.contains("@author compound")
-            || contract_name.contains("ctoken");
+        let is_compound = lower.contains("@author compound") || contract_name.contains("ctoken");
 
         // Safe (Gnosis Safe) wallet - battle-tested multisig
         let file_path_lower = ctx.file_path.to_lowercase();
@@ -359,8 +358,8 @@ impl ClassicReentrancyDetector {
     /// Phase 15 FP Reduction: Check if function uses SafeERC20 for token transfers
     /// SafeERC20 wraps transfers in a way that prevents reentrancy
     fn uses_safe_token_transfer(&self, func_source: &str, contract_source: &str) -> bool {
-        let has_safe_erc20 = contract_source.contains("SafeERC20")
-            || contract_source.contains("using SafeERC20");
+        let has_safe_erc20 =
+            contract_source.contains("SafeERC20") || contract_source.contains("using SafeERC20");
 
         let uses_safe_methods = func_source.contains("safeTransfer")
             || func_source.contains("safeTransferFrom")
@@ -481,15 +480,8 @@ impl ClassicReentrancyDetector {
         ];
 
         // Builtin/safe prefixes -- calls on these are NOT external contract calls
-        const SAFE_PREFIXES: &[&str] = &[
-            "this.",
-            "msg.",
-            "abi.",
-            "type(",
-            "block.",
-            "tx.",
-            "super.",
-        ];
+        const SAFE_PREFIXES: &[&str] =
+            &["this.", "msg.", "abi.", "type(", "block.", "tx.", "super."];
 
         for method in STATE_CHANGING_METHODS {
             let mut search_from = 0;
@@ -511,9 +503,7 @@ impl ClassicReentrancyDetector {
                         // Extract the identifier before the dot to check against safe libraries
                         let before_dot = &func_source[..abs_pos];
                         let caller_name = Self::extract_trailing_identifier(before_dot);
-                        if !caller_name.is_empty()
-                            && !Self::is_safe_library_name(caller_name)
-                        {
+                        if !caller_name.is_empty() && !Self::is_safe_library_name(caller_name) {
                             return true;
                         }
                     }
@@ -563,16 +553,10 @@ impl ClassicReentrancyDetector {
         // Walk backwards while we see identifier chars
         let end = bytes.len();
         let mut start = end;
-        while start > 0
-            && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_')
-        {
+        while start > 0 && (bytes[start - 1].is_ascii_alphanumeric() || bytes[start - 1] == b'_') {
             start -= 1;
         }
-        if start == end {
-            ""
-        } else {
-            &s[start..end]
-        }
+        if start == end { "" } else { &s[start..end] }
     }
 
     /// Phase 15 FP Reduction: Check if this is a pull payment pattern
@@ -581,9 +565,8 @@ impl ClassicReentrancyDetector {
         let lower = func_source.to_lowercase();
 
         // Pull payment patterns
-        let has_pull_keywords = lower.contains("claim")
-            || lower.contains("withdraw")
-            || lower.contains("redeem");
+        let has_pull_keywords =
+            lower.contains("claim") || lower.contains("withdraw") || lower.contains("redeem");
 
         // Check if it accesses msg.sender's balance (user withdrawing their own funds)
         let accesses_sender_balance = lower.contains("[msg.sender]")
@@ -629,7 +612,10 @@ impl ClassicReentrancyDetector {
 
         // Interface naming convention (IPool, IAToken, etc.)
         if contract_name.starts_with('I')
-            && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase())
+            && contract_name
+                .chars()
+                .nth(1)
+                .map_or(false, |c| c.is_uppercase())
         {
             return true;
         }

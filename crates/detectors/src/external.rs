@@ -274,7 +274,11 @@ impl UncheckedCallDetector {
             // - array.push() - internal array operation
             // - mapping[key] - storage access
             // - contract.function() - handled by Solidity (reverts on failure)
-            if method == "call" || method == "delegatecall" || method == "staticcall" || method == "send" {
+            if method == "call"
+                || method == "delegatecall"
+                || method == "staticcall"
+                || method == "send"
+            {
                 // Verify the expression is an address-like type, not an array or mapping
                 // Skip if it looks like array/internal operations
                 if !self.is_array_or_internal_operation(expression) {
@@ -295,17 +299,25 @@ impl UncheckedCallDetector {
             ast::Expression::Identifier(id) => {
                 let name = id.name.to_lowercase();
                 // Common array/mapping variable names
-                name.contains("array") || name.contains("list") || name.contains("holders")
-                    || name.contains("shareholders") || name.contains("members")
-                    || name.contains("users") || name.contains("addresses")
-                    || name.contains("balances") || name.contains("allowances")
-                    || name.contains("shares") || name.contains("tokens")
+                name.contains("array")
+                    || name.contains("list")
+                    || name.contains("holders")
+                    || name.contains("shareholders")
+                    || name.contains("members")
+                    || name.contains("users")
+                    || name.contains("addresses")
+                    || name.contains("balances")
+                    || name.contains("allowances")
+                    || name.contains("shares")
+                    || name.contains("tokens")
                     || name.ends_with("s") && name.len() > 3 // plurals often indicate arrays
             }
             // Index access like mapping[key] or array[index]
             ast::Expression::IndexAccess { .. } => true,
             // Member access chain - check inner expression
-            ast::Expression::MemberAccess { expression, member, .. } => {
+            ast::Expression::MemberAccess {
+                expression, member, ..
+            } => {
                 // If accessing .length, it's an array
                 if member.name == "length" {
                     return true;

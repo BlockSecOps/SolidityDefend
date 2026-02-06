@@ -69,8 +69,8 @@ impl SandwichConditionalSwapDetector {
                     || func_body.contains("minAmount")
                     || func_body.contains("amountOutMin");
 
-                let has_deadline = func_body.contains("deadline")
-                    && !func_body.contains("block.timestamp");
+                let has_deadline =
+                    func_body.contains("deadline") && !func_body.contains("block.timestamp");
 
                 let uses_router = func_body.contains("swapExact")
                     || func_body.contains("swap(")
@@ -106,11 +106,11 @@ impl SandwichConditionalSwapDetector {
                         || lower.contains("rate")
                         || lower.contains("getamountsout");
 
-                    let has_balance_condition = lower.contains("balanceof")
-                        || lower.contains("balance");
+                    let has_balance_condition =
+                        lower.contains("balanceof") || lower.contains("balance");
 
-                    let has_time_condition = trimmed.contains("block.timestamp")
-                        || trimmed.contains("block.number");
+                    let has_time_condition =
+                        trimmed.contains("block.timestamp") || trimmed.contains("block.number");
 
                     if has_price_condition || has_balance_condition || has_time_condition {
                         let func_name = self.find_containing_function(&lines, line_num);
@@ -149,8 +149,8 @@ impl SandwichConditionalSwapDetector {
                     || func_body.contains("reveal")
                     || func_body.contains("commitment");
 
-                let has_private_pool = func_body.contains("private")
-                    || func_body.contains("encrypted");
+                let has_private_pool =
+                    func_body.contains("private") || func_body.contains("encrypted");
 
                 if !has_flashbots && !has_commit_reveal && !has_private_pool {
                     // Check if it actually does a swap
@@ -315,7 +315,7 @@ impl Detector for SandwichConditionalSwapDetector {
                          );\n\
                          require(out >= minOut, \"Slippage\");\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -396,7 +396,7 @@ impl Detector for SandwichConditionalSwapDetector {
                          require(deadline > block.timestamp, \"Invalid deadline\");\n\
                          router.swap(..., deadline);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

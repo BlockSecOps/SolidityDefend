@@ -149,7 +149,11 @@ impl UpgradeableProxyIssuesDetector {
             || file_path.ends_with(".t.sol")
             || lower.contains("import \"forge-std/test.sol\"");
 
-        is_oz_foundry_upgrades || is_foundry_script || is_hardhat_deploy || is_deployer_library || is_test
+        is_oz_foundry_upgrades
+            || is_foundry_script
+            || is_hardhat_deploy
+            || is_deployer_library
+            || is_test
     }
 
     /// Phase 15 FP Reduction: Check if this is a known trusted proxy implementation
@@ -181,7 +185,8 @@ impl UpgradeableProxyIssuesDetector {
 
         // FP Reduction Phase 2: ERC1967 standard implementations are trusted
         // These are the building blocks - actual usage is what matters
-        let is_erc1967_standard = (source.contains("ERC1967Proxy") || source.contains("ERC1967Utils"))
+        let is_erc1967_standard = (source.contains("ERC1967Proxy")
+            || source.contains("ERC1967Utils"))
             && source.contains("IMPLEMENTATION_SLOT");
 
         // FP Reduction Phase 2: Library contracts provide utilities, not proxy logic
@@ -190,7 +195,11 @@ impl UpgradeableProxyIssuesDetector {
             || source.contains("library StorageSlot")
             || source.contains("library Address");
 
-        is_vendored_oz || has_oz_admin_pattern || is_transparent_proxy || is_erc1967_standard || is_library_contract
+        is_vendored_oz
+            || has_oz_admin_pattern
+            || is_transparent_proxy
+            || is_erc1967_standard
+            || is_library_contract
     }
 
     /// FP Reduction Phase 2: Check if this is a library contract
@@ -292,8 +301,8 @@ impl UpgradeableProxyIssuesDetector {
         });
 
         // Check for UUPS pattern where _authorizeUpgrade is internal with onlyOwner
-        let is_uups_authorize = func_name == "_authorizeUpgrade"
-            || func_name_lower.contains("authorizeupgrade");
+        let is_uups_authorize =
+            func_name == "_authorizeUpgrade" || func_name_lower.contains("authorizeupgrade");
 
         // FP Reduction Phase 2: Internal helper functions don't need direct access control
         // e.g., _setImplementation, _upgradeTo, etc. are called by protected external functions
@@ -308,7 +317,7 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("onlyOwner")
             && !func_source.contains("onlyAdmin")
             && !func_source.contains("require(msg.sender")
-            && !is_internal_helper;  // FP Reduction: Skip internal helpers
+            && !is_internal_helper; // FP Reduction: Skip internal helpers
 
         if lacks_access_control && !is_internal_or_private {
             return Some(
@@ -320,8 +329,8 @@ impl UpgradeableProxyIssuesDetector {
 
         // Pattern 2: Initialize function can be called multiple times
         // FP Reduction Phase 2: Only check external/public initialize functions
-        let is_initialize = func_source.contains("initialize")
-            || func_name_lower.contains("initialize");
+        let is_initialize =
+            func_source.contains("initialize") || func_name_lower.contains("initialize");
 
         // CRITICAL FP FIX: Check for OpenZeppelin's initializer modifier on the function
         // The modifier is recognized by checking both the function source AND the modifier list
@@ -341,7 +350,8 @@ impl UpgradeableProxyIssuesDetector {
             || func_name_lower.contains("unsafe")
             || func_name_lower.contains("allowuninitialized");
 
-        let no_initialization_guard = is_initialize && !has_initialization_protection && !is_internal_or_private;
+        let no_initialization_guard =
+            is_initialize && !has_initialization_protection && !is_internal_or_private;
 
         if no_initialization_guard {
             return Some(
@@ -370,11 +380,12 @@ impl UpgradeableProxyIssuesDetector {
         let no_storage_gap = is_upgradeable_contract
             && !contract_source.contains("__gap")
             && !contract_source.contains("uint256[50]")
-            && !is_base_proxy_contract;  // FP Reduction: Base proxies don't need gaps
+            && !is_base_proxy_contract; // FP Reduction: Base proxies don't need gaps
 
         // FP Reduction Phase 2: Only report storage gap once per contract, not per function
         // Skip if this isn't the first proxy-related function (to avoid duplicate reports)
-        let should_report_storage_gap = no_storage_gap && is_proxy_related && !is_internal_or_private;
+        let should_report_storage_gap =
+            no_storage_gap && is_proxy_related && !is_internal_or_private;
 
         if should_report_storage_gap && func_name_lower.contains("initialize") {
             return Some(
@@ -396,7 +407,7 @@ impl UpgradeableProxyIssuesDetector {
             && !func_source.contains("require")
             && !func_source.contains("isContract")
             && !has_oz_delegatecall_pattern  // FP Reduction: OZ patterns are safe
-            && !is_internal_or_private;  // FP Reduction: Internal helpers are called safely
+            && !is_internal_or_private; // FP Reduction: Internal helpers are called safely
 
         if no_impl_validation {
             return Some(
@@ -434,7 +445,7 @@ impl UpgradeableProxyIssuesDetector {
         let constructor_in_upgradeable = is_constructor
             && (contract_source.contains("upgradeable")
                 || contract_source.contains("Initializable"))
-            && !has_disable_initializers;  // FP Reduction: _disableInitializers is the safe pattern
+            && !has_disable_initializers; // FP Reduction: _disableInitializers is the safe pattern
 
         if constructor_in_upgradeable {
             return Some(
@@ -467,7 +478,8 @@ impl UpgradeableProxyIssuesDetector {
             || contract_source.contains("emit AdminChanged")
             || contract_source.contains("emit BeaconUpgraded");
 
-        let no_upgrade_event = is_upgrade_function && !emits_event && is_callable && !is_internal_or_private;
+        let no_upgrade_event =
+            is_upgrade_function && !emits_event && is_callable && !is_internal_or_private;
 
         if no_upgrade_event {
             return Some(

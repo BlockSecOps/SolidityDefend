@@ -110,30 +110,21 @@ pub fn has_comprehensive_restaking_safety(ctx: &AnalysisContext) -> bool {
 /// Check if restaking function has proper operator validation
 ///
 /// Convenience function for checking individual functions.
-pub fn function_has_operator_validation(
-    function: &ast::Function,
-    ctx: &AnalysisContext,
-) -> bool {
+pub fn function_has_operator_validation(function: &ast::Function, ctx: &AnalysisContext) -> bool {
     has_operator_validation(function, ctx)
 }
 
 /// Check if slashing function has proper evidence validation
 ///
 /// Convenience function for checking slashing functions.
-pub fn function_has_slashing_safety(
-    function: &ast::Function,
-    ctx: &AnalysisContext,
-) -> bool {
+pub fn function_has_slashing_safety(function: &ast::Function, ctx: &AnalysisContext) -> bool {
     has_evidence_parameter(function) && validates_evidence(function, ctx)
 }
 
 /// Check if withdrawal function has delay protection
 ///
 /// Convenience function for checking withdrawal functions.
-pub fn function_has_withdrawal_delay(
-    function: &ast::Function,
-    ctx: &AnalysisContext,
-) -> bool {
+pub fn function_has_withdrawal_delay(function: &ast::Function, ctx: &AnalysisContext) -> bool {
     has_withdrawal_delay(function, ctx)
 }
 

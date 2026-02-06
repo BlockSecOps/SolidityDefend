@@ -163,10 +163,7 @@ impl ERC7821BatchAuthorizationDetector {
         let source_lower = source.to_lowercase();
 
         // Gelato automation
-        if source.contains("Gelato")
-            || source.contains("IOps")
-            || source_lower.contains("gelato")
-        {
+        if source.contains("Gelato") || source.contains("IOps") || source_lower.contains("gelato") {
             return true;
         }
 

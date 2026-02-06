@@ -94,16 +94,16 @@ impl Detector for Erc20ApproveRaceDetector {
 impl Erc20ApproveRaceDetector {
     /// Checks if a contract has increaseAllowance function
     fn has_increase_allowance(&self, ctx: &AnalysisContext) -> bool {
-        ctx.get_functions().iter().any(|func| {
-            func.name.name == "increaseAllowance" && func.parameters.len() == 2
-        })
+        ctx.get_functions()
+            .iter()
+            .any(|func| func.name.name == "increaseAllowance" && func.parameters.len() == 2)
     }
 
     /// Checks if contract has decreaseAllowance function
     fn has_decrease_allowance(&self, ctx: &AnalysisContext) -> bool {
-        ctx.get_functions().iter().any(|func| {
-            func.name.name == "decreaseAllowance" && func.parameters.len() == 2
-        })
+        ctx.get_functions()
+            .iter()
+            .any(|func| func.name.name == "decreaseAllowance" && func.parameters.len() == 2)
     }
 
     /// Checks if this appears to be an ERC20 contract

@@ -44,14 +44,21 @@ impl DelegatecallReturnIgnoredDetector {
                 DetectorId("delegatecall-return-ignored".to_string()),
                 "Delegatecall Return Value Ignored".to_string(),
                 "Detects delegatecall operations without proper return value checking".to_string(),
-                vec![DetectorCategory::ExternalCalls, DetectorCategory::BestPractices],
+                vec![
+                    DetectorCategory::ExternalCalls,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::High,
             ),
         }
     }
 
     /// Check if function has unchecked delegatecall
-    fn has_unchecked_delegatecall(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_unchecked_delegatecall(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let source = self.get_function_source(function, ctx);
 
         // Check if function contains delegatecall
@@ -63,7 +70,8 @@ impl DelegatecallReturnIgnoredDetector {
         if self.has_statement_delegatecall(&source) {
             return Some(
                 "Delegatecall used as statement without capturing return value. \
-                Always capture: (bool success, bytes memory data) = target.delegatecall(...)".to_string()
+                Always capture: (bool success, bytes memory data) = target.delegatecall(...)"
+                    .to_string(),
             );
         }
 
@@ -71,7 +79,8 @@ impl DelegatecallReturnIgnoredDetector {
         if self.has_unvalidated_delegatecall(&source) {
             return Some(
                 "Delegatecall return value captured but not validated. \
-                Add require(success, ...) or if (!success) revert(...)".to_string()
+                Add require(success, ...) or if (!success) revert(...)"
+                    .to_string(),
             );
         }
 
@@ -79,7 +88,8 @@ impl DelegatecallReturnIgnoredDetector {
         if self.has_data_only_capture(&source) {
             return Some(
                 "Delegatecall captures only return data, not success status. \
-                Use (bool success, bytes memory data) to capture both".to_string()
+                Use (bool success, bytes memory data) to capture both"
+                    .to_string(),
             );
         }
 
@@ -87,7 +97,8 @@ impl DelegatecallReturnIgnoredDetector {
         if self.has_unchecked_assembly_delegatecall(&source) {
             return Some(
                 "Assembly delegatecall result not properly validated. \
-                Check result: switch result case 0 { revert(...) } default { return(...) }".to_string()
+                Check result: switch result case 0 { revert(...) } default { return(...) }"
+                    .to_string(),
             );
         }
 
@@ -105,17 +116,19 @@ impl DelegatecallReturnIgnoredDetector {
             if trimmed.contains("delegatecall(") {
                 // Check if it's used as a statement (ends with ;)
                 // and not part of an assignment or declaration
-                if !trimmed.contains("(bool") &&
-                   !trimmed.contains("= ") &&
-                   !trimmed.contains("let ") &&
-                   trimmed.contains(");") {
+                if !trimmed.contains("(bool")
+                    && !trimmed.contains("= ")
+                    && !trimmed.contains("let ")
+                    && trimmed.contains(");")
+                {
                     return true;
                 }
 
                 // Check for direct usage without assignment
-                if trimmed.starts_with("implementation.delegatecall") ||
-                   trimmed.starts_with("target.delegatecall") ||
-                   trimmed.starts_with("library.delegatecall") {
+                if trimmed.starts_with("implementation.delegatecall")
+                    || trimmed.starts_with("target.delegatecall")
+                    || trimmed.starts_with("library.delegatecall")
+                {
                     if !line.contains("(bool") && !line.contains("= ") {
                         return true;
                     }
@@ -141,14 +154,13 @@ impl DelegatecallReturnIgnoredDetector {
         }
 
         // Check if success is validated
-        let has_require_success = source.contains("require(success") ||
-                                   source.contains("require(result");
-        let has_if_check = source.contains("if (!success)") ||
-                           source.contains("if(!success)") ||
-                           source.contains("if (!result)") ||
-                           source.contains("if(!result)");
-        let has_assert = source.contains("assert(success)") ||
-                         source.contains("assert(result)");
+        let has_require_success =
+            source.contains("require(success") || source.contains("require(result");
+        let has_if_check = source.contains("if (!success)")
+            || source.contains("if(!success)")
+            || source.contains("if (!result)")
+            || source.contains("if(!result)");
+        let has_assert = source.contains("assert(success)") || source.contains("assert(result)");
 
         // If delegatecall result captured but not validated
         if !has_require_success && !has_if_check && !has_assert {
@@ -187,19 +199,18 @@ impl DelegatecallReturnIgnoredDetector {
         }
 
         // Look for assembly block with delegatecall
-        let in_assembly = source.contains("assembly {") &&
-                          source.contains("delegatecall(");
+        let in_assembly = source.contains("assembly {") && source.contains("delegatecall(");
 
         if !in_assembly {
             return false;
         }
 
         // Check if result is checked
-        let has_switch_check = source.contains("switch result") ||
-                               source.contains("switch success");
+        let has_switch_check =
+            source.contains("switch result") || source.contains("switch success");
         let has_case_zero = source.contains("case 0");
-        let has_if_check = source.contains("if iszero(result)") ||
-                          source.contains("if iszero(success)");
+        let has_if_check =
+            source.contains("if iszero(result)") || source.contains("if iszero(success)");
 
         // If no proper checking
         if !has_switch_check && !has_if_check {
@@ -287,7 +298,8 @@ impl Detector for DelegatecallReturnIgnoredDetector {
                     func_type, function.name.name, issue_description
                 );
 
-                let finding = self.base
+                let finding = self
+                    .base
                     .create_finding(
                         ctx,
                         message,

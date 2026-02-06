@@ -353,7 +353,8 @@ impl Detector for YieldFarmingDetector {
         let has_min_deposit = vault_patterns::has_minimum_deposit_pattern(ctx);
 
         // If vault has comprehensive inflation protection, skip inflation-related checks
-        let skip_inflation_checks = has_inflation_protection || has_dead_shares || has_virtual_shares;
+        let skip_inflation_checks =
+            has_inflation_protection || has_dead_shares || has_virtual_shares;
 
         for function in ctx.get_functions() {
             // Skip internal/private functions

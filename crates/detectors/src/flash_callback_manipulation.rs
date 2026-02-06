@@ -256,7 +256,8 @@ impl Detector for FlashCallbackManipulationDetector {
 
         // Track if contract has some safety measures (for reduced severity findings)
         let has_callback_validation = flash_loan_patterns::has_flash_loan_callback_validation(ctx);
-        let has_reentrancy_protection = flash_loan_patterns::has_flash_loan_reentrancy_protection(ctx);
+        let has_reentrancy_protection =
+            flash_loan_patterns::has_flash_loan_reentrancy_protection(ctx);
         let has_partial_safety = has_callback_validation || has_reentrancy_protection;
 
         for (line, func_name) in self.find_state_read_before_callback(source) {

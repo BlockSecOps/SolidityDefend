@@ -35,7 +35,10 @@ impl Eip1967SlotComplianceDetector {
                 "Detects proxy contracts using non-standard storage slots for implementation, \
                  admin, or beacon addresses instead of EIP-1967 compliant slots"
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::BestPractices],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::BestPractices,
+                ],
                 Severity::Medium,
             ),
         }
@@ -296,7 +299,9 @@ mod tests {
     #[test]
     fn test_is_proxy_contract() {
         let detector = Eip1967SlotComplianceDetector::new();
-        assert!(detector.is_proxy_contract("contract MyProxy is Proxy { function _implementation() }"));
+        assert!(
+            detector.is_proxy_contract("contract MyProxy is Proxy { function _implementation() }")
+        );
         assert!(detector.is_proxy_contract("function _fallback() internal { delegatecall(impl) }"));
         assert!(!detector.is_proxy_contract("contract SimpleToken { }"));
     }
@@ -324,8 +329,9 @@ mod tests {
     fn test_extract_keccak_slot_name() {
         let detector = Eip1967SlotComplianceDetector::new();
 
-        let name =
-            detector.extract_keccak_slot_name("bytes32 slot = keccak256(\"eip1967.proxy.implementation\");");
+        let name = detector.extract_keccak_slot_name(
+            "bytes32 slot = keccak256(\"eip1967.proxy.implementation\");",
+        );
         assert_eq!(name, Some("eip1967.proxy.implementation".to_string()));
     }
 }

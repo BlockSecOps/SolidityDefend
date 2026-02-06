@@ -45,10 +45,12 @@ impl MissingEIP712DomainDetector {
         }
 
         // Check for proper EIP-712 domain separator usage
-        let has_eip712 = func_source.contains("\\x19\\x01") && func_source.contains("DOMAIN_SEPARATOR");
-        let has_domain_construction = func_source.contains("EIP712Domain") && func_source.contains("chainId");
-        let has_eip191_prefix = func_source.contains("\\x19Ethereum Signed Message") ||
-                                 func_source.contains("toEthSignedMessageHash");
+        let has_eip712 =
+            func_source.contains("\\x19\\x01") && func_source.contains("DOMAIN_SEPARATOR");
+        let has_domain_construction =
+            func_source.contains("EIP712Domain") && func_source.contains("chainId");
+        let has_eip191_prefix = func_source.contains("\\x19Ethereum Signed Message")
+            || func_source.contains("toEthSignedMessageHash");
 
         if has_eip712 || has_domain_construction || has_eip191_prefix {
             return None;
@@ -126,10 +128,7 @@ impl Detector for MissingEIP712DomainDetector {
 
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_missing_eip712_domain(function, ctx) {
-                let message = format!(
-                    "Function '{}' {}",
-                    function.name.name, issue
-                );
+                let message = format!("Function '{}' {}", function.name.name, issue);
 
                 let finding = self
                     .base

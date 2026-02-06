@@ -58,8 +58,10 @@ impl BlockhashRandomnessDetector {
                 let func_name = self.find_containing_function(&lines, line_num);
 
                 // Check if it's being used in a hash/random context
-                if trimmed.contains("keccak256") || trimmed.contains("random")
-                    || trimmed.contains("seed") || trimmed.contains("entropy")
+                if trimmed.contains("keccak256")
+                    || trimmed.contains("random")
+                    || trimmed.contains("seed")
+                    || trimmed.contains("entropy")
                 {
                     let issue = "blockhash used as randomness seed".to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
@@ -67,11 +69,11 @@ impl BlockhashRandomnessDetector {
             }
 
             // Detect keccak256 with block variables
-            if trimmed.contains("keccak256") &&
-               (trimmed.contains("block.timestamp") ||
-                trimmed.contains("block.number") ||
-                trimmed.contains("block.coinbase") ||
-                trimmed.contains("block.prevrandao"))
+            if trimmed.contains("keccak256")
+                && (trimmed.contains("block.timestamp")
+                    || trimmed.contains("block.number")
+                    || trimmed.contains("block.coinbase")
+                    || trimmed.contains("block.prevrandao"))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 let issue = "keccak256 hash of block variables for randomness".to_string();
@@ -91,20 +93,26 @@ impl BlockhashRandomnessDetector {
             let trimmed = line.trim();
 
             // Detect lottery/game/random functions
-            if trimmed.contains("function ") &&
-               (trimmed.contains("random") || trimmed.contains("Random") ||
-                trimmed.contains("lottery") || trimmed.contains("Lottery") ||
-                trimmed.contains("draw") || trimmed.contains("winner") ||
-                trimmed.contains("roll") || trimmed.contains("flip"))
+            if trimmed.contains("function ")
+                && (trimmed.contains("random")
+                    || trimmed.contains("Random")
+                    || trimmed.contains("lottery")
+                    || trimmed.contains("Lottery")
+                    || trimmed.contains("draw")
+                    || trimmed.contains("winner")
+                    || trimmed.contains("roll")
+                    || trimmed.contains("flip"))
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check if using weak randomness
-                if (func_body.contains("block.") || func_body.contains("blockhash")) &&
-                   !func_body.contains("chainlink") && !func_body.contains("vrf") &&
-                   !func_body.contains("VRF") && !func_body.contains("oracle")
+                if (func_body.contains("block.") || func_body.contains("blockhash"))
+                    && !func_body.contains("chainlink")
+                    && !func_body.contains("vrf")
+                    && !func_body.contains("VRF")
+                    && !func_body.contains("oracle")
                 {
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -127,11 +135,14 @@ impl BlockhashRandomnessDetector {
             }
 
             // Detect seed assignments with block variables
-            if (trimmed.contains("seed") || trimmed.contains("Seed") ||
-                trimmed.contains("entropy") || trimmed.contains("nonce")) &&
-               trimmed.contains("=") &&
-               (trimmed.contains("block.") || trimmed.contains("tx.") ||
-                trimmed.contains("msg.sender"))
+            if (trimmed.contains("seed")
+                || trimmed.contains("Seed")
+                || trimmed.contains("entropy")
+                || trimmed.contains("nonce"))
+                && trimmed.contains("=")
+                && (trimmed.contains("block.")
+                    || trimmed.contains("tx.")
+                    || trimmed.contains("msg.sender"))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));

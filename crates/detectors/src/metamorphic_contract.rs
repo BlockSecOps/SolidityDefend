@@ -301,9 +301,7 @@ impl MetamorphicContractDetector {
         }
 
         // Compound/Maker factory patterns
-        if source.contains("Comptroller")
-            || source.contains("CToken")
-            || source.contains("DSProxy")
+        if source.contains("Comptroller") || source.contains("CToken") || source.contains("DSProxy")
         {
             return true;
         }

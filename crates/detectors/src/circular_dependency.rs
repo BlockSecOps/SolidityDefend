@@ -85,7 +85,6 @@ impl Detector for CircularDependencyDetector {
             }
 
             if let Some(dependency_issue) = self.check_circular_dependency(function, ctx) {
-
                 // NEW: Calculate confidence based on protection mechanisms
                 let confidence = self.calculate_confidence(&func_source, &dependency_issue);
 

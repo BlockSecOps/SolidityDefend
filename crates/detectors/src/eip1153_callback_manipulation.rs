@@ -301,7 +301,7 @@ impl Detector for Eip1153CallbackManipulationDetector {
                          _;\n\
                          assembly { tstore(LOCK_SLOT, 0) }\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -363,7 +363,7 @@ impl Detector for Eip1153CallbackManipulationDetector {
                          token.safeTransferFrom(...);  // Has callback\n\
                          assembly { result := tload(slot) }\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

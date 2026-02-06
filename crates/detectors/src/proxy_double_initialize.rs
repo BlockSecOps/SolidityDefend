@@ -34,12 +34,12 @@ impl ProxyDoubleInitializeDetector {
     }
 
     fn is_proxy_contract(&self, source: &str) -> bool {
-        source.contains("Initializable") ||
-        source.contains("initializer") ||
-        source.contains("Proxy") ||
-        source.contains("UUPS") ||
-        source.contains("Beacon") ||
-        source.contains("ERC1967")
+        source.contains("Initializable")
+            || source.contains("initializer")
+            || source.contains("Proxy")
+            || source.contains("UUPS")
+            || source.contains("Beacon")
+            || source.contains("ERC1967")
     }
 
     fn find_double_init_risks(&self, source: &str) -> Vec<(u32, String, String)> {
@@ -54,9 +54,9 @@ impl ProxyDoubleInitializeDetector {
             }
 
             // Detect initialize function without initializer modifier
-            if (trimmed.contains("function initialize") || trimmed.contains("function init(")) &&
-               !trimmed.contains("initializer") &&
-               !trimmed.contains("reinitializer")
+            if (trimmed.contains("function initialize") || trimmed.contains("function init("))
+                && !trimmed.contains("initializer")
+                && !trimmed.contains("reinitializer")
             {
                 let func_name = self.extract_function_name(trimmed);
 
@@ -64,13 +64,14 @@ impl ProxyDoubleInitializeDetector {
                 let func_start = line_num;
                 let func_body = self.get_function_body(&lines, func_start);
 
-                let has_guard = func_body.contains("_initialized") ||
-                    func_body.contains("initialized = true") ||
-                    func_body.contains("require(!initialized") ||
-                    func_body.contains("if (initialized)");
+                let has_guard = func_body.contains("_initialized")
+                    || func_body.contains("initialized = true")
+                    || func_body.contains("require(!initialized")
+                    || func_body.contains("if (initialized)");
 
                 if !has_guard {
-                    let issue = "Initialize function without initializer modifier or guard".to_string();
+                    let issue =
+                        "Initialize function without initializer modifier or guard".to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
                 }
             }
@@ -92,9 +93,9 @@ impl ProxyDoubleInitializeDetector {
                 let func_body = self.get_function_body(&lines, func_start);
 
                 // Check if there's re-initialization possible after upgrade
-                let has_init_check = func_body.contains("_initialized") ||
-                    func_body.contains("reinitializer") ||
-                    func_body.contains("_getInitializedVersion");
+                let has_init_check = func_body.contains("_initialized")
+                    || func_body.contains("reinitializer")
+                    || func_body.contains("_getInitializedVersion");
 
                 if !has_init_check && func_body.contains("delegatecall") {
                     let issue = "Upgrade function may allow re-initialization".to_string();
@@ -135,9 +136,9 @@ impl ProxyDoubleInitializeDetector {
                 let func_body = self.get_function_body(&lines, func_start);
 
                 // Check for version tracking
-                let tracks_version = func_body.contains("_getInitializedVersion") ||
-                    func_body.contains("implementationVersion") ||
-                    func_body.contains("version >=");
+                let tracks_version = func_body.contains("_getInitializedVersion")
+                    || func_body.contains("implementationVersion")
+                    || func_body.contains("version >=");
 
                 if !tracks_version {
                     findings.push((line_num as u32 + 1, func_name));

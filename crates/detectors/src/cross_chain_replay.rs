@@ -205,11 +205,11 @@ impl CrossChainReplayDetector {
             let has_eip712_pattern = (func_source.contains("\\x19\\x01")
                 && func_source.contains("DOMAIN_SEPARATOR"))
                 || (func_source.contains("\\x19\\\\x01")
-                && func_source.contains("DOMAIN_SEPARATOR"));
+                    && func_source.contains("DOMAIN_SEPARATOR"));
 
             // Check for OpenZeppelin ECDSA library (has built-in protection)
-            let uses_oz_ecdsa = func_source.contains("ECDSA.recover")
-                || func_source.contains("ECDSA.tryRecover");
+            let uses_oz_ecdsa =
+                func_source.contains("ECDSA.recover") || func_source.contains("ECDSA.tryRecover");
 
             // Check for direct chainId usage in hash
             let has_chainid_in_hash =

@@ -155,10 +155,7 @@ impl Detector for TransparentProxyAdminIssuesDetector {
             let issues = self.find_admin_issues(source);
 
             for (line, issue_desc) in issues {
-                let message = format!(
-                    "Transparent proxy '{}': {}",
-                    contract_name, issue_desc
-                );
+                let message = format!("Transparent proxy '{}': {}", contract_name, issue_desc);
 
                 let finding = self
                     .base

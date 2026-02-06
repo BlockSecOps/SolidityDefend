@@ -91,12 +91,13 @@ impl Detector for ProxyStorageCollisionDetector {
                     ctx.contract.name.name.len() as u32,
                 )
                 .with_cwe(1321) // CWE-1321: Improperly Controlled Modification of Object Prototype Attributes
-                .with_cwe(119)  // CWE-119: Improper Restriction of Operations within the Bounds of a Memory Buffer
+                .with_cwe(119) // CWE-119: Improper Restriction of Operations within the Bounds of a Memory Buffer
                 .with_fix_suggestion(
                     "Use EIP-1967 standard storage slots for proxy-specific variables. \
                     Reserve storage slots using 'bytes32 private constant SLOT = keccak256(...)'. \
                     Avoid declaring storage variables at the beginning of proxy contracts. \
-                    Use upgradeable patterns like OpenZeppelin's transparent proxy.".to_string(),
+                    Use upgradeable patterns like OpenZeppelin's transparent proxy."
+                        .to_string(),
                 );
 
             findings.push(finding);
@@ -196,15 +197,18 @@ impl ProxyStorageCollisionDetector {
 
         // Check for EIP-1967 storage slot constants
         // These are the standard slots defined in EIP-1967
-        let has_implementation_slot = source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+        let has_implementation_slot = source
+            .contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
             || source.contains("IMPLEMENTATION_SLOT")
             || source.contains("_IMPLEMENTATION_SLOT");
 
-        let has_admin_slot = source.contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
+        let has_admin_slot = source
+            .contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
             || source.contains("ADMIN_SLOT")
             || source.contains("_ADMIN_SLOT");
 
-        let has_beacon_slot = source.contains("0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50")
+        let has_beacon_slot = source
+            .contains("0xa3f0ad74e5423aebfd80d3ef4346578335a9a72aeaee59ff6cb3582b35133d50")
             || source.contains("BEACON_SLOT")
             || source.contains("_BEACON_SLOT");
 
@@ -220,7 +224,11 @@ impl ProxyStorageCollisionDetector {
             || source.contains("keccak256('eip1967.")
             || source.contains("bytes32(uint256(keccak256");
 
-        has_implementation_slot || has_admin_slot || has_beacon_slot || is_oz_proxy || has_proper_slot_calc
+        has_implementation_slot
+            || has_admin_slot
+            || has_beacon_slot
+            || is_oz_proxy
+            || has_proper_slot_calc
     }
 
     /// Check if proxy has non-standard storage variables

@@ -57,12 +57,18 @@ impl TokenTransferFrontrunDetector {
     }
 
     /// Checks if function contains price-dependent token transfers
-    fn has_vulnerable_transfer(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_vulnerable_transfer(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
 
         // Skip if function is internal/private
-        if function.visibility != ast::Visibility::Public && function.visibility != ast::Visibility::External {
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
             return None;
         }
 
@@ -73,28 +79,26 @@ impl TokenTransferFrontrunDetector {
         }
 
         // Check for price-dependent operations
-        let is_price_dependent =
-            func_name_lower.contains("buy") ||
-            func_name_lower.contains("purchase") ||
-            func_name_lower.contains("swap") ||
-            func_name_lower.contains("mint") ||
-            func_name_lower.contains("trade") ||
-            func_source.contains("getPrice") ||
-            func_source.contains("price") ||
-            func_source.contains("calculateAmount") ||
-            func_source.contains("getAmountOut");
+        let is_price_dependent = func_name_lower.contains("buy")
+            || func_name_lower.contains("purchase")
+            || func_name_lower.contains("swap")
+            || func_name_lower.contains("mint")
+            || func_name_lower.contains("trade")
+            || func_source.contains("getPrice")
+            || func_source.contains("price")
+            || func_source.contains("calculateAmount")
+            || func_source.contains("getAmountOut");
 
         if !is_price_dependent {
             return None;
         }
 
         // Check for slippage protection (multiple forms)
-        let has_slippage_protection =
-            self.has_min_amount_param(function) ||
-            self.has_slippage_check(&func_source) ||
-            self.has_deadline_param(function) ||
-            self.has_deadline_validation(&func_source) ||
-            self.has_price_protection(&func_source);
+        let has_slippage_protection = self.has_min_amount_param(function)
+            || self.has_slippage_check(&func_source)
+            || self.has_deadline_param(function)
+            || self.has_deadline_validation(&func_source)
+            || self.has_price_protection(&func_source);
 
         if !has_slippage_protection {
             return Some(format!(
@@ -113,8 +117,8 @@ impl TokenTransferFrontrunDetector {
         function.parameters.iter().any(|param| {
             if let Some(name) = &param.name {
                 let name_lower = name.name.to_lowercase();
-                name_lower.contains("min") &&
-                (name_lower.contains("amount") || name_lower.contains("out"))
+                name_lower.contains("min")
+                    && (name_lower.contains("amount") || name_lower.contains("out"))
             } else {
                 false
             }
@@ -135,33 +139,37 @@ impl TokenTransferFrontrunDetector {
 
     /// Checks source code for slippage protection patterns
     fn has_slippage_check(&self, source: &str) -> bool {
-        (source.contains("require") || source.contains("revert")) &&
-        (source.contains("minAmount") ||
-         source.contains("minOut") ||
-         source.contains("slippage") ||
-         source.contains(">=") && (source.contains("amount") || source.contains("output")))
+        (source.contains("require") || source.contains("revert"))
+            && (source.contains("minAmount")
+                || source.contains("minOut")
+                || source.contains("slippage")
+                || source.contains(">=")
+                    && (source.contains("amount") || source.contains("output")))
     }
 
     /// Checks source code for deadline validation patterns
     fn has_deadline_validation(&self, source: &str) -> bool {
         // Look for timestamp checks with expiration/deadline
-        (source.contains("block.timestamp") || source.contains("block.number")) &&
-        (source.contains("<=") || source.contains("<")) &&
-        (source.contains("expiration") ||
-         source.contains("deadline") ||
-         source.contains("expiry"))
+        (source.contains("block.timestamp") || source.contains("block.number"))
+            && (source.contains("<=") || source.contains("<"))
+            && (source.contains("expiration")
+                || source.contains("deadline")
+                || source.contains("expiry"))
     }
 
     /// Checks source code for price protection patterns
     fn has_price_protection(&self, source: &str) -> bool {
         // Look for price limit checks
-        (source.contains("require") || source.contains("revert")) &&
-        (source.contains("price") || source.contains("Price")) &&
-        (source.contains("<=") || source.contains(">=") || source.contains("<") || source.contains(">")) &&
-        (source.contains("target") ||
-         source.contains("max") ||
-         source.contains("min") ||
-         source.contains("limit"))
+        (source.contains("require") || source.contains("revert"))
+            && (source.contains("price") || source.contains("Price"))
+            && (source.contains("<=")
+                || source.contains(">=")
+                || source.contains("<")
+                || source.contains(">"))
+            && (source.contains("target")
+                || source.contains("max")
+                || source.contains("min")
+                || source.contains("limit"))
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

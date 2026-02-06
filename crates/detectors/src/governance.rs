@@ -207,13 +207,7 @@ impl GovernanceDetector {
 
         // Only flag functions that are specifically governance-related
         // "execute" and "delegate" alone are too generic (used in proxies, wallets, etc.)
-        let governance_specific_patterns = [
-            "propose",
-            "vote",
-            "castvote",
-            "queue",
-            "cancel",
-        ];
+        let governance_specific_patterns = ["propose", "vote", "castvote", "queue", "cancel"];
 
         // Check for governance-specific function names
         if governance_specific_patterns
@@ -300,21 +294,21 @@ impl GovernanceDetector {
         let strong_governance_indicators = [
             "votingtoken",
             "governancetoken",
-            "proposal",         // Proposal creation/management
-            "castVote",         // Voting functions
-            "getVotes",         // Voting power queries
-            "getPriorVotes",    // Historical voting power
-            "getPastVotes",     // Historical voting power (OZ)
-            "quorum",           // Quorum requirements
-            "proposalThreshold",// Proposal creation threshold
-            "votingPeriod",     // Voting period configuration
-            "votingDelay",      // Voting delay configuration
-            "IGovernor",        // Governor interface
+            "proposal",          // Proposal creation/management
+            "castVote",          // Voting functions
+            "getVotes",          // Voting power queries
+            "getPriorVotes",     // Historical voting power
+            "getPastVotes",      // Historical voting power (OZ)
+            "quorum",            // Quorum requirements
+            "proposalThreshold", // Proposal creation threshold
+            "votingPeriod",      // Voting period configuration
+            "votingDelay",       // Voting delay configuration
+            "IGovernor",         // Governor interface
         ];
 
-        let has_strong_indicator = strong_governance_indicators.iter().any(|&indicator| {
-            source_lower.contains(&indicator.to_lowercase())
-        });
+        let has_strong_indicator = strong_governance_indicators
+            .iter()
+            .any(|&indicator| source_lower.contains(&indicator.to_lowercase()));
 
         // If no strong indicator, this is NOT a governance contract
         // Simple wallets with "owner" or contracts with "delegate" for proxies

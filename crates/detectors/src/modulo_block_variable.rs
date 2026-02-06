@@ -94,10 +94,18 @@ impl ModuloBlockVariableDetector {
     fn is_power_of_two_modulo(&self, line: &str) -> bool {
         // Patterns like: % 2**32, % 2**64, % 2**128, % 2**256
         let power_of_two_patterns = [
-            "% 2**32", "% 2**64", "% 2**128", "% 2**256",
-            "% (2**32)", "% (2**64)", "% (2**128)", "% (2**256)",
-            "% type(uint32).max", "% type(uint64).max",
-            "% type(uint128).max", "% type(uint256).max",
+            "% 2**32",
+            "% 2**64",
+            "% 2**128",
+            "% 2**256",
+            "% (2**32)",
+            "% (2**64)",
+            "% (2**128)",
+            "% (2**256)",
+            "% type(uint32).max",
+            "% type(uint64).max",
+            "% type(uint128).max",
+            "% type(uint256).max",
         ];
 
         for pattern in power_of_two_patterns {
@@ -138,9 +146,10 @@ impl ModuloBlockVariableDetector {
             }
 
             // Detect array index using block variable modulo
-            if trimmed.contains("[") && trimmed.contains("]") &&
-               trimmed.contains("%") &&
-               (trimmed.contains("block.") || trimmed.contains("blockhash"))
+            if trimmed.contains("[")
+                && trimmed.contains("]")
+                && trimmed.contains("%")
+                && (trimmed.contains("block.") || trimmed.contains("blockhash"))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
@@ -163,15 +172,17 @@ impl ModuloBlockVariableDetector {
             }
 
             // Detect selection patterns
-            let has_selection_keyword = trimmed.contains("winner") ||
-                trimmed.contains("selected") ||
-                trimmed.contains("index") ||
-                trimmed.contains("choice") ||
-                trimmed.contains("pick");
+            let has_selection_keyword = trimmed.contains("winner")
+                || trimmed.contains("selected")
+                || trimmed.contains("index")
+                || trimmed.contains("choice")
+                || trimmed.contains("pick");
 
-            if has_selection_keyword && trimmed.contains("%") &&
-               (trimmed.contains("block.") || trimmed.contains("blockhash") ||
-                trimmed.contains("uint256(keccak256"))
+            if has_selection_keyword
+                && trimmed.contains("%")
+                && (trimmed.contains("block.")
+                    || trimmed.contains("blockhash")
+                    || trimmed.contains("uint256(keccak256"))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));

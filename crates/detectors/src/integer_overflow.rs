@@ -320,9 +320,11 @@ impl IntegerOverflowDetector {
         if let Some(unchecked_pos) = func_source.find("unchecked") {
             let before_unchecked = &func_source[..unchecked_pos];
             // Check for require/assert with >= or > comparisons
-            before_unchecked.contains("require(") &&
-                (before_unchecked.contains(" >= ") || before_unchecked.contains(" > ") ||
-                 before_unchecked.contains(" <= ") || before_unchecked.contains(" < "))
+            before_unchecked.contains("require(")
+                && (before_unchecked.contains(" >= ")
+                    || before_unchecked.contains(" > ")
+                    || before_unchecked.contains(" <= ")
+                    || before_unchecked.contains(" < "))
         } else {
             false
         }

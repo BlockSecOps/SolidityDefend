@@ -305,7 +305,7 @@ impl Detector for UpgradeAbiIncompatibilityDetector {
                      function newFunc(uint256 a, uint256 b) external returns (uint256) {\n\
                          // new implementation\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -367,7 +367,8 @@ mod tests {
             Some("transfer".to_string())
         );
         assert_eq!(
-            detector.extract_function_name("function balanceOf(address) public view returns (uint256)"),
+            detector
+                .extract_function_name("function balanceOf(address) public view returns (uint256)"),
             Some("balanceOf".to_string())
         );
     }

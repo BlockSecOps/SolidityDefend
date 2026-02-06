@@ -27,7 +27,10 @@ impl OperatorWhitelistInheritanceDetector {
                 "Detects upgradeable contracts where operator approvals may persist \
                  after upgrades, granting unintended access to previous operators."
                     .to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::Upgradeable],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::Upgradeable,
+                ],
                 Severity::Medium,
             ),
         }
@@ -243,7 +246,7 @@ impl Detector for OperatorWhitelistInheritanceDetector {
                      function _resetApprovals() internal {\n\
                          approvalEpoch++; // Invalidates all previous approvals\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -289,7 +292,7 @@ impl Detector for OperatorWhitelistInheritanceDetector {
                          // Increment epoch to invalidate old approvals if needed\n\
                          approvalEpoch++;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

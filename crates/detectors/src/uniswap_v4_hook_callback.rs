@@ -137,8 +137,7 @@ impl UniswapV4HookCallbackDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
-            if trimmed.contains("function ")
-                && (trimmed.contains("Fee") || trimmed.contains("fee"))
+            if trimmed.contains("function ") && (trimmed.contains("Fee") || trimmed.contains("fee"))
             {
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
@@ -305,7 +304,7 @@ impl Detector for UniswapV4HookCallbackDetector {
                          require(msg.sender == address(poolManager));\n\
                          // ... hook logic\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

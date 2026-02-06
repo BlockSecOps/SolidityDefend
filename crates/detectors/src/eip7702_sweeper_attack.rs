@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_eip7702_context};
+use crate::utils::{is_eip7702_context, is_test_contract};
 
 /// Detector for EIP-7702 sweeper attack vulnerabilities
 ///
@@ -63,8 +63,7 @@ impl Eip7702SweeperAttackDetector {
 
             // Look for full balance transfers
             if (trimmed.contains(".transfer(") || trimmed.contains(".call{value:"))
-                && (trimmed.contains("address(this).balance")
-                    || trimmed.contains("balance"))
+                && (trimmed.contains("address(this).balance") || trimmed.contains("balance"))
             {
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
@@ -415,7 +414,8 @@ impl Detector for Eip7702SweeperAttackDetector {
                 }
 
                 // Skip if function has access control
-                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                let func_line_idx =
+                    self.find_function_line(&lines, (line as usize).saturating_sub(1));
                 if self.function_has_access_control(&lines, func_line_idx) {
                     continue;
                 }
@@ -447,7 +447,8 @@ impl Detector for Eip7702SweeperAttackDetector {
             let token_sweeps = self.find_token_sweep(source);
             for (line, func_name) in token_sweeps {
                 // Skip if function has access control
-                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                let func_line_idx =
+                    self.find_function_line(&lines, (line as usize).saturating_sub(1));
                 if self.function_has_access_control(&lines, func_line_idx) {
                     continue;
                 }
@@ -479,7 +480,8 @@ impl Detector for Eip7702SweeperAttackDetector {
             let batch_sweeps = self.find_batch_sweep(source);
             for (line, func_name) in batch_sweeps {
                 // Skip if function has access control
-                let func_line_idx = self.find_function_line(&lines, (line as usize).saturating_sub(1));
+                let func_line_idx =
+                    self.find_function_line(&lines, (line as usize).saturating_sub(1));
                 if self.function_has_access_control(&lines, func_line_idx) {
                     continue;
                 }

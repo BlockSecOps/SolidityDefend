@@ -16,9 +16,8 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     let lower = source.to_lowercase();
 
     // Path 1: Strict ERC-4626 compliance (explicit interface)
-    let has_erc4626_explicit = source.contains("ERC4626")
-        || source.contains("IERC4626")
-        || source.contains("ERC-4626");
+    let has_erc4626_explicit =
+        source.contains("ERC4626") || source.contains("IERC4626") || source.contains("ERC-4626");
 
     if has_erc4626_explicit {
         return true;
@@ -57,9 +56,8 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
     let has_share_calculation = has_total_assets || has_total_supply;
 
     // Must have shares variable or return type
-    let has_share_returns = has_shares
-        || lower.contains("returns (uint256 shares)")
-        || lower.contains("return shares");
+    let has_share_returns =
+        has_shares || lower.contains("returns (uint256 shares)") || lower.contains("return shares");
 
     // Must have share-to-asset conversion patterns (the core of vault logic)
     let has_conversion = lower.contains("converttoshares")
@@ -1399,13 +1397,11 @@ pub fn is_erc20_token(ctx: &AnalysisContext) -> bool {
     // Check for inheritance pattern: "contract X is ERC20" or "contract X is IERC20"
     // This is more specific than just checking if "ierc20" appears anywhere
     let contract_pattern = format!("contract {} is", ctx.contract.name.name.to_lowercase());
-    let has_erc20_inheritance = lower
-        .lines()
-        .any(|line| {
-            let line_lower = line.to_lowercase();
-            line_lower.contains(&contract_pattern) &&
-            (line_lower.contains("erc20") || line_lower.contains("ierc20"))
-        });
+    let has_erc20_inheritance = lower.lines().any(|line| {
+        let line_lower = line.to_lowercase();
+        line_lower.contains(&contract_pattern)
+            && (line_lower.contains("erc20") || line_lower.contains("ierc20"))
+    });
 
     // Alternative: Check for OpenZeppelin ERC20 import AND inheritance
     let imports_oz_erc20 = lower.contains("@openzeppelin/contracts/token/erc20");
@@ -1428,10 +1424,9 @@ pub fn is_erc20_token(ctx: &AnalysisContext) -> bool {
         && (lower.contains("_transfer(") || lower.contains("balances["));
     let has_transfer_from_impl = lower.contains("function transferfrom(address")
         && (lower.contains("_spendallowance") || lower.contains("allowance["));
-    let has_balance_of_impl = lower.contains("function balanceof(address")
-        && lower.contains("return");
-    let has_total_supply_impl = lower.contains("function totalsupply(")
-        && lower.contains("return");
+    let has_balance_of_impl =
+        lower.contains("function balanceof(address") && lower.contains("return");
+    let has_total_supply_impl = lower.contains("function totalsupply(") && lower.contains("return");
 
     // Need implementations, not just declarations (interfaces)
     let impl_count = [
@@ -1472,13 +1467,11 @@ pub fn is_erc721_token(ctx: &AnalysisContext) -> bool {
 
     // Check for inheritance pattern: "contract X is ERC721"
     let contract_pattern = format!("contract {} is", ctx.contract.name.name.to_lowercase());
-    let has_erc721_inheritance = lower
-        .lines()
-        .any(|line| {
-            let line_lower = line.to_lowercase();
-            line_lower.contains(&contract_pattern) &&
-            (line_lower.contains("erc721") || line_lower.contains("ierc721"))
-        });
+    let has_erc721_inheritance = lower.lines().any(|line| {
+        let line_lower = line.to_lowercase();
+        line_lower.contains(&contract_pattern)
+            && (line_lower.contains("erc721") || line_lower.contains("ierc721"))
+    });
 
     // If we have ERC721 inheritance pattern, it's an NFT
     if has_erc721_inheritance {
@@ -1494,12 +1487,11 @@ pub fn is_erc721_token(ctx: &AnalysisContext) -> bool {
     // Fallback: Check for core ERC721 function implementations with bodies
     let has_owner_of_impl = lower.contains("function ownerof(uint256")
         && (lower.contains("_owners[") || lower.contains("owners["));
-    let has_safe_transfer_impl = lower.contains("function safetransferfrom(")
-        && lower.contains("_transfer(");
-    let has_approval_impl = lower.contains("function setapprovalforall(")
-        && lower.contains("_operatorapprovals[");
-    let has_token_uri_impl = lower.contains("function tokenuri(")
-        && lower.contains("return");
+    let has_safe_transfer_impl =
+        lower.contains("function safetransferfrom(") && lower.contains("_transfer(");
+    let has_approval_impl =
+        lower.contains("function setapprovalforall(") && lower.contains("_operatorapprovals[");
+    let has_token_uri_impl = lower.contains("function tokenuri(") && lower.contains("return");
 
     // Need implementations with internal state patterns
     let impl_count = [
@@ -1538,13 +1530,11 @@ pub fn is_erc1155_token(ctx: &AnalysisContext) -> bool {
 
     // Check for inheritance pattern: "contract X is ERC1155"
     let contract_pattern = format!("contract {} is", ctx.contract.name.name.to_lowercase());
-    let has_erc1155_inheritance = lower
-        .lines()
-        .any(|line| {
-            let line_lower = line.to_lowercase();
-            line_lower.contains(&contract_pattern) &&
-            (line_lower.contains("erc1155") || line_lower.contains("ierc1155"))
-        });
+    let has_erc1155_inheritance = lower.lines().any(|line| {
+        let line_lower = line.to_lowercase();
+        line_lower.contains(&contract_pattern)
+            && (line_lower.contains("erc1155") || line_lower.contains("ierc1155"))
+    });
 
     // If we have ERC1155 inheritance pattern, it's a multi-token
     if has_erc1155_inheritance {
@@ -1558,8 +1548,8 @@ pub fn is_erc1155_token(ctx: &AnalysisContext) -> bool {
     }
 
     // Fallback: Check for ERC1155-specific batch operation implementations
-    let has_balance_of_batch_impl = lower.contains("function balanceofbatch(")
-        && lower.contains("_balances[");
+    let has_balance_of_batch_impl =
+        lower.contains("function balanceofbatch(") && lower.contains("_balances[");
     let has_safe_batch_transfer_impl = lower.contains("function safebatchtransferfrom(")
         && lower.contains("_safebatchtransferfrom(");
 
@@ -1597,7 +1587,8 @@ pub fn is_factory_contract(ctx: &AnalysisContext) -> bool {
         || lower.contains("function createtoken(");
 
     // CREATE2 usage (deployment with deterministic address)
-    let has_create2 = lower.contains("create2(") || lower.contains("new ") && lower.contains("salt");
+    let has_create2 =
+        lower.contains("create2(") || lower.contains("new ") && lower.contains("salt");
 
     has_factory_name || (has_create_function && has_create2)
 }
@@ -1652,7 +1643,8 @@ pub fn is_eip7702_context(ctx: &AnalysisContext) -> bool {
     let has_auth = lower.contains("auth") && !lower.contains("authorize"); // AUTH opcode, not authorization
     let has_authcall = lower.contains("authcall");
     let has_setcode = lower.contains("setcode") || lower.contains("set_code");
-    let has_7702_marker = lower.contains("7702") || lower.contains("eip7702") || lower.contains("eip-7702");
+    let has_7702_marker =
+        lower.contains("7702") || lower.contains("eip7702") || lower.contains("eip-7702");
 
     // Account abstraction patterns
     let has_aa_patterns = lower.contains("validateuserop")
@@ -1925,10 +1917,7 @@ pub fn contains_in_code(source: &str, pattern: &str) -> bool {
 /// Returns a vector of (start_line, end_line, function_source) tuples.
 ///
 /// This allows for function-scoped analysis when checking patterns.
-pub fn find_function_blocks_with_pattern(
-    source: &str,
-    pattern: &str,
-) -> Vec<(u32, u32, String)> {
+pub fn find_function_blocks_with_pattern(source: &str, pattern: &str) -> Vec<(u32, u32, String)> {
     let mut results = Vec::new();
     let lines: Vec<&str> = source.lines().collect();
     let mut i = 0;
@@ -1969,11 +1958,7 @@ pub fn find_function_blocks_with_pattern(
 
             // Check if the pattern exists in this function (in actual code)
             if contains_in_code(&func_source, pattern) {
-                results.push((
-                    (func_start + 1) as u32,
-                    (func_end + 1) as u32,
-                    func_source,
-                ));
+                results.push(((func_start + 1) as u32, (func_end + 1) as u32, func_source));
             }
 
             i = func_end + 1;
@@ -1987,7 +1972,10 @@ pub fn find_function_blocks_with_pattern(
 
 /// Extract the function source code containing a specific line number.
 /// Returns (function_name, start_line, end_line, function_source) or None.
-pub fn get_containing_function(source: &str, target_line: u32) -> Option<(String, u32, u32, String)> {
+pub fn get_containing_function(
+    source: &str,
+    target_line: u32,
+) -> Option<(String, u32, u32, String)> {
     let lines: Vec<&str> = source.lines().collect();
     let target_idx = (target_line - 1) as usize;
 
@@ -2148,9 +2136,7 @@ pub fn has_reentrancy_protection(func_source: &str, contract_source: &str) -> bo
     }
 
     // Check contract-level ReentrancyGuard inheritance
-    if contract_source.contains("ReentrancyGuard")
-        || contract_source.contains("reentrancy guard")
-    {
+    if contract_source.contains("ReentrancyGuard") || contract_source.contains("reentrancy guard") {
         return true;
     }
 
@@ -2231,8 +2217,8 @@ pub fn is_l2_contract(ctx: &AnalysisContext) -> bool {
         || lower.contains("stateroot");
 
     // Check for L1/L2 block references
-    let has_l1_l2_refs = (lower.contains("l1blocknumber") || lower.contains("l1block"))
-        && !lower.contains("// l1");  // Exclude comments
+    let has_l1_l2_refs =
+        (lower.contains("l1blocknumber") || lower.contains("l1block")) && !lower.contains("// l1"); // Exclude comments
 
     // Must have at least 2 strong indicators
     let indicator_count = [
@@ -2277,9 +2263,8 @@ pub fn is_simple_token(ctx: &AnalysisContext) -> bool {
         || lower.contains("function safetransfer(")
         || lower.contains("function safetransferfrom(");
 
-    let has_balance_tracking = lower.contains("balanceof")
-        || lower.contains("_balances")
-        || lower.contains("ownerof");
+    let has_balance_tracking =
+        lower.contains("balanceof") || lower.contains("_balances") || lower.contains("ownerof");
 
     // Check for token standards
     let is_token_standard = (has_token_interface || has_transfer) && has_balance_tracking;
@@ -2628,7 +2613,9 @@ pub fn is_deployment_tooling(ctx: &AnalysisContext) -> bool {
 
     // OpenZeppelin deployment infrastructure
     let is_oz_deployment = source.contains("@openzeppelin")
-        && (source.contains("Proxy") || source.contains("Upgradeable") || source.contains("Beacon"))
+        && (source.contains("Proxy")
+            || source.contains("Upgradeable")
+            || source.contains("Beacon"))
         && (lower.contains("deploy") || lower.contains("upgrade"));
 
     // Proxy factory/admin patterns
@@ -2803,7 +2790,9 @@ pub fn is_proxy_contract(ctx: &AnalysisContext) -> bool {
 
     // Only consider "implementation" if it's immutable or constructor-set (not settable)
     let has_immutable_impl = (lower.contains("immutable") && lower.contains("implementation"))
-        || (lower.contains("implementation") && !lower.contains("function") && lower.contains("constructor"));
+        || (lower.contains("implementation")
+            && !lower.contains("function")
+            && lower.contains("constructor"));
 
     // Check for proxy fallback pattern with delegatecall
     let has_proxy_fallback = (source.contains("fallback()")
@@ -2866,7 +2855,11 @@ pub fn is_interface_only(ctx: &AnalysisContext) -> bool {
 
     // Check for interface naming conventions
     let contract_name = &ctx.contract.name.name;
-    let has_interface_name = contract_name.starts_with('I') && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase())
+    let has_interface_name = contract_name.starts_with('I')
+        && contract_name
+            .chars()
+            .nth(1)
+            .map_or(false, |c| c.is_uppercase())
         || contract_name.ends_with("Interface")
         || contract_name.ends_with("Interfaces");
 
@@ -2886,7 +2879,8 @@ pub fn is_interface_only(ctx: &AnalysisContext) -> bool {
 
     // Check for absence of state-modifying code
     let no_state_changes = !source.contains(" = ")
-        || (source.matches(" = ").count() <= source.matches("constant").count() + source.matches("immutable").count());
+        || (source.matches(" = ").count()
+            <= source.matches("constant").count() + source.matches("immutable").count());
 
     // Check for only type definitions (structs, enums, events, errors)
     let has_type_defs = lower.contains("struct ")

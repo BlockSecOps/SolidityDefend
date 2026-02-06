@@ -203,20 +203,11 @@ impl Detector for UnexpectedEtherBalanceDetector {
                 (Severity::Medium, Confidence::Medium)
             };
 
-            let message = format!(
-                "Line {}: {}",
-                line_num, issue
-            );
+            let message = format!("Line {}: {}", line_num, issue);
 
             let mut finding = self
                 .base
-                .create_finding(
-                    ctx,
-                    message,
-                    line_num as u32,
-                    1,
-                    line.len() as u32,
-                )
+                .create_finding(ctx, message, line_num as u32, 1, line.len() as u32)
                 .with_swc("SWC-132")
                 .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
                 .with_confidence(confidence)

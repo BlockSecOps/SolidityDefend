@@ -2,8 +2,8 @@
 //!
 //! Recursively finds .sol files while respecting project configuration.
 
-use crate::config::ProjectConfig;
 use crate::ProjectError;
+use crate::config::ProjectConfig;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -225,7 +225,11 @@ mod tests {
         assert!(files.iter().any(|f| f.ends_with("Token.sol")));
         assert!(files.iter().any(|f| f.ends_with("Contract.t.sol")));
         // Library files should still be excluded
-        assert!(!files.iter().any(|f| f.to_string_lossy().contains("lib/forge-std")));
+        assert!(
+            !files
+                .iter()
+                .any(|f| f.to_string_lossy().contains("lib/forge-std"))
+        );
     }
 
     #[test]

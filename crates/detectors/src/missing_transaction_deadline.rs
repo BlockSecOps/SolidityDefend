@@ -65,24 +65,35 @@ impl MissingTransactionDeadlineDetector {
     }
 
     /// Checks if function is missing transaction deadline
-    fn has_missing_deadline(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_missing_deadline(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
 
         // Skip if function is internal/private
-        if function.visibility != ast::Visibility::Public && function.visibility != ast::Visibility::External {
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
             return None;
         }
 
         // Skip view/pure functions
-        if function.mutability == ast::StateMutability::View || function.mutability == ast::StateMutability::Pure {
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
             return None;
         }
 
         // Skip interface functions (no body) - only IERC20 standard functions
-        if (func_source.trim().is_empty() || !func_source.contains("{")) &&
-           (func_name_lower == "transfer" || func_name_lower == "transferfrom" ||
-            func_name_lower == "approve" || func_name_lower == "balanceof") {
+        if (func_source.trim().is_empty() || !func_source.contains("{"))
+            && (func_name_lower == "transfer"
+                || func_name_lower == "transferfrom"
+                || func_name_lower == "approve"
+                || func_name_lower == "balanceof")
+        {
             return None;
         }
 
@@ -97,7 +108,9 @@ impl MissingTransactionDeadlineDetector {
            !func_source.contains("rate") &&
            !func_source.contains("getAmount") &&
            !func_source.contains("*") &&  // No multiplication (conversion)
-           !func_source.contains("/") {   // No division (rate calculation)
+           !func_source.contains("/")
+        {
+            // No division (rate calculation)
             return None;
         }
 
@@ -107,9 +120,9 @@ impl MissingTransactionDeadlineDetector {
         }
 
         // Check for deadline protection
-        let has_deadline = self.has_deadline_parameter(function) ||
-                          self.has_deadline_validation(&func_source) ||
-                          self.has_expiration_check(&func_source);
+        let has_deadline = self.has_deadline_parameter(function)
+            || self.has_deadline_validation(&func_source)
+            || self.has_expiration_check(&func_source);
 
         if !has_deadline {
             let operation_type = self.get_operation_type(&func_name_lower);
@@ -117,8 +130,7 @@ impl MissingTransactionDeadlineDetector {
                 "Missing transaction deadline. {} operation '{}' has no deadline parameter \
                 or expiration validation. Transaction can be executed at any time, \
                 potentially at unfavorable conditions",
-                operation_type,
-                function.name.name
+                operation_type, function.name.name
             ));
         }
 
@@ -130,29 +142,27 @@ impl MissingTransactionDeadlineDetector {
     /// Simple withdraw/deposit/claim operations do NOT need deadlines
     fn is_time_sensitive(&self, source: &str, func_name: &str) -> bool {
         // DEX/Trading function names - THESE need deadlines
-        let is_trading_function =
-            func_name.contains("swap") ||
-            func_name.contains("trade") ||
-            func_name.contains("exchange") ||
-            func_name.contains("fill");  // Order fill
+        let is_trading_function = func_name.contains("swap")
+            || func_name.contains("trade")
+            || func_name.contains("exchange")
+            || func_name.contains("fill"); // Order fill
 
         // Buy/sell only if price-sensitive (DEX context)
         let is_price_sensitive_buy_sell = (func_name.contains("buy") || func_name.contains("sell"))
             && self.has_price_calculation(source);
 
         // Source contains DEX/trading operations
-        let source_indicates_trading =
-            source.contains(".swap(") ||
-            source.contains("IUniswap") ||
-            source.contains("IPancake") ||
-            source.contains("ICurve") ||
-            source.contains("IBalancer") ||
-            source.contains("getAmountOut") ||
-            source.contains("getAmountsOut") ||
-            source.contains("getAmountIn") ||
-            source.contains("amountOutMin") ||
-            source.contains("amountInMax") ||
-            source.contains("sqrtPriceLimit");
+        let source_indicates_trading = source.contains(".swap(")
+            || source.contains("IUniswap")
+            || source.contains("IPancake")
+            || source.contains("ICurve")
+            || source.contains("IBalancer")
+            || source.contains("getAmountOut")
+            || source.contains("getAmountsOut")
+            || source.contains("getAmountIn")
+            || source.contains("amountOutMin")
+            || source.contains("amountInMax")
+            || source.contains("sqrtPriceLimit");
 
         // Liquidation functions need deadlines (price-dependent)
         let is_liquidation = func_name.contains("liquidat")
@@ -184,7 +194,7 @@ impl MissingTransactionDeadlineDetector {
             || source.contains("oracle")
             || source.contains("quoter")
             || source.contains("sqrt")
-            || source.contains("k = ")  // x * y = k AMM
+            || source.contains("k = ") // x * y = k AMM
     }
 
     /// Checks if function has deadline parameter
@@ -192,11 +202,11 @@ impl MissingTransactionDeadlineDetector {
         function.parameters.iter().any(|param| {
             if let Some(name) = &param.name {
                 let name_lower = name.name.to_lowercase();
-                name_lower.contains("deadline") ||
-                name_lower.contains("expiry") ||
-                name_lower.contains("expiration") ||
-                name_lower.contains("timeout") ||
-                name_lower.contains("validuntil")
+                name_lower.contains("deadline")
+                    || name_lower.contains("expiry")
+                    || name_lower.contains("expiration")
+                    || name_lower.contains("timeout")
+                    || name_lower.contains("validuntil")
             } else {
                 false
             }
@@ -216,23 +226,34 @@ impl MissingTransactionDeadlineDetector {
 
     /// Checks for expiration validation (for orders/positions)
     fn has_expiration_check(&self, source: &str) -> bool {
-        (source.contains("expiration") || source.contains("expiry") || source.contains("expiresAt")) &&
-        source.contains("block.timestamp") &&
-        (source.contains("require") || source.contains("<=") || source.contains("<"))
+        (source.contains("expiration") || source.contains("expiry") || source.contains("expiresAt"))
+            && source.contains("block.timestamp")
+            && (source.contains("require") || source.contains("<=") || source.contains("<"))
     }
 
     /// Gets operation type for error message
     fn get_operation_type(&self, func_name: &str) -> &str {
-        if func_name.contains("swap") { "Swap" }
-        else if func_name.contains("trade") { "Trade" }
-        else if func_name.contains("exchange") { "Exchange" }
-        else if func_name.contains("buy") || func_name.contains("sell") { "Purchase/Sale" }
-        else if func_name.contains("execute") || func_name.contains("fill") { "Order execution" }
-        else if func_name.contains("redeem") { "Redemption" }
-        else if func_name.contains("withdraw") { "Withdrawal" }
-        else if func_name.contains("liquidate") { "Liquidation" }
-        else if func_name.contains("claim") { "Claim" }
-        else { "Time-sensitive" }
+        if func_name.contains("swap") {
+            "Swap"
+        } else if func_name.contains("trade") {
+            "Trade"
+        } else if func_name.contains("exchange") {
+            "Exchange"
+        } else if func_name.contains("buy") || func_name.contains("sell") {
+            "Purchase/Sale"
+        } else if func_name.contains("execute") || func_name.contains("fill") {
+            "Order execution"
+        } else if func_name.contains("redeem") {
+            "Redemption"
+        } else if func_name.contains("withdraw") {
+            "Withdrawal"
+        } else if func_name.contains("liquidate") {
+            "Liquidation"
+        } else if func_name.contains("claim") {
+            "Claim"
+        } else {
+            "Time-sensitive"
+        }
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

@@ -46,12 +46,19 @@ impl DosUnboundedStorageDetector {
             }
 
             // Detect array state variable declarations
-            if trimmed.contains("[]") && !trimmed.contains("memory") && !trimmed.contains("calldata")
-                && (trimmed.contains("public") || trimmed.contains("private") || trimmed.contains("internal"))
+            if trimmed.contains("[]")
+                && !trimmed.contains("memory")
+                && !trimmed.contains("calldata")
+                && (trimmed.contains("public")
+                    || trimmed.contains("private")
+                    || trimmed.contains("internal"))
             {
                 // Check if it's a state variable (contains type + visibility)
-                if trimmed.contains("address") || trimmed.contains("uint") || trimmed.contains("bytes")
-                    || trimmed.contains("string") || trimmed.contains("struct")
+                if trimmed.contains("address")
+                    || trimmed.contains("uint")
+                    || trimmed.contains("bytes")
+                    || trimmed.contains("string")
+                    || trimmed.contains("struct")
                 {
                     if let Some(var_name) = self.extract_variable_name(trimmed) {
                         // Check if there's a max length check when pushing
@@ -146,8 +153,10 @@ impl DosUnboundedStorageDetector {
                 }
 
                 // Check for nested mapping writes
-                if func_body.contains("][") && func_body.contains("=")
-                    && !func_body.contains("require") && !func_body.contains("onlyOwner")
+                if func_body.contains("][")
+                    && func_body.contains("=")
+                    && !func_body.contains("require")
+                    && !func_body.contains("onlyOwner")
                 {
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -185,13 +194,17 @@ impl DosUnboundedStorageDetector {
 
     fn extract_variable_name(&self, line: &str) -> Option<String> {
         // Extract variable name from declaration
-        let parts: Vec<&str> = line.split(|c: char| c.is_whitespace() || c == ';').collect();
+        let parts: Vec<&str> = line
+            .split(|c: char| c.is_whitespace() || c == ';')
+            .collect();
 
         for (i, part) in parts.iter().enumerate() {
-            if part.contains("[]") || *part == "public" || *part == "private" || *part == "internal" {
+            if part.contains("[]") || *part == "public" || *part == "private" || *part == "internal"
+            {
                 // Look for the identifier (usually after [] or visibility)
-                if i + 1 < parts.len() && !parts[i + 1].is_empty()
-                   && !["public", "private", "internal", "=", ";"].contains(&parts[i + 1])
+                if i + 1 < parts.len()
+                    && !parts[i + 1].is_empty()
+                    && !["public", "private", "internal", "=", ";"].contains(&parts[i + 1])
                 {
                     return Some(parts[i + 1].trim_matches(';').to_string());
                 }
@@ -387,7 +400,7 @@ impl Detector for DosUnboundedStorageDetector {
                          userItems[msg.sender].length < MAX_ITEMS_PER_USER,\n\
                          \"Max items reached\"\n\
                      );"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

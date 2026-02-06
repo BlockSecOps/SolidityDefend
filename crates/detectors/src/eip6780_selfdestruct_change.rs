@@ -118,7 +118,8 @@ impl Eip6780SelfdestructChangeDetector {
                 };
                 if lines_after.contains("// code will be deleted")
                     || lines_after.contains("// contract destroyed")
-                    || source.contains("extcodesize") // Checking if code exists
+                    || source.contains("extcodesize")
+                // Checking if code exists
                 {
                     findings.push((
                         line_num as u32 + 1,

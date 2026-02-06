@@ -1,3 +1,4 @@
+use detectors::allowance_toctou::AllowanceToctouDetector;
 /**
  * Integration tests for Phase 2 Front-Running Detectors
  *
@@ -6,12 +7,10 @@
  * 2. token-transfer-frontrun
  * 3. allowance-toctou
  */
-
 use detectors::detector::{Detector, DetectorCategory};
 use detectors::erc20_approve_race::Erc20ApproveRaceDetector;
 use detectors::token_transfer_frontrun::TokenTransferFrontrunDetector;
-use detectors::allowance_toctou::AllowanceToctouDetector;
-use detectors::types::{Severity, DetectorId};
+use detectors::types::{DetectorId, Severity};
 use std::path::PathBuf;
 
 /// Helper function to get test contract path
@@ -98,9 +97,9 @@ fn test_detector_categories_unique() {
 
     // All should have MEV or DeFi category (front-running related)
     assert!(
-        cats1.contains(&DetectorCategory::DeFi) ||
-        cats2.contains(&DetectorCategory::MEV) ||
-        cats3.contains(&DetectorCategory::MEV)
+        cats1.contains(&DetectorCategory::DeFi)
+            || cats2.contains(&DetectorCategory::MEV)
+            || cats3.contains(&DetectorCategory::MEV)
     );
 }
 
@@ -242,24 +241,24 @@ mod coverage {
         let d2 = TokenTransferFrontrunDetector::new();
         let d3 = AllowanceToctouDetector::new();
 
-        let all_categories = vec![
-            d1.categories(),
-            d2.categories(),
-            d3.categories(),
-        ];
+        let all_categories = vec![d1.categories(), d2.categories(), d3.categories()];
 
         // At least one should have MEV category
-        let has_mev = all_categories.iter().any(|cats| {
-            cats.contains(&DetectorCategory::MEV)
-        });
+        let has_mev = all_categories
+            .iter()
+            .any(|cats| cats.contains(&DetectorCategory::MEV));
 
         // At least two should have DeFi category
-        let defi_count = all_categories.iter().filter(|cats| {
-            cats.contains(&DetectorCategory::DeFi)
-        }).count();
+        let defi_count = all_categories
+            .iter()
+            .filter(|cats| cats.contains(&DetectorCategory::DeFi))
+            .count();
 
         assert!(has_mev, "At least one detector should have MEV category");
-        assert!(defi_count >= 2, "At least two detectors should have DeFi category");
+        assert!(
+            defi_count >= 2,
+            "At least two detectors should have DeFi category"
+        );
     }
 }
 
@@ -311,8 +310,11 @@ mod performance {
         let elapsed = start.elapsed();
 
         // 1000 iterations of 3 detectors should complete in < 100ms
-        assert!(elapsed.as_millis() < 100,
-                "Detector creation too slow: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 100,
+            "Detector creation too slow: {:?}",
+            elapsed
+        );
     }
 
     #[test]
@@ -339,7 +341,10 @@ mod performance {
         let elapsed = start.elapsed();
 
         // 10000 iterations should complete in < 10ms
-        assert!(elapsed.as_millis() < 10,
-                "Metadata access too slow: {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() < 10,
+            "Metadata access too slow: {:?}",
+            elapsed
+        );
     }
 }

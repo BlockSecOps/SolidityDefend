@@ -42,7 +42,10 @@ impl FallbackFunctionShadowingDetector {
                 DetectorId("fallback-function-shadowing".to_string()),
                 "Fallback Function Shadowing".to_string(),
                 "Detects when proxy functions shadow implementation functions".to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::Upgradeable],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::Upgradeable,
+                ],
                 Severity::Medium,
             ),
         }
@@ -72,7 +75,11 @@ impl FallbackFunctionShadowingDetector {
     }
 
     /// Check if function could shadow implementation functions
-    fn has_shadowing_risk(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_shadowing_risk(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let func_name = function.name.name.to_lowercase();
         let source = self.get_function_source(function, ctx);
 
@@ -84,11 +91,21 @@ impl FallbackFunctionShadowingDetector {
 
         // Check for common proxy admin functions that might shadow implementation
         let risky_function_names = [
-            "upgrade", "upgradeto", "setimplementation", "changeimplementation",
-            "transferownership", "changeowner", "setowner",
-            "pause", "unpause",
-            "initialize", "init",
-            "getadmin", "getowner", "getimplementation", "getversion",
+            "upgrade",
+            "upgradeto",
+            "setimplementation",
+            "changeimplementation",
+            "transferownership",
+            "changeowner",
+            "setowner",
+            "pause",
+            "unpause",
+            "initialize",
+            "init",
+            "getadmin",
+            "getowner",
+            "getimplementation",
+            "getversion",
         ];
 
         for risky_name in &risky_function_names {
@@ -110,18 +127,29 @@ impl FallbackFunctionShadowingDetector {
     }
 
     /// Check if fallback function has hardcoded selector checks
-    fn has_hardcoded_selectors(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_hardcoded_selectors(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let source = self.get_function_source(function, ctx);
 
         // Check if fallback/receive function
-        if !matches!(function.function_type, ast::FunctionType::Fallback | ast::FunctionType::Receive) {
+        if !matches!(
+            function.function_type,
+            ast::FunctionType::Fallback | ast::FunctionType::Receive
+        ) {
             return None;
         }
 
         // Look for hardcoded selector checks
-        if source.contains("msg.sig ==") || source.contains("msg.sig!=") || source.contains("selector ==") {
+        if source.contains("msg.sig ==")
+            || source.contains("msg.sig!=")
+            || source.contains("selector ==")
+        {
             // Check if there are multiple selector checks (likely routing logic)
-            let selector_checks = source.matches("msg.sig").count() + source.matches("selector ==").count();
+            let selector_checks =
+                source.matches("msg.sig").count() + source.matches("selector ==").count();
             if selector_checks > 0 {
                 return Some(
                     "Fallback function has hardcoded selector checks. This can shadow implementation functions. \
@@ -199,7 +227,8 @@ impl FallbackFunctionShadowingDetector {
         if has_receive && has_fallback_with_delegatecall && self.is_proxy_contract(ctx) {
             return Some(
                 "Proxy defines receive() function which shadows implementation's receive logic. \
-                Consider delegating receive to implementation or documenting why proxy handles ETH".to_string()
+                Consider delegating receive to implementation or documenting why proxy handles ETH"
+                    .to_string(),
             );
         }
 
@@ -253,7 +282,8 @@ impl Detector for FallbackFunctionShadowingDetector {
                 ctx.contract.name.name, issue
             );
 
-            let finding = self.base
+            let finding = self
+                .base
                 .create_finding(
                     ctx,
                     message,
@@ -276,7 +306,8 @@ impl Detector for FallbackFunctionShadowingDetector {
                     function.name.name, risk_description
                 );
 
-                let finding = self.base
+                let finding = self
+                    .base
                     .create_finding(
                         ctx,
                         message,
@@ -296,7 +327,8 @@ impl Detector for FallbackFunctionShadowingDetector {
                     function.name.name, selector_issue
                 );
 
-                let finding = self.base
+                let finding = self
+                    .base
                     .create_finding(
                         ctx,
                         message,

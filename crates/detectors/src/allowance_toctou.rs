@@ -62,44 +62,50 @@ impl AllowanceToctouDetector {
     }
 
     /// Checks if function has allowance TOCTOU vulnerability
-    fn has_allowance_toctou(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_allowance_toctou(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
 
         // Skip if function is internal/private
-        if function.visibility != ast::Visibility::Public && function.visibility != ast::Visibility::External {
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
             return None;
         }
 
         // Check for allowance() calls
-        let has_allowance_check = func_source.contains("allowance(") ||
-                                   func_source.contains(".allowance(");
+        let has_allowance_check =
+            func_source.contains("allowance(") || func_source.contains(".allowance(");
 
         if !has_allowance_check {
             return None;
         }
 
         // Check for transferFrom (allowance usage)
-        let has_transfer_from = func_source.contains("transferFrom(") ||
-                                func_source.contains(".transferFrom(");
+        let has_transfer_from =
+            func_source.contains("transferFrom(") || func_source.contains(".transferFrom(");
 
         // Check for state-changing operations between check and use
-        let has_external_call = func_source.contains(".call(") ||
-                                 func_source.contains(".delegatecall(") ||
-                                 func_source.contains("external") && func_source.contains("()");
+        let has_external_call = func_source.contains(".call(")
+            || func_source.contains(".delegatecall(")
+            || func_source.contains("external") && func_source.contains("()");
 
         // Check for multi-step operations
-        let is_multi_step = func_name_lower.contains("batch") ||
-                            func_name_lower.contains("multi") ||
-                            func_name_lower.contains("claim") ||
-                            func_name_lower.contains("process") ||
-                            func_source.contains("for ") ||
-                            func_source.contains("while ");
+        let is_multi_step = func_name_lower.contains("batch")
+            || func_name_lower.contains("multi")
+            || func_name_lower.contains("claim")
+            || func_name_lower.contains("process")
+            || func_source.contains("for ")
+            || func_source.contains("while ");
 
         // Check for conditional logic based on allowance
-        let has_allowance_conditional =
-            (func_source.contains("if") || func_source.contains("require")) &&
-            func_source.contains("allowance");
+        let has_allowance_conditional = (func_source.contains("if")
+            || func_source.contains("require"))
+            && func_source.contains("allowance");
 
         // Check for revalidation first (applies to all patterns with transferFrom)
         let has_revalidation = if has_transfer_from {
@@ -120,9 +126,9 @@ impl AllowanceToctouDetector {
         // Pattern 2: Allowance-based conditional with external calls
         // Skip if has revalidation or reentrancy protection
         if has_allowance_conditional && has_external_call && !has_revalidation {
-            let has_reentrancy_guard = func_source.contains("nonReentrant") ||
-                                        func_source.contains("locked") ||
-                                        func_source.contains("reentrancy");
+            let has_reentrancy_guard = func_source.contains("nonReentrant")
+                || func_source.contains("locked")
+                || func_source.contains("reentrancy");
 
             if !has_reentrancy_guard {
                 return Some(format!(
@@ -135,8 +141,12 @@ impl AllowanceToctouDetector {
 
         // Pattern 3: Multi-step operation relying on allowance
         // Only flag if no revalidation AND no lock mechanism
-        if has_allowance_check && is_multi_step && !has_revalidation &&
-           !self.has_allowance_lock(&func_source) && has_transfer_from {
+        if has_allowance_check
+            && is_multi_step
+            && !has_revalidation
+            && !self.has_allowance_lock(&func_source)
+            && has_transfer_from
+        {
             return Some(format!(
                 "Allowance TOCTOU in multi-step operation. Function '{}' performs multiple \
                 operations based on allowance without locking it. Race condition possible",
@@ -147,14 +157,16 @@ impl AllowanceToctouDetector {
         // Pattern 4: Allowance check without immediate use
         if has_allowance_check && !has_transfer_from && !self.is_view_function(function) {
             // This might be storing allowance for later use
-            let stores_allowance = func_source.contains("allowance") &&
-                                   (func_source.contains("=") || func_source.contains("storage"));
+            let stores_allowance = func_source.contains("allowance")
+                && (func_source.contains("=") || func_source.contains("storage"));
 
             // Skip if this is creating a lock structure (valid pattern)
-            let is_creating_lock = (func_name_lower.contains("create") || func_name_lower.contains("lock") ||
-                                    func_name_lower.contains("snapshot")) &&
-                                   (func_source.contains("Lock") || func_source.contains("lock") ||
-                                    func_source.contains("Snapshot"));
+            let is_creating_lock = (func_name_lower.contains("create")
+                || func_name_lower.contains("lock")
+                || func_name_lower.contains("snapshot"))
+                && (func_source.contains("Lock")
+                    || func_source.contains("lock")
+                    || func_source.contains("Snapshot"));
 
             if stores_allowance && !is_creating_lock {
                 return Some(format!(
@@ -212,16 +224,16 @@ impl AllowanceToctouDetector {
     /// Checks if function implements allowance locking mechanism
     fn has_allowance_lock(&self, source: &str) -> bool {
         // Look for patterns that lock allowance during execution
-        source.contains("lock") ||
-        source.contains("snapshot") ||
-        source.contains("freeze") ||
-        (source.contains("nonReentrant") && source.contains("allowance"))
+        source.contains("lock")
+            || source.contains("snapshot")
+            || source.contains("freeze")
+            || (source.contains("nonReentrant") && source.contains("allowance"))
     }
 
     /// Checks if function is view/pure (read-only)
     fn is_view_function(&self, function: &ast::Function<'_>) -> bool {
-        function.mutability == ast::StateMutability::View ||
-        function.mutability == ast::StateMutability::Pure
+        function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {

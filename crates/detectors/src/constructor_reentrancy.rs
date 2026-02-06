@@ -129,10 +129,7 @@ impl ConstructorReentrancyDetector {
                     // Check for state modifications after external call
                     if found_call && i > call_line {
                         if cline.contains(" = ") && !cline.contains("==") {
-                            findings.push((
-                                (line_num + i) as u32 + 1,
-                                "constructor".to_string(),
-                            ));
+                            findings.push(((line_num + i) as u32 + 1, "constructor".to_string()));
                             break;
                         }
                     }
@@ -296,7 +293,7 @@ impl Detector for ConstructorReentrancyDetector {
                          // 2. External calls last\n\
                          token.transfer(...);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -444,10 +441,6 @@ mod tests {
         "#;
 
         let findings = detector.find_constructor_external_calls(source);
-        assert_eq!(
-            findings.len(),
-            1,
-            "Low-level .call() should be flagged"
-        );
+        assert_eq!(findings.len(), 1, "Low-level .call() should be flagged");
     }
 }

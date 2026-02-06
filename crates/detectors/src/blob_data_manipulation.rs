@@ -27,10 +27,7 @@ impl BlobDataManipulationDetector {
                 "Detects EIP-4844 blob data vulnerabilities including missing KZG \
                  verification, improper blob lifecycle handling, and data tampering risks."
                     .to_string(),
-                vec![
-                    DetectorCategory::L2,
-                    DetectorCategory::DataAvailability,
-                ],
+                vec![DetectorCategory::L2, DetectorCategory::DataAvailability],
                 Severity::High,
             ),
         }

@@ -22,11 +22,11 @@ pub mod circular_dependency;
 pub mod confidence;
 pub mod cross_chain_replay;
 pub mod dangerous_delegatecall;
+pub mod deadline_manipulation;
 pub mod delegatecall_in_constructor;
 pub mod delegatecall_return_ignored;
 pub mod delegatecall_untrusted_library;
 pub mod delegatecall_user_controlled;
-pub mod deadline_manipulation;
 pub mod delegation_loop;
 pub mod deprecated_functions;
 pub mod dos_failed_transfer;
@@ -50,12 +50,15 @@ pub mod liquidity_bootstrapping_abuse;
 pub mod logic;
 pub mod mev;
 pub mod mev_extractable_value;
+pub mod missing_eip712_domain;
 pub mod missing_input_validation;
 pub mod nonce_reuse;
 pub mod oracle;
 pub mod oracle_manipulation;
 pub mod price_impact_manipulation;
 pub mod price_oracle_stale;
+pub mod proxy_storage_collision;
+pub mod proxy_upgrade_unprotected;
 pub mod redundant_checks;
 pub mod reentrancy;
 pub mod reward_calculation;
@@ -64,7 +67,6 @@ pub mod selfdestruct_abuse;
 pub mod shadowing_variables;
 pub mod short_address;
 pub mod signature_malleability;
-pub mod missing_eip712_domain;
 pub mod slashing_mechanism;
 pub mod slippage_protection;
 pub mod storage_collision;
@@ -75,8 +77,6 @@ pub mod unchecked_math;
 pub mod uninitialized_storage;
 pub mod unsafe_type_casting;
 pub mod upgradeable_proxy_issues;
-pub mod proxy_upgrade_unprotected;
-pub mod proxy_storage_collision;
 pub mod validation;
 pub mod validator_front_running;
 pub mod validator_griefing;
@@ -145,14 +145,14 @@ pub mod defi_liquidity_pool_manipulation;
 pub mod defi_yield_farming;
 
 // Phase 17: Token Standard Edge Cases (2025)
-pub mod erc20_approve_race;
-pub mod token_transfer_frontrun;
 pub mod allowance_toctou;
-pub mod price_manipulation_frontrun;
-pub mod missing_transaction_deadline;
+pub mod erc20_approve_race;
 pub mod erc20_infinite_approval;
 pub mod erc721_callback_reentrancy;
 pub mod erc777_reentrancy_hooks;
+pub mod missing_transaction_deadline;
+pub mod price_manipulation_frontrun;
+pub mod token_transfer_frontrun;
 
 // Phase 18: DeFi Protocol-Specific (2025)
 pub mod amm_k_invariant_violation;
@@ -230,120 +230,120 @@ pub mod uups_missing_disable_initializers;
 pub mod uups_upgrade_unsafe;
 
 // Phase 42: Advanced Proxy Security & Vulnerability Patterns (v1.7.0 - 2026)
-pub mod reinitializer_vulnerability;
-pub mod storage_layout_inheritance_shift;
 pub mod beacon_single_point_of_failure;
 pub mod clones_immutable_args_bypass;
-pub mod upgrade_abi_incompatibility;
-pub mod diamond_facet_code_existence;
-pub mod proxy_context_visibility_mismatch;
-pub mod upgrade_event_missing;
-pub mod delegatecall_in_loop;
-pub mod fallback_delegatecall_pattern;
-pub mod unchecked_send_return;
-pub mod transaction_ordering_dependence;
-pub mod l2_sequencer_dependency;
 pub mod cross_chain_replay_protection;
+pub mod delegatecall_in_loop;
+pub mod diamond_facet_code_existence;
+pub mod fallback_delegatecall_pattern;
+pub mod l2_sequencer_dependency;
+pub mod proxy_context_visibility_mismatch;
+pub mod reinitializer_vulnerability;
+pub mod storage_layout_inheritance_shift;
+pub mod transaction_ordering_dependence;
+pub mod unchecked_send_return;
+pub mod upgrade_abi_incompatibility;
+pub mod upgrade_event_missing;
 
 // Phase 43: EIP-7702 & EIP-1153 New Standards (v1.8.0 - 2026)
-pub mod eip7702_delegation_phishing;
-pub mod eip7702_storage_corruption;
-pub mod eip7702_sweeper_attack;
-pub mod eip7702_authorization_bypass;
-pub mod eip7702_replay_vulnerability;
-pub mod eip1153_transient_reentrancy;
-pub mod eip1153_cross_tx_assumption;
 pub mod eip1153_callback_manipulation;
 pub mod eip1153_composability_risk;
+pub mod eip1153_cross_tx_assumption;
 pub mod eip1153_guard_bypass;
+pub mod eip1153_transient_reentrancy;
+pub mod eip7702_authorization_bypass;
+pub mod eip7702_delegation_phishing;
+pub mod eip7702_replay_vulnerability;
+pub mod eip7702_storage_corruption;
+pub mod eip7702_sweeper_attack;
 
 // Phase 51: EIP-3074 & Future Standards
-pub mod eip3074_upgradeable_invoker;
-pub mod eip3074_commit_validation;
-pub mod eip3074_replay_attack;
 pub mod eip3074_call_depth_griefing;
+pub mod eip3074_commit_validation;
 pub mod eip3074_invoker_authorization;
+pub mod eip3074_replay_attack;
+pub mod eip3074_upgradeable_invoker;
 pub mod eip4844_blob_validation;
 pub mod eip6780_selfdestruct_change;
 pub mod push0_stack_assumption;
 
 // Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
-pub mod sandwich_conditional_swap;
-pub mod jit_liquidity_extraction;
 pub mod backrunning_opportunity;
 pub mod bundle_inclusion_leak;
-pub mod order_flow_auction_abuse;
-pub mod encrypted_mempool_timing;
 pub mod cross_domain_mev;
-pub mod liquidation_mev;
-pub mod oracle_update_mev;
+pub mod encrypted_mempool_timing;
 pub mod governance_proposal_mev;
-pub mod token_launch_mev;
+pub mod jit_liquidity_extraction;
+pub mod liquidation_mev;
 pub mod nft_mint_mev;
+pub mod oracle_update_mev;
+pub mod order_flow_auction_abuse;
+pub mod sandwich_conditional_swap;
+pub mod token_launch_mev;
 
 // Phase 45: Metamorphic & CREATE2 Patterns (v1.8.2 - 2026)
-pub mod metamorphic_contract_risk;
-pub mod create2_salt_frontrunning;
-pub mod create2_address_collision;
-pub mod extcodesize_check_bypass;
-pub mod selfdestruct_recipient_control;
-pub mod contract_recreation_attack;
 pub mod constructor_reentrancy;
+pub mod contract_recreation_attack;
+pub mod create2_address_collision;
+pub mod create2_salt_frontrunning;
+pub mod extcodesize_check_bypass;
 pub mod initcode_injection;
+pub mod metamorphic_contract_risk;
+pub mod selfdestruct_recipient_control;
 
 // Phase 46: Callback Chains & Multicall (v1.8.3 - 2026)
-pub mod nested_callback_reentrancy;
+pub mod batch_cross_function_reentrancy;
 pub mod callback_in_callback_loop;
+pub mod compound_callback_chain;
+pub mod erc1155_callback_reentrancy;
+pub mod erc721_safemint_callback;
+pub mod flash_callback_manipulation;
 pub mod multicall_msgvalue_reuse;
 pub mod multicall_partial_revert;
-pub mod batch_cross_function_reentrancy;
-pub mod flash_callback_manipulation;
-pub mod erc721_safemint_callback;
-pub mod erc1155_callback_reentrancy;
+pub mod nested_callback_reentrancy;
 pub mod uniswap_v4_hook_callback;
-pub mod compound_callback_chain;
 
 // Phase 47: Governance & Access Control (v1.8.4 - 2026)
-pub mod governance_parameter_bypass;
-pub mod voting_snapshot_manipulation;
-pub mod quorum_calculation_overflow;
-pub mod proposal_frontrunning;
-pub mod governor_refund_drain;
-pub mod timelock_bypass_delegatecall;
-pub mod role_escalation_upgrade;
 pub mod accesscontrol_race_condition;
-pub mod operator_whitelist_inheritance;
 pub mod cross_contract_role_confusion;
+pub mod governance_parameter_bypass;
+pub mod governor_refund_drain;
+pub mod operator_whitelist_inheritance;
+pub mod proposal_frontrunning;
+pub mod quorum_calculation_overflow;
+pub mod role_escalation_upgrade;
+pub mod timelock_bypass_delegatecall;
+pub mod voting_snapshot_manipulation;
 
 // Phase 48: L2/Rollup & Cross-Chain Advanced (v1.8.5 - 2026)
-pub mod sequencer_fee_exploitation;
-pub mod escape_hatch_dependency;
-pub mod cross_l2_frontrunning;
-pub mod optimistic_inference_attack;
-pub mod l2_mev_sequencer_leak;
-pub mod da_sampling_attack;
+pub mod blob_data_manipulation;
 pub mod bridge_merkle_bypass;
 pub mod challenge_period_bypass;
+pub mod cross_l2_frontrunning;
 pub mod cross_rollup_state_mismatch;
-pub mod blob_data_manipulation;
+pub mod da_sampling_attack;
+pub mod escape_hatch_dependency;
+pub mod l2_mev_sequencer_leak;
+pub mod optimistic_inference_attack;
+pub mod sequencer_fee_exploitation;
 
 // Phase 49: Weak Randomness & DoS Expansion (v1.8.6 - 2026)
 pub mod blockhash_randomness;
-pub mod multi_block_randomness;
-pub mod modulo_block_variable;
 pub mod chainlink_vrf_misuse;
 pub mod commit_reveal_timing;
-pub mod dos_push_pattern;
-pub mod dos_unbounded_storage;
-pub mod dos_external_call_loop;
 pub mod dos_block_gas_limit;
+pub mod dos_external_call_loop;
+pub mod dos_push_pattern;
 pub mod dos_revert_bomb;
+pub mod dos_unbounded_storage;
+pub mod modulo_block_variable;
+pub mod multi_block_randomness;
 
 // Phase 50: Diamond Proxy & Advanced Upgrades (v1.9.0 - 2026)
-pub mod diamond_init_frontrunning;
-pub mod proxy_gap_underflow;
-pub mod proxy_double_initialize;
 pub mod delegatecall_to_self;
+pub mod diamond_init_frontrunning;
+pub mod proxy_double_initialize;
+pub mod proxy_gap_underflow;
 
 // DeFi-specific detectors
 pub mod defi;

@@ -76,9 +76,9 @@ impl Detector for PrivateVariableExposureDetector {
             "credential",
             "passphrase",
             "pin",
-            "apikey",      // More specific than "key"
-            "privatekey",  // More specific than "private" or "key"
-            "secretkey",   // More specific than "secret" or "key"
+            "apikey",     // More specific than "key"
+            "privatekey", // More specific than "private" or "key"
+            "secretkey",  // More specific than "secret" or "key"
         ];
 
         for (line_num, line) in lines.iter().enumerate() {

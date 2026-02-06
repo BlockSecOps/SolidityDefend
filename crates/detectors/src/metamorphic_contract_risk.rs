@@ -39,8 +39,7 @@ impl MetamorphicContractRiskDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         let has_create2 = source.contains("create2") || source.contains("CREATE2");
-        let has_selfdestruct =
-            source.contains("selfdestruct") || source.contains("SELFDESTRUCT");
+        let has_selfdestruct = source.contains("selfdestruct") || source.contains("SELFDESTRUCT");
 
         if has_create2 && has_selfdestruct {
             for (line_num, line) in lines.iter().enumerate() {

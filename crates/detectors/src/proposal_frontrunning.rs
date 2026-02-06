@@ -93,9 +93,7 @@ impl ProposalFrontrunningDetector {
                     || context.contains("chainlink")
                     || context.contains("VRF");
 
-                if !has_randomness
-                    && !context.contains("msg.sender")
-                    && !context.contains("nonce")
+                if !has_randomness && !context.contains("msg.sender") && !context.contains("nonce")
                 {
                     let func_name = self.find_containing_function(&lines, line_num);
                     findings.push((line_num as u32 + 1, func_name));

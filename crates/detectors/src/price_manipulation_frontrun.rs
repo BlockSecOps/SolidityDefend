@@ -65,19 +65,29 @@ impl PriceManipulationFrontrunDetector {
     }
 
     /// Checks if function has price manipulation vulnerability
-    fn has_price_manipulation(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> Option<String> {
+    fn has_price_manipulation(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
         let func_source = self.get_function_source(function, ctx);
         let func_name_lower = function.name.name.to_lowercase();
 
         // Skip if function is internal/private
-        if function.visibility != ast::Visibility::Public && function.visibility != ast::Visibility::External {
+        if function.visibility != ast::Visibility::Public
+            && function.visibility != ast::Visibility::External
+        {
             return None;
         }
 
         // Skip ALL view/pure getter functions - they're read-only and implement price logic
-        if (function.mutability == ast::StateMutability::View || function.mutability == ast::StateMutability::Pure) &&
-           (func_name_lower.starts_with("get") || func_name_lower.starts_with("calculate") ||
-            func_name_lower.starts_with("median") || func_name_lower.starts_with("twap")) {
+        if (function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure)
+            && (func_name_lower.starts_with("get")
+                || func_name_lower.starts_with("calculate")
+                || func_name_lower.starts_with("median")
+                || func_name_lower.starts_with("twap"))
+        {
             return None;
         }
 
@@ -112,11 +122,12 @@ impl PriceManipulationFrontrunDetector {
         // Pattern 1: Spot price from AMM without TWAP or alternative protections
         // Phase 5 FP Reduction: Require actual trading context for spot price warnings
         let is_trading = self.is_trading_context(&func_source, &func_name_lower);
-        if self.uses_spot_price(&func_source) &&
-           !self.has_twap_protection(&func_source) &&
-           !self.has_price_bounds(&func_source) &&
-           !self.has_circuit_breaker(&func_source) &&
-           is_trading {
+        if self.uses_spot_price(&func_source)
+            && !self.has_twap_protection(&func_source)
+            && !self.has_price_bounds(&func_source)
+            && !self.has_circuit_breaker(&func_source)
+            && is_trading
+        {
             return Some(format!(
                 "Uses manipulable spot price from AMM. Function '{}' relies on spot price \
                 (getAmountOut, getReserves) without TWAP protection. \
@@ -136,12 +147,13 @@ impl PriceManipulationFrontrunDetector {
 
         // Pattern 3: External price oracle without staleness check or alternative protections
         // Allow deviation bounds, multiple oracles, circuit breakers, or price bounds as alternatives
-        if self.uses_external_oracle(&func_source) &&
-           !self.has_staleness_check(&func_source) &&
-           !self.has_deviation_check(&func_source) &&
-           !self.uses_multiple_oracles(&func_source) &&
-           !self.has_circuit_breaker(&func_source) &&
-           !self.has_price_bounds(&func_source) {
+        if self.uses_external_oracle(&func_source)
+            && !self.has_staleness_check(&func_source)
+            && !self.has_deviation_check(&func_source)
+            && !self.uses_multiple_oracles(&func_source)
+            && !self.has_circuit_breaker(&func_source)
+            && !self.has_price_bounds(&func_source)
+        {
             return Some(format!(
                 "Price oracle without staleness check. Function '{}' uses external price \
                 oracle but doesn't validate timestamp/staleness. Stale prices enable arbitrage",
@@ -151,12 +163,13 @@ impl PriceManipulationFrontrunDetector {
 
         // Pattern 4: No price deviation bounds or alternative protections
         // Allow staleness checks, multiple oracles, circuit breakers, or price bounds as alternatives
-        if self.uses_price_feed(&func_source) &&
-           !self.has_deviation_check(&func_source) &&
-           !self.has_staleness_check(&func_source) &&
-           !self.uses_multiple_oracles(&func_source) &&
-           !self.has_circuit_breaker(&func_source) &&
-           !self.has_price_bounds(&func_source) {
+        if self.uses_price_feed(&func_source)
+            && !self.has_deviation_check(&func_source)
+            && !self.has_staleness_check(&func_source)
+            && !self.uses_multiple_oracles(&func_source)
+            && !self.has_circuit_breaker(&func_source)
+            && !self.has_price_bounds(&func_source)
+        {
             return Some(format!(
                 "Missing price deviation bounds. Function '{}' accepts prices without \
                 validating reasonable deviation limits. Extreme price moves can be exploited",
@@ -165,8 +178,9 @@ impl PriceManipulationFrontrunDetector {
         }
 
         // Pattern 5: Large value operation without price impact check
-        if self.is_large_value_operation(&func_source, &func_name_lower) &&
-           !self.has_price_impact_check(&func_source) {
+        if self.is_large_value_operation(&func_source, &func_name_lower)
+            && !self.has_price_impact_check(&func_source)
+        {
             return Some(format!(
                 "Large value operation without price impact check. Function '{}' performs \
                 significant value operations that can manipulate prices without validation",
@@ -179,24 +193,24 @@ impl PriceManipulationFrontrunDetector {
 
     /// Checks if function is price-dependent
     fn is_price_dependent(&self, source: &str, func_name: &str) -> bool {
-        func_name.contains("swap") ||
-        func_name.contains("exchange") ||
-        func_name.contains("trade") ||
-        func_name.contains("liquidate") ||
-        func_name.contains("borrow") ||
-        func_name.contains("repay") ||
-        source.contains("price") ||
-        source.contains("getAmountOut") ||
-        source.contains("getReserves") ||
-        source.contains("balanceOf") && (source.contains("*") || source.contains("/"))
+        func_name.contains("swap")
+            || func_name.contains("exchange")
+            || func_name.contains("trade")
+            || func_name.contains("liquidate")
+            || func_name.contains("borrow")
+            || func_name.contains("repay")
+            || source.contains("price")
+            || source.contains("getAmountOut")
+            || source.contains("getReserves")
+            || source.contains("balanceOf") && (source.contains("*") || source.contains("/"))
     }
 
     /// Checks for spot price usage from AMMs
     fn uses_spot_price(&self, source: &str) -> bool {
-        source.contains("getAmountOut") ||
-        source.contains("getReserves") ||
-        (source.contains("reserve") && source.contains("/")) ||
-        source.contains("spot") && source.contains("price")
+        source.contains("getAmountOut")
+            || source.contains("getReserves")
+            || (source.contains("reserve") && source.contains("/"))
+            || source.contains("spot") && source.contains("price")
     }
 
     /// Checks for TWAP protection
@@ -212,19 +226,22 @@ impl PriceManipulationFrontrunDetector {
 
     /// Checks if balanceOf is used for price calculations
     fn uses_balance_for_price(&self, source: &str) -> bool {
-        source.contains("balanceOf") &&
-        (source.contains("*") || source.contains("/") || source.contains("mul") || source.contains("div")) &&
-        (source.contains("price") || source.contains("amount") || source.contains("value"))
+        source.contains("balanceOf")
+            && (source.contains("*")
+                || source.contains("/")
+                || source.contains("mul")
+                || source.contains("div"))
+            && (source.contains("price") || source.contains("amount") || source.contains("value"))
     }
 
     /// Checks for external oracle usage
     fn uses_external_oracle(&self, source: &str) -> bool {
-        source.contains("oracle") ||
-        source.contains("Oracle") ||
-        source.contains("priceFeed") ||
-        source.contains("getPrice") ||
-        source.contains("latestAnswer") ||
-        source.contains("latestRoundData")
+        source.contains("oracle")
+            || source.contains("Oracle")
+            || source.contains("priceFeed")
+            || source.contains("getPrice")
+            || source.contains("latestAnswer")
+            || source.contains("latestRoundData")
     }
 
     /// Checks for staleness validation
@@ -239,64 +256,67 @@ impl PriceManipulationFrontrunDetector {
 
     /// Checks for price validation
     fn has_price_validation(&self, source: &str) -> bool {
-        (source.contains("require") || source.contains("revert")) &&
-        source.contains("price") &&
-        (source.contains(">") || source.contains("<") || source.contains("!="))
+        (source.contains("require") || source.contains("revert"))
+            && source.contains("price")
+            && (source.contains(">") || source.contains("<") || source.contains("!="))
     }
 
     /// Checks if function uses price feeds
     fn uses_price_feed(&self, source: &str) -> bool {
-        source.contains("getPrice") ||
-        source.contains("latestAnswer") ||
-        source.contains("latestRoundData") ||
-        source.contains("priceFeed")
+        source.contains("getPrice")
+            || source.contains("latestAnswer")
+            || source.contains("latestRoundData")
+            || source.contains("priceFeed")
     }
 
     /// Checks for price deviation validation
     fn has_deviation_check(&self, source: &str) -> bool {
-        (source.contains("maxDeviation") ||
-         source.contains("priceDeviation") ||
-         source.contains("deviationThreshold") ||
-         source.contains("MAX_DEVIATION") ||
-         source.contains("deviation")) &&
-        (source.contains("require") || source.contains("revert") || source.contains("<=") || source.contains(">="))
+        (source.contains("maxDeviation")
+            || source.contains("priceDeviation")
+            || source.contains("deviationThreshold")
+            || source.contains("MAX_DEVIATION")
+            || source.contains("deviation"))
+            && (source.contains("require")
+                || source.contains("revert")
+                || source.contains("<=")
+                || source.contains(">="))
     }
 
     /// Checks if this is a large value operation
     fn is_large_value_operation(&self, source: &str, func_name: &str) -> bool {
-        func_name.contains("liquidate") ||
-        func_name.contains("flash") ||
-        source.contains("liquidation") ||
-        source.contains("flashLoan") ||
-        source.contains("flashSwap")
+        func_name.contains("liquidate")
+            || func_name.contains("flash")
+            || source.contains("liquidation")
+            || source.contains("flashLoan")
+            || source.contains("flashSwap")
     }
 
     /// Checks for price impact validation
     fn has_price_impact_check(&self, source: &str) -> bool {
-        source.contains("priceImpact") ||
-        source.contains("slippage") ||
-        (source.contains("before") && source.contains("after") && source.contains("price"))
+        source.contains("priceImpact")
+            || source.contains("slippage")
+            || (source.contains("before") && source.contains("after") && source.contains("price"))
     }
 
     /// Checks for circuit breaker pattern
     fn has_circuit_breaker(&self, source: &str) -> bool {
-        source.contains("circuitBreaker") ||
-        source.contains("circuit_breaker") ||
-        (source.contains("paused") || source.contains("emergency"))
+        source.contains("circuitBreaker")
+            || source.contains("circuit_breaker")
+            || (source.contains("paused") || source.contains("emergency"))
     }
 
     /// Checks for multiple oracle usage
     fn uses_multiple_oracles(&self, source: &str) -> bool {
-        source.contains("median") ||
-        source.contains("oracles[") ||
-        source.contains("multiple") && source.contains("oracle")
+        source.contains("median")
+            || source.contains("oracles[")
+            || source.contains("multiple") && source.contains("oracle")
     }
 
     /// Checks for price bounds (min/max)
     fn has_price_bounds(&self, source: &str) -> bool {
-        (source.contains("minPrice") && source.contains("maxPrice")) ||
-        (source.contains("min") && source.contains("max") && source.contains("price")) ||
-        (source.contains("minAmountOut") || source.contains("amountOutMin"))
+        (source.contains("minPrice") && source.contains("maxPrice"))
+            || (source.contains("min") && source.contains("max") && source.contains("price"))
+            || (source.contains("minAmountOut") || source.contains("amountOutMin"))
     }
 
     /// Phase 5 FP Reduction: Check if function is in trading context

@@ -27,7 +27,10 @@ impl TimelockBypassDelegatecallDetector {
                 "Detects patterns where timelock restrictions can be bypassed by \
                  routing calls through proxy contracts with delegatecall."
                     .to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::Upgradeable],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::Upgradeable,
+                ],
                 Severity::Critical,
             ),
         }
@@ -248,7 +251,7 @@ impl Detector for TimelockBypassDelegatecallDetector {
                          require(address(this) == implementation, \"No delegatecall\");\n\
                          _;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

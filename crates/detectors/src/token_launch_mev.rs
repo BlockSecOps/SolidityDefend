@@ -102,9 +102,8 @@ impl TokenLaunchMevDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         let has_presale = source.contains("presale") || source.contains("Presale");
-        let has_dex = source.contains("uniswap")
-            || source.contains("pancake")
-            || source.contains("router");
+        let has_dex =
+            source.contains("uniswap") || source.contains("pancake") || source.contains("router");
 
         if has_presale && has_dex {
             for (line_num, line) in lines.iter().enumerate() {
@@ -274,7 +273,7 @@ impl Detector for TokenLaunchMevDetector {
                      if (block.number < launchBlock + 3) {\n\
                          require(amount <= maxBuyFirstBlocks);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

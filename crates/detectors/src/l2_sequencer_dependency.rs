@@ -94,13 +94,7 @@ impl L2SequencerDependencyDetector {
 
         // Check for L2 indicators
         let l2_indicators = [
-            "Arbitrum",
-            "Optimism",
-            "arbitrum",
-            "optimism",
-            "L2",
-            "l2",
-            "rollup",
+            "Arbitrum", "Optimism", "arbitrum", "optimism", "L2", "l2", "rollup",
             "0x4200", // Optimism system addresses
         ];
 

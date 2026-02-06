@@ -63,7 +63,8 @@ pub fn deduplicate_findings_enhanced(findings: Vec<Finding>) -> Vec<Finding> {
     let findings = deduplicate_findings(findings);
 
     // Group findings by file and approximate function (using line ranges)
-    let mut by_function: std::collections::HashMap<u64, Vec<Finding>> = std::collections::HashMap::new();
+    let mut by_function: std::collections::HashMap<u64, Vec<Finding>> =
+        std::collections::HashMap::new();
 
     for finding in findings {
         // Create a function-scope key using file and line range (±10 lines)
@@ -82,16 +83,14 @@ pub fn deduplicate_findings_enhanced(findings: Vec<Finding>) -> Vec<Finding> {
 
     for (_key, mut group) in by_function {
         // Separate MEV/validation findings from others
-        let (mut mev_validation, others): (Vec<_>, Vec<_>) = group
-            .drain(..)
-            .partition(|f| {
-                let id = f.detector_id.0.as_str();
-                id.contains("mev")
-                    || id.contains("sandwich")
-                    || id.contains("front-run")
-                    || id.contains("parameter")
-                    || id.contains("validation")
-            });
+        let (mut mev_validation, others): (Vec<_>, Vec<_>) = group.drain(..).partition(|f| {
+            let id = f.detector_id.0.as_str();
+            id.contains("mev")
+                || id.contains("sandwich")
+                || id.contains("front-run")
+                || id.contains("parameter")
+                || id.contains("validation")
+        });
 
         // Add all non-MEV/validation findings
         deduplicated.extend(others);
@@ -99,9 +98,8 @@ pub fn deduplicate_findings_enhanced(findings: Vec<Finding>) -> Vec<Finding> {
         // For MEV/validation findings, keep highest severity per category
         if !mev_validation.is_empty() {
             // Sort by severity (higher first)
-            mev_validation.sort_by(|a, b| {
-                severity_rank(&b.severity).cmp(&severity_rank(&a.severity))
-            });
+            mev_validation
+                .sort_by(|a, b| severity_rank(&b.severity).cmp(&severity_rank(&a.severity)));
 
             // Group by detector category
             let mut seen_categories: HashSet<String> = HashSet::new();

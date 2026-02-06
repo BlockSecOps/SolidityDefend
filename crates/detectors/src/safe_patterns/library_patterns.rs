@@ -3,7 +3,6 @@
 /// This module detects usage of well-known, audited libraries that
 /// provide built-in security protections. When a contract uses these
 /// libraries correctly, many vulnerability patterns are already mitigated.
-
 use crate::types::AnalysisContext;
 
 // ============================================================================
@@ -307,7 +306,10 @@ pub fn is_interface_contract(ctx: &AnalysisContext) -> bool {
 
     // Interface naming convention (IPool, IAToken, etc.)
     if contract_name.starts_with('I')
-        && contract_name.chars().nth(1).map_or(false, |c| c.is_uppercase())
+        && contract_name
+            .chars()
+            .nth(1)
+            .map_or(false, |c| c.is_uppercase())
     {
         return true;
     }
@@ -372,7 +374,10 @@ pub fn has_inline_balance_check(function_source: &str) -> bool {
 
     (lower.contains("balance") || lower.contains("amount"))
         && (lower.contains("require(") || lower.contains("if (") || lower.contains("if("))
-        && (lower.contains(" >= ") || lower.contains(" > ") || lower.contains(" <= ") || lower.contains(" < "))
+        && (lower.contains(" >= ")
+            || lower.contains(" > ")
+            || lower.contains(" <= ")
+            || lower.contains(" < "))
 }
 
 /// Detect try/catch usage for external calls

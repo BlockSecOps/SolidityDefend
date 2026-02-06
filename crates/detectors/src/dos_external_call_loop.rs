@@ -194,8 +194,16 @@ impl DosExternalCallLoopDetector {
     fn has_external_interface_call(&self, code: &str) -> bool {
         // Check for interface call patterns like IToken(addr).function()
         let interface_patterns = [
-            "IERC20(", "IToken(", "IContract(", "IVault(", "IPool(",
-            "oracle.", "router.", "factory.", "pool.", "vault.",
+            "IERC20(",
+            "IToken(",
+            "IContract(",
+            "IVault(",
+            "IPool(",
+            "oracle.",
+            "router.",
+            "factory.",
+            "pool.",
+            "vault.",
         ];
 
         for pattern in interface_patterns {
@@ -322,7 +330,7 @@ impl Detector for DosExternalCallLoopDetector {
                          pendingWithdrawals[msg.sender] = 0;\n\
                          payable(msg.sender).transfer(amount);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -350,7 +358,7 @@ impl Detector for DosExternalCallLoopDetector {
                      } catch {\n\
                          failedPayments[recipient] = amount;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -378,7 +386,7 @@ impl Detector for DosExternalCallLoopDetector {
                              emit BatchCallFailed(targets[i]);\n\
                          }\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -407,7 +415,7 @@ impl Detector for DosExternalCallLoopDetector {
                          refunds[msg.sender] = 0;\n\
                          payable(msg.sender).transfer(amount);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

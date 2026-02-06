@@ -3,7 +3,9 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_secure_example_file, is_test_contract, is_uniswap_v2_pair, is_uniswap_v3_pool};
+use crate::utils::{
+    is_secure_example_file, is_test_contract, is_uniswap_v2_pair, is_uniswap_v3_pool,
+};
 
 /// Detector for transaction deadline manipulation vulnerabilities
 pub struct DeadlineManipulationDetector {

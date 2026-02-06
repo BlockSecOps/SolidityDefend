@@ -176,8 +176,7 @@ impl ExtcodesizeBypassDetector {
 
         // Check for Address library function calls
         if source.contains("Address.isContract(")
-            || source.contains("isContract(")
-                && source.contains("@openzeppelin")
+            || source.contains("isContract(") && source.contains("@openzeppelin")
         {
             return true;
         }

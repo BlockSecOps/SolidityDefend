@@ -431,7 +431,7 @@ impl Detector for Eip1153GuardBypassDetector {
                          _;  // Function body executes here\n\
                          assembly { tstore(SLOT, 0) }  // Reset AFTER _;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

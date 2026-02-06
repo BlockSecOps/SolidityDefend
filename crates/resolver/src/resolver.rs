@@ -2,8 +2,8 @@
 //!
 //! Resolves import paths to absolute file paths.
 
-use crate::remapper::ImportRemapper;
 use crate::ResolverError;
+use crate::remapper::ImportRemapper;
 use std::path::{Path, PathBuf};
 
 /// Resolves import paths to absolute file paths
@@ -31,11 +31,7 @@ impl PathResolver {
     }
 
     /// Resolve an import path relative to a source file
-    pub fn resolve(
-        &self,
-        import_path: &str,
-        from_file: &Path,
-    ) -> Result<PathBuf, ResolverError> {
+    pub fn resolve(&self, import_path: &str, from_file: &Path) -> Result<PathBuf, ResolverError> {
         // 1. Try remapping first
         if self.remapper.has_remapping(import_path) {
             let resolved = self.remapper.resolve(import_path);
@@ -107,13 +103,15 @@ mod tests {
 
         // Create directory structure
         std::fs::create_dir_all(temp.path().join("src")).unwrap();
-        std::fs::create_dir_all(temp.path().join("lib/openzeppelin/contracts/token/ERC20")).unwrap();
+        std::fs::create_dir_all(temp.path().join("lib/openzeppelin/contracts/token/ERC20"))
+            .unwrap();
 
         // Create source files
         std::fs::write(temp.path().join("src/Token.sol"), "// Token").unwrap();
         std::fs::write(temp.path().join("src/Utils.sol"), "// Utils").unwrap();
         std::fs::write(
-            temp.path().join("lib/openzeppelin/contracts/token/ERC20/ERC20.sol"),
+            temp.path()
+                .join("lib/openzeppelin/contracts/token/ERC20/ERC20.sol"),
             "// ERC20",
         )
         .unwrap();
@@ -124,11 +122,7 @@ mod tests {
     #[test]
     fn test_resolve_relative_import() {
         let temp = create_test_project();
-        let resolver = PathResolver::new(
-            temp.path(),
-            vec![],
-            vec![temp.path().join("lib")],
-        );
+        let resolver = PathResolver::new(temp.path(), vec![], vec![temp.path().join("lib")]);
 
         let from_file = temp.path().join("src/Token.sol");
         let resolved = resolver.resolve("./Utils.sol", &from_file).unwrap();
@@ -141,7 +135,10 @@ mod tests {
         let temp = create_test_project();
         let resolver = PathResolver::new(
             temp.path(),
-            vec![("@openzeppelin/".to_string(), "lib/openzeppelin/".to_string())],
+            vec![(
+                "@openzeppelin/".to_string(),
+                "lib/openzeppelin/".to_string(),
+            )],
             vec![],
         );
 
@@ -156,11 +153,7 @@ mod tests {
     #[test]
     fn test_resolve_library_import() {
         let temp = create_test_project();
-        let resolver = PathResolver::new(
-            temp.path(),
-            vec![],
-            vec![temp.path().join("lib")],
-        );
+        let resolver = PathResolver::new(temp.path(), vec![], vec![temp.path().join("lib")]);
 
         let from_file = temp.path().join("src/Token.sol");
         let resolved = resolver

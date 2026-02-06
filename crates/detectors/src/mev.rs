@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_amm_pool, is_standard_token};
+use crate::utils::{is_amm_pool, is_standard_token, is_test_contract};
 
 pub struct SandwichAttackDetector {
     base: BaseDetector,

@@ -71,11 +71,7 @@ impl UnprotectedSelfdestructDetector {
     }
 
     /// Check if selfdestruct has user-controlled beneficiary
-    fn has_user_controlled_beneficiary(
-        &self,
-        source: &str,
-        function: &ast::Function<'_>,
-    ) -> bool {
+    fn has_user_controlled_beneficiary(&self, source: &str, function: &ast::Function<'_>) -> bool {
         // Check if any function parameter is used as selfdestruct beneficiary
         for param in &function.parameters {
             if let Some(param_name) = &param.name {

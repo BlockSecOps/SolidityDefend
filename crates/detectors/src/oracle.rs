@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_test_contract, is_oracle_implementation, is_deployment_tooling};
+use crate::utils::{is_deployment_tooling, is_oracle_implementation, is_test_contract};
 
 /// Detector for single oracle source dependencies
 pub struct SingleSourceDetector {
@@ -185,7 +185,10 @@ impl SingleSourceDetector {
         sources: &mut std::collections::HashSet<String>,
     ) {
         if let ast::Expression::FunctionCall { function, .. } = expr {
-            if let ast::Expression::MemberAccess { expression, member, .. } = function {
+            if let ast::Expression::MemberAccess {
+                expression, member, ..
+            } = function
+            {
                 // Phase 14 FP Reduction: Only extract if it's an actual oracle call
                 let member_name = member.name.to_lowercase();
                 let is_oracle_call = member_name.contains("price")

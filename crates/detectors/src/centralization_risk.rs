@@ -22,7 +22,8 @@ impl CentralizationRiskDetector {
             base: BaseDetector::new(
                 DetectorId("centralization-risk".to_string()),
                 "Centralization Risk".to_string(),
-                "Detects concentration of control that may create single points of failure".to_string(),
+                "Detects concentration of control that may create single points of failure"
+                    .to_string(),
                 vec![DetectorCategory::AccessControl],
                 // P1 FIX: Default to Medium - severity is calibrated per finding
                 // Simple Ownable patterns are INFO, dangerous patterns are HIGH
@@ -140,7 +141,8 @@ impl CentralizationRiskDetector {
             || contract_source.contains("queueTransaction")
             || contract_source.contains("delay =")
             || contract_source.contains("executeTransaction")
-            || (contract_source.contains("timestamp") && contract_source.contains("require(block.timestamp >="));
+            || (contract_source.contains("timestamp")
+                && contract_source.contains("require(block.timestamp >="));
 
         let has_multisig = contract_source.contains("multisig")
             || contract_source.contains("MultiSig")
@@ -172,13 +174,13 @@ impl CentralizationRiskDetector {
         // Standard Ownable without extra risk factors is just a design choice
 
         // Check for dangerous combinations that warrant HIGH severity
-        let has_selfdestruct = contract_source.contains("selfdestruct")
-            || contract_source.contains("suicide");
+        let has_selfdestruct =
+            contract_source.contains("selfdestruct") || contract_source.contains("suicide");
 
         let has_arbitrary_token_transfer = contract_source.contains("transferFrom(address(this)")
             || contract_source.contains(".transfer(owner")
             || contract_source.contains(".transfer(msg.sender")
-            && contract_source.contains("onlyOwner");
+                && contract_source.contains("onlyOwner");
 
         // Phase 16 FN Recovery: Check for governance-specific centralization
         // Governance contracts have unique centralization risks even with OZ Ownable
@@ -195,8 +197,8 @@ impl CentralizationRiskDetector {
                 || contract_source.contains("bypass")
                 || contract_source.contains("pause"));
 
-        let has_centralized_parameter_control =
-            contract_source.contains("onlyOwner") || contract_source.contains("msg.sender == owner");
+        let has_centralized_parameter_control = contract_source.contains("onlyOwner")
+            || contract_source.contains("msg.sender == owner");
 
         // Governance contracts with guardian/admin that can bypass voting
         if is_governance_contract && has_guardian_bypass && has_centralized_parameter_control {

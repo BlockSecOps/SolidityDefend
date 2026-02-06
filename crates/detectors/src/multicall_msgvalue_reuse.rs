@@ -315,7 +315,7 @@ impl Detector for MulticallMsgvalueReuseDetector {
                          require(totalUsed <= msg.value, \"Insufficient value\");\n\
                          // ... call\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

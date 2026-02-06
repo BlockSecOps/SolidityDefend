@@ -64,7 +64,13 @@ impl EnhancedInputValidationDetector {
     }
 
     /// Phase 51 FP Reduction: Check batch operations for array validation
-    fn check_batch_operations(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+    fn check_batch_operations(
+        &self,
+        ctx: &AnalysisContext<'_>,
+        source: &str,
+        lower: &str,
+        findings: &mut Vec<Finding>,
+    ) {
         // Only check functions with "batch", "multi", or "bulk" in name
         let has_batch_function = lower.contains("function batch")
             || lower.contains("function multi")
@@ -113,7 +119,7 @@ impl EnhancedInputValidationDetector {
                          require(recipients.length > 0, \"Empty arrays\");\n\
                          require(recipients.length <= MAX_BATCH, \"Too many\");\n\
                      }"
-                            .to_string(),
+                        .to_string(),
                     );
                 findings.push(finding);
             }
@@ -121,7 +127,13 @@ impl EnhancedInputValidationDetector {
     }
 
     /// Phase 51 FP Reduction: Check admin functions for address validation
-    fn check_admin_address_validation(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+    fn check_admin_address_validation(
+        &self,
+        ctx: &AnalysisContext<'_>,
+        source: &str,
+        lower: &str,
+        findings: &mut Vec<Finding>,
+    ) {
         // Check for admin/owner setter functions and simple address setters
         let admin_setter_patterns = [
             "function setowner",
@@ -169,14 +181,20 @@ impl EnhancedInputValidationDetector {
                      require(newOwner != address(0), \"Zero address\");\n\
                      owner = newOwner;\n\
                  }"
-                        .to_string(),
+                    .to_string(),
                 );
             findings.push(finding);
         }
     }
 
     /// Phase 51 FP Reduction: Check fee setter functions for bounds validation
-    fn check_fee_setter_functions(&self, ctx: &AnalysisContext<'_>, source: &str, lower: &str, findings: &mut Vec<Finding>) {
+    fn check_fee_setter_functions(
+        &self,
+        ctx: &AnalysisContext<'_>,
+        source: &str,
+        lower: &str,
+        findings: &mut Vec<Finding>,
+    ) {
         // Only check explicit fee/ratio setter functions
         let fee_setter_patterns = [
             "function setfee",
@@ -195,9 +213,12 @@ impl EnhancedInputValidationDetector {
         }
 
         // Check for upper bounds validation
-        let has_upper_bound = source.contains("<=") || source.contains("< ")
-            || lower.contains("max_fee") || lower.contains("maxfee")
-            || lower.contains("fee_cap") || lower.contains("feecap");
+        let has_upper_bound = source.contains("<=")
+            || source.contains("< ")
+            || lower.contains("max_fee")
+            || lower.contains("maxfee")
+            || lower.contains("fee_cap")
+            || lower.contains("feecap");
 
         if !has_upper_bound {
             let finding = self
@@ -218,7 +239,7 @@ impl EnhancedInputValidationDetector {
                      require(newFee <= MAX_FEE, \"Fee too high\");\n\
                      fee = newFee;\n\
                  }"
-                        .to_string(),
+                    .to_string(),
                 );
             findings.push(finding);
         }

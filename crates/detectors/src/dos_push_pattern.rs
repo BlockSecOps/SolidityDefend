@@ -136,7 +136,9 @@ impl DosPushPatternDetector {
         if let Some(push_pos) = line.find(".push(") {
             let before_push = &line[..push_pos];
             // Find the array name (last identifier before .push)
-            let parts: Vec<&str> = before_push.split(|c: char| !c.is_alphanumeric() && c != '_').collect();
+            let parts: Vec<&str> = before_push
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .collect();
             if let Some(name) = parts.last() {
                 if !name.is_empty() {
                     return Some(name.to_string());
@@ -149,7 +151,9 @@ impl DosPushPatternDetector {
     fn extract_loop_array(&self, line: &str) -> Option<String> {
         if let Some(length_pos) = line.find(".length") {
             let before_length = &line[..length_pos];
-            let parts: Vec<&str> = before_length.split(|c: char| !c.is_alphanumeric() && c != '_').collect();
+            let parts: Vec<&str> = before_length
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
+                .collect();
             if let Some(name) = parts.last() {
                 if !name.is_empty() {
                     return Some(name.to_string());

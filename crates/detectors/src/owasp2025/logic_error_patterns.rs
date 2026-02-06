@@ -48,7 +48,9 @@ impl LogicErrorPatternsDetector {
             // Look for expressions containing both / and *
             if trimmed.contains('/') && trimmed.contains('*') {
                 // Skip lines that are just comments or imports
-                if trimmed.contains("//") && trimmed.find("//").unwrap() < trimmed.find('/').unwrap_or(usize::MAX) {
+                if trimmed.contains("//")
+                    && trimmed.find("//").unwrap() < trimmed.find('/').unwrap_or(usize::MAX)
+                {
                     continue;
                 }
 
@@ -84,9 +86,11 @@ impl LogicErrorPatternsDetector {
             if let Some(div_pos) = cleaned.find(" / ") {
                 if let Some(close_paren) = cleaned[div_pos..].find(')') {
                     let after_paren = &cleaned[div_pos + close_paren..];
-                    if after_paren.trim_start().starts_with('*') ||
-                       after_paren.contains(" * ") {
-                        return Some(format!("Division before multiplication: {}", cleaned.trim()));
+                    if after_paren.trim_start().starts_with('*') || after_paren.contains(" * ") {
+                        return Some(format!(
+                            "Division before multiplication: {}",
+                            cleaned.trim()
+                        ));
                     }
                 }
             }
@@ -122,8 +126,14 @@ impl LogicErrorPatternsDetector {
                     // Check if this is division (not comment or path)
                     if i + 1 < chars.len() && chars[i + 1] != '/' && chars[i + 1] != '*' {
                         // Check if there's something before and after (not just /)
-                        let before = i > 0 && (chars[i - 1].is_alphanumeric() || chars[i - 1] == ')' || chars[i - 1] == ' ');
-                        let after = i + 1 < chars.len() && (chars[i + 1].is_alphanumeric() || chars[i + 1] == '(' || chars[i + 1] == ' ');
+                        let before = i > 0
+                            && (chars[i - 1].is_alphanumeric()
+                                || chars[i - 1] == ')'
+                                || chars[i - 1] == ' ');
+                        let after = i + 1 < chars.len()
+                            && (chars[i + 1].is_alphanumeric()
+                                || chars[i + 1] == '('
+                                || chars[i + 1] == ' ');
                         if before && after {
                             found_div = true;
                         }
@@ -134,9 +144,15 @@ impl LogicErrorPatternsDetector {
                     if found_div && in_parens == 0 {
                         // Check if there's something after (not just *)
                         if i + 1 < chars.len() && chars[i + 1] != '/' && chars[i + 1] != '*' {
-                            let after = i + 1 < chars.len() && (chars[i + 1].is_alphanumeric() || chars[i + 1] == '(' || chars[i + 1] == ' ');
+                            let after = i + 1 < chars.len()
+                                && (chars[i + 1].is_alphanumeric()
+                                    || chars[i + 1] == '('
+                                    || chars[i + 1] == ' ');
                             if after {
-                                return Some(format!("Division before multiplication (precision loss): {}", expr.trim()));
+                                return Some(format!(
+                                    "Division before multiplication (precision loss): {}",
+                                    expr.trim()
+                                ));
                             }
                         }
                     }
@@ -200,13 +216,17 @@ impl LogicErrorPatternsDetector {
             }
 
             // Pattern: reward = something / something without scaling
-            if (lower.contains("reward") || lower.contains("share") || lower.contains("portion")) &&
-               trimmed.contains('/') && trimmed.contains('=') {
+            if (lower.contains("reward") || lower.contains("share") || lower.contains("portion"))
+                && trimmed.contains('/')
+                && trimmed.contains('=')
+            {
                 // Check if there's proper scaling (1e18, WAD, etc.)
-                if !trimmed.contains("1e") && !trimmed.contains("WAD") &&
-                   !trimmed.contains("RAY") && !trimmed.contains("PRECISION") &&
-                   !trimmed.contains("SCALE") {
-
+                if !trimmed.contains("1e")
+                    && !trimmed.contains("WAD")
+                    && !trimmed.contains("RAY")
+                    && !trimmed.contains("PRECISION")
+                    && !trimmed.contains("SCALE")
+                {
                     // Check context for preceding multiplication
                     let context_start = if line_num > 3 { line_num - 3 } else { 0 };
                     let context: String = lines[context_start..=line_num].join("\n");
@@ -216,7 +236,8 @@ impl LogicErrorPatternsDetector {
                     if !self.has_mul_before_div_in_context(&context) {
                         results.push((
                             line_num as u32 + 1,
-                            "Reward/share calculation with division - verify precision scaling".to_string()
+                            "Reward/share calculation with division - verify precision scaling"
+                                .to_string(),
                         ));
                     }
                 }
@@ -281,15 +302,18 @@ impl Detector for LogicErrorPatternsDetector {
         // Phase 6: Properly analyze expressions for division-before-multiplication
         let div_before_mul = self.find_div_before_mul_patterns(source);
         for (line, pattern, _context) in div_before_mul {
-            let finding = self.base.create_finding_with_severity(
-                ctx,
-                format!("{} (OWASP 2025 - $63.8M in losses)", pattern),
-                line,
-                0,
-                20,
-                Severity::High,
-            ).with_fix_suggestion(
-                "❌ PRECISION LOSS ($63.8M in losses):\n\
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    format!("{} (OWASP 2025 - $63.8M in losses)", pattern),
+                    line,
+                    0,
+                    20,
+                    Severity::High,
+                )
+                .with_fix_suggestion(
+                    "❌ PRECISION LOSS ($63.8M in losses):\n\
                  uint256 reward = (amount / totalSupply) * rewardRate;\n\
                  // Result: 0 if amount < totalSupply!\n\
                  \n\
@@ -303,8 +327,9 @@ impl Detector for LogicErrorPatternsDetector {
                  Real incidents:\n\
                  - Cork Protocol: $11M (May 2025) - Division rounding\n\
                  - SIR.trading: $355K (March 2025) - Reward calculation\n\
-                 - Multiple 2024 incidents: $63.8M total".to_string()
-            );
+                 - Multiple 2024 incidents: $63.8M total"
+                        .to_string(),
+                );
             findings.push(finding);
         }
 
@@ -313,14 +338,7 @@ impl Detector for LogicErrorPatternsDetector {
         for (line, issue) in reward_issues {
             let finding = self
                 .base
-                .create_finding_with_severity(
-                    ctx,
-                    issue,
-                    line,
-                    0,
-                    20,
-                    Severity::Medium,
-                )
+                .create_finding_with_severity(ctx, issue, line, 0, 20, Severity::Medium)
                 .with_fix_suggestion(
                     "Common reward distribution errors:\n\
                  \n\
@@ -372,7 +390,10 @@ mod tests {
         "#;
 
         let patterns = detector.find_div_before_mul_patterns(vulnerable);
-        assert!(!patterns.is_empty(), "Division before multiplication should be detected");
+        assert!(
+            !patterns.is_empty(),
+            "Division before multiplication should be detected"
+        );
     }
 
     #[test]
@@ -387,7 +408,10 @@ mod tests {
         "#;
 
         let patterns = detector.find_div_before_mul_patterns(safe);
-        assert!(patterns.is_empty(), "Correct mul-before-div should not be flagged");
+        assert!(
+            patterns.is_empty(),
+            "Correct mul-before-div should not be flagged"
+        );
     }
 
     #[test]
@@ -416,7 +440,10 @@ mod tests {
         "#;
 
         let patterns = detector.find_div_before_mul_patterns(dangerous);
-        assert!(!patterns.is_empty(), "Consecutive div-mul should be detected");
+        assert!(
+            !patterns.is_empty(),
+            "Consecutive div-mul should be detected"
+        );
     }
 
     #[test]
@@ -432,6 +459,9 @@ mod tests {
 
         let issues = detector.find_reward_calculation_issues(safe_scaled);
         // Scaling patterns should not trigger reward issues
-        assert!(issues.is_empty() || safe_scaled.contains("1e"), "Scaled calculations should be OK");
+        assert!(
+            issues.is_empty() || safe_scaled.contains("1e"),
+            "Scaled calculations should be OK"
+        );
     }
 }

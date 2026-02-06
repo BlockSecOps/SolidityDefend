@@ -107,19 +107,23 @@ impl DelegatecallUntrustedLibraryDetector {
             format!("address constant {}", var_name),
         ];
 
-        patterns.iter().any(|pattern| contract_source.contains(pattern))
+        patterns
+            .iter()
+            .any(|pattern| contract_source.contains(pattern))
     }
 
     /// Checks if a delegatecall uses a mutable library address
-    fn check_delegatecall_target(&self, function_source: &str, contract_source: &str) -> Option<String> {
+    fn check_delegatecall_target(
+        &self,
+        function_source: &str,
+        contract_source: &str,
+    ) -> Option<String> {
         if !function_source.contains("delegatecall") {
             return None;
         }
 
         // Pattern 1: Direct variable delegatecall: library.delegatecall(...)
-        let var_delegatecall_patterns = [
-            r"(\w+)\.delegatecall\(",
-        ];
+        let var_delegatecall_patterns = [r"(\w+)\.delegatecall\("];
 
         for pattern in &var_delegatecall_patterns {
             if let Some(var_name) = self.extract_variable_name(function_source, pattern) {
@@ -139,14 +143,16 @@ impl DelegatecallUntrustedLibraryDetector {
         // Pattern 2: Mapping access: libraries[name].delegatecall(...)
         if function_source.contains("libraries[") && function_source.contains("].delegatecall") {
             return Some(
-                "Delegatecall to library from mutable mapping - library addresses can be changed".to_string()
+                "Delegatecall to library from mutable mapping - library addresses can be changed"
+                    .to_string(),
             );
         }
 
         // Pattern 3: Array access: libraries[index].delegatecall(...)
         if function_source.contains("libraries[") && function_source.contains("].delegatecall") {
             return Some(
-                "Delegatecall to library from mutable array - library addresses can be changed".to_string()
+                "Delegatecall to library from mutable array - library addresses can be changed"
+                    .to_string(),
             );
         }
 
@@ -158,11 +164,15 @@ impl DelegatecallUntrustedLibraryDetector {
         }
 
         // Pattern 5: Conditional library selection from storage
-        if function_source.contains("? ") && function_source.contains(": ") && function_source.contains(".delegatecall") {
+        if function_source.contains("? ")
+            && function_source.contains(": ")
+            && function_source.contains(".delegatecall")
+        {
             // Check for patterns like: useTestLibrary ? testLib : prodLib
             if self.has_storage_conditional(function_source, contract_source) {
                 return Some(
-                    "Delegatecall to conditionally selected library from mutable storage".to_string()
+                    "Delegatecall to conditionally selected library from mutable storage"
+                        .to_string(),
                 );
             }
         }
@@ -170,7 +180,7 @@ impl DelegatecallUntrustedLibraryDetector {
         // Pattern 6: Assignment to local variable from storage
         if self.has_storage_to_local_delegatecall(function_source, contract_source) {
             return Some(
-                "Delegatecall uses library address loaded from mutable storage".to_string()
+                "Delegatecall uses library address loaded from mutable storage".to_string(),
             );
         }
 
@@ -240,7 +250,11 @@ impl DelegatecallUntrustedLibraryDetector {
     }
 
     /// Checks if delegatecall uses address loaded from storage into local variable
-    fn has_storage_to_local_delegatecall(&self, function_source: &str, contract_source: &str) -> bool {
+    fn has_storage_to_local_delegatecall(
+        &self,
+        function_source: &str,
+        contract_source: &str,
+    ) -> bool {
         // Look for pattern: address lib = storageVar; ... lib.delegatecall(...)
         let lines: Vec<&str> = function_source.lines().collect();
 
@@ -284,7 +298,8 @@ impl DelegatecallUntrustedLibraryDetector {
             let after_eq = &line[eq_pos + 1..].trim();
 
             // Check if RHS is a state variable
-            let words: Vec<&str> = after_eq.split(|c: char| !c.is_alphanumeric() && c != '_')
+            let words: Vec<&str> = after_eq
+                .split(|c: char| !c.is_alphanumeric() && c != '_')
                 .filter(|s| !s.is_empty())
                 .collect();
 
@@ -340,14 +355,15 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
         for function in ctx.get_functions() {
             let function_source = self.get_function_source(function, ctx);
 
-            if let Some(reason) = self.check_delegatecall_target(&function_source, &contract_source) {
+            if let Some(reason) = self.check_delegatecall_target(&function_source, &contract_source)
+            {
                 let message = format!(
                     "Function '{}' uses delegatecall to mutable library address. {}",
-                    function.name.name,
-                    reason
+                    function.name.name, reason
                 );
 
-                let finding = self.base
+                let finding = self
+                    .base
                     .create_finding(
                         ctx,
                         message,

@@ -277,9 +277,7 @@ pub fn is_test_contract(ctx: &AnalysisContext) -> bool {
     }
 
     // Testing framework inheritance
-    if source.contains("is Test")
-        || source.contains("is DSTest")
-        || source.contains("is BaseTest")
+    if source.contains("is Test") || source.contains("is DSTest") || source.contains("is BaseTest")
     {
         return true;
     }

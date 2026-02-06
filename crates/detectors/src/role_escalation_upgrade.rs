@@ -27,7 +27,10 @@ impl RoleEscalationUpgradeDetector {
                 "Detects upgrade patterns where new implementation constructors \
                  can grant elevated privileges, bypassing access control."
                     .to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::Upgradeable],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::Upgradeable,
+                ],
                 Severity::Critical,
             ),
         }
@@ -243,7 +246,7 @@ impl Detector for RoleEscalationUpgradeDetector {
                          __AccessControl_init();\n\
                          _grantRole(DEFAULT_ADMIN_ROLE, admin);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

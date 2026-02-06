@@ -120,7 +120,9 @@ impl TimestampManipulationDetector {
                     || lower.contains("validuntil")
                     || lower.contains("expires")
                     || lower.contains("timeout")
-                    || lower == "v" || lower == "r" || lower == "s" // Signature params indicate signature verification
+                    || lower == "v"
+                    || lower == "r"
+                    || lower == "s" // Signature params indicate signature verification
             } else {
                 false
             }
@@ -155,7 +157,11 @@ impl TimestampManipulationDetector {
 
     /// Phase 52 FP Reduction: Check if timestamp is used for non-critical purposes
     /// UI display, logging, event emission, metadata updates are not manipulatable for gain
-    fn is_non_critical_timestamp_use(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+    fn is_non_critical_timestamp_use(
+        &self,
+        func_source: &str,
+        function: &ast::Function<'_>,
+    ) -> bool {
         let func_name_lower = function.name.name.to_lowercase();
 
         // Event-only functions (logging, metadata updates)
@@ -229,7 +235,8 @@ impl TimestampManipulationDetector {
             || func_source.contains("release")
             || func_source.contains("cliff")
             || func_source.contains("vested"))
-            && (func_source.contains("block.timestamp >=") || func_source.contains(">= block.timestamp"));
+            && (func_source.contains("block.timestamp >=")
+                || func_source.contains(">= block.timestamp"));
 
         if is_safe_vesting_pattern {
             return None; // This is the safe pattern for vesting/unlock

@@ -104,8 +104,7 @@ pub fn is_eip7702_delegate(ctx: &crate::types::AnalysisContext) -> bool {
         || file_path.contains("aave-v2");
 
     // Solmate is a library that predates EIP-7702
-    let is_solmate = file_path.contains("/solmate/")
-        || source.contains("solmate");
+    let is_solmate = file_path.contains("/solmate/") || source.contains("solmate");
 
     // Skip all pre-7702 known contracts
     if is_safe || is_openzeppelin || is_aave || is_solmate {

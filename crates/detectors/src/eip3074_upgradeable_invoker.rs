@@ -40,7 +40,10 @@ impl Eip3074UpgradeableInvokerDetector {
                  EIP-3074 explicitly forbids upgradeable invokers because users sign AUTH \
                  messages trusting specific code. Upgradeable invokers break this trust model."
                     .to_string(),
-                vec![DetectorCategory::AccessControl, DetectorCategory::Upgradeable],
+                vec![
+                    DetectorCategory::AccessControl,
+                    DetectorCategory::Upgradeable,
+                ],
                 Severity::Critical,
             ),
         }

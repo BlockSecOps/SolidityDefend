@@ -365,7 +365,7 @@ impl Detector for JitLiquidityExtractionDetector {
                          );\n\
                          // ... remove liquidity\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -433,7 +433,7 @@ impl Detector for JitLiquidityExtractionDetector {
                          );\n\
                          // ...\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

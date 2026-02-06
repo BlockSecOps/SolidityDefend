@@ -39,7 +39,10 @@ impl ProxyContextVisibilityMismatchDetector {
                  In delegatecall context, implementation visibility applies. Internal proxy \
                  functions that are public in implementation become externally callable."
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::Medium,
             ),
         }

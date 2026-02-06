@@ -2,9 +2,9 @@
 //!
 //! Builds and traverses a dependency graph based on imports.
 
+use crate::ResolverError;
 use crate::extractor::ImportExtractor;
 use crate::resolver::PathResolver;
-use crate::ResolverError;
 use petgraph::algo::toposort;
 use petgraph::graph::{DiGraph, NodeIndex};
 use petgraph::visit::EdgeRef;
@@ -272,8 +272,14 @@ contract Vault {
         let token_pos = order.iter().position(|p| p.ends_with("Token.sol")).unwrap();
         let vault_pos = order.iter().position(|p| p.ends_with("Vault.sol")).unwrap();
 
-        assert!(base_pos < token_pos, "Base.sol should come before Token.sol");
-        assert!(token_pos < vault_pos, "Token.sol should come before Vault.sol");
+        assert!(
+            base_pos < token_pos,
+            "Base.sol should come before Token.sol"
+        );
+        assert!(
+            token_pos < vault_pos,
+            "Token.sol should come before Vault.sol"
+        );
     }
 
     #[test]

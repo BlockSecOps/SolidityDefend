@@ -35,7 +35,10 @@ impl UupsMissingDisableInitializersDetector {
                 "Detects UUPS upgradeable contracts that don't call _disableInitializers() \
                  in their constructor, leaving the implementation vulnerable to takeover"
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::Critical,
             ),
         }
@@ -86,8 +89,8 @@ impl UupsMissingDisableInitializersDetector {
 
         // Now check for actual UUPS patterns
         // UUPS requires _authorizeUpgrade to be implemented in the logic contract
-        let has_uups_pattern = source.contains("UUPSUpgradeable")
-            || source.contains("_authorizeUpgrade");
+        let has_uups_pattern =
+            source.contains("UUPSUpgradeable") || source.contains("_authorizeUpgrade");
 
         // Only flag if it explicitly has UUPS patterns
         // Don't flag just because it has "upgradeTo" - that's common in many proxy types
@@ -232,10 +235,16 @@ mod tests {
     fn test_is_uups_contract() {
         let detector = UupsMissingDisableInitializersDetector::new();
         assert!(detector.is_uups_contract("contract MyToken is UUPSUpgradeable {", "MyToken"));
-        assert!(detector.is_uups_contract("function _authorizeUpgrade(address) internal override {}", "MyUpgradeable"));
+        assert!(detector.is_uups_contract(
+            "function _authorizeUpgrade(address) internal override {}",
+            "MyUpgradeable"
+        ));
         assert!(!detector.is_uups_contract("contract SimpleToken {", "SimpleToken"));
         // TransparentUpgradeableProxy should NOT be flagged as UUPS
-        assert!(!detector.is_uups_contract("contract TransparentUpgradeableProxy {", "TransparentUpgradeableProxy"));
+        assert!(!detector.is_uups_contract(
+            "contract TransparentUpgradeableProxy {",
+            "TransparentUpgradeableProxy"
+        ));
         assert!(!detector.is_uups_contract("contract ERC1967Proxy {", "ERC1967Proxy"));
     }
 

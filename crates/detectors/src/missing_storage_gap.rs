@@ -120,9 +120,9 @@ impl MissingStorageGapDetector {
     /// Check if line is a state variable declaration
     fn is_state_variable_declaration(&self, line: &str) -> bool {
         let storage_types = [
-            "uint256", "uint128", "uint64", "uint32", "uint16", "uint8", "uint", "int256", "int128",
-            "int64", "int32", "int16", "int8", "int", "address", "bool", "bytes32", "bytes",
-            "string", "mapping",
+            "uint256", "uint128", "uint64", "uint32", "uint16", "uint8", "uint", "int256",
+            "int128", "int64", "int32", "int16", "int8", "int", "address", "bool", "bytes32",
+            "bytes", "string", "mapping",
         ];
 
         for type_name in &storage_types {
@@ -224,7 +224,8 @@ impl Detector for MissingStorageGapDetector {
             || source.contains("library ERC1967Utils")
             || source.contains("function _delegate(address")
             || source.contains("IMPLEMENTATION_SLOT")
-            || source.contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
+            || source
+                .contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc");
 
         if is_proxy_contract {
             return Ok(findings);

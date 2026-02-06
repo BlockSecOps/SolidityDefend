@@ -59,10 +59,19 @@ impl Eip3074ReplayAttackDetector {
         }
 
         // Track what protections exist
-        let has_nonce = source.contains("nonce") || source.contains("_nonce") || source.contains("usedNonces");
-        let has_chain_id = source.contains("chainId") || source.contains("block.chainid") || source.contains("chainid()");
-        let has_deadline = source.contains("deadline") || source.contains("expiry") || source.contains("validUntil") || source.contains("block.timestamp");
-        let has_nonce_increment = source.contains("nonce++") || source.contains("nonce +=") || source.contains("++nonce") || source.contains("nonces[");
+        let has_nonce =
+            source.contains("nonce") || source.contains("_nonce") || source.contains("usedNonces");
+        let has_chain_id = source.contains("chainId")
+            || source.contains("block.chainid")
+            || source.contains("chainid()");
+        let has_deadline = source.contains("deadline")
+            || source.contains("expiry")
+            || source.contains("validUntil")
+            || source.contains("block.timestamp");
+        let has_nonce_increment = source.contains("nonce++")
+            || source.contains("nonce +=")
+            || source.contains("++nonce")
+            || source.contains("nonces[");
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
@@ -72,9 +81,11 @@ impl Eip3074ReplayAttackDetector {
             }
 
             // Find AUTH usage or invoke functions
-            if trimmed.contains("auth(") || trimmed.contains("AUTH") ||
-               (trimmed.contains("function") && (trimmed.contains("execute") || trimmed.contains("invoke"))) {
-
+            if trimmed.contains("auth(")
+                || trimmed.contains("AUTH")
+                || (trimmed.contains("function")
+                    && (trimmed.contains("execute") || trimmed.contains("invoke")))
+            {
                 let mut missing = Vec::new();
 
                 if !has_nonce {
@@ -108,22 +119,43 @@ impl Eip3074ReplayAttackDetector {
             let trimmed = line.trim();
 
             // Check for nonce that's never incremented
-            if trimmed.contains("nonce") && trimmed.contains("=") && !trimmed.contains("++") && !trimmed.contains("+= 1") {
+            if trimmed.contains("nonce")
+                && trimmed.contains("=")
+                && !trimmed.contains("++")
+                && !trimmed.contains("+= 1")
+            {
                 // Look ahead for increment
                 let context_end = (line_num + 20).min(lines.len());
                 let context: String = lines[line_num..context_end].join("\n");
-                if !context.contains("nonce++") && !context.contains("++nonce") && !context.contains("nonce += 1") && !context.contains("nonce = nonce + 1") {
+                if !context.contains("nonce++")
+                    && !context.contains("++nonce")
+                    && !context.contains("nonce += 1")
+                    && !context.contains("nonce = nonce + 1")
+                {
                     // Check if it's just reading the nonce
                     if !trimmed.contains("mapping") && !trimmed.contains("uint256 nonce") {
-                        findings.push((line_num as u32 + 1, "nonce read without increment".to_string()));
+                        findings.push((
+                            line_num as u32 + 1,
+                            "nonce read without increment".to_string(),
+                        ));
                     }
                 }
             }
 
             // Check for deadline without enforcement
-            if trimmed.contains("deadline") && !source.contains("require") && !source.contains("revert") {
-                if !source.contains("deadline >") && !source.contains("deadline >=") && !source.contains("> deadline") && !source.contains(">= deadline") {
-                    findings.push((line_num as u32 + 1, "deadline without enforcement".to_string()));
+            if trimmed.contains("deadline")
+                && !source.contains("require")
+                && !source.contains("revert")
+            {
+                if !source.contains("deadline >")
+                    && !source.contains("deadline >=")
+                    && !source.contains("> deadline")
+                    && !source.contains(">= deadline")
+                {
+                    findings.push((
+                        line_num as u32 + 1,
+                        "deadline without enforcement".to_string(),
+                    ));
                 }
             }
         }
@@ -159,16 +191,20 @@ impl Eip3074ReplayAttackDetector {
 
         // Check for specific EIP-3074 invoker patterns
         // Must have "Invoker" as a word boundary (contract name or interface)
-        let has_invoker_contract = source.contains("contract") &&
-            (source.contains("Invoker ") || source.contains("Invoker{") || source.contains("is Invoker"));
+        let has_invoker_contract = source.contains("contract")
+            && (source.contains("Invoker ")
+                || source.contains("Invoker{")
+                || source.contains("is Invoker"));
 
-        let has_invoker_interface = source.contains("interface") &&
-            (source.contains("IInvoker") || source.contains("Invoker ") || source.contains("Invoker{"));
+        let has_invoker_interface = source.contains("interface")
+            && (source.contains("IInvoker")
+                || source.contains("Invoker ")
+                || source.contains("Invoker{"));
 
         // Check for EIP-3074 specific commit pattern with AUTH
-        let has_3074_commit = source.contains("commit") &&
-            source.contains("keccak256") &&
-            (source.contains("AUTH") || source.contains("invoker"));
+        let has_3074_commit = source.contains("commit")
+            && source.contains("keccak256")
+            && (source.contains("AUTH") || source.contains("invoker"));
 
         has_invoker_contract || has_invoker_interface || has_3074_commit
     }

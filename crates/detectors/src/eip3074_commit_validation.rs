@@ -71,7 +71,10 @@ impl Eip3074CommitValidationDetector {
                 if !context.contains("nonce") && !context.contains("_nonce") {
                     missing.push("nonce");
                 }
-                if !context.contains("deadline") && !context.contains("expiry") && !context.contains("validUntil") {
+                if !context.contains("deadline")
+                    && !context.contains("expiry")
+                    && !context.contains("validUntil")
+                {
                     missing.push("deadline/expiry");
                 }
                 if !context.contains("chainId") && !context.contains("block.chainid") {
@@ -91,8 +94,7 @@ impl Eip3074CommitValidationDetector {
             }
 
             // Check for AUTH without commit validation
-            if (trimmed.contains("auth(") || trimmed.contains("AUTH"))
-                && !source.contains("commit")
+            if (trimmed.contains("auth(") || trimmed.contains("AUTH")) && !source.contains("commit")
             {
                 findings.push((
                     line_num as u32 + 1,
@@ -114,18 +116,24 @@ impl Eip3074CommitValidationDetector {
             let trimmed = line.trim();
 
             // Check for commit = 0 or empty commit
-            if trimmed.contains("commit") && (trimmed.contains("= 0") || trimmed.contains("= bytes32(0)")) {
+            if trimmed.contains("commit")
+                && (trimmed.contains("= 0") || trimmed.contains("= bytes32(0)"))
+            {
                 findings.push((line_num as u32 + 1, "zero commit value".to_string()));
             }
 
             // Check for commit without encoding call data
             if trimmed.contains("commit") && trimmed.contains("keccak256") {
-                if !trimmed.contains("data") && !trimmed.contains("calldata") && !trimmed.contains("payload") {
+                if !trimmed.contains("data")
+                    && !trimmed.contains("calldata")
+                    && !trimmed.contains("payload")
+                {
                     // Look ahead for data inclusion
                     let context_end = (line_num + 5).min(lines.len());
                     let context: String = lines[line_num..context_end].join("\n");
                     if !context.contains("data") && !context.contains("calldata") {
-                        findings.push((line_num as u32 + 1, "commit missing call data".to_string()));
+                        findings
+                            .push((line_num as u32 + 1, "commit missing call data".to_string()));
                     }
                 }
             }
@@ -158,16 +166,20 @@ impl Eip3074CommitValidationDetector {
         }
 
         // Check for specific EIP-3074 invoker patterns
-        let has_invoker_contract = source.contains("contract") &&
-            (source.contains("Invoker ") || source.contains("Invoker{") || source.contains("is Invoker"));
+        let has_invoker_contract = source.contains("contract")
+            && (source.contains("Invoker ")
+                || source.contains("Invoker{")
+                || source.contains("is Invoker"));
 
-        let has_invoker_interface = source.contains("interface") &&
-            (source.contains("IInvoker") || source.contains("Invoker ") || source.contains("Invoker{"));
+        let has_invoker_interface = source.contains("interface")
+            && (source.contains("IInvoker")
+                || source.contains("Invoker ")
+                || source.contains("Invoker{"));
 
         // Check for EIP-3074 specific commit pattern with AUTH
-        let has_3074_commit = source.contains("commit") &&
-            source.contains("keccak256") &&
-            (source.contains("AUTH") || source.contains("invoker"));
+        let has_3074_commit = source.contains("commit")
+            && source.contains("keccak256")
+            && (source.contains("AUTH") || source.contains("invoker"));
 
         has_invoker_contract || has_invoker_interface || has_3074_commit
     }
@@ -240,7 +252,7 @@ impl Detector for Eip3074CommitValidationDetector {
                          block.chainid,// chain binding\n\
                          address(this) // invoker binding\n\
                      ));"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

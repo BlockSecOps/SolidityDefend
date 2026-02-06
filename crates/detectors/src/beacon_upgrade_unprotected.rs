@@ -37,7 +37,10 @@ impl BeaconUpgradeUnprotectedDetector {
                 "Detects beacon contracts with unprotected upgrade functions that allow \
                  unauthorized changes to all beacon proxies simultaneously"
                     .to_string(),
-                vec![DetectorCategory::Upgradeable, DetectorCategory::AccessControl],
+                vec![
+                    DetectorCategory::Upgradeable,
+                    DetectorCategory::AccessControl,
+                ],
                 Severity::Critical,
             ),
         }

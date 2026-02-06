@@ -39,20 +39,20 @@ impl ChainlinkVrfMisuseDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         // Check if contract uses VRF
-        let has_vrf = source.contains("VRFConsumerBase") ||
-                      source.contains("VRFConsumerBaseV2") ||
-                      source.contains("VRFV2WrapperConsumerBase") ||
-                      source.contains("requestRandomWords") ||
-                      source.contains("requestRandomness");
+        let has_vrf = source.contains("VRFConsumerBase")
+            || source.contains("VRFConsumerBaseV2")
+            || source.contains("VRFV2WrapperConsumerBase")
+            || source.contains("requestRandomWords")
+            || source.contains("requestRandomness");
 
         if !has_vrf {
             return findings;
         }
 
         // Check for fulfillRandomWords/fulfillRandomness implementation
-        let has_callback = source.contains("fulfillRandomWords") ||
-                          source.contains("fulfillRandomness") ||
-                          source.contains("rawFulfillRandomWords");
+        let has_callback = source.contains("fulfillRandomWords")
+            || source.contains("fulfillRandomness")
+            || source.contains("rawFulfillRandomWords");
 
         if !has_callback {
             // Find the request function
@@ -90,10 +90,14 @@ impl ChainlinkVrfMisuseDetector {
                 let func_body: String = lines[line_num..func_end].join("\n");
 
                 // Check if both request and state change happen in same function
-                if (func_body.contains("requestRandomWords") || func_body.contains("requestRandomness"))
-                    && (func_body.contains("winner") || func_body.contains("selected") ||
-                        func_body.contains("transfer(") || func_body.contains("mint("))
-                    && !func_body.contains("pending") && !func_body.contains("await")
+                if (func_body.contains("requestRandomWords")
+                    || func_body.contains("requestRandomness"))
+                    && (func_body.contains("winner")
+                        || func_body.contains("selected")
+                        || func_body.contains("transfer(")
+                        || func_body.contains("mint("))
+                    && !func_body.contains("pending")
+                    && !func_body.contains("await")
                 {
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -109,8 +113,7 @@ impl ChainlinkVrfMisuseDetector {
         let lines: Vec<&str> = source.lines().collect();
 
         // Check if using VRF v2
-        let uses_v2 = source.contains("VRFConsumerBaseV2") ||
-                      source.contains("VRFCoordinatorV2");
+        let uses_v2 = source.contains("VRFConsumerBaseV2") || source.contains("VRFCoordinatorV2");
 
         if !uses_v2 {
             return findings;
@@ -120,12 +123,15 @@ impl ChainlinkVrfMisuseDetector {
             let trimmed = line.trim();
 
             // Check for hardcoded subscription ID
-            if trimmed.contains("s_subscriptionId") && trimmed.contains("=") &&
-               !trimmed.contains("constructor") && !trimmed.contains("function")
+            if trimmed.contains("s_subscriptionId")
+                && trimmed.contains("=")
+                && !trimmed.contains("constructor")
+                && !trimmed.contains("function")
             {
                 // Check if it's a constant assignment
-                if trimmed.contains("uint64") && (trimmed.contains("constant") ||
-                   trimmed.matches(char::is_numeric).count() > 0)
+                if trimmed.contains("uint64")
+                    && (trimmed.contains("constant")
+                        || trimmed.matches(char::is_numeric).count() > 0)
                 {
                     let func_name = self.find_containing_function(&lines, line_num);
                     findings.push((line_num as u32 + 1, func_name));
@@ -149,16 +155,19 @@ impl ChainlinkVrfMisuseDetector {
             }
 
             // Detect requestRandomWords in external/public functions without guards
-            if trimmed.contains("function ") &&
-               (trimmed.contains("external") || trimmed.contains("public")) &&
-               !trimmed.contains("onlyOwner") && !trimmed.contains("internal")
+            if trimmed.contains("function ")
+                && (trimmed.contains("external") || trimmed.contains("public"))
+                && !trimmed.contains("onlyOwner")
+                && !trimmed.contains("internal")
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
 
-                if (func_body.contains("requestRandomWords") || func_body.contains("requestRandomness"))
-                    && !func_body.contains("require") && !func_body.contains("revert")
+                if (func_body.contains("requestRandomWords")
+                    || func_body.contains("requestRandomness"))
+                    && !func_body.contains("require")
+                    && !func_body.contains("revert")
                 {
                     findings.push((line_num as u32 + 1, func_name));
                 }
@@ -268,7 +277,7 @@ impl Detector for ChainlinkVrfMisuseDetector {
                          // Use randomWords here\n\
                          s_randomWord = randomWords[0];\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

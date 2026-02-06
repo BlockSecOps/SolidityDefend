@@ -233,7 +233,8 @@ impl MevExtractableValueDetector {
 
         // Skip simple deposit/withdraw functions that don't involve price calculations
         // These are user operations that don't expose extractable MEV
-        let is_simple_deposit_withdraw = (func_name_lower == "deposit" || func_name_lower == "withdraw")
+        let is_simple_deposit_withdraw = (func_name_lower == "deposit"
+            || func_name_lower == "withdraw")
             && !self.is_price_sensitive(&func_source);
 
         if is_simple_deposit_withdraw {
@@ -247,7 +248,9 @@ impl MevExtractableValueDetector {
             || func_name_lower == "harvest";
 
         let operates_on_user_balance = func_source.contains("[msg.sender]")
-            && (func_source.contains("balance") || func_source.contains("reward") || func_source.contains("earned"));
+            && (func_source.contains("balance")
+                || func_source.contains("reward")
+                || func_source.contains("earned"));
 
         if is_user_specific_operation && operates_on_user_balance {
             return None; // User claiming their own rewards is not MEV-vulnerable

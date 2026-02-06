@@ -8,7 +8,7 @@ pub mod detector;
 pub mod discovery;
 
 pub use config::{FoundryConfig, HardhatConfig, ProjectConfig};
-pub use detector::{detect_framework, Framework};
+pub use detector::{Framework, detect_framework};
 pub use discovery::ProjectDiscovery;
 
 use std::path::{Path, PathBuf};

@@ -311,7 +311,7 @@ impl Detector for CrossChainReplayProtectionDetector {
                          nonce,          // Nonce for replay protection\n\
                          data\n\
                      ));"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

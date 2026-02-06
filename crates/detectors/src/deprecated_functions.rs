@@ -218,7 +218,8 @@ impl Detector for DeprecatedFunctionsDetector {
                         .create_finding(ctx, message, (line_num + 1) as u32, col, 5)
                         .with_cwe(477)
                         .with_fix_suggestion(
-                            "Replace 'years' with explicit calculation: 365 days or 365 * 24 hours".to_string()
+                            "Replace 'years' with explicit calculation: 365 days or 365 * 24 hours"
+                                .to_string(),
                         );
 
                     findings.push(finding);

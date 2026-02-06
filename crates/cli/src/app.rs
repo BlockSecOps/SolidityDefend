@@ -575,7 +575,8 @@ impl CliApp {
                     _ => Severity::Info,
                 };
 
-                let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str() {
+                let min_confidence = match matches.get_one::<String>("confidence").unwrap().as_str()
+                {
                     "low" => detectors::types::Confidence::Low,
                     "medium" => detectors::types::Confidence::Medium,
                     "high" => detectors::types::Confidence::High,
@@ -727,7 +728,10 @@ impl CliApp {
         // Load the project
         let project_dir = PathBuf::from(project_path);
         if !project_dir.exists() {
-            return Err(anyhow!("Project directory does not exist: {}", project_path));
+            return Err(anyhow!(
+                "Project directory does not exist: {}",
+                project_path
+            ));
         }
 
         // Detect or use specified framework
@@ -791,13 +795,25 @@ impl CliApp {
         // === PHASE 1: Verbose Project Discovery Output ===
         println!();
         println!("=== SolidityDefend Project Analysis ===");
-        println!("Framework: {:?} ({})", framework, if framework_override.is_some() { "specified" } else { "auto-detected" });
+        println!(
+            "Framework: {:?} ({})",
+            framework,
+            if framework_override.is_some() {
+                "specified"
+            } else {
+                "auto-detected"
+            }
+        );
         println!("Project Root: {}", project.root().display());
         println!();
 
         // Show source directories
         println!("Source Directories:");
-        println!("  [SCAN] {} - {} files", project.source_dir().display(), project.solidity_files.len());
+        println!(
+            "  [SCAN] {} - {} files",
+            project.source_dir().display(),
+            project.solidity_files.len()
+        );
 
         for excluded in project.excluded_dirs() {
             println!("  [SKIP] {} - excluded by default", excluded);
@@ -810,7 +826,10 @@ impl CliApp {
                     println!("  [DEPS] {} - included for scanning", lib);
                 }
             } else {
-                println!("  [DEPS] {} - use --include-deps to scan", lib_dirs.join(", "));
+                println!(
+                    "  [DEPS] {} - use --include-deps to scan",
+                    lib_dirs.join(", ")
+                );
             }
         }
         println!();
@@ -838,7 +857,8 @@ impl CliApp {
                                 if ext == "sol" {
                                     // Skip test directories in dependencies
                                     let path_str = path.to_string_lossy();
-                                    if !path_str.contains("/test/") && !path_str.contains("/tests/") {
+                                    if !path_str.contains("/test/") && !path_str.contains("/tests/")
+                                    {
                                         dep_files.push(path.to_path_buf());
                                     }
                                 }
@@ -920,7 +940,8 @@ impl CliApp {
 
                 // Show dependency information in verbose mode
                 if verbose {
-                    let files_with_deps: Vec<_> = all_files.iter()
+                    let files_with_deps: Vec<_> = all_files
+                        .iter()
                         .filter(|f| !dep_graph.dependencies(f).is_empty())
                         .collect();
 
@@ -930,10 +951,12 @@ impl CliApp {
                         for file in files_with_deps {
                             let deps = dep_graph.dependencies(file);
                             if !deps.is_empty() {
-                                let file_name = file.file_name().unwrap_or_default().to_string_lossy();
+                                let file_name =
+                                    file.file_name().unwrap_or_default().to_string_lossy();
                                 println!("  {} imports:", file_name);
                                 for dep in deps {
-                                    let dep_name = dep.file_name().unwrap_or_default().to_string_lossy();
+                                    let dep_name =
+                                        dep.file_name().unwrap_or_default().to_string_lossy();
                                     println!("    -> {}", dep_name);
                                 }
                             }
@@ -958,7 +981,10 @@ impl CliApp {
         // Note: Full cross-contract integration requires collecting AnalysisContext during parsing
         let _cross_contract_enabled = enable_cross_contract;
 
-        println!("Analyzing {} files in dependency order...", analysis_order.len());
+        println!(
+            "Analyzing {} files in dependency order...",
+            analysis_order.len()
+        );
 
         for file_path in &analysis_order {
             let file_str = file_path.to_string_lossy().to_string();
@@ -1018,18 +1044,24 @@ impl CliApp {
 
             // For now, we can detect circular dependencies from the dependency graph
             if dep_graph.has_cycles() {
-                println!("  [WARN] Circular dependencies detected - this can cause deployment issues");
+                println!(
+                    "  [WARN] Circular dependencies detected - this can cause deployment issues"
+                );
             } else {
                 println!("  [OK] No circular dependencies detected");
             }
 
             // Report on multi-file interaction patterns
-            let files_with_imports: usize = all_files.iter()
+            let files_with_imports: usize = all_files
+                .iter()
                 .filter(|f| !dep_graph.dependencies(f).is_empty())
                 .count();
 
             if files_with_imports > 0 {
-                println!("  {} contracts have external dependencies", files_with_imports);
+                println!(
+                    "  {} contracts have external dependencies",
+                    files_with_imports
+                );
             }
         }
 
@@ -1044,9 +1076,13 @@ impl CliApp {
         println!();
         if include_deps || deps_only {
             // Show categorized output
-            println!("=== Source Contract Findings ({}) ===", source_findings.len());
+            println!(
+                "=== Source Contract Findings ({}) ===",
+                source_findings.len()
+            );
             if !source_findings.is_empty() {
-                self.output_manager.write_to_stdout(&source_findings, format)?;
+                self.output_manager
+                    .write_to_stdout(&source_findings, format)?;
             } else {
                 println!("  No issues found in source contracts");
             }
@@ -1078,13 +1114,29 @@ impl CliApp {
         println!();
         println!("=== Project Security Summary ===");
 
-        let critical_count = *analysis_summary.findings_by_severity.get(&Severity::Critical).unwrap_or(&0);
-        let high_count = *analysis_summary.findings_by_severity.get(&Severity::High).unwrap_or(&0);
-        let medium_count = *analysis_summary.findings_by_severity.get(&Severity::Medium).unwrap_or(&0);
-        let low_count = *analysis_summary.findings_by_severity.get(&Severity::Low).unwrap_or(&0);
-        let info_count = *analysis_summary.findings_by_severity.get(&Severity::Info).unwrap_or(&0);
+        let critical_count = *analysis_summary
+            .findings_by_severity
+            .get(&Severity::Critical)
+            .unwrap_or(&0);
+        let high_count = *analysis_summary
+            .findings_by_severity
+            .get(&Severity::High)
+            .unwrap_or(&0);
+        let medium_count = *analysis_summary
+            .findings_by_severity
+            .get(&Severity::Medium)
+            .unwrap_or(&0);
+        let low_count = *analysis_summary
+            .findings_by_severity
+            .get(&Severity::Low)
+            .unwrap_or(&0);
+        let info_count = *analysis_summary
+            .findings_by_severity
+            .get(&Severity::Info)
+            .unwrap_or(&0);
 
-        println!("Contracts Analyzed: {} ({} source, {} dependencies)",
+        println!(
+            "Contracts Analyzed: {} ({} source, {} dependencies)",
             analysis_summary.total_files,
             source_files.len(),
             dep_files.len()
@@ -1130,20 +1182,27 @@ impl CliApp {
         } else if risk_score < 6.0 {
             println!("Protocol Risk Score: {:.1}/10 (Medium Risk)", risk_score);
         } else {
-            println!("Protocol Risk Score: {:.1}/10 (High Risk - Review Required)", risk_score);
+            println!(
+                "Protocol Risk Score: {:.1}/10 (High Risk - Review Required)",
+                risk_score
+            );
         }
 
         println!();
         println!("Analysis completed in {:.2}s", duration.as_secs_f64());
         if analysis_summary.failed_files > 0 {
-            println!("  ({} files failed to analyze)", analysis_summary.failed_files);
+            println!(
+                "  ({} files failed to analyze)",
+                analysis_summary.failed_files
+            );
         }
 
         // Write combined output to file if specified
         if let Some(path) = output_file {
             if include_deps || deps_only {
                 // Write categorized JSON with both source and dep findings
-                self.output_manager.write_to_file(&all_findings, format, &path)?;
+                self.output_manager
+                    .write_to_file(&all_findings, format, &path)?;
                 println!("\nFull results written to: {}", path.display());
             }
         }
@@ -1973,13 +2032,22 @@ impl CliApp {
             message: String,
         }
 
-        let ground_truth_content = std::fs::read_to_string(ground_truth_path)
-            .map_err(|e| anyhow!("Failed to read ground truth file {}: {}", ground_truth_path, e))?;
+        let ground_truth_content = std::fs::read_to_string(ground_truth_path).map_err(|e| {
+            anyhow!(
+                "Failed to read ground truth file {}: {}",
+                ground_truth_path,
+                e
+            )
+        })?;
 
         let ground_truth: GroundTruthDataset = serde_json::from_str(&ground_truth_content)
             .map_err(|e| anyhow!("Failed to parse ground truth JSON: {}", e))?;
 
-        println!("Loaded ground truth v{} with {} contracts\n", ground_truth.version, ground_truth.contracts.len());
+        println!(
+            "Loaded ground truth v{} with {} contracts\n",
+            ground_truth.version,
+            ground_truth.contracts.len()
+        );
 
         // Create analyzer
         let config = SolidityDefendConfig::load_from_defaults_and_file(None)?;
@@ -2009,7 +2077,9 @@ impl CliApp {
                 false_negatives += gt.expected_findings.len();
                 for ef in &gt.expected_findings {
                     missed_vulns.push((file_path.clone(), ef.clone()));
-                    let stats = detector_stats.entry(ef.detector_id.clone()).or_insert((0, 0, 0));
+                    let stats = detector_stats
+                        .entry(ef.detector_id.clone())
+                        .or_insert((0, 0, 0));
                     stats.2 += 1; // fn
                 }
                 continue;
@@ -2084,7 +2154,9 @@ impl CliApp {
                             matched_actual[ai] = true;
                             true_positives += 1;
 
-                            let stats = detector_stats.entry(expected.detector_id.clone()).or_insert((0, 0, 0));
+                            let stats = detector_stats
+                                .entry(expected.detector_id.clone())
+                                .or_insert((0, 0, 0));
                             stats.0 += 1; // tp
                             break;
                         }
@@ -2098,7 +2170,9 @@ impl CliApp {
                     false_negatives += 1;
                     let ef = &gt.expected_findings[ei];
                     missed_vulns.push((file_path.clone(), ef.clone()));
-                    let stats = detector_stats.entry(ef.detector_id.clone()).or_insert((0, 0, 0));
+                    let stats = detector_stats
+                        .entry(ef.detector_id.clone())
+                        .or_insert((0, 0, 0));
                     stats.2 += 1; // fn
                 }
             }
@@ -2109,13 +2183,15 @@ impl CliApp {
                     let actual = &file_findings[ai];
                     // Check if it's a known false positive
                     let is_known_fp = gt.known_false_positives.iter().any(|kfp| {
-                        kfp.detector_id == actual.detector_id &&
-                        (actual.line as i32 - kfp.line as i32).abs() <= line_tolerance
+                        kfp.detector_id == actual.detector_id
+                            && (actual.line as i32 - kfp.line as i32).abs() <= line_tolerance
                     });
 
                     if !is_known_fp {
                         false_positives += 1;
-                        let stats = detector_stats.entry(actual.detector_id.clone()).or_insert((0, 0, 0));
+                        let stats = detector_stats
+                            .entry(actual.detector_id.clone())
+                            .or_insert((0, 0, 0));
                         stats.1 += 1; // fp
                     }
                 }
@@ -2146,21 +2222,42 @@ impl CliApp {
         println!("║              DETECTOR VALIDATION RESULTS                     ║");
         println!("╚══════════════════════════════════════════════════════════════╝\n");
 
-        println!("FILES ANALYZED: {} (failed: {})\n", files_analyzed, files_failed);
+        println!(
+            "FILES ANALYZED: {} (failed: {})\n",
+            files_analyzed, files_failed
+        );
 
         println!("OVERALL METRICS");
         println!("═══════════════");
-        println!("  True Positives:  {:>4} / {} ({:.1}%)",
-            true_positives, total_expected,
-            if total_expected > 0 { true_positives as f64 / total_expected as f64 * 100.0 } else { 0.0 }
+        println!(
+            "  True Positives:  {:>4} / {} ({:.1}%)",
+            true_positives,
+            total_expected,
+            if total_expected > 0 {
+                true_positives as f64 / total_expected as f64 * 100.0
+            } else {
+                0.0
+            }
         );
-        println!("  False Negatives: {:>4} / {} ({:.1}%)  <- Missed real vulnerabilities",
-            false_negatives, total_expected,
-            if total_expected > 0 { false_negatives as f64 / total_expected as f64 * 100.0 } else { 0.0 }
+        println!(
+            "  False Negatives: {:>4} / {} ({:.1}%)  <- Missed real vulnerabilities",
+            false_negatives,
+            total_expected,
+            if total_expected > 0 {
+                false_negatives as f64 / total_expected as f64 * 100.0
+            } else {
+                0.0
+            }
         );
-        println!("  False Positives: {:>4} / {} ({:.1}%)",
-            false_positives, total_actual,
-            if total_actual > 0 { false_positives as f64 / total_actual as f64 * 100.0 } else { 0.0 }
+        println!(
+            "  False Positives: {:>4} / {} ({:.1}%)",
+            false_positives,
+            total_actual,
+            if total_actual > 0 {
+                false_positives as f64 / total_actual as f64 * 100.0
+            } else {
+                0.0
+            }
         );
         println!();
         println!("  Precision: {:.1}%", precision * 100.0);
@@ -2178,15 +2275,31 @@ impl CliApp {
             sorted_detectors.sort_by(|a, b| b.1.0.cmp(&a.1.0)); // Sort by TP
 
             for (detector, (tp, fp, fn_)) in sorted_detectors {
-                let d_precision = if *tp + *fp > 0 { *tp as f64 / (*tp + *fp) as f64 } else { 0.0 };
-                let d_recall = if *tp + *fn_ > 0 { *tp as f64 / (*tp + *fn_) as f64 } else { 0.0 };
+                let d_precision = if *tp + *fp > 0 {
+                    *tp as f64 / (*tp + *fp) as f64
+                } else {
+                    0.0
+                };
+                let d_recall = if *tp + *fn_ > 0 {
+                    *tp as f64 / (*tp + *fn_) as f64
+                } else {
+                    0.0
+                };
                 let d_f1 = if d_precision + d_recall > 0.0 {
                     2.0 * (d_precision * d_recall) / (d_precision + d_recall)
                 } else {
                     0.0
                 };
-                println!("  {:<25} {:>4}  {:>4}  {:>4}  {:>5.1}%  {:>5.1}%  {:.3}",
-                    detector, tp, fp, fn_, d_precision * 100.0, d_recall * 100.0, d_f1);
+                println!(
+                    "  {:<25} {:>4}  {:>4}  {:>4}  {:>5.1}%  {:>5.1}%  {:.3}",
+                    detector,
+                    tp,
+                    fp,
+                    fn_,
+                    d_precision * 100.0,
+                    d_recall * 100.0,
+                    d_f1
+                );
             }
         }
 
@@ -2196,7 +2309,10 @@ impl CliApp {
             println!("══════════════════════════════════════");
             for (i, (path, ef)) in missed_vulns.iter().take(15).enumerate() {
                 println!("  {}. [{}] {}", i + 1, ef.detector_id, ef.description);
-                println!("     File: {}:{}-{}", path, ef.line_range[0], ef.line_range[1]);
+                println!(
+                    "     File: {}:{}-{}",
+                    path, ef.line_range[0], ef.line_range[1]
+                );
             }
             if missed_vulns.len() > 15 {
                 println!("  ... and {} more", missed_vulns.len() - 15);
@@ -2210,20 +2326,31 @@ impl CliApp {
 
         if let Some(min_p) = min_precision {
             if precision < min_p {
-                println!("FAIL: Precision {:.1}% is below threshold {:.1}%", precision * 100.0, min_p * 100.0);
+                println!(
+                    "FAIL: Precision {:.1}% is below threshold {:.1}%",
+                    precision * 100.0,
+                    min_p * 100.0
+                );
                 should_fail = true;
             }
         }
 
         if let Some(min_r) = min_recall {
             if recall < min_r {
-                println!("FAIL: Recall {:.1}% is below threshold {:.1}%", recall * 100.0, min_r * 100.0);
+                println!(
+                    "FAIL: Recall {:.1}% is below threshold {:.1}%",
+                    recall * 100.0,
+                    min_r * 100.0
+                );
                 should_fail = true;
             }
         }
 
         if fail_on_regression && !missed_vulns.is_empty() {
-            println!("FAIL: {} vulnerabilities not detected (regressions)", missed_vulns.len());
+            println!(
+                "FAIL: {} vulnerabilities not detected (regressions)",
+                missed_vulns.len()
+            );
             should_fail = true;
         }
 

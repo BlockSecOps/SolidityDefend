@@ -141,9 +141,7 @@ impl Eip1153CrossTxAssumptionDetector {
                 // Check context for persistent state keywords
                 let context_start = if line_num > 5 { line_num - 5 } else { 0 };
                 let context_end = std::cmp::min(line_num + 5, lines.len());
-                let context: String = lines[context_start..context_end]
-                    .join("\n")
-                    .to_lowercase();
+                let context: String = lines[context_start..context_end].join("\n").to_lowercase();
 
                 for keyword in &persistent_keywords {
                     if context.contains(keyword) {
@@ -406,7 +404,7 @@ impl Detector for Eip1153CrossTxAssumptionDetector {
                          owner = msg.sender;  // Persists\n\
                          // NOT: assembly { tstore(0, caller()) }  // Lost after tx!\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);

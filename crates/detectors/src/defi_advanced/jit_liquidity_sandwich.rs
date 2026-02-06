@@ -193,7 +193,9 @@ impl Detector for JitLiquiditySandwichDetector {
         let has_fee_distribution = lower.contains("distributefee")
             || lower.contains("accruefee")
             || lower.contains("claimfee")
-            || (lower.contains("fee") && lower.contains("liquidity") && lower.contains("distribute"));
+            || (lower.contains("fee")
+                && lower.contains("liquidity")
+                && lower.contains("distribute"));
 
         if has_fee_distribution {
             let has_timeweighted_fees = lower.contains("timeweighted")
@@ -236,8 +238,8 @@ impl JitLiquiditySandwichDetector {
             || lower.contains("providerliquidity")
             || lower.contains("depositliquidity");
 
-        let has_remove_liquidity = lower.contains("removeliquidity")
-            || lower.contains("withdrawliquidity");
+        let has_remove_liquidity =
+            lower.contains("removeliquidity") || lower.contains("withdrawliquidity");
 
         // Must have reserve tracking (AMM pattern)
         let has_reserves = (lower.contains("reserve0") && lower.contains("reserve1"))
@@ -264,11 +266,11 @@ impl JitLiquiditySandwichDetector {
 
         // Require at least 2 strong indicators to flag
         let indicators = [
-            has_add_liquidity && has_remove_liquidity,  // Both liquidity functions
-            has_reserves,                               // Reserve tracking
-            has_swap,                                   // Swap functionality
-            has_lp_tokens,                              // LP token mechanics
-            is_pool_named,                              // Named as pool
+            has_add_liquidity && has_remove_liquidity, // Both liquidity functions
+            has_reserves,                              // Reserve tracking
+            has_swap,                                  // Swap functionality
+            has_lp_tokens,                             // LP token mechanics
+            is_pool_named,                             // Named as pool
         ];
 
         let indicator_count = indicators.iter().filter(|&&x| x).count();
@@ -288,7 +290,7 @@ impl JitLiquiditySandwichDetector {
                 return (i + 1) as u32;
             }
         }
-        1  // Default to line 1 if not found
+        1 // Default to line 1 if not found
     }
 }
 

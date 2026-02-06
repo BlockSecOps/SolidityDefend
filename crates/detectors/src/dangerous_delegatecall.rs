@@ -315,8 +315,7 @@ impl DangerousDelegatecallDetector {
             || source.contains("using Address for address");
 
         // Check if it's a library itself (libraries are internal, not exploitable)
-        let is_library = source.contains("library ")
-            && source.contains("delegatecall");
+        let is_library = source.contains("library ") && source.contains("delegatecall");
 
         // Solmate/Solady libraries
         let uses_solmate_library = source.contains("@solmate/")
