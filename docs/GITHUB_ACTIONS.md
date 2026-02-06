@@ -13,7 +13,7 @@ This document describes the GitHub Actions workflows configured for SolidityDefe
 1. **Build and Test**
    - Install Rust toolchain (stable)
    - Run code formatting checks (`cargo fmt`)
-   - Run clippy linter (`cargo clippy` with `-D warnings`, allowing `dead_code`, `unused_variables`, `unused_assignments`, `unused_parens`)
+   - Run clippy linter (advisory mode — reports warnings but does not fail the build)
    - Build in debug and release modes
    - Run all tests
    - Verify detector count (333+ expected)
@@ -282,7 +282,7 @@ Recommended settings for `main` branch:
 
 All PRs to `main` automatically run:
 1. Format checking
-2. Linting (clippy — allows `dead_code`, `unused_variables`, `unused_assignments`, `unused_parens`)
+2. Linting (clippy — advisory mode, does not block builds)
 3. Tests
 4. Security scan
 
@@ -408,8 +408,8 @@ cargo fmt -- --check
 ### Workflow Fails on Clippy
 
 ```bash
-# Run clippy locally (matching CI configuration)
-cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables -A unused_assignments -A unused_parens
+# Run clippy locally (matching CI configuration — advisory, non-blocking)
+cargo clippy --all-targets --all-features -- -W warnings
 
 # Auto-fix issues
 cargo clippy --all-targets --all-features --fix

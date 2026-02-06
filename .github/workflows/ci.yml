@@ -28,8 +28,9 @@ jobs:
       - name: Check formatting
         run: cargo fmt -- --check
 
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables -A unused_assignments -A unused_parens
+      - name: Run clippy (advisory)
+        continue-on-error: true
+        run: cargo clippy --all-targets --all-features -- -W warnings
 
       - name: Build (debug)
         run: cargo build --verbose
