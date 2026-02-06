@@ -242,8 +242,44 @@ impl ProxyStorageCollisionDetector {
                 // Allow constants and properly slotted variables
                 if var_name.contains("slot")
                     || var_name.contains("constant")
+                    || var_name.contains("position")
+                    || var_name.contains("__gap")
+                    || var_name.contains("reserved")
                     || source.contains(&format!("constant {} =", var.name.name))
+                    || source.contains(&format!("constant {} =", var.name.name.to_uppercase()))
                 {
+                    continue;
+                }
+
+                // Phase 54 FP Reduction: Check if the variable is declared as
+                // immutable (set once in constructor, not stored in regular slots)
+                if source.contains(&format!("immutable {}", var.name.name))
+                    || source.contains(&format!("immutable {};", var.name.name))
+                {
+                    continue;
+                }
+
+                // Phase 54 FP Reduction: Check if the variable is a bytes32 constant
+                // used for slot definitions (common EIP-1967 pattern). The AST may
+                // not always correctly identify these as constants, so check source.
+                if source.contains(&format!("bytes32 private constant {}", var.name.name))
+                    || source.contains(&format!("bytes32 internal constant {}", var.name.name))
+                    || source.contains(&format!("bytes32 public constant {}", var.name.name))
+                    || source.contains(&format!("bytes32 constant {}", var.name.name))
+                {
+                    continue;
+                }
+
+                // Phase 54 FP Reduction: Check if the variable declaration line
+                // contains the 'constant' keyword anywhere (handles various orderings
+                // of visibility/mutability keywords in Solidity)
+                let var_decl_pattern = format!("{}", var.name.name);
+                let is_constant = source.lines().any(|line| {
+                    line.contains(&var_decl_pattern)
+                        && line.contains("constant")
+                        && !line.contains("//")
+                });
+                if is_constant {
                     continue;
                 }
 
@@ -259,12 +295,23 @@ impl ProxyStorageCollisionDetector {
     fn has_unsafe_storage_slots(&self, source: &str) -> bool {
         // Direct sstore/sload without EIP-1967 pattern
         if source.contains("sstore") || source.contains("sload") {
-            // Check if using proper EIP-1967 slots
+            // Check if using proper EIP-1967 slots or computed slot patterns
             let has_eip1967 = source.contains("eip1967")
                 || source.contains("keccak256(")
-                || source.contains("bytes32 private constant");
+                || source.contains("bytes32 private constant")
+                || source.contains("bytes32 internal constant")
+                || source.contains("bytes32 public constant")
+                || source.contains("bytes32 constant");
 
-            if !has_eip1967 {
+            // Phase 54 FP Reduction: Also recognize patterns where sload/sstore
+            // operate on a variable that was loaded from a constant bytes32 slot.
+            // Example: bytes32 slot = IMPLEMENTATION_SLOT; assembly { impl := sload(slot) }
+            let has_slot_variable = source.contains("bytes32 slot")
+                || source.contains("bytes32 position")
+                || source.contains("SLOT")
+                || source.contains("POSITION");
+
+            if !has_eip1967 && !has_slot_variable {
                 return true;
             }
         }

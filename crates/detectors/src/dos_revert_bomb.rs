@@ -65,10 +65,30 @@ impl DosRevertBombDetector {
             {
                 // Check if this is in a try-catch block (safe)
                 let in_try_catch = self.is_in_try_catch(&lines, line_num);
-                if !in_try_catch {
-                    let issue = ".call{} without gas limit forwards all gas - recipient can cause revert bomb".to_string();
-                    findings.push((line_num as u32 + 1, func_name.clone(), issue));
+                if in_try_catch {
+                    continue;
                 }
+
+                // Skip when the call target is msg.sender (user withdrawing their own funds).
+                // A revert bomb from msg.sender only harms themselves, so it is not a
+                // vulnerability -- the caller controls whether they revert.
+                if self.is_call_to_msg_sender(trimmed, &lines, line_num) {
+                    continue;
+                }
+
+                // Skip single-call functions (not in a loop) where the call is
+                // the last meaningful operation. In this pattern only the caller
+                // is affected by a revert, matching the safe pull/withdrawal pattern.
+                if !self.is_in_loop(&lines, line_num)
+                    && self.is_last_call_in_function(&lines, line_num)
+                {
+                    continue;
+                }
+
+                let issue =
+                    ".call{} without gas limit forwards all gas - recipient can cause revert bomb"
+                        .to_string();
+                findings.push((line_num as u32 + 1, func_name.clone(), issue));
             }
 
             // Detect send() without return check - returns false on failure but doesn't revert
@@ -158,6 +178,14 @@ impl DosRevertBombDetector {
                     && !func_body.contains("try ")
                     && !func_body.contains("catch")
                 {
+                    // If the only external call in the function body is to
+                    // msg.sender and the state changes happen BEFORE the
+                    // call (checks-effects-interactions), this is the safe
+                    // pull/withdrawal pattern -- skip it.
+                    if self.is_safe_withdrawal_pattern(&func_body, &lines, line_num, func_end) {
+                        continue;
+                    }
+
                     findings.push((line_num as u32 + 1, func_name));
                 }
             }
@@ -258,12 +286,39 @@ impl DosRevertBombDetector {
 
             // Detect calls without gas limits
             if trimmed.contains(".call{value:") && !trimmed.contains("gas:") {
+                // Skip when the call target is msg.sender -- the caller
+                // controls their own receive/fallback; griefing themselves
+                // is not a vulnerability.
+                if self.is_call_to_msg_sender(trimmed, &lines, line_num) {
+                    continue;
+                }
+
+                // Skip single-call functions (not in loops) where the call
+                // is the last meaningful operation -- only the caller is
+                // affected by failure, matching the safe pull pattern.
+                if !self.is_in_loop(&lines, line_num)
+                    && self.is_last_call_in_function(&lines, line_num)
+                {
+                    continue;
+                }
+
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
             }
 
             // Detect call forwarding all gas
             if trimmed.contains(".call{") && trimmed.contains("gasleft()") {
+                // Same msg.sender exemption for explicit gasleft() forwarding
+                if self.is_call_to_msg_sender(trimmed, &lines, line_num) {
+                    continue;
+                }
+
+                if !self.is_in_loop(&lines, line_num)
+                    && self.is_last_call_in_function(&lines, line_num)
+                {
+                    continue;
+                }
+
                 let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
             }
@@ -329,6 +384,230 @@ impl DosRevertBombDetector {
             }
         }
         false
+    }
+
+    /// Determine if a function body follows the safe withdrawal / pull pattern:
+    ///
+    /// 1. The only `.call{}` in the body targets `msg.sender` (or a local
+    ///    alias assigned from `msg.sender`).
+    /// 2. All storage-mutating state changes happen BEFORE the external call
+    ///    (checks-effects-interactions).
+    /// 3. The call is NOT inside a loop.
+    ///
+    /// When all three conditions hold, only the caller themselves can cause
+    /// a revert, so it is not a DoS revert bomb vulnerability.
+    fn is_safe_withdrawal_pattern(
+        &self,
+        _func_body: &str,
+        lines: &[&str],
+        func_start: usize,
+        func_end: usize,
+    ) -> bool {
+        // Find all .call{ lines in the function
+        let mut call_lines: Vec<usize> = Vec::new();
+        for i in func_start..func_end {
+            let trimmed = lines[i].trim();
+            if trimmed.contains(".call{") && !trimmed.starts_with("//") {
+                call_lines.push(i);
+            }
+        }
+
+        // Must have exactly one call and it must not be in a loop
+        if call_lines.len() != 1 {
+            return false;
+        }
+        let call_line = call_lines[0];
+
+        if self.is_in_loop(lines, call_line) {
+            return false;
+        }
+
+        // The call must target msg.sender
+        let call_trimmed = lines[call_line].trim();
+        if !self.is_call_to_msg_sender(call_trimmed, lines, call_line) {
+            return false;
+        }
+
+        // Verify checks-effects-interactions: no state changes after the
+        // call (the existing `has_state_change_after_call` scans from
+        // func_start; we need to check only from the call line onward).
+        // If there IS a state change after the call it is NOT safe CEI.
+        if self.has_state_change_after_call(lines, call_line, func_end) {
+            return false;
+        }
+
+        true
+    }
+
+    /// Check whether a `.call{...}` on the given line targets `msg.sender`.
+    ///
+    /// Covers common Solidity idioms:
+    ///   - `msg.sender.call{value: ...}("")`
+    ///   - `payable(msg.sender).call{value: ...}("")`
+    ///   - `address(msg.sender).call{value: ...}("")`
+    ///
+    /// If the target is not on the current line (e.g. stored in a local
+    /// variable), we look backwards in the same function for a preceding
+    /// assignment such as `address recipient = msg.sender;` and resolve
+    /// the alias.
+    fn is_call_to_msg_sender(&self, trimmed: &str, lines: &[&str], line_num: usize) -> bool {
+        // Direct patterns on the same line
+        if trimmed.contains("msg.sender.call{")
+            || trimmed.contains("payable(msg.sender).call{")
+            || trimmed.contains("address(msg.sender).call{")
+        {
+            return true;
+        }
+
+        // Try to resolve an alias: extract the identifier before `.call{`
+        if let Some(call_pos) = trimmed.find(".call{") {
+            let before_call = trimmed[..call_pos].trim();
+            // The identifier is the last whitespace-/paren-delimited token
+            let target = before_call
+                .rsplit(|c: char| c.is_whitespace() || c == '(' || c == '=' || c == ',')
+                .next()
+                .unwrap_or("")
+                .trim_end_matches(')');
+
+            if !target.is_empty() && target != "msg" {
+                // Walk backwards in the function to see if this variable
+                // was assigned from msg.sender.
+                for i in (0..line_num).rev() {
+                    let prev = lines[i].trim();
+                    // Stop at function boundary
+                    if prev.contains("function ") {
+                        break;
+                    }
+                    // Match patterns like:
+                    //   address target = msg.sender;
+                    //   address payable target = payable(msg.sender);
+                    //   target = msg.sender;
+                    if prev.contains(target)
+                        && prev.contains('=')
+                        && !prev.contains("==")
+                        && (prev.contains("msg.sender") || prev.contains("payable(msg.sender)"))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        false
+    }
+
+    /// Determine whether `line_num` is inside a `for`, `while`, or `do` loop.
+    ///
+    /// Walks backwards from the current line tracking brace depth. If we
+    /// encounter a loop keyword at the correct nesting depth before we hit
+    /// the enclosing function declaration, the line is considered to be
+    /// inside a loop.
+    fn is_in_loop(&self, lines: &[&str], line_num: usize) -> bool {
+        let mut depth: i32 = 0;
+
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+
+            // Count braces to track nesting
+            for c in trimmed.chars().rev() {
+                match c {
+                    '}' => depth += 1,
+                    '{' => depth -= 1,
+                    _ => {}
+                }
+            }
+
+            // If we are at the same or enclosing scope (depth <= 0) and
+            // this line opens a loop, then the target line is inside it.
+            if depth <= 0
+                && (trimmed.starts_with("for ")
+                    || trimmed.starts_with("for(")
+                    || trimmed.starts_with("while ")
+                    || trimmed.starts_with("while(")
+                    || trimmed.starts_with("do {")
+                    || trimmed.starts_with("do{")
+                    || trimmed == "do")
+            {
+                return true;
+            }
+
+            // Stop scanning at the enclosing function boundary
+            if trimmed.contains("function ") {
+                return false;
+            }
+        }
+
+        false
+    }
+
+    /// Check whether the `.call{...}` at `line_num` is the last meaningful
+    /// operation in its enclosing function.
+    ///
+    /// "Last meaningful operation" means there are no storage writes,
+    /// additional external calls, or state-changing statements after the
+    /// call line -- only the result check (`require(success)`, `if
+    /// (!success)`, etc.), closing braces, return statements, or event
+    /// emissions are allowed.
+    fn is_last_call_in_function(&self, lines: &[&str], line_num: usize) -> bool {
+        let func_start = self.find_function_start(lines, line_num);
+        let func_end = self.find_block_end(lines, func_start);
+
+        // Look at every line after the call up to the function end.
+        for i in (line_num + 1)..func_end {
+            let trimmed = lines[i].trim();
+
+            // Skip blank lines, comments, and pure braces
+            if trimmed.is_empty()
+                || trimmed.starts_with("//")
+                || trimmed.starts_with("/*")
+                || trimmed.starts_with("*")
+                || trimmed == "}"
+                || trimmed == "};"
+                || trimmed == "{"
+            {
+                continue;
+            }
+
+            // Allow result checks (require/revert/assert on the success bool)
+            if trimmed.starts_with("require(")
+                || trimmed.starts_with("require (")
+                || trimmed.starts_with("if (!")
+                || trimmed.starts_with("if(!")
+                || trimmed.starts_with("if (!success")
+                || trimmed.starts_with("if(!success")
+                || trimmed.starts_with("assert(")
+                || trimmed.starts_with("revert")
+            {
+                continue;
+            }
+
+            // Allow return statements
+            if trimmed.starts_with("return") {
+                continue;
+            }
+
+            // Allow event emissions
+            if trimmed.starts_with("emit ") {
+                continue;
+            }
+
+            // Allow success-variable declarations produced by the call itself
+            // e.g. `(bool success, ) = ...` sometimes spans multiple lines
+            if trimmed.contains("success") && !trimmed.contains('=') {
+                continue;
+            }
+
+            // Allow closing if/else blocks that handle the call result
+            if trimmed.starts_with("} else") || trimmed.starts_with("else") {
+                continue;
+            }
+
+            // Anything else (state writes, additional calls, etc.) means
+            // this is NOT the last meaningful operation.
+            return false;
+        }
+
+        true
     }
 
     fn find_function_start(&self, lines: &[&str], line_num: usize) -> usize {

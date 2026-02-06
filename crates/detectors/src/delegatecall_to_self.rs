@@ -8,6 +8,11 @@ use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 ///
 /// Detects patterns where contracts make delegatecall to themselves,
 /// which can cause unexpected behavior or enable attack vectors.
+///
+/// False positive reduction: skips legitimate proxy patterns including
+/// EIP-1967, Diamond (EIP-2535), Beacon, UUPS, Transparent, Safe wallet,
+/// abstract Proxy base contracts, and fallback functions that forward
+/// to an implementation address.
 pub struct DelegatecallToSelfDetector {
     base: BaseDetector,
 }
@@ -44,46 +49,96 @@ impl DelegatecallToSelfDetector {
                 continue;
             }
 
-            // Direct delegatecall to this
+            // Direct delegatecall to this -- genuine true positive
             if trimmed.contains("delegatecall") && trimmed.contains("address(this)") {
-                let func_name = self.find_containing_function(&lines, line_num);
-                let issue = "Direct delegatecall to address(this)".to_string();
-                findings.push((line_num as u32 + 1, func_name, issue));
+                // Skip if the line is inside a proxy forwarding pattern where
+                // address(this) is used for something other than the target
+                // (e.g., checking balance of self before delegatecall)
+                if self.is_direct_self_delegatecall(trimmed) {
+                    // Check if target variable is immutable/constant
+                    if !self.has_immutable_target(source, trimmed) {
+                        let func_name = self.find_containing_function(&lines, line_num);
+                        let issue = "Direct delegatecall to address(this)".to_string();
+                        findings.push((line_num as u32 + 1, func_name, issue));
+                    }
+                }
             }
 
             // Delegatecall via stored self reference
             if trimmed.contains("delegatecall") {
-                let func_name = self.find_containing_function(&lines, line_num);
+                // Check if the delegatecall target variable is immutable/constant -- skip if so
+                if self.has_immutable_target(source, trimmed)
+                    || self.has_constant_target(source, trimmed)
+                {
+                    continue;
+                }
+
                 let func_start = self.find_function_start(&lines, line_num);
                 let func_body = self.get_function_body(&lines, func_start);
+
+                // Skip proxy forwarding patterns: if the function body references
+                // an implementation address variable, this is likely a proxy
+                if self.is_proxy_forwarding_body(&func_body) {
+                    continue;
+                }
 
                 // Check for patterns like: address target = address(this); target.delegatecall
                 if func_body.contains("= address(this)")
                     || func_body.contains("selfAddress")
                     || func_body.contains("_self")
                 {
-                    // Check if the delegatecall might use this variable
+                    // Check if the delegatecall actually uses this self-referencing variable
                     if trimmed.contains("target.delegatecall")
                         || trimmed.contains("selfAddress.delegatecall")
                         || trimmed.contains("_self.delegatecall")
                     {
-                        let issue = "Possible delegatecall to self via stored address".to_string();
-                        findings.push((line_num as u32 + 1, func_name, issue));
+                        // Verify the target variable is actually assigned address(this),
+                        // not just present in the function for other purposes
+                        if self.verify_target_is_self(&func_body, trimmed) {
+                            let func_name = self.find_containing_function(&lines, line_num);
+                            let issue =
+                                "Possible delegatecall to self via stored address".to_string();
+                            findings.push((line_num as u32 + 1, func_name, issue));
+                        }
                     }
                 }
             }
 
             // Multicall/batch patterns with self-delegation
+            // Only flag when delegatecall target is genuinely address(this)
             if (trimmed.contains("multicall") || trimmed.contains("batch"))
                 && trimmed.contains("delegatecall")
             {
-                let func_name = self.find_containing_function(&lines, line_num);
-                let issue = "Multicall with delegatecall may enable self-delegation".to_string();
-                findings.push((line_num as u32 + 1, func_name, issue));
+                // Only flag if the line actually uses address(this) as target
+                if trimmed.contains("address(this).delegatecall")
+                    || trimmed.contains("address(this)).delegatecall")
+                {
+                    let func_name = self.find_containing_function(&lines, line_num);
+                    let issue =
+                        "Multicall with delegatecall may enable self-delegation".to_string();
+                    findings.push((line_num as u32 + 1, func_name, issue));
+                }
             }
         }
 
         findings
+    }
+
+    /// Check if a delegatecall line genuinely targets address(this)
+    /// Returns true when address(this) is the actual delegatecall target,
+    /// not just present on the same line for another reason.
+    fn is_direct_self_delegatecall(&self, line: &str) -> bool {
+        // Pattern: address(this).delegatecall(...)
+        if line.contains("address(this).delegatecall") {
+            return true;
+        }
+        // Pattern: (address(this)).delegatecall(...)
+        if line.contains("address(this)).delegatecall") {
+            return true;
+        }
+        // If address(this) appears but not as the delegatecall receiver,
+        // it might be used for something else (e.g., balance check)
+        false
     }
 
     fn find_recursive_delegation(&self, source: &str) -> Vec<(u32, String)> {
@@ -102,14 +157,32 @@ impl DelegatecallToSelfDetector {
                 let func_name = self.extract_function_name(trimmed);
                 let func_body = self.get_function_body(&lines, line_num);
 
+                // Skip proxy forwarding functions -- these legitimately use delegatecall
+                // to an external implementation address
+                if self.is_proxy_forwarding_body(&func_body) {
+                    continue;
+                }
+
+                // Skip fallback/receive functions (handled separately)
+                if func_name == "unknown" || func_name.is_empty() {
+                    continue;
+                }
+
                 // Check if function makes delegatecall that could call itself
                 if func_body.contains("delegatecall") {
-                    // Look for selector that matches this function
+                    // Look for selector that matches this function name
                     let selector_pattern = format!("{}(", func_name);
-                    if func_body.contains(&selector_pattern)
-                        || func_body.contains("msg.sig")
-                        || func_body.contains("this.") && func_body.contains(&func_name)
-                    {
+
+                    // msg.sig forwarding is a proxy pattern, not recursive self-call.
+                    // Only flag msg.sig if it is combined with address(this) as target.
+                    let has_msg_sig_self =
+                        func_body.contains("msg.sig") && func_body.contains("address(this)");
+
+                    // this.<func_name> pattern (fix precedence with parentheses)
+                    let has_this_call =
+                        func_body.contains("this.") && func_body.contains(&func_name);
+
+                    if func_body.contains(&selector_pattern) || has_msg_sig_self || has_this_call {
                         findings.push((line_num as u32 + 1, func_name));
                     }
                 }
@@ -137,10 +210,20 @@ impl DelegatecallToSelfDetector {
                 let func_body = self.get_function_body(&lines, line_num);
 
                 if func_body.contains("delegatecall") {
-                    // Check if target could be self
-                    if func_body.contains("address(this)")
-                        || !func_body.contains("require(")
-                        || func_body.contains("implementation")
+                    // FP reduction: Skip if the fallback delegates to an implementation
+                    // address (this is a standard proxy pattern, not delegatecall-to-self)
+                    if self.is_proxy_forwarding_body(&func_body) {
+                        continue;
+                    }
+
+                    // FP reduction: Skip if delegatecall target is immutable or constant
+                    if self.fallback_has_safe_target(source, &func_body) {
+                        continue;
+                    }
+
+                    // Only flag when target is genuinely address(this)
+                    if func_body.contains("address(this).delegatecall")
+                        || func_body.contains("address(this)).delegatecall")
                     {
                         let func_name = if trimmed.contains("fallback") {
                             "fallback".to_string()
@@ -154,6 +237,91 @@ impl DelegatecallToSelfDetector {
         }
 
         findings
+    }
+
+    /// Check if a function body represents a proxy forwarding pattern.
+    /// Proxy patterns delegate to an external implementation address, not to self.
+    fn is_proxy_forwarding_body(&self, func_body: &str) -> bool {
+        let lower = func_body.to_lowercase();
+
+        // References to implementation address variables
+        let has_impl_ref = lower.contains("implementation")
+            || lower.contains("_implementation")
+            || lower.contains("impl_")
+            || lower.contains("_impl")
+            || lower.contains("singleton")
+            || lower.contains("mastercopy")
+            || lower.contains("_mastercopy")
+            || lower.contains("logic_contract")
+            || lower.contains("logiccontract")
+            || lower.contains("target_contract");
+
+        // Proxy internal helper calls
+        let has_delegate_helper = lower.contains("_delegate(")
+            || lower.contains("_fallback(")
+            || lower.contains("_getimplementation")
+            || lower.contains("_implementation()");
+
+        // EIP-1967 storage slot access
+        let has_eip1967_slot = func_body
+            .contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || func_body.contains("StorageSlot")
+            || func_body.contains("sload")
+            || func_body.contains("IMPLEMENTATION_SLOT");
+
+        // Assembly-based proxy forwarding (common in minimal proxies)
+        let has_assembly_forward = (func_body.contains("assembly") || func_body.contains("mstore"))
+            && (func_body.contains("calldatacopy") || func_body.contains("calldatasize"))
+            && func_body.contains("delegatecall");
+
+        // Diamond proxy selector routing
+        let has_diamond_routing = lower.contains("facetaddress")
+            || lower.contains("selectortofacet")
+            || lower.contains("diamondstorage");
+
+        // Beacon proxy pattern
+        let has_beacon = lower.contains("beacon") && lower.contains("implementation");
+
+        has_impl_ref
+            || has_delegate_helper
+            || has_eip1967_slot
+            || has_assembly_forward
+            || has_diamond_routing
+            || has_beacon
+    }
+
+    /// Check if the fallback function delegates to a safe (immutable/constant) target
+    fn fallback_has_safe_target(&self, source: &str, func_body: &str) -> bool {
+        // Extract any delegatecall target from the function body
+        for line in func_body.lines() {
+            let trimmed = line.trim();
+            if trimmed.contains("delegatecall") {
+                if self.has_immutable_target(source, trimmed)
+                    || self.has_constant_target(source, trimmed)
+                {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Verify that a target variable in a delegatecall line is actually assigned address(this)
+    fn verify_target_is_self(&self, func_body: &str, delegatecall_line: &str) -> bool {
+        // Extract the target variable from the delegatecall line
+        if let Some(target) = self.extract_delegatecall_target(delegatecall_line) {
+            // Check if that variable is assigned address(this) in the function body
+            let assignment1 = format!("{} = address(this)", target);
+            let assignment2 = format!("{}=address(this)", target);
+            let assignment3 = format!("{} =address(this)", target);
+
+            func_body.contains(&assignment1)
+                || func_body.contains(&assignment2)
+                || func_body.contains(&assignment3)
+        } else {
+            // If we can't extract the target, be conservative and flag it
+            true
+        }
     }
 
     fn find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
@@ -305,6 +473,70 @@ impl DelegatecallToSelfDetector {
         false
     }
 
+    /// FP Reduction: Comprehensive proxy contract detection
+    /// Catches proxy patterns not covered by EIP-1967, Diamond, or Safe checks
+    fn is_generic_proxy_contract(&self, source: &str, ctx: &AnalysisContext) -> bool {
+        let lower = source.to_lowercase();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+
+        // Contract name indicates proxy
+        let proxy_name_patterns = [
+            "proxy",
+            "delegator",
+            "forwarder",
+            "upgradeableproxy",
+            "beaconproxy",
+            "minimalproxy",
+        ];
+        let is_proxy_name = proxy_name_patterns
+            .iter()
+            .any(|p| contract_name_lower.contains(p));
+
+        // Abstract proxy base contract pattern
+        let is_abstract_proxy = source.contains("abstract contract Proxy")
+            || source.contains("abstract contract BaseProxy")
+            || (source.contains("function _delegate(")
+                && source.contains("function _implementation("));
+
+        // Beacon proxy pattern
+        let is_beacon_proxy = (lower.contains("ibeacon") || lower.contains("beacon"))
+            && lower.contains("implementation")
+            && source.contains("delegatecall");
+
+        // Minimal proxy / clone pattern (EIP-1167)
+        let is_minimal_proxy = source.contains("0x3d602d80600a3d3981f3")
+            || source.contains("0x363d3d373d3d3d363d73")
+            || lower.contains("eip1167")
+            || lower.contains("minimal proxy")
+            || lower.contains("clone");
+
+        // OpenZeppelin Proxy inheritance
+        let is_oz_proxy = source.contains("import")
+            && (source.contains("proxy/Proxy.sol")
+                || source.contains("proxy/ERC1967")
+                || source.contains("proxy/transparent")
+                || source.contains("proxy/beacon")
+                || source.contains("proxy/utils"));
+
+        // Has _implementation() function (standard proxy pattern)
+        let has_impl_getter = source.contains("function _implementation(")
+            || source.contains("function implementation(");
+
+        // Has fallback with _delegate pattern
+        let has_delegate_pattern =
+            source.contains("_delegate(") && source.contains("_implementation()");
+
+        is_proxy_name
+            || is_abstract_proxy
+            || is_beacon_proxy
+            || is_minimal_proxy
+            || is_oz_proxy
+            || has_delegate_pattern
+            || (is_proxy_name && has_impl_getter)
+            // Contract inherits from Proxy
+            || (source.contains("is Proxy") && source.contains("delegatecall"))
+    }
+
     /// Phase 16 FP Reduction: Check if delegatecall target is immutable
     /// Immutable targets are safe because they can't be changed after construction
     fn has_immutable_target(&self, source: &str, line: &str) -> bool {
@@ -318,6 +550,22 @@ impl DelegatecallToSelfDetector {
             source.contains(&immutable_pattern1)
                 || source.contains(&immutable_pattern2)
                 || source.contains(&immutable_pattern3)
+        } else {
+            false
+        }
+    }
+
+    /// Check if delegatecall target is a constant address
+    /// Constant addresses cannot be changed and are safe targets
+    fn has_constant_target(&self, source: &str, line: &str) -> bool {
+        if let Some(target_var) = self.extract_delegatecall_target(line) {
+            let constant_pattern1 = format!("constant {}", target_var);
+            let constant_pattern2 = format!("{} constant", target_var);
+            let constant_pattern3 = format!("address constant {}", target_var);
+
+            source.contains(&constant_pattern1)
+                || source.contains(&constant_pattern2)
+                || source.contains(&constant_pattern3)
         } else {
             false
         }
@@ -382,6 +630,11 @@ impl Detector for DelegatecallToSelfDetector {
         }
 
         if self.is_safe_wallet(source, ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip generic proxy contracts that legitimately use delegatecall
+        if self.is_generic_proxy_contract(source, ctx) {
             return Ok(findings);
         }
 
@@ -474,5 +727,153 @@ mod tests {
         let detector = DelegatecallToSelfDetector::new();
         assert_eq!(detector.name(), "Delegatecall to Self");
         assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    #[test]
+    fn test_is_direct_self_delegatecall() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // True positive: address(this).delegatecall(...)
+        assert!(detector.is_direct_self_delegatecall(
+            "address(this).delegatecall(abi.encodeWithSignature(\"foo()\"))"
+        ));
+
+        // True positive: (address(this)).delegatecall(...)
+        assert!(detector.is_direct_self_delegatecall("(address(this)).delegatecall(data)"));
+
+        // False positive: address(this) used for balance, delegatecall targets impl
+        assert!(
+            !detector.is_direct_self_delegatecall("impl.delegatecall(abi.encode(address(this)))")
+        );
+    }
+
+    #[test]
+    fn test_proxy_forwarding_body_detection() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // Proxy fallback that forwards to implementation
+        assert!(detector.is_proxy_forwarding_body(
+            "function fallback() external payable {\n\
+             address impl = _implementation();\n\
+             impl.delegatecall(msg.data);\n\
+             }"
+        ));
+
+        // Assembly-based proxy forwarding
+        assert!(detector.is_proxy_forwarding_body(
+            "fallback() external payable {\n\
+             assembly {\n\
+             calldatacopy(0, 0, calldatasize())\n\
+             let result := delegatecall(gas(), impl, 0, calldatasize(), 0, 0)\n\
+             }\n\
+             }"
+        ));
+
+        // Diamond proxy routing
+        assert!(detector.is_proxy_forwarding_body(
+            "function fallback() external payable {\n\
+             address facet = facetAddress(msg.sig);\n\
+             facet.delegatecall(msg.data);\n\
+             }"
+        ));
+
+        // Not a proxy -- genuine self-delegatecall
+        assert!(!detector.is_proxy_forwarding_body(
+            "function dangerous() external {\n\
+             address(this).delegatecall(data);\n\
+             }"
+        ));
+    }
+
+    #[test]
+    fn test_generic_proxy_detection() {
+        let _detector = DelegatecallToSelfDetector::new();
+
+        // Beacon proxy
+        let source = "contract MyBeaconProxy {\n\
+            IBeacon beacon;\n\
+            function _implementation() internal view returns (address) {\n\
+                return beacon.implementation();\n\
+            }\n\
+            fallback() external payable {\n\
+                address impl = _implementation();\n\
+                impl.delegatecall(msg.data);\n\
+            }\n\
+        }";
+
+        // We need an AnalysisContext to test this, so we verify the name-based check
+        assert!(source.to_lowercase().contains("beacon"));
+        assert!(source.to_lowercase().contains("implementation"));
+    }
+
+    #[test]
+    fn test_immutable_target_skipped() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        let source = "address immutable implementation;\n\
+            constructor(address impl) { implementation = impl; }\n\
+            function exec(bytes memory data) external {\n\
+                implementation.delegatecall(data);\n\
+            }";
+
+        assert!(detector.has_immutable_target(source, "implementation.delegatecall(data);"));
+    }
+
+    #[test]
+    fn test_constant_target_skipped() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        let source = "address constant IMPL = 0x1234;\n\
+            function exec(bytes memory data) external {\n\
+                IMPL.delegatecall(data);\n\
+            }";
+
+        assert!(detector.has_constant_target(source, "IMPL.delegatecall(data);"));
+    }
+
+    #[test]
+    fn test_verify_target_is_self() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // Target is actually assigned address(this)
+        let func_body = "address target = address(this);\ntarget.delegatecall(data);";
+        assert!(detector.verify_target_is_self(func_body, "target.delegatecall(data);"));
+
+        // Target is assigned something else
+        let func_body2 = "address target = someOtherAddress;\ntarget.delegatecall(data);";
+        assert!(!detector.verify_target_is_self(func_body2, "target.delegatecall(data);"));
+    }
+
+    #[test]
+    fn test_multicall_only_flags_self_target() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // Should produce findings for address(this).delegatecall in multicall
+        let source = "contract Test {\n\
+            function multicall(bytes[] memory data) external {\n\
+                for (uint i = 0; i < data.length; i++) {\n\
+                    address(this).delegatecall(data[i]);\n\
+                }\n\
+            }\n\
+        }";
+        let findings = detector.find_self_delegatecall(source);
+        // Should flag the address(this).delegatecall line
+        assert!(!findings.is_empty());
+
+        // Should NOT produce findings for implementation.delegatecall
+        let source2 = "contract Test {\n\
+            function multicall(bytes[] memory data) external {\n\
+                for (uint i = 0; i < data.length; i++) {\n\
+                    implementation.delegatecall(data[i]);\n\
+                }\n\
+            }\n\
+        }";
+        let findings2 = detector.find_self_delegatecall(source2);
+        // The multicall check should not fire without address(this)
+        let multicall_findings: Vec<_> = findings2
+            .iter()
+            .filter(|f| f.2.contains("Multicall"))
+            .collect();
+        assert!(multicall_findings.is_empty());
     }
 }

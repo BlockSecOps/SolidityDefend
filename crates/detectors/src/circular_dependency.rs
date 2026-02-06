@@ -186,6 +186,75 @@ impl CircularDependencyDetector {
             || func_source.contains("_checkRole")
     }
 
+    /// Check if a keyword appears as a function call (e.g., ".notify(" or "notify(")
+    /// rather than as a variable name, parameter name, or inside a string/encoded call.
+    fn is_function_call_pattern(func_source: &str, keyword: &str) -> bool {
+        // Check for direct method call: .keyword( or keyword(
+        let call_pattern = format!(".{}(", keyword);
+        let direct_call = format!("{}(", keyword);
+
+        if func_source.contains(&call_pattern) {
+            return true;
+        }
+
+        // Check for direct call only if the keyword is followed by ( at a word boundary
+        // This avoids matching e.g., "updateBalance(" when checking for "update("
+        // We want to match standalone calls like "notify(" but not "notifyAdmin(" for the
+        // generic "notify" keyword
+        for (idx, _) in func_source.match_indices(&direct_call) {
+            // Make sure this is at a word boundary (preceded by space, newline, or start)
+            if idx == 0 {
+                return true;
+            }
+            let prev_char = func_source.as_bytes()[idx - 1];
+            if prev_char == b' '
+                || prev_char == b'\n'
+                || prev_char == b'\t'
+                || prev_char == b';'
+                || prev_char == b'{'
+                || prev_char == b'}'
+                || prev_char == b'('
+                || prev_char == b','
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if source contains actual contract deployment (new ContractName(...))
+    /// as opposed to variable declarations like "uint256 newAmount"
+    fn has_contract_deployment(func_source: &str) -> bool {
+        // Look for "new " followed by an uppercase letter (contract name convention)
+        for (idx, _) in func_source.match_indices("new ") {
+            let after = &func_source[idx + 4..];
+            if let Some(first_char) = after.chars().next() {
+                if first_char.is_uppercase() {
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Check if contract source defines or references interface/abstract contracts
+    /// that would create non-circular type references
+    fn is_interface_or_abstract_reference(ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        // If the contract itself is an interface or abstract, its references are type-only
+        source.contains("interface ") && !source.contains("contract ")
+            || ctx.contract.name.name.starts_with('I')
+                && ctx.contract.name.name.len() > 1
+                && ctx
+                    .contract
+                    .name
+                    .name
+                    .chars()
+                    .nth(1)
+                    .map_or(false, |c| c.is_uppercase())
+    }
+
     /// Check for circular dependency vulnerabilities
     fn check_circular_dependency(
         &self,
@@ -217,6 +286,12 @@ impl CircularDependencyDetector {
             return None; // Safe pattern detected - no circular risk
         }
 
+        // Skip interface-only contracts - references through interfaces are type-level,
+        // not actual circular instantiation
+        if Self::is_interface_or_abstract_reference(ctx) {
+            return None;
+        }
+
         // NEW: Tighter external call detection (not just any parentheses!)
         let makes_external_call = func_source.contains(".call(")
             || func_source.contains(".call{")
@@ -228,10 +303,16 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 1: Callback pattern without reentrancy guard
-        let has_callback = func_source.contains("callback")
-            || func_source.contains("Callback")
-            || func_source.contains("onReceive")
-            || func_source.contains("hook");
+        // Tightened: "callback"/"Callback"/"onReceive" must appear as function call patterns
+        // or as part of function name, not just anywhere in source (e.g., in comments or
+        // encoded strings). "hook" must appear as a call like ".hook(" or "_hook("
+        let has_callback = Self::is_function_call_pattern(&func_source, "callback")
+            || Self::is_function_call_pattern(&func_source, "Callback")
+            || Self::is_function_call_pattern(&func_source, "onReceive")
+            || func_source.contains("_hook(")
+            || func_source.contains(".hook(")
+            || function.name.name.to_lowercase().contains("callback")
+            || function.name.name.to_lowercase().contains("onreceive");
 
         let no_reentrancy_guard = has_callback
             && !func_source.contains("nonReentrant")
@@ -273,17 +354,33 @@ impl CircularDependencyDetector {
             );
         }
 
-        // Define calls_external for use in later patterns
-        let calls_external =
-            func_source.contains(".") && (func_source.contains("()") || func_source.contains("("));
-
         // Pattern 3: Observer pattern with notification loops
-        let notifies_observers = func_source.contains("notify")
-            || func_source.contains("update")
-            || func_source.contains("observer")
-            || func_source.contains("listener");
+        // TIGHTENED: Require actual observer/notification call patterns, not just
+        // keywords appearing as variable names, parameter names, or in encoded strings.
+        // - "notify" must appear as a function call: .notify( or notifyObservers( etc.
+        // - "update" is too generic; only flag notifyX/updateObservers-style calls
+        // - "observer" and "listener" as parameter names do NOT indicate observer pattern
+        let has_observer_call_pattern = Self::is_function_call_pattern(&func_source, "notifyObservers")
+                || Self::is_function_call_pattern(&func_source, "notifyListeners")
+                || Self::is_function_call_pattern(&func_source, "notifyAll")
+                || Self::is_function_call_pattern(&func_source, "updateObservers")
+                || Self::is_function_call_pattern(&func_source, "updateListeners")
+                || (func_source.contains("for ") && func_source.contains("observers[")
+                    && (Self::is_function_call_pattern(&func_source, "notify")
+                        || Self::is_function_call_pattern(&func_source, "update")))
+                // Detect iterator-based observer calling: loop over an array and
+                // call each element via .call( -- this is the structural observer
+                // pattern regardless of the specific function being called.
+                || (func_source.contains("for ")
+                    && (func_source.contains("observers[") || func_source.contains("listeners[")
+                        || func_source.contains("subscribers[") || func_source.contains("hooks["))
+                    && (func_source.contains(".call(") || func_source.contains(".call{")))
+                // Also detect when the function itself is named as a notification entry point
+                || (function.name.name.to_lowercase().contains("notify")
+                    && func_source.contains("for ")
+                    && (func_source.contains(".call(") || func_source.contains(".call{")));
 
-        let no_loop_protection = notifies_observers
+        let no_loop_protection = has_observer_call_pattern
             && !func_source.contains("visited")
             && !func_source.contains("notified")
             && !func_source.contains("break");
@@ -316,12 +413,14 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 5: Delegation chain without cycle detection
-        let is_delegation = func_source.contains("delegate")
-            || func_source.contains("proxy")
-            || function.name.name.to_lowercase().contains("delegate");
+        // TIGHTENED: Only flag actual proxy delegation patterns (delegatecall usage,
+        // _delegate() calls, proxy forwarding), NOT governance delegation like
+        // delegateVotes() or delegateAction().
+        let is_proxy_delegation = func_source.contains("delegatecall")
+            || func_source.contains("_delegate(")
+            || (func_source.contains("proxy") && func_source.contains("implementation"));
 
-        let no_cycle_detection = is_delegation
-            && calls_external
+        let no_cycle_detection = is_proxy_delegation
             && !func_source.contains("visited")
             && !func_source.contains("checked");
 
@@ -345,10 +444,10 @@ impl CircularDependencyDetector {
         let has_state_writes =
             func_source.contains(" = ") || func_source.contains("+=") || func_source.contains("-=");
 
-        // Must have callback potential
+        // Must have callback potential - require actual low-level call with callback
         let has_callback_potential = func_source.contains(".call(")
-            || func_source.contains("callback")
-            || func_source.contains("hook");
+            || func_source.contains(".call{")
+            || Self::is_function_call_pattern(&func_source, "callback");
 
         let dependency_cycle = reads_external_state && has_state_writes && has_callback_potential;
 
@@ -361,11 +460,18 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 7: Upgrade circular dependency
-        let is_upgrade = func_source.contains("upgrade")
-            || func_source.contains("setImplementation")
-            || function.name.name.to_lowercase().contains("upgrade");
+        // TIGHTENED: Only flag actual proxy/implementation upgrade functions, not
+        // any function that happens to contain the word "upgrade" (e.g., upgradeUserTier).
+        let is_proxy_upgrade = func_source.contains("setImplementation")
+            || func_source.contains("upgradeTo(")
+            || func_source.contains("upgradeToAndCall(")
+            || func_source.contains("_upgradeBeaconToAndCall(")
+            || (function.name.name.to_lowercase().contains("upgrade")
+                && (func_source.contains("implementation")
+                    || func_source.contains("delegatecall")));
 
-        let calls_dependency = is_upgrade && calls_external && !func_source.contains("require");
+        let calls_dependency =
+            is_proxy_upgrade && makes_external_call && !func_source.contains("require");
 
         if calls_dependency {
             return Some(
@@ -376,11 +482,18 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 8: Event-based circular triggers
+        // TIGHTENED: Only flag when there is an actual listener registry/notification
+        // mechanism, not just a parameter or variable named "listener".
+        // Require evidence of listener iteration (for loop + listeners array) or
+        // explicit subscriber notification calls.
         let emits_event = func_source.contains("emit");
 
-        let event_triggers_call = emits_event
-            && calls_external
-            && (func_source.contains("listener") || func_source.contains("subscriber"));
+        let has_listener_registry = func_source.contains("listeners[")
+            || func_source.contains("subscribers[")
+            || Self::is_function_call_pattern(&func_source, "notifyListeners")
+            || Self::is_function_call_pattern(&func_source, "notifySubscribers");
+
+        let event_triggers_call = emits_event && makes_external_call && has_listener_registry;
 
         if event_triggers_call {
             return Some(
@@ -391,11 +504,16 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 9: Factory pattern circular reference
-        let is_factory = func_source.contains("create")
-            || func_source.contains("deploy")
-            || function.name.name.to_lowercase().contains("create");
+        // TIGHTENED: Require actual contract deployment (new ContractName(...))
+        // not just "new " appearing in variable declarations like "uint256 newAmount".
+        let is_factory = func_source.contains("deploy")
+            || function.name.name.to_lowercase().contains("deploy")
+            || (function.name.name.to_lowercase().contains("create")
+                && func_source.contains("factory"));
 
-        let circular_factory = is_factory && func_source.contains("new ") && calls_external;
+        let has_deployment = Self::has_contract_deployment(&func_source);
+
+        let circular_factory = is_factory && has_deployment && makes_external_call;
 
         if circular_factory {
             return Some(
@@ -406,10 +524,16 @@ impl CircularDependencyDetector {
         }
 
         // Pattern 10: Approval-transfer circular dependency
-        let is_approval = func_source.contains("approve")
+        // TIGHTENED: Only flag when the function actually calls BOTH approve and transfer
+        // as function calls, not just containing the words (e.g., "transferAmount" variable).
+        let is_approval_function = function.name.name.to_lowercase() == "approve"
             || function.name.name.to_lowercase().contains("approve");
 
-        let approval_transfers = is_approval && func_source.contains("transfer");
+        let calls_transfer = Self::is_function_call_pattern(&func_source, "transfer")
+            || Self::is_function_call_pattern(&func_source, "transferFrom")
+            || Self::is_function_call_pattern(&func_source, "safeTransfer");
+
+        let approval_transfers = is_approval_function && calls_transfer;
 
         if approval_transfers {
             return Some(
