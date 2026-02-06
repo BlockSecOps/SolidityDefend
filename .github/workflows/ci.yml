@@ -76,7 +76,8 @@ jobs:
       - name: Test Docker image
         run: |
           docker run --rm soliditydefend:ci --version
-          docker run --rm soliditydefend:ci --list-detectors | head -20
+          docker run --rm soliditydefend:ci --list-detectors > /tmp/detectors.txt
+          head -20 /tmp/detectors.txt
 
   security-scan:
     name: Security Scan (Self-Test)
