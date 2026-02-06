@@ -7,6 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.15] - 2026-02-05
+
+### Fixed
+
+#### GitHub Actions Workflow Fixes
+
+- **release.yml**: Full rewrite — replaced deprecated `actions/create-release@v1` and `actions/upload-release-asset@v1` with `softprops/action-gh-release@v2`
+- **release.yml**: Fixed `macos-latest` runner now being arm64 — use `macos-13` for Intel x86_64 builds
+- **release.yml**: Added `cross` tool for Linux aarch64 cross-compilation (previously would fail with no toolchain)
+- **release.yml**: Added SHA256 checksums (`SHA256SUMS.txt`) for all release binaries
+- **release.yml**: Release notes now auto-extracted from CHANGELOG.md
+- **release.yml**: Binaries are now stripped before packaging (smaller download size)
+- **release.yml**: New 3-job architecture: build-release → create-release → publish-docker
+- **ci.yml**: Clippy now allows pre-existing warning categories (`dead_code`, `unused_variables`, `unused_assignments`, `unused_parens`)
+- **ci.yml**: Docker build job gated to pushes to `main` only (skipped on PRs)
+- **validate.yml**: Fixed broken action reference `dtolnay/rust-action@stable` → `dtolnay/rust-toolchain@stable`
+
+#### Cross-Compilation Support
+
+- Added `[target.aarch64-unknown-linux-gnu]` section to `Cross.toml` with OpenSSL pre-build dependencies
+- Release matrix now covers 5 targets: Linux x86_64, Linux aarch64, macOS arm64, macOS x86_64, Windows x86_64
+
+### Changed
+
+- **release.yml**: Docker publish job now includes OCI image labels and build-args
+- Updated documentation: GITHUB_ACTIONS.md, INSTALLATION.md, README.md
+
+## [1.10.14] - 2026-02-04
+
+### Fixed
+
+#### Comprehensive False Positive Reduction (FP-1 through FP-12)
+
+Twelve false positive reduction fixes across reentrancy and other detectors, significantly improving precision for real-world DeFi contracts. Safe Patterns Library expanded from 24 to 36+ FP reduction categories.
+
+- **FP-1**: Reentrancy detector no longer flags functions protected by `nonReentrant` modifier
+- **FP-2**: Improved CEI (Checks-Effects-Interactions) pattern recognition
+- **FP-3**: Trusted internal calls no longer flagged as reentrancy vectors
+- **FP-4**: View/pure functions excluded from reentrancy analysis
+- **FP-5**: Safe ERC-20 transfer patterns recognized (SafeERC20, etc.)
+- **FP-6**: Known safe protocols excluded (OpenZeppelin, Aave, Compound, Uniswap)
+- **FP-7**: Transient storage lock patterns recognized
+- **FP-8**: Reentrancy guard via storage slot patterns detected
+- **FP-9**: Balance-check-before-transfer patterns no longer flagged
+- **FP-10**: Constructor and initializer calls excluded from reentrancy
+- **FP-11**: Immutable/constant address calls treated as trusted
+- **FP-12**: Multi-call batch patterns handled correctly
+
 ## [1.10.13] - 2026-01-29
 
 ### Added

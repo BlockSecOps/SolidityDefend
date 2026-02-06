@@ -6,9 +6,9 @@ This guide provides detailed installation instructions for SolidityDefend on var
 
 - [System Requirements](#system-requirements)
 - [Installation Methods](#installation-methods)
-  - [From Source (Recommended)](#from-source-recommended)
+  - [Binary Releases (Recommended)](#binary-releases-recommended)
   - [Using Docker](#using-docker)
-  - [Binary Releases](#binary-releases)
+  - [From Source](#from-source)
 - [Verification](#verification)
 - [Platform-Specific Instructions](#platform-specific-instructions)
 - [Troubleshooting](#troubleshooting)
@@ -16,10 +16,10 @@ This guide provides detailed installation instructions for SolidityDefend on var
 ## System Requirements
 
 ### Minimum Requirements
-- **OS**: Linux, macOS, or Windows 10+
+- **OS**: Linux (x86_64, aarch64), macOS (x86_64, ARM64), or Windows 10+ (x86_64)
 - **RAM**: 2GB minimum, 4GB+ recommended for large projects
 - **Disk**: 500MB for installation, additional space for cache and analysis results
-- **Rust**: 1.82.0 or later (for source builds)
+- **Rust**: 1.82.0 or later (only required for [building from source](#from-source) — pre-built binaries and Docker images require no Rust installation)
 
 ### Recommended Requirements
 - **RAM**: 8GB+ for optimal performance on large codebases
@@ -28,9 +28,32 @@ This guide provides detailed installation instructions for SolidityDefend on var
 
 ## Installation Methods
 
-### Quick Install (Recommended)
+### Binary Releases (Recommended)
 
-The fastest way to install SolidityDefend is using our installation script:
+Pre-built binaries are automatically compiled, stripped, and published by **GitHub Actions** on every tagged release. Each release includes SHA256 checksums (`SHA256SUMS.txt`) for integrity verification.
+
+Download from the [releases page](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
+
+**Available platforms:**
+
+| Platform | Archive | Built on |
+|----------|---------|----------|
+| Linux x86_64 | `soliditydefend-vX.X.X-linux-x86_64.tar.gz` | `ubuntu-latest` (native) |
+| Linux aarch64 | `soliditydefend-vX.X.X-linux-aarch64.tar.gz` | `ubuntu-latest` via [`cross`](https://github.com/cross-rs/cross) |
+| macOS ARM64 (Apple Silicon) | `soliditydefend-vX.X.X-macos-aarch64.tar.gz` | `macos-latest` (native arm64) |
+| macOS Intel | `soliditydefend-vX.X.X-macos-x86_64.tar.gz` | `macos-13` (native x86_64) |
+| Windows x86_64 | `soliditydefend-vX.X.X-windows-x86_64.zip` | `windows-latest` (native) |
+
+**Installation steps:**
+1. Download the appropriate archive for your platform
+2. Verify the checksum against `SHA256SUMS.txt`
+3. Extract the binary: `tar -xzf soliditydefend-*.tar.gz` (or unzip for Windows)
+4. Move to your PATH: `mv soliditydefend /usr/local/bin/` (or add to PATH on Windows)
+5. Verify: `soliditydefend --version`
+
+### Quick Install Script
+
+The install script automates the above steps by downloading the latest release from GitHub:
 
 ```bash
 curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/install.sh | bash
@@ -38,7 +61,7 @@ curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/ins
 
 This script will:
 - Automatically detect your platform (Linux, macOS, Windows)
-- Download the latest pre-compiled binary
+- Download the latest pre-compiled binary from GitHub Releases
 - Install it to `~/.local/bin` (or custom location via `INSTALL_DIR`)
 - Verify the installation
 
@@ -60,24 +83,9 @@ brew install soliditydefend
 brew upgrade soliditydefend
 ```
 
-### Binary Releases
-
-Download pre-compiled binaries from the [releases page](https://github.com/BlockSecOps/SolidityDefend/releases):
-
-**Available platforms:**
-- Linux x86_64 (`soliditydefend-vX.X.X-linux-x86_64.tar.gz`)
-- Linux ARM64 (`soliditydefend-vX.X.X-linux-arm64.tar.gz`)
-- macOS Intel (`soliditydefend-vX.X.X-darwin-x86_64.tar.gz`)
-
-**Installation steps:**
-1. Download the appropriate archive for your platform
-2. Extract the binary: `tar -xzf soliditydefend-*.tar.gz` (or unzip for Windows)
-3. Move to your PATH: `mv soliditydefend /usr/local/bin/` (or add to PATH on Windows)
-4. Verify: `soliditydefend --version`
-
 ### From Source
 
-Building from source ensures you get the latest features and optimal performance for your platform.
+Building from source is useful for development or if a pre-built binary is not available for your platform.
 
 #### Prerequisites
 
@@ -141,7 +149,7 @@ RUSTFLAGS="-C target-cpu=native" cargo build --release
 
 ### Using Docker
 
-Docker provides a consistent environment across all platforms.
+Multi-platform Docker images (`linux/amd64`, `linux/arm64`) are automatically built and published to **Docker Hub** by GitHub Actions on every tagged release.
 
 #### Prerequisites
 
@@ -150,38 +158,40 @@ Docker provides a consistent environment across all platforms.
 
 #### Basic Docker Usage
 
-1. **Pull the image** (when available):
+1. **Pull the image from Docker Hub**:
    ```bash
+   # Latest release
    docker pull blocksecops/soliditydefend:latest
+
+   # Specific version
+   docker pull blocksecops/soliditydefend:1.10.15
    ```
 
-2. **Or build locally**:
+2. **Run analysis**:
+   ```bash
+   # Analyze files in current directory
+   docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest /workspace/*.sol
+
+   # With custom output
+   docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest \
+     -f json -o /workspace/results.json /workspace/contract.sol
+   ```
+
+3. **Or build locally from source** (for development):
    ```bash
    git clone https://github.com/BlockSecOps/SolidityDefend.git
    cd SolidityDefend
    docker build -t soliditydefend .
    ```
 
-3. **Run analysis**:
-   ```bash
-   # Analyze files in current directory
-   docker run -v $(pwd):/workspace soliditydefend /workspace/*.sol
-
-   # With custom output
-   docker run -v $(pwd):/workspace soliditydefend \
-     -f json -o /workspace/results.json /workspace/contract.sol
-   ```
-
-#### Docker Compose (Development)
-
-For development with live reloading:
+#### Docker Compose
 
 ```yaml
 # docker-compose.yml
 version: '3.8'
 services:
   soliditydefend:
-    build: .
+    image: blocksecops/soliditydefend:latest
     volumes:
       - ./contracts:/workspace
     working_dir: /workspace
@@ -234,6 +244,8 @@ soliditydefend test.sol
 Expected output should show detected issues.
 
 ## Platform-Specific Instructions
+
+> **Note:** For most users, [pre-built binaries](#binary-releases-recommended) or [Docker](#using-docker) are the easiest installation methods. The instructions below are for building from source.
 
 ### Linux (Ubuntu/Debian)
 
@@ -432,6 +444,6 @@ rm -rf ~/.cache/soliditydefend
 
 **Docker cleanup**:
 ```bash
-docker rmi soliditydefend
+docker rmi blocksecops/soliditydefend:latest
 docker system prune  # Remove unused containers and images
 ```

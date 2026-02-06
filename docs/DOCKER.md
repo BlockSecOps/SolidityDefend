@@ -18,22 +18,25 @@ This guide covers running SolidityDefend in Docker containers for development, C
 
 ## Quick Start
 
-### Pull and Run (Coming Soon)
+### Pull and Run
 
-Once published to a container registry:
+Multi-platform Docker images (`linux/amd64`, `linux/arm64`) are automatically built and published to **Docker Hub** by GitHub Actions on every tagged release.
 
 ```bash
 # Pull the latest image
-docker pull ghcr.io/blocksecops/soliditydefend:latest
+docker pull blocksecops/soliditydefend:latest
+
+# Pull a specific version
+docker pull blocksecops/soliditydefend:1.10.15
 
 # Run on a local contract
-docker run --rm -v $(pwd):/workspace ghcr.io/blocksecops/soliditydefend:latest contract.sol
+docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest contract.sol
 ```
 
-### Build and Run Locally
+### Build and Run Locally (Development)
 
 ```bash
-# Build the image
+# Build the image from source
 docker build -t soliditydefend:local .
 
 # Analyze a contract
@@ -180,7 +183,7 @@ version: '3.8'
 
 services:
   soliditydefend:
-    image: soliditydefend:latest
+    image: blocksecops/soliditydefend:latest
     volumes:
       - ./contracts:/workspace:ro
       - soliditydefend-cache:/home/soliditydefend/.cache
@@ -199,7 +202,7 @@ version: '3.8'
 
 services:
   soliditydefend-ci:
-    image: soliditydefend:latest
+    image: blocksecops/soliditydefend:latest
     volumes:
       - ./contracts:/workspace:ro
     environment:
@@ -290,45 +293,46 @@ on: [push, pull_request]
 jobs:
   security:
     runs-on: ubuntu-latest
+    container:
+      image: blocksecops/soliditydefend:latest
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Build SolidityDefend
-        run: docker build -t soliditydefend:ci .
+      - uses: actions/checkout@v4
 
       - name: Run Security Scan
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            soliditydefend:ci \
-            -f json -o security-report.json contracts/
+          soliditydefend -f json -o security-report.json contracts/
 
       - name: Check for Critical Issues
         run: |
-          docker run --rm \
-            -v ${{ github.workspace }}:/workspace \
-            soliditydefend:ci \
-            --exit-code-level high contracts/
+          soliditydefend --exit-code-level high contracts/
 
       - name: Upload Results
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: always()
         with:
           name: security-report
           path: security-report.json
 ```
 
+Alternatively, use `docker run` with the published image:
+
+```yaml
+      - name: Run Security Scan
+        run: |
+          docker run --rm \
+            -v ${{ github.workspace }}:/workspace \
+            blocksecops/soliditydefend:latest \
+            -f json -o security-report.json contracts/
+```
+
 ### GitLab CI
 
 ```yaml
 security_scan:
-  image: docker:latest
-  services:
-    - docker:dind
+  image: blocksecops/soliditydefend:latest
   script:
-    - docker build -t soliditydefend:ci .
-    - docker run --rm -v $CI_PROJECT_DIR:/workspace soliditydefend:ci -f json -o security-report.json contracts/
-    - docker run --rm -v $CI_PROJECT_DIR:/workspace soliditydefend:ci --exit-code-level high contracts/
+    - soliditydefend -f json -o security-report.json contracts/
+    - soliditydefend --exit-code-level high contracts/
   artifacts:
     reports:
       json: security-report.json
@@ -339,31 +343,18 @@ security_scan:
 
 ```groovy
 pipeline {
-    agent any
+    agent {
+        docker { image 'blocksecops/soliditydefend:latest' }
+    }
     stages {
-        stage('Build') {
-            steps {
-                sh 'docker build -t soliditydefend:${BUILD_NUMBER} .'
-            }
-        }
         stage('Security Scan') {
             steps {
-                sh '''
-                    docker run --rm \
-                      -v ${WORKSPACE}:/workspace \
-                      soliditydefend:${BUILD_NUMBER} \
-                      -f json -o security-report.json contracts/
-                '''
+                sh 'soliditydefend -f json -o security-report.json contracts/'
             }
         }
         stage('Quality Gate') {
             steps {
-                sh '''
-                    docker run --rm \
-                      -v ${WORKSPACE}:/workspace \
-                      soliditydefend:${BUILD_NUMBER} \
-                      --exit-code-level high contracts/
-                '''
+                sh 'soliditydefend --exit-code-level high contracts/'
             }
         }
     }
@@ -381,7 +372,7 @@ pipeline {
 
 ### Multi-Platform Builds
 
-Build for multiple architectures:
+Multi-platform images (`linux/amd64`, `linux/arm64`) are automatically built and pushed to Docker Hub by GitHub Actions on each release. To build multi-platform images locally:
 
 ```bash
 # Enable BuildKit
@@ -394,7 +385,6 @@ docker buildx create --name multiarch --use
 docker buildx build \
   --platform linux/amd64,linux/arm64 \
   -t soliditydefend:latest \
-  --push \
   .
 ```
 
@@ -600,34 +590,25 @@ docker scan soliditydefend:latest
 
 ## Container Registry Publishing
 
-### GitHub Container Registry (GHCR)
+Docker images are **automatically published to Docker Hub** by GitHub Actions when a version tag is pushed (e.g., `git push origin v1.10.15`). The release workflow builds multi-platform images (`linux/amd64`, `linux/arm64`) and pushes them with both `latest` and version-specific tags.
+
+**Required GitHub secrets:** `DOCKER_USERNAME`, `DOCKER_PASSWORD`
+
+See [GITHUB_ACTIONS.md](GITHUB_ACTIONS.md) for full release pipeline details.
+
+### Manual Publishing (if needed)
 
 ```bash
-# Login
-echo $GITHUB_TOKEN | docker login ghcr.io -u USERNAME --password-stdin
-
-# Tag
-docker tag soliditydefend:latest ghcr.io/blocksecops/soliditydefend:latest
-docker tag soliditydefend:latest ghcr.io/blocksecops/soliditydefend:1.0.0
-
-# Push
-docker push ghcr.io/blocksecops/soliditydefend:latest
-docker push ghcr.io/blocksecops/soliditydefend:1.0.0
-```
-
-### Docker Hub
-
-```bash
-# Login
+# Login to Docker Hub
 docker login
 
 # Tag
 docker tag soliditydefend:latest blocksecops/soliditydefend:latest
-docker tag soliditydefend:latest blocksecops/soliditydefend:1.0.0
+docker tag soliditydefend:latest blocksecops/soliditydefend:1.10.15
 
 # Push
 docker push blocksecops/soliditydefend:latest
-docker push blocksecops/soliditydefend:1.0.0
+docker push blocksecops/soliditydefend:1.10.15
 ```
 
 ---
