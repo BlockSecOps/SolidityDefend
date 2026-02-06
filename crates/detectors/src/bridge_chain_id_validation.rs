@@ -4,6 +4,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::contract_classification;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct ChainIdValidationDetector {
@@ -23,9 +24,93 @@ impl ChainIdValidationDetector {
         }
     }
 
+    /// Determine whether this contract is primarily a bridge contract.
+    ///
+    /// Uses the shared contract classification as a baseline (requires >= 2
+    /// bridge indicators), then excludes contracts whose primary purpose is
+    /// clearly not bridging (governance, DAO, token, vault, etc.).
     fn is_bridge_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code.to_lowercase();
-        source.contains("bridge") || source.contains("relay")
+        // First gate: must pass shared bridge classification (>= 2 indicators)
+        if !contract_classification::is_bridge_contract(ctx) {
+            return false;
+        }
+
+        // Exclude contracts whose primary purpose is clearly NOT bridging.
+        // A governance / DAO / token / vault contract that happens to mention
+        // "bridge" or "cross-chain" should not be treated as a bridge.
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let non_bridge_names = [
+            "governance",
+            "governor",
+            "dao",
+            "voting",
+            "token",
+            "vault",
+            "staking",
+            "lending",
+            "pool",
+            "factory",
+            "registry",
+            "paymaster",
+        ];
+        if non_bridge_names
+            .iter()
+            .any(|kw| contract_name_lower.contains(kw))
+        {
+            return false;
+        }
+
+        // Require the contract name itself to contain a bridge-related keyword,
+        // OR require strong structural indicators from the source (bridge-specific
+        // function patterns). This prevents contracts that only mention "bridge"
+        // in comments from being classified as bridges.
+        let has_bridge_name = contract_name_lower.contains("bridge")
+            || contract_name_lower.contains("relay")
+            || contract_name_lower.contains("messenger")
+            || contract_name_lower.contains("crosschain");
+
+        if has_bridge_name {
+            return true;
+        }
+
+        // If the contract name is generic, require bridge-specific function patterns
+        let source_lower = ctx.source_code.to_lowercase();
+        source_lower.contains("function relaymessage")
+            || source_lower.contains("function finalize")
+            || source_lower.contains("function bridgetokens")
+            || source_lower.contains("function sendmessage")
+            || source_lower.contains("mapping(bytes32 => bool) public processedmessages")
+            || (source_lower.contains("stateroot") && source_lower.contains("merkle"))
+    }
+
+    /// Check whether a function has an access-control modifier that indicates
+    /// a trusted caller pattern (e.g. onlyOwner, onlyGuardian, onlyRelayer).
+    /// Trusted callers do not need chain ID validation since the access
+    /// control itself provides the security guarantee.
+    fn has_access_control_modifier(&self, function: &ast::Function<'_>) -> bool {
+        function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("authorized")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("relayer")
+                || name_lower.contains("role")
+                || name_lower.contains("trusted")
+                || name_lower.contains("guardian")
+                || name_lower.contains("operator")
+        })
+    }
+
+    /// Check whether the contract already uses block.chainid in an EIP-712
+    /// domain separator or similar construct. This demonstrates chain-ID
+    /// awareness at the contract level, so individual functions that do not
+    /// explicitly re-check chain ID are less likely to be vulnerable.
+    fn has_eip712_chain_id(&self, ctx: &AnalysisContext) -> bool {
+        let source_lower = ctx.source_code.to_lowercase();
+        // EIP-712 domain separator typically includes block.chainid in
+        // keccak256(abi.encode(..., block.chainid, ...))
+        source_lower.contains("eip712domain") && source_lower.contains("block.chainid")
     }
 
     fn check_function(
@@ -39,6 +124,12 @@ impl ChainIdValidationDetector {
             return None;
         }
 
+        // Skip bare receive()/fallback() functions -- these are ETH receivers,
+        // not cross-chain message receivers
+        if function.parameters.is_empty() && (name == "receive" || name == "fallback") {
+            return None;
+        }
+
         // Only check external/public functions (skip internal/private helpers)
         let is_external = matches!(
             function.visibility,
@@ -49,8 +140,25 @@ impl ChainIdValidationDetector {
             return None;
         }
 
+        // Skip functions with access-control modifiers -- trusted callers
+        // do not need chain ID validation
+        if self.has_access_control_modifier(function) {
+            return None;
+        }
+
+        // Skip if the contract already uses EIP-712 domain separator with
+        // block.chainid -- demonstrates chain-ID awareness
+        if self.has_eip712_chain_id(ctx) {
+            return None;
+        }
+
         // Extract only the function body source code to avoid matching comments
         let func_source = self.get_function_source(function, ctx).to_lowercase();
+
+        // Skip functions with inline access control (require(msg.sender == ...))
+        if self.has_inline_access_control(&func_source) {
+            return None;
+        }
 
         // Look for actual validation using block.chainid (more specific than just "chainid")
         let validates_chain = (func_source.contains("block.chainid")
@@ -77,6 +185,16 @@ impl ChainIdValidationDetector {
         } else {
             None
         }
+    }
+
+    /// Check whether the function body contains inline access control checks
+    /// such as require(msg.sender == ...) or require(authorizedRelayers[msg.sender]).
+    fn has_inline_access_control(&self, func_source: &str) -> bool {
+        let src = func_source.to_lowercase();
+        (src.contains("require") && src.contains("msg.sender"))
+            || (src.contains("authorized") && src.contains("[msg.sender]"))
+            || (src.contains("relayer") && src.contains("[msg.sender]"))
+            || (src.contains("trusted") && src.contains("[msg.sender]"))
     }
 
     /// Get function source code with comments stripped to avoid false positives

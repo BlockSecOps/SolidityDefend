@@ -170,8 +170,15 @@ impl DelegatecallToSelfDetector {
 
                 // Check if function makes delegatecall that could call itself
                 if func_body.contains("delegatecall") {
-                    // Look for selector that matches this function name
+                    // Look for selector that matches this function name.
+                    // IMPORTANT: Strip the function declaration line itself before
+                    // checking for the selector pattern, because the declaration
+                    // trivially contains "funcName(" and would always match.
                     let selector_pattern = format!("{}(", func_name);
+                    let body_without_decl = func_body
+                        .find('\n')
+                        .map(|pos| &func_body[pos..])
+                        .unwrap_or("");
 
                     // msg.sig forwarding is a proxy pattern, not recursive self-call.
                     // Only flag msg.sig if it is combined with address(this) as target.
@@ -179,10 +186,15 @@ impl DelegatecallToSelfDetector {
                         func_body.contains("msg.sig") && func_body.contains("address(this)");
 
                     // this.<func_name> pattern (fix precedence with parentheses)
-                    let has_this_call =
-                        func_body.contains("this.") && func_body.contains(&func_name);
+                    // Also check in body_without_decl to avoid matching the
+                    // declaration line itself
+                    let has_this_call = body_without_decl.contains("this.")
+                        && body_without_decl.contains(&func_name);
 
-                    if func_body.contains(&selector_pattern) || has_msg_sig_self || has_this_call {
+                    if body_without_decl.contains(&selector_pattern)
+                        || has_msg_sig_self
+                        || has_this_call
+                    {
                         findings.push((line_num as u32 + 1, func_name));
                     }
                 }
@@ -842,6 +854,60 @@ mod tests {
         // Target is assigned something else
         let func_body2 = "address target = someOtherAddress;\ntarget.delegatecall(data);";
         assert!(!detector.verify_target_is_self(func_body2, "target.delegatecall(data);"));
+    }
+
+    #[test]
+    fn test_user_controlled_delegatecall_not_flagged() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // User-controlled delegatecall should NOT be flagged as "recursive delegation".
+        // The function name appearing in its own declaration is not a recursive call.
+        let source = "contract DirectUserControlled {\n\
+            function execute(address target, bytes calldata data) external payable {\n\
+                (bool success, ) = target.delegatecall(data);\n\
+                require(success, \"Delegatecall failed\");\n\
+            }\n\
+        }";
+        let findings = detector.find_recursive_delegation(source);
+        assert!(
+            findings.is_empty(),
+            "User-controlled delegatecall should not be flagged as recursive delegation, got: {:?}",
+            findings
+        );
+
+        // Batch with user-controlled targets should also NOT be flagged
+        let source2 = "contract Batch {\n\
+            function batchExecute(address[] calldata targets, bytes[] calldata data) external {\n\
+                for (uint256 i = 0; i < targets.length; i++) {\n\
+                    (bool success, ) = targets[i].delegatecall(data[i]);\n\
+                }\n\
+            }\n\
+        }";
+        let findings2 = detector.find_recursive_delegation(source2);
+        assert!(
+            findings2.is_empty(),
+            "Batch user-controlled delegatecall should not be flagged, got: {:?}",
+            findings2
+        );
+    }
+
+    #[test]
+    fn test_genuine_recursive_delegatecall_still_detected() {
+        let detector = DelegatecallToSelfDetector::new();
+
+        // Genuine recursive self-delegatecall SHOULD be detected:
+        // function encodes its own selector and delegates to address(this)
+        let source = "contract Recursive {\n\
+            function dangerous() external {\n\
+                bytes memory data = abi.encodeWithSignature(\"dangerous()\");\n\
+                address(this).delegatecall(data);\n\
+            }\n\
+        }";
+        let findings = detector.find_recursive_delegation(source);
+        assert!(
+            !findings.is_empty(),
+            "Genuine recursive delegatecall should be detected"
+        );
     }
 
     #[test]

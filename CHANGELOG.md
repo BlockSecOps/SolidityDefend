@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.18] - 2026-02-06
+
+### Fixed
+
+#### False Positive Reduction v4 (10 detectors, 52 FPs eliminated, net -22)
+
+Ground truth validation: 311 → 289 findings across 18 test contracts (7.1% reduction), 0 TP regressions.
+Cumulative from v1.10.14: 436 → 289 (34% total reduction across 30 detectors in 4 rounds).
+
+- **delegatecall-to-self** (round 3): Fix self-match bug in selector pattern check — function body includes declaration line causing trivial match; strip declaration before checking
+- **price-manipulation-frontrun**: Skip view/pure functions, flash loan providers, governance contracts, ERC-4626 vaults, and access-controlled functions
+- **governance-parameter-bypass**: Skip state variable declarations, access-controlled functions, governance mechanisms (timelock/require/proposal), and interface definitions
+- **fallback-function-shadowing**: Contract-scoped `is_proxy_contract` and `has_if_admin_pattern` (not file-level); detect receive-to-fallback delegation patterns
+- **aa-social-recovery**: Contract-scoped source extraction; skip non-social-recovery contracts (paymasters, nonce managers, session key handlers)
+- **unprotected-initializer**: Require upgradeable context (proxy indicators); detect initialization guards, inline access control, simple ownership setters; strict name matching
+- **storage-collision** (round 3): Gate variable-target findings behind `has_proxy_storage_pattern` check — require proxy storage patterns before flagging variable collision
+- **missing-chainid-validation**: Multi-layered bridge classification (same approach as bridge-message-verification); access control detection; EIP-712 domain detection; bare receive exclusion
+- **dos-unbounded-storage** (round 3): Skip mapping declarations; require push operations for array findings; LHS-only nested mapping writes; boolean authorization patterns
+- **inefficient-storage**: Word-boundary matching for storage variable names; skip view/pure, flash loan, and external call functions; skip governance parameters from constant check
+
+Note: 36 findings from related detectors surfaced due to cross-detector deduplication effects (when suppressing one detector's findings, similar findings from overlapping detectors become visible).
+
 ## [1.10.17] - 2026-02-06
 
 ### Fixed

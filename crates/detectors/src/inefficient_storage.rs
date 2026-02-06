@@ -203,7 +203,27 @@ impl InefficientStorageDetector {
                     || trimmed.contains("= 1e"))
                     && !trimmed.contains("block.");
 
-                if is_constant_like {
+                // Exclude governance/configurable parameters that are intentionally
+                // stored in storage because they can be updated via admin functions.
+                let is_governance_param = trimmed.contains("threshold")
+                    || trimmed.contains("Threshold")
+                    || trimmed.contains("quorum")
+                    || trimmed.contains("delay")
+                    || trimmed.contains("Delay")
+                    || trimmed.contains("period")
+                    || trimmed.contains("Period")
+                    || trimmed.contains("limit")
+                    || trimmed.contains("Limit")
+                    || trimmed.contains("fee")
+                    || trimmed.contains("Fee")
+                    || trimmed.contains("rate")
+                    || trimmed.contains("Rate")
+                    || trimmed.contains("min")
+                    || trimmed.contains("max")
+                    || trimmed.contains("Max")
+                    || trimmed.contains("Min");
+
+                if is_constant_like && !is_governance_param {
                     issues.push((
                         (line_idx + 1) as u32,
                         "Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable".to_string()
@@ -287,11 +307,42 @@ impl InefficientStorageDetector {
         None
     }
 
-    fn has_redundant_storage_reads(&self, source: &str) -> bool {
+    fn has_redundant_storage_reads(&self, function_source: &str) -> bool {
+        // Skip view/pure functions -- gas optimization is less critical for read-only functions
+        let first_lines: String = function_source
+            .lines()
+            .take(3)
+            .collect::<Vec<_>>()
+            .join(" ");
+        if first_lines.contains(" view ") || first_lines.contains(" pure ") {
+            return false;
+        }
+
+        // Skip flash loan functions that use before/after balance comparison patterns
+        // These are security-critical patterns, not redundant reads
+        let source_lower = function_source.to_lowercase();
+        if (source_lower.contains("before") && source_lower.contains("after"))
+            || source_lower.contains("flashloan")
+            || source_lower.contains("flash_loan")
+            || source_lower.contains("flashmint")
+        {
+            return false;
+        }
+
+        // Skip functions with external calls between storage reads --
+        // re-reading after an external call may be intentional to detect manipulation
+        if function_source.contains(".call{")
+            || function_source.contains(".call(")
+            || function_source.contains(".transfer(")
+            || function_source.contains("onFlashLoan")
+        {
+            return false;
+        }
+
         let state_vars = ["owner", "totalSupply", "paused", "balance"];
 
         // Remove comments to avoid false positives
-        let source_no_comments: String = source
+        let source_no_comments: String = function_source
             .lines()
             .filter(|line| {
                 let trimmed = line.trim();
@@ -303,8 +354,13 @@ impl InefficientStorageDetector {
             .join("\n");
 
         for var in &state_vars {
-            // Require 4+ usages to flag (increased from 2)
-            if source_no_comments.matches(var).count() > 3
+            // Use word-boundary matching to avoid substring false positives.
+            // For example, "balance" should not match "balanceBefore", "balanceOf",
+            // "balanceAfter", or ".balance" (address property).
+            let exact_count = self.count_exact_storage_reads(&source_no_comments, var);
+
+            // Require 4+ exact usages to flag (high threshold to avoid FPs)
+            if exact_count > 3
                 && !source_no_comments.contains(&format!("uint256 {} =", var))
                 && !source_no_comments.contains(&format!("{} memory", var))
             {
@@ -313,6 +369,45 @@ impl InefficientStorageDetector {
         }
 
         false
+    }
+
+    /// Count exact word-boundary matches for a storage variable name.
+    /// Avoids matching substrings like "balanceBefore" when searching for "balance".
+    fn count_exact_storage_reads(&self, source: &str, var_name: &str) -> usize {
+        let mut count = 0;
+        let var_bytes = var_name.as_bytes();
+        let src_bytes = source.as_bytes();
+        let var_len = var_bytes.len();
+
+        if src_bytes.len() < var_len {
+            return 0;
+        }
+
+        for i in 0..=(src_bytes.len() - var_len) {
+            if &src_bytes[i..i + var_len] == var_bytes {
+                // Check character before the match (word boundary)
+                let before_ok = if i == 0 {
+                    true
+                } else {
+                    let c = src_bytes[i - 1] as char;
+                    !c.is_alphanumeric() && c != '_'
+                };
+
+                // Check character after the match (word boundary)
+                let after_ok = if i + var_len >= src_bytes.len() {
+                    true
+                } else {
+                    let c = src_bytes[i + var_len] as char;
+                    !c.is_alphanumeric() && c != '_'
+                };
+
+                if before_ok && after_ok {
+                    count += 1;
+                }
+            }
+        }
+
+        count
     }
 }
 
@@ -333,5 +428,170 @@ mod tests {
         // Phase 6: Reclassified from Low to Info (gas optimization, not security)
         assert_eq!(detector.default_severity(), Severity::Info);
         assert!(detector.is_enabled());
+    }
+
+    // --- Word-boundary matching tests ---
+
+    #[test]
+    fn test_count_exact_storage_reads_word_boundary() {
+        let detector = InefficientStorageDetector::new();
+
+        // "balance" should NOT match "balanceBefore", "balanceOf", "balanceAfter"
+        let source = "uint256 balanceBefore = balanceOf[msg.sender];\nuint256 balanceAfter = balanceOf[msg.sender];";
+        assert_eq!(detector.count_exact_storage_reads(source, "balance"), 0);
+
+        // "balance" SHOULD match standalone "balance" usage
+        let source2 = "balance += 1;\nbalance -= 2;\nbalance = 0;\nbalance;";
+        assert_eq!(detector.count_exact_storage_reads(source2, "balance"), 4);
+
+        // "owner" should NOT match "onlyOwner" or "Ownable"
+        let source3 = "modifier onlyOwner() { require(msg.sender == Ownable.owner()); }";
+        // "owner" appears once as a standalone word in "Ownable.owner()" -- the .owner() part
+        // Actually let's trace: "onlyOwner" -- o-n-l-y-O-w-n-e-r, the "owner" at position 4 has 'y' before it
+        // so before_ok is false. "Ownable" doesn't contain "owner". ".owner()" has "owner" at position after "."
+        // The "." is not alphanumeric and not '_', so before_ok = true. After is "(", so after_ok = true.
+        assert_eq!(detector.count_exact_storage_reads(source3, "owner"), 1);
+
+        // "totalSupply" should NOT match "totalSupplySnapshot" etc.
+        let source4 = "uint256 supply = totalSupplySnapshot;\ntotalSupply += 1;";
+        assert_eq!(
+            detector.count_exact_storage_reads(source4, "totalSupply"),
+            1
+        );
+    }
+
+    // --- Pattern 5: Redundant storage reads FP reduction ---
+
+    #[test]
+    fn test_no_fp_on_view_functions() {
+        let detector = InefficientStorageDetector::new();
+        // View functions should not trigger redundant storage reads
+        let source = r#"
+    function getVotingPower(address account) public view returns (uint256) {
+        return owner + owner + owner + owner + owner;
+    }
+"#;
+        assert!(!detector.has_redundant_storage_reads(source));
+    }
+
+    #[test]
+    fn test_no_fp_on_pure_functions() {
+        let detector = InefficientStorageDetector::new();
+        let source = r#"
+    function calculate(uint256 x) public pure returns (uint256) {
+        return owner + owner + owner + owner + owner;
+    }
+"#;
+        assert!(!detector.has_redundant_storage_reads(source));
+    }
+
+    #[test]
+    fn test_no_fp_on_flash_loan_before_after_pattern() {
+        let detector = InefficientStorageDetector::new();
+        // Flash loan balance before/after is a security pattern
+        let source = r#"
+    function flashLoan(address receiver, uint256 amount) external {
+        uint256 balanceBefore = address(this).balance;
+        payable(receiver).transfer(amount);
+        IFlashBorrower(receiver).onFlashLoan(msg.sender, address(this), amount, 0, "");
+        uint256 balanceAfter = address(this).balance;
+        require(balanceAfter >= balanceBefore, "Flash loan not repaid");
+    }
+"#;
+        assert!(!detector.has_redundant_storage_reads(source));
+    }
+
+    #[test]
+    fn test_no_fp_on_functions_with_external_calls() {
+        let detector = InefficientStorageDetector::new();
+        // Re-reading after external call is intentional for security
+        let source = r#"
+    function doSomething() external {
+        uint256 before = totalSupply;
+        target.call{value: 1}("");
+        require(totalSupply == before, "Reentrancy detected");
+        totalSupply += 1;
+        totalSupply += 2;
+    }
+"#;
+        assert!(!detector.has_redundant_storage_reads(source));
+    }
+
+    #[test]
+    fn test_no_fp_on_substring_matches() {
+        let detector = InefficientStorageDetector::new();
+        // "balance" substring in balanceOf, balanceBefore, balanceAfter should not count
+        let source = r#"
+    function withdraw(uint256 amount) external {
+        require(balanceOf[msg.sender] >= amount);
+        balanceOf[msg.sender] -= amount;
+        uint256 balanceBefore = address(this).balance;
+        uint256 balanceAfter = address(this).balance;
+    }
+"#;
+        assert!(!detector.has_redundant_storage_reads(source));
+    }
+
+    #[test]
+    fn test_tp_on_genuine_redundant_reads() {
+        let detector = InefficientStorageDetector::new();
+        // Genuine redundant reads of the same storage variable should still be caught
+        let source = r#"
+    function inefficient() external {
+        uint256 a = totalSupply;
+        uint256 b = totalSupply;
+        uint256 c = totalSupply;
+        uint256 d = totalSupply;
+    }
+"#;
+        assert!(detector.has_redundant_storage_reads(source));
+    }
+
+    // --- Pattern 4: Governance parameter FP reduction ---
+
+    #[test]
+    fn test_no_fp_on_governance_parameters() {
+        let detector = InefficientStorageDetector::new();
+        let source = r#"
+contract Governance {
+    uint256 public proposalThreshold = 100000e18;
+    uint256 public quorum = 10000;
+    uint256 public votingDelay = 10000;
+    uint256 public minDeposit = 1000;
+}
+"#;
+        let issues = detector.check_storage_layout(source);
+        // Should not flag any of these as "constant-like"
+        if let Some(ref found_issues) = issues {
+            for (_, desc) in found_issues {
+                assert!(
+                    !desc.contains("constant/immutable"),
+                    "Should not flag governance parameter as constant: {}",
+                    desc
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_tp_on_actual_constants() {
+        let detector = InefficientStorageDetector::new();
+        let source = r#"
+contract Example {
+    uint256 public multiplier = 10000;
+}
+"#;
+        let issues = detector.check_storage_layout(source);
+        let has_constant_warning = issues
+            .as_ref()
+            .map(|v| {
+                v.iter()
+                    .any(|(_, desc)| desc.contains("constant/immutable"))
+            })
+            .unwrap_or(false);
+        assert!(
+            has_constant_warning,
+            "Should flag non-governance constant-like variable"
+        );
     }
 }

@@ -46,9 +46,12 @@ impl DosUnboundedStorageDetector {
             }
 
             // Detect array state variable declarations
+            // FP reduction: skip mapping declarations — they are handled by
+            // find_unbounded_mapping_arrays instead.
             if trimmed.contains("[]")
                 && !trimmed.contains("memory")
                 && !trimmed.contains("calldata")
+                && !trimmed.contains("mapping(")
                 && (trimmed.contains("public")
                     || trimmed.contains("private")
                     || trimmed.contains("internal"))
@@ -61,6 +64,13 @@ impl DosUnboundedStorageDetector {
                     || trimmed.contains("struct")
                 {
                     if let Some(var_name) = self.extract_variable_name(trimmed) {
+                        // FP reduction: only flag if there are actual push operations
+                        // for this array. Arrays that are only written via index
+                        // (e.g., values[i] = x) do not grow unboundedly.
+                        if !self.has_push_operations(source, &var_name) {
+                            continue;
+                        }
+
                         // Check if there's a max length check when pushing
                         if !self.has_length_check(source, &var_name)
                             // FP reduction: skip if all push sites are access-controlled
@@ -94,6 +104,15 @@ impl DosUnboundedStorageDetector {
                 // mapping(address => ...[]) where the push uses msg.sender as key
                 // are naturally bounded by the number of unique users.
                 if self.is_per_user_mapping(trimmed, source) {
+                    continue;
+                }
+
+                // FP reduction: address-keyed mapping-to-array patterns
+                // (mapping(address => T[])) partition storage per key. Each
+                // push only grows one key's array and the caller pays the gas
+                // cost. This is fundamentally different from a global array
+                // that affects all users' gas costs when iterated.
+                if self.is_address_keyed_mapping_array(trimmed) {
                     continue;
                 }
 
@@ -178,11 +197,13 @@ impl DosUnboundedStorageDetector {
                     continue;
                 }
 
-                // Check for nested mapping writes
-                if func_body.contains("][")
-                    && func_body.contains("=")
-                    && !self.has_bounds_check(&func_body)
-                {
+                // Check for nested mapping writes that actually grow storage.
+                // Only flag if "][" appears on the LEFT side of an assignment
+                // (the write target), not merely in a read expression on the
+                // right side. Also skip writes to scalar values (bool, single
+                // uint/address) since those overwrite a fixed slot and don't
+                // cause unbounded growth.
+                if self.has_nested_mapping_write(&func_body) && !self.has_bounds_check(&func_body) {
                     findings.push((line_num as u32 + 1, func_name));
                 }
             }
@@ -267,6 +288,97 @@ impl DosUnboundedStorageDetector {
                 }
             }
         }
+        false
+    }
+
+    /// Check if there are actual `.push(` operations for a given array variable
+    /// anywhere in the source. Arrays that are only written via index assignment
+    /// (e.g., `values[i] = x`) have bounded storage footprint and should not be
+    /// flagged as unbounded growth.
+    fn has_push_operations(&self, source: &str, array_name: &str) -> bool {
+        let push_pattern = format!("{}.push(", array_name);
+        source.contains(&push_pattern)
+    }
+
+    /// Check if a function body contains a nested mapping write on the LEFT
+    /// side of an assignment (the actual write target). Returns false when
+    /// `][` only appears in read expressions on the right side of `=`.
+    ///
+    /// Also returns false for writes to scalar values (bool, single uint,
+    /// address), since overwriting a fixed-size slot does not cause unbounded
+    /// storage growth.
+    fn has_nested_mapping_write(&self, func_body: &str) -> bool {
+        for line in func_body.lines() {
+            let trimmed = line.trim();
+
+            // Skip comments
+            if trimmed.starts_with("//") {
+                continue;
+            }
+
+            // Look for assignment statements
+            if let Some(eq_pos) = self.find_assignment_operator(trimmed) {
+                let lhs = &trimmed[..eq_pos];
+                let rhs = &trimmed[eq_pos..];
+
+                // Only flag if "][" is on the left side of the assignment
+                if lhs.contains("][") {
+                    // FP reduction: skip scalar value assignments.
+                    // Writes like `mapping[a][b] = true/false/0/value` just
+                    // overwrite a single storage slot and don't grow storage.
+                    // The concern is push/append patterns, not overwrites.
+                    if self.is_scalar_mapping_write(rhs) {
+                        continue;
+                    }
+                    return true;
+                }
+            }
+        }
+        false
+    }
+
+    /// Find the position of the assignment operator `=` in a line,
+    /// skipping comparison operators (`==`, `!=`, `<=`, `>=`).
+    /// Returns the index of `=` if it is an assignment.
+    fn find_assignment_operator(&self, line: &str) -> Option<usize> {
+        let bytes = line.as_bytes();
+        let len = bytes.len();
+        for i in 0..len {
+            if bytes[i] == b'=' {
+                // Skip `==`
+                if i + 1 < len && bytes[i + 1] == b'=' {
+                    continue;
+                }
+                // Skip `!=`, `<=`, `>=`, and second `=` of `==`
+                if i > 0
+                    && (bytes[i - 1] == b'!'
+                        || bytes[i - 1] == b'<'
+                        || bytes[i - 1] == b'>'
+                        || bytes[i - 1] == b'=')
+                {
+                    continue;
+                }
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    /// Check if a nested mapping write is a boolean authorization pattern.
+    /// Writes like `mapping[a][b] = true` or `mapping[a][b] = false` are
+    /// standard authorization patterns (whitelisting, session keys, approvals)
+    /// that overwrite a single boolean slot. These are semantically similar to
+    /// ERC20 approve and should not be flagged as unbounded storage growth.
+    fn is_scalar_mapping_write(&self, rhs: &str) -> bool {
+        // rhs starts with "= ..."  Strip leading "= " or "+= " etc.
+        let value = rhs.trim_start_matches(|c: char| c == '=' || c == '+' || c == '-' || c == ' ');
+        let value = value.trim().trim_end_matches(';').trim();
+
+        // Boolean authorization patterns: mapping[a][b] = true/false
+        if value == "true" || value == "false" {
+            return true;
+        }
+
         false
     }
 
@@ -433,6 +545,15 @@ impl DosUnboundedStorageDetector {
 
         // If there are pushes and they all use msg.sender, it's per-user
         found_push && all_sender
+    }
+
+    /// Check if a mapping declaration is address-keyed mapping to array.
+    /// `mapping(address => T[])` patterns partition storage per key, so each
+    /// push only grows one key's isolated array. The caller pays their own
+    /// gas cost and this doesn't create a DoS vector for other users
+    /// (unlike a global unbounded array that gets iterated for everyone).
+    fn is_address_keyed_mapping_array(&self, declaration_line: &str) -> bool {
+        declaration_line.contains("mapping(address")
     }
 
     /// Check if all push sites for a given array variable are inside
@@ -917,5 +1038,162 @@ mod tests {
             findings.is_empty(),
             "Should NOT flag nested mapping writes with bounds checks"
         );
+    }
+
+    // ================================================================
+    // FP reduction round 3: new patterns
+    // ================================================================
+
+    #[test]
+    fn test_false_positive_mapping_declaration_not_plain_array() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // mapping(address => address[]) should NOT be detected by find_unbounded_arrays
+        // (it's a mapping, not a plain array)
+        let source = r#"
+            mapping(address => address[]) public guardians;
+
+            function addGuardian(address guardian) external {
+                guardians[msg.sender].push(guardian);
+            }
+        "#;
+
+        let findings = detector.find_unbounded_arrays(source);
+        assert!(
+            findings.is_empty(),
+            "Should NOT flag mapping declarations as plain unbounded arrays"
+        );
+    }
+
+    #[test]
+    fn test_false_positive_array_without_push() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // Array with only index writes, no push — no unbounded growth
+        let source = r#"
+            uint256[] public values;
+
+            function updateValue(uint256 index, uint256 value) public {
+                values[index] = value;
+            }
+        "#;
+
+        let findings = detector.find_unbounded_arrays(source);
+        assert!(
+            findings.is_empty(),
+            "Should NOT flag arrays without push operations"
+        );
+    }
+
+    #[test]
+    fn test_false_positive_nested_mapping_rhs_only() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // ][  only appears on the right side of =, not the left
+        let source = r#"
+            function delegate(address delegatee, uint256 proposalId) external {
+                uint256 snapshotBlock = proposals[proposalId].snapshotBlock;
+                uint256 powerAtSnapshot = votingPowerSnapshots[proposalId][snapshotBlock];
+                votingPower[delegatee] += powerAtSnapshot;
+            }
+        "#;
+
+        let findings = detector.find_nested_mapping_growth(source);
+        assert!(
+            findings.is_empty(),
+            "Should NOT flag when ][ only appears in read expressions"
+        );
+    }
+
+    #[test]
+    fn test_false_positive_nested_mapping_boolean_write() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // Boolean authorization pattern: mapping[a][b] = true
+        let source = r#"
+            function addSessionKey(address account, address sessionKey) external {
+                sessionKeys[account][sessionKey] = true;
+            }
+        "#;
+
+        let findings = detector.find_nested_mapping_growth(source);
+        assert!(
+            findings.is_empty(),
+            "Should NOT flag boolean authorization patterns"
+        );
+    }
+
+    #[test]
+    fn test_false_positive_address_keyed_mapping_array() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // mapping(address => T[]) partitions storage per key
+        let source = r#"
+            mapping(address => address[]) public guardians;
+
+            function addGuardian(address account, address guardian) external {
+                guardians[account].push(guardian);
+            }
+        "#;
+
+        let findings = detector.find_unbounded_mapping_arrays(source);
+        assert!(
+            findings.is_empty(),
+            "Should NOT flag address-keyed mapping-to-array patterns"
+        );
+    }
+
+    #[test]
+    fn test_has_nested_mapping_write_detection() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // Should detect: write on LHS with ][
+        assert!(
+            detector.has_nested_mapping_write("data[user][key] = val;"),
+            "Should detect nested mapping write on LHS"
+        );
+
+        // Should NOT detect: ][ only on RHS
+        assert!(
+            !detector.has_nested_mapping_write(
+                "uint256 v = snapshots[id][block];\nvotingPower[user] += v;"
+            ),
+            "Should NOT detect ][ only on RHS"
+        );
+
+        // Should NOT detect: boolean write
+        assert!(
+            !detector.has_nested_mapping_write("flags[a][b] = true;"),
+            "Should NOT detect boolean authorization writes"
+        );
+
+        // Should NOT detect: false write
+        assert!(
+            !detector.has_nested_mapping_write("flags[a][b] = false;"),
+            "Should NOT detect boolean revocation writes"
+        );
+    }
+
+    #[test]
+    fn test_find_assignment_operator() {
+        let detector = DosUnboundedStorageDetector::new();
+
+        // Regular assignment
+        assert!(detector.find_assignment_operator("x = 5;").is_some());
+
+        // Compound assignment
+        assert!(detector.find_assignment_operator("x += 5;").is_some());
+
+        // Comparison (not assignment)
+        assert!(detector.find_assignment_operator("x == 5").is_none());
+
+        // Not-equal (not assignment)
+        assert!(detector.find_assignment_operator("x != 5").is_none());
+
+        // Less-equal (not assignment)
+        assert!(detector.find_assignment_operator("x <= 5").is_none());
+
+        // Greater-equal (not assignment)
+        assert!(detector.find_assignment_operator("x >= 5").is_none());
     }
 }

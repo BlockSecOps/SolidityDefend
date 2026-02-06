@@ -276,10 +276,23 @@ impl StorageCollisionDetector {
             return None;
         }
 
+        // FP Reduction: Storage collision is specifically about proxy patterns where
+        // a proxy contract and its implementation have mismatched storage layouts.
+        // If a contract simply uses delegatecall with user-provided or variable
+        // targets in regular functions (not a proxy pattern), the real vulnerability
+        // is "dangerous-delegatecall" (user-controlled delegatecall target), NOT
+        // storage collision. Only flag when the contract has proxy-pattern evidence.
         if has_variable_target && !has_storage_check {
-            return Some(
-                "Delegatecall to variable target without storage layout verification".to_string(),
-            );
+            let contract_source = self.get_contract_source(ctx.contract, ctx);
+            if self.has_proxy_storage_pattern(&contract_source) {
+                return Some(
+                    "Delegatecall to variable target without storage layout verification"
+                        .to_string(),
+                );
+            }
+            // No proxy pattern evidence -- this is a user-controlled delegatecall
+            // vulnerability, not a storage collision. Skip to avoid FPs.
+            return None;
         }
 
         None
@@ -295,8 +308,62 @@ impl StorageCollisionDetector {
             && func_source.contains("assembly")
     }
 
+    /// Check if the contract source exhibits proxy storage collision patterns.
+    /// Storage collision is a proxy-specific vulnerability where the proxy and
+    /// implementation contracts have conflicting storage layouts. Contracts that
+    /// merely use delegatecall for arbitrary execution (user-controlled targets)
+    /// are a different vulnerability class (dangerous-delegatecall).
+    ///
+    /// Returns true if the contract looks like a proxy with storage collision risk.
+    fn has_proxy_storage_pattern(&self, contract_source: &str) -> bool {
+        // Proxy pattern: has an "implementation" state variable + fallback/delegatecall
+        let has_implementation_var = contract_source.contains("address public implementation")
+            || contract_source.contains("address private implementation")
+            || contract_source.contains("address internal implementation")
+            || contract_source.contains("address implementation");
+
+        let has_fallback =
+            contract_source.contains("fallback()") || contract_source.contains("fallback ()");
+
+        // Classic proxy pattern: implementation variable + fallback forwarding
+        if has_implementation_var && has_fallback {
+            return true;
+        }
+
+        // Upgrade pattern: upgradeTo function indicates proxy
+        if contract_source.contains("upgradeTo(")
+            || contract_source.contains("upgradeToAndCall(")
+            || contract_source.contains("_upgradeTo(")
+        {
+            return true;
+        }
+
+        // Initializable pattern combined with delegatecall suggests proxy/impl
+        if contract_source.contains("Initializable")
+            || contract_source.contains("UUPSUpgradeable")
+            || contract_source.contains("TransparentUpgradeableProxy")
+        {
+            return true;
+        }
+
+        // Contract has both delegatecall in fallback AND state variables that
+        // could collide (implementation address stored in sequential slot)
+        if has_fallback && contract_source.contains("delegatecall") && has_implementation_var {
+            return true;
+        }
+
+        // Explicit storage collision vulnerability markers in contract
+        if contract_source.contains("storage collision")
+            || contract_source.contains("Storage collision")
+            || contract_source.contains("STORAGE COLLISION")
+        {
+            return true;
+        }
+
+        false
+    }
+
     /// Get contract source code
-    #[allow(dead_code)]
     fn get_contract_source(&self, contract: &ast::Contract<'_>, ctx: &AnalysisContext) -> String {
         let start = contract.location.start().line();
         let end = contract.location.end().line();

@@ -4,7 +4,6 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
-use crate::safe_patterns::access_control_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 
 pub struct SocialRecoveryDetector {
@@ -24,10 +23,98 @@ impl SocialRecoveryDetector {
         }
     }
 
+    /// Extract source code for just this contract (not the whole file).
+    fn get_contract_source<'a>(&self, ctx: &'a AnalysisContext) -> &'a str {
+        let source = &ctx.source_code;
+        let start = ctx.contract.location.start().offset();
+        let end = ctx.contract.location.end().offset();
+        if end <= start || start >= source.len() {
+            return "";
+        }
+        &source[start..end.min(source.len())]
+    }
+
+    /// Determine if this specific contract (not the whole file) is a social recovery contract.
     fn is_social_recovery_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code.to_lowercase();
-        (source.contains("guardian") || source.contains("recovery"))
-            && (source.contains("recover") || source.contains("addguardian"))
+        let contract_name = ctx.contract.name.name.to_lowercase();
+        let contract_source = self.get_contract_source(ctx).to_lowercase();
+
+        // Skip paymaster contracts -- they handle gas payment, not account recovery
+        if contract_name.contains("paymaster")
+            || ctx
+                .get_functions()
+                .iter()
+                .any(|f| f.name.name == "validatePaymasterUserOp")
+        {
+            return false;
+        }
+
+        // Skip nonce managers, session key contracts, signature aggregators, etc.
+        if contract_name.contains("nonce")
+            || contract_name.contains("sessionkey")
+            || contract_name.contains("aggregator")
+            || contract_name.contains("delegation")
+            || contract_name.contains("hardware")
+        {
+            return false;
+        }
+
+        // The contract must have social-recovery-specific patterns in ITS OWN source
+        let has_guardian = contract_source.contains("guardian");
+        let has_recovery_func = ctx.get_functions().iter().any(|f| {
+            let name = f.name.name.to_lowercase();
+            name.contains("recovery") || name.contains("recover")
+        });
+        let has_add_guardian = ctx
+            .get_functions()
+            .iter()
+            .any(|f| f.name.name.to_lowercase().contains("addguardian"));
+
+        // Must have guardian concept AND recovery functions in this contract
+        has_guardian && (has_recovery_func || has_add_guardian)
+    }
+
+    /// Check if this contract has comprehensive social recovery protections.
+    fn has_secure_social_recovery(&self, ctx: &AnalysisContext) -> bool {
+        let contract_source = self.get_contract_source(ctx);
+        let contract_lower = contract_source.to_lowercase();
+
+        // Check for timelock protection
+        let has_timelock = contract_source.contains("RECOVERY_TIMELOCK")
+            || contract_source.contains("RECOVERY_DELAY")
+            || (contract_lower.contains("timelock") && contract_lower.contains("timestamp"));
+
+        // Check for guardian threshold enforcement
+        let has_threshold = contract_lower.contains("threshold")
+            && (contract_lower.contains(">=") || contract_lower.contains(">"));
+
+        // Check for guardian validation (isGuardian check or guardian mapping + require)
+        let has_guardian_validation = contract_lower.contains("isguardian")
+            || (contract_lower.contains("guardian") && contract_lower.contains("require"));
+
+        // Check for approval tracking
+        let has_approval_tracking =
+            contract_lower.contains("approval") || contract_lower.contains("approvalcount");
+
+        // Check for executed flag (replay protection)
+        let has_executed_flag =
+            contract_lower.contains("executed") && contract_lower.contains("bool");
+
+        // Check for minimum guardian count
+        let has_min_guardians = contract_source.contains("MIN_GUARDIANS")
+            || (contract_lower.contains("minimum") && contract_lower.contains("guardian"));
+
+        // Secure if it has timelock + threshold + guardian validation
+        if has_timelock && has_threshold && has_guardian_validation {
+            return true;
+        }
+
+        // Secure if it has comprehensive protections (timelock + min guardians + approval tracking + executed flag)
+        if has_timelock && has_min_guardians && has_approval_tracking && has_executed_flag {
+            return true;
+        }
+
+        false
     }
 
     fn check_function(
@@ -37,16 +124,16 @@ impl SocialRecoveryDetector {
     ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
-        let source = &ctx.source_code;
-        let source_lower = source.to_lowercase();
+        let contract_source = self.get_contract_source(ctx);
+        let contract_lower = contract_source.to_lowercase();
 
         // Check recovery execution functions
         if name.contains("recover") || name.contains("executerecovery") {
             // Check for insufficient threshold
-            let has_threshold = source_lower.contains("threshold")
-                && (source_lower.contains(">=") || source_lower.contains(">"));
-            let has_quorum = source_lower.contains("quorum");
-            let has_count_check = source_lower.contains("count") && source_lower.contains(">=");
+            let has_threshold = contract_lower.contains("threshold")
+                && (contract_lower.contains(">=") || contract_lower.contains(">"));
+            let has_quorum = contract_lower.contains("quorum");
+            let has_count_check = contract_lower.contains("count") && contract_lower.contains(">=");
 
             if !has_threshold && !has_quorum && !has_count_check {
                 issues.push((
@@ -57,11 +144,11 @@ impl SocialRecoveryDetector {
             }
 
             // Check for missing timelock delay
-            let has_timelock = (source_lower.contains("timelock")
-                || source_lower.contains("delay"))
-                && source_lower.contains("timestamp");
-            let has_recovery_period =
-                source_lower.contains("recoveryperiod") || source_lower.contains("waitingperiod");
+            let has_timelock = (contract_lower.contains("timelock")
+                || contract_lower.contains("delay"))
+                && contract_lower.contains("timestamp");
+            let has_recovery_period = contract_lower.contains("recoveryperiod")
+                || contract_lower.contains("waitingperiod");
 
             if !has_timelock && !has_recovery_period {
                 issues.push((
@@ -72,8 +159,9 @@ impl SocialRecoveryDetector {
             }
 
             // Check for owner cancellation mechanism
-            let has_cancel = source_lower.contains("cancel") && source_lower.contains("recovery");
-            let has_veto = source_lower.contains("veto");
+            let has_cancel =
+                contract_lower.contains("cancel") && contract_lower.contains("recovery");
+            let has_veto = contract_lower.contains("veto");
 
             if !has_cancel && !has_veto {
                 issues.push((
@@ -84,8 +172,8 @@ impl SocialRecoveryDetector {
             }
 
             // Check for guardian validation
-            let has_guardian_check = source_lower.contains("isguardian")
-                || (source_lower.contains("guardian") && source_lower.contains("mapping"));
+            let has_guardian_check = contract_lower.contains("isguardian")
+                || (contract_lower.contains("guardian") && contract_lower.contains("mapping"));
 
             if !has_guardian_check {
                 issues.push((
@@ -97,7 +185,8 @@ impl SocialRecoveryDetector {
             }
 
             // Check for replay protection
-            let has_nonce = source_lower.contains("nonce") || source_lower.contains("recoveryid");
+            let has_nonce =
+                contract_lower.contains("nonce") || contract_lower.contains("recoveryid");
 
             if !has_nonce {
                 issues.push((
@@ -111,8 +200,8 @@ impl SocialRecoveryDetector {
         // Check guardian addition/removal functions
         if name.contains("addguardian") || name.contains("removeguardian") {
             // Check for owner-only access
-            let has_owner_check = source_lower.contains("owner")
-                && (source_lower.contains("require") || source_lower.contains("onlyowner"));
+            let has_owner_check = contract_lower.contains("owner")
+                && (contract_lower.contains("require") || contract_lower.contains("onlyowner"));
 
             if !has_owner_check {
                 issues.push((
@@ -123,8 +212,8 @@ impl SocialRecoveryDetector {
             }
 
             // Check for minimum guardian count
-            let has_min_count = source_lower.contains("min")
-                && (source_lower.contains("guardian") || source_lower.contains("count"));
+            let has_min_count = contract_lower.contains("min")
+                && (contract_lower.contains("guardian") || contract_lower.contains("count"));
 
             if name.contains("remove") && !has_min_count {
                 issues.push((
@@ -135,8 +224,8 @@ impl SocialRecoveryDetector {
             }
 
             // Check for duplicate guardian prevention
-            let has_duplicate_check =
-                source_lower.contains("!isguardian") || source_lower.contains("require(!guardian");
+            let has_duplicate_check = contract_lower.contains("!isguardian")
+                || contract_lower.contains("require(!guardian");
 
             if name.contains("add") && !has_duplicate_check {
                 issues.push((
@@ -151,8 +240,8 @@ impl SocialRecoveryDetector {
         // Check recovery initiation
         if name.contains("initiate") && name.contains("recovery") {
             // Check for rate limiting
-            let has_rate_limit = source_lower.contains("lastrecovery")
-                || (source_lower.contains("timestamp") && source_lower.contains("cooldown"));
+            let has_rate_limit = contract_lower.contains("lastrecovery")
+                || (contract_lower.contains("timestamp") && contract_lower.contains("cooldown"));
 
             if !has_rate_limit {
                 issues.push((
@@ -163,7 +252,7 @@ impl SocialRecoveryDetector {
             }
 
             // Check for notification/event emission
-            let has_event = source_lower.contains("emit") && source_lower.contains("recovery");
+            let has_event = contract_lower.contains("emit") && contract_lower.contains("recovery");
 
             if !has_event {
                 issues.push((
@@ -212,41 +301,13 @@ impl Detector for SocialRecoveryDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Step 1: Check if this specific contract is a social recovery contract
         if !self.is_social_recovery_contract(ctx) {
             return Ok(findings);
         }
 
-        // Phase 2 Enhancement: Safe pattern detection for comprehensive social recovery
-
-        let source = &ctx.source_code;
-        let source_lower = source.to_lowercase();
-
-        // Check for comprehensive social recovery protection
-        let has_recovery_timelock =
-            source.contains("RECOVERY_TIMELOCK") || source.contains("RECOVERY_DELAY");
-        let has_min_guardians = source.contains("MIN_GUARDIANS")
-            || source_lower.contains("minimum") && source_lower.contains("guardian");
-        let has_threshold = source_lower.contains("threshold") && source_lower.contains(">=");
-        let has_approval_tracking =
-            source_lower.contains("approval") || source_lower.contains("approvalcount");
-        let has_executed_flag = source_lower.contains("executed") && source_lower.contains("bool");
-
-        // If contract has comprehensive social recovery protections, return early
-        if has_recovery_timelock
-            && has_min_guardians
-            && has_threshold
-            && has_approval_tracking
-            && has_executed_flag
-        {
-            // Comprehensive social recovery with timelock + guardian threshold + replay protection
-            return Ok(findings);
-        }
-
-        // Also check for timelock + multisig pattern (alternative protection)
-        if access_control_patterns::has_timelock_pattern(ctx)
-            && access_control_patterns::has_multisig_pattern(ctx)
-        {
-            // Timelock + multisig provides strong protection for account recovery
+        // Step 2: Check if this contract already has comprehensive protections (secure version)
+        if self.has_secure_social_recovery(ctx) {
             return Ok(findings);
         }
 
