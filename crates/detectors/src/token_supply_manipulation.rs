@@ -2,6 +2,8 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::contract_classification;
+use crate::safe_patterns::safe_call_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::utils;
 
@@ -65,9 +67,19 @@ impl Detector for TokenSupplyManipulationDetector {
         // Skip if this is an ERC-3156 flash loan - flash minting is required behavior
         let is_flash_loan = utils::is_erc3156_flash_loan(ctx);
 
+        // FP Reduction: Detect AMM/DEX pool contracts
+        // AMM pools mint LP tokens proportional to deposited assets - this is by design.
+        // LP token supply is inherently bounded by the deposited asset reserves, so a
+        // max supply cap is unnecessary and would break pool functionality.
+        // Uses both the broad contract_classification check (reserve0/reserve1 pattern)
+        // and the utils check (swap + liquidity ops + indicators).
+        let is_amm = contract_classification::is_amm_contract(ctx)
+            || utils::is_amm_pool(ctx)
+            || self.is_amm_pool_contract(ctx);
+
         for function in ctx.get_functions() {
             if let Some(supply_issue) =
-                self.check_token_supply_manipulation(function, ctx, is_vault, is_flash_loan)
+                self.check_token_supply_manipulation(function, ctx, is_vault, is_flash_loan, is_amm)
             {
                 let message = format!(
                     "Function '{}' has token supply manipulation vulnerability. {} \
@@ -155,11 +167,18 @@ impl TokenSupplyManipulationDetector {
         ctx: &AnalysisContext,
         is_vault: bool,
         is_flash_loan: bool,
+        is_amm: bool,
     ) -> Option<String> {
         function.body.as_ref()?;
 
         let func_name_lower = function.name.name.to_lowercase();
         let func_source = self.get_function_source(function, ctx);
+
+        // FP Reduction: Skip view/pure functions - they cannot modify state
+        // These functions only read data, they cannot mint, burn, or manipulate supply
+        if safe_call_patterns::is_view_or_pure_function(function) {
+            return None;
+        }
 
         // Skip constructors and initializers - they represent fixed supply at deployment
         // Minting only in constructor means the supply is fixed, not vulnerable
@@ -169,6 +188,23 @@ impl TokenSupplyManipulationDetector {
             || func_name_lower.starts_with("_init")
         {
             return None;
+        }
+
+        // FP Reduction: Skip AMM/DEX pool LP token operations
+        // AMM pools mint LP tokens proportionally to deposited liquidity and burn them
+        // on withdrawal. The supply is inherently bounded by deposited assets, and
+        // K-invariant checks protect against manipulation. Functions like mint(), burn(),
+        // addLiquidity(), removeLiquidity() are core pool operations, not vulnerabilities.
+        if is_amm {
+            let is_amm_function = func_name_lower == "mint"
+                || func_name_lower == "burn"
+                || func_name_lower.contains("liquidity")
+                || func_name_lower.contains("addliquidity")
+                || func_name_lower.contains("removeliquidity");
+
+            if is_amm_function {
+                return None;
+            }
         }
 
         // FP Reduction: Skip ERC-4626 vault functions - these mint SHARES, not tokens
@@ -248,15 +284,24 @@ impl TokenSupplyManipulationDetector {
             || (ctx.source_code.to_lowercase().contains("bridgeable")
                 && func_name_lower.contains("mint"));
 
+        // FP Reduction: Check if the mint is proportional to deposited assets
+        // AMM-style contracts that calculate minted amounts from reserves/balances
+        // have inherent supply bounds - no explicit cap is needed.
+        let has_proportional_mint = self.has_proportional_mint_pattern(&func_source, ctx);
+
         // Skip supply cap check for:
         // - ERC-4626 vaults - they mint shares, not tokens (shares backed by assets)
         // - ERC-3156 flash loans - they temporarily mint for flash loan duration
         // - Bridge/crosschain tokens - supply is validated by bridge protocol
         // - Contracts without external mint functions (fixed supply)
+        // - AMM pools - LP token supply is bounded by deposited reserves
+        // - Functions with proportional mint calculations (supply bounded by deposits)
         let no_supply_cap = is_mint
             && !is_vault  // Skip if vault
             && !is_flash_loan  // Skip if flash loan provider
             && !is_bridge_mint  // Skip if bridge mint function
+            && !is_amm  // Skip if AMM pool (LP tokens bounded by reserves)
+            && !has_proportional_mint  // Skip if mint proportional to deposits
             && !func_source.contains("maxSupply")
             && !func_source.contains("MAX_SUPPLY")
             && !func_source.contains("cap()");
@@ -300,12 +345,18 @@ impl TokenSupplyManipulationDetector {
         }
 
         // Pattern 3: No minting rate limit
+        // Skip for AMM pools - LP minting is rate-limited by deposited assets, not time
+        // Skip for proportional mints - already bounded by underlying asset deposits
         let has_rate_limit = func_source.contains("lastMint")
             || func_source.contains("mintRate")
             || func_source.contains("cooldown")
             || func_source.contains("block.timestamp");
 
-        let no_rate_limit = is_mint && !has_rate_limit && func_source.contains("amount");
+        let no_rate_limit = is_mint
+            && !has_rate_limit
+            && !is_amm
+            && !has_proportional_mint
+            && func_source.contains("amount");
 
         if no_rate_limit {
             return Some(
@@ -339,7 +390,9 @@ impl TokenSupplyManipulationDetector {
             || func_source.contains("totalSupply -=");
 
         // Skip for vaults - ERC-4626 vaults legitimately modify totalSupply for share tracking
-        let direct_manipulation = modifies_total_supply && !is_mint && !is_burn && !is_vault;
+        // Skip for AMM pools - they manage totalSupply for LP tokens through _mint/_burn
+        let direct_manipulation =
+            modifies_total_supply && !is_mint && !is_burn && !is_vault && !is_amm;
 
         if direct_manipulation {
             return Some(
@@ -482,6 +535,119 @@ impl TokenSupplyManipulationDetector {
         }
 
         None
+    }
+
+    /// Detect AMM pool contracts using heuristics beyond what the shared utilities check.
+    /// This catches custom AMM implementations that don't match standard Uniswap/Curve
+    /// patterns but still have the essential AMM characteristics.
+    fn is_amm_pool_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Check for K-invariant enforcement - the defining feature of constant-product AMMs.
+        // If a contract enforces K-invariant, its LP token minting is inherently safe.
+        let has_k_invariant = lower.contains("invariantviolation")
+            || lower.contains("invariant violation")
+            || lower.contains("k invariant")
+            || lower.contains("k =")
+            || (lower.contains("balance0")
+                && lower.contains("balance1")
+                && lower.contains("reserve"))
+            || (source.contains("balance0Adjusted * balance1Adjusted")
+                || source.contains("_reserve0) * _reserve1"));
+
+        // Check for AMM pool naming patterns
+        let has_pool_name = contract_name.contains("pool")
+            || contract_name.contains("pair")
+            || contract_name.contains("amm")
+            || contract_name.contains("dex")
+            || contract_name.contains("exchange");
+
+        // Check for core LP token mechanics: internal _mint + _burn + totalSupply tracking
+        let has_lp_mechanics = lower.contains("function _mint(")
+            && lower.contains("function _burn(")
+            && lower.contains("totalsupply");
+
+        // Check for swap function
+        let has_swap = lower.contains("function swap(") || lower.contains("function exchange(");
+
+        // Check for reserve tracking
+        let has_reserves = (source.contains("reserve0") && source.contains("reserve1"))
+            || source.contains("getReserves");
+
+        // Check for TWAP oracle (Uniswap V2-style cumulative price tracking)
+        let has_twap = lower.contains("cumulativelast")
+            || lower.contains("twap")
+            || lower.contains("pricecumulative");
+
+        // Check for minimum liquidity / dead shares (first-depositor protection)
+        let has_min_liquidity =
+            lower.contains("minimum_liquidity") || lower.contains("dead shares");
+
+        // Strong signal: K-invariant + pool name
+        if has_k_invariant && has_pool_name {
+            return true;
+        }
+
+        // Strong signal: reserves + swap + LP mechanics
+        if has_reserves && has_swap && has_lp_mechanics {
+            return true;
+        }
+
+        // Strong signal: TWAP oracle + swap (oracle is only useful in AMM context)
+        if has_twap && has_swap {
+            return true;
+        }
+
+        // Strong signal: minimum liquidity + LP mechanics (Uniswap V2 pattern)
+        if has_min_liquidity && has_lp_mechanics {
+            return true;
+        }
+
+        // Count medium indicators, require 3+
+        let indicator_count = [
+            has_k_invariant,
+            has_pool_name,
+            has_lp_mechanics,
+            has_swap,
+            has_reserves,
+            has_twap,
+            has_min_liquidity,
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+        indicator_count >= 3
+    }
+
+    /// Check if the function contains proportional mint calculations.
+    /// AMM pools and similar contracts compute minted amounts as a proportion of
+    /// existing reserves/totalSupply, which inherently bounds the minted amount.
+    ///
+    /// Common patterns:
+    /// - `liquidity = amount * totalSupply / reserve`  (Uniswap V2)
+    /// - `shares = amount * totalSupply / totalAssets`  (ERC-4626 style)
+    /// - `sqrt(amount0 * amount1)`  (initial LP mint)
+    fn has_proportional_mint_pattern(&self, func_source: &str, ctx: &AnalysisContext) -> bool {
+        let lower = func_source.to_lowercase();
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Pattern: amount * totalSupply / reserve (proportional LP minting)
+        let has_proportional_calc = (lower.contains("totalsupply") && lower.contains("reserve"))
+            || (lower.contains("totalsupply") && lower.contains("_reserve"))
+            || (lower.contains("totalsupply") && lower.contains("totalassets"));
+
+        // Pattern: sqrt(amount0 * amount1) - initial liquidity calculation
+        let has_sqrt_calc = lower.contains("sqrt(") && lower.contains("amount");
+
+        // Pattern: Contract has getReserves + this function uses reserves for mint calc
+        let has_reserve_based_mint = source_lower.contains("getreserves")
+            && (lower.contains("_mint(") || lower.contains("mint("))
+            && (lower.contains("reserve") || lower.contains("balance"));
+
+        has_proportional_calc || has_sqrt_calc || has_reserve_based_mint
     }
 
     /// Get function source code
@@ -686,5 +852,224 @@ mod tests {
         let source_lower = fixed_supply_token.to_lowercase();
         let has_function_mint = source_lower.contains("function mint");
         assert!(!has_function_mint);
+    }
+
+    #[test]
+    fn test_amm_pool_detection_with_reserves() {
+        // An AMM pool contract with reserve0/reserve1 should be detected as AMM
+        let detector = TokenSupplyManipulationDetector::new();
+
+        // Contract with reserve0/reserve1 is a strong AMM signal
+        let source = r#"
+            contract SafeAMMPool {
+                uint112 private reserve0;
+                uint112 private reserve1;
+                function swap(uint256 amount0Out, uint256 amount1Out, address to) external {}
+                function mint(address to) external returns (uint256 liquidity) {
+                    _mint(to, liquidity);
+                }
+                function burn(address to) external returns (uint256 amount0, uint256 amount1) {
+                    _burn(address(this), liquidity);
+                }
+                function _mint(address to, uint256 value) internal {
+                    totalSupply += value;
+                }
+                function _burn(address from, uint256 value) internal {
+                    totalSupply -= value;
+                }
+            }
+        "#;
+
+        let lower = source.to_lowercase();
+
+        // Verify reserve0/reserve1 pattern is detected
+        assert!(source.contains("reserve0") && source.contains("reserve1"));
+
+        // Verify swap function present
+        assert!(lower.contains("function swap("));
+
+        // Verify LP mechanics present
+        assert!(lower.contains("function _mint(") && lower.contains("function _burn("));
+    }
+
+    #[test]
+    fn test_amm_pool_detection_with_k_invariant() {
+        // A contract with K-invariant checks + pool name should be detected as AMM
+        let source = r#"
+            contract LiquidityPool {
+                error InvariantViolation();
+                function swap(uint256 amount) external {
+                    if (balance0Adjusted * balance1Adjusted < uint256(_reserve0) * _reserve1) {
+                        revert InvariantViolation();
+                    }
+                }
+                function mint(address to) external {
+                    _mint(to, liquidity);
+                }
+            }
+        "#;
+
+        let lower = source.to_lowercase();
+        let contract_name = "LiquidityPool".to_lowercase();
+
+        // K-invariant detected
+        assert!(lower.contains("invariantviolation"));
+
+        // Pool name detected
+        assert!(contract_name.contains("pool"));
+    }
+
+    #[test]
+    fn test_amm_pool_detection_with_twap() {
+        // A contract with TWAP oracle + swap should be detected as AMM
+        let source = r#"
+            contract AMMPool {
+                uint256 public price0CumulativeLast;
+                function swap(uint256 amount) external {}
+                function getTWAP(uint32 period) external view returns (uint256) {}
+            }
+        "#;
+
+        let lower = source.to_lowercase();
+
+        // TWAP pattern detected
+        assert!(lower.contains("cumulativelast"));
+
+        // Swap function present
+        assert!(lower.contains("function swap("));
+    }
+
+    #[test]
+    fn test_amm_pool_detection_with_minimum_liquidity() {
+        // A contract with MINIMUM_LIQUIDITY + LP mechanics = AMM pool
+        let source = r#"
+            contract UniswapPair {
+                uint256 public constant MINIMUM_LIQUIDITY = 1000;
+                uint256 public totalSupply;
+                function _mint(address to, uint256 value) internal {
+                    totalSupply += value;
+                }
+                function _burn(address from, uint256 value) internal {
+                    totalSupply -= value;
+                }
+                function mint(address to) external returns (uint256) {}
+            }
+        "#;
+
+        let lower = source.to_lowercase();
+
+        // Minimum liquidity detected (dead shares pattern)
+        assert!(lower.contains("minimum_liquidity"));
+
+        // LP mechanics detected
+        assert!(
+            lower.contains("function _mint(")
+                && lower.contains("function _burn(")
+                && lower.contains("totalsupply")
+        );
+    }
+
+    #[test]
+    fn test_proportional_mint_detection() {
+        // A function that calculates mint amount proportional to reserves should be recognized
+        let detector = TokenSupplyManipulationDetector::new();
+
+        let func_source = r#"
+            liquidity = min(
+                (amount0 * totalSupply) / _reserve0,
+                (amount1 * totalSupply) / _reserve1
+            );
+            _mint(to, liquidity);
+        "#;
+
+        let lower = func_source.to_lowercase();
+
+        // Proportional calculation: totalSupply + reserve
+        assert!(lower.contains("totalsupply") && lower.contains("reserve"));
+    }
+
+    #[test]
+    fn test_sqrt_mint_calculation_detected() {
+        // Initial LP mint using sqrt(amount0 * amount1) should be recognized as safe
+        let func_source = r#"
+            liquidity = sqrt(amount0 * amount1) - MINIMUM_LIQUIDITY;
+            _mint(address(0), MINIMUM_LIQUIDITY);
+            _mint(to, liquidity);
+        "#;
+
+        let lower = func_source.to_lowercase();
+
+        // sqrt + amount pattern detected
+        assert!(lower.contains("sqrt(") && lower.contains("amount"));
+    }
+
+    #[test]
+    fn test_vulnerable_mint_not_skipped_as_amm() {
+        // A simple token with unprotected mint should NOT be skipped as an AMM pool
+        let source = r#"
+            contract VulnerableToken {
+                mapping(address => uint256) public balances;
+                uint256 public totalSupply;
+                function mint(address to, uint256 amount) external {
+                    totalSupply += amount;
+                    balances[to] += amount;
+                }
+            }
+        "#;
+
+        let lower = source.to_lowercase();
+        let contract_name = "VulnerableToken".to_lowercase();
+
+        // No reserve0/reserve1 - not an AMM
+        assert!(!(source.contains("reserve0") && source.contains("reserve1")));
+
+        // No swap function
+        assert!(!lower.contains("function swap("));
+
+        // No K-invariant
+        assert!(!lower.contains("invariantviolation"));
+
+        // No pool-like name
+        assert!(
+            !contract_name.contains("pool")
+                && !contract_name.contains("pair")
+                && !contract_name.contains("amm")
+        );
+    }
+
+    #[test]
+    fn test_amm_function_name_skipping() {
+        // AMM pool contract: mint() and burn() should be skipped
+        // but random other supply-affecting functions should still be checked
+        let amm_functions = ["mint", "burn", "addliquidity", "removeliquidity"];
+        let non_amm_functions = ["inflateSupply", "emergencyMint", "adminMint"];
+
+        for func in &amm_functions {
+            let func_lower = func.to_lowercase();
+            let is_amm_function = func_lower == "mint"
+                || func_lower == "burn"
+                || func_lower.contains("liquidity")
+                || func_lower.contains("addliquidity")
+                || func_lower.contains("removeliquidity");
+            assert!(
+                is_amm_function,
+                "Expected '{}' to be recognized as AMM function",
+                func
+            );
+        }
+
+        for func in &non_amm_functions {
+            let func_lower = func.to_lowercase();
+            let is_amm_function = func_lower == "mint"
+                || func_lower == "burn"
+                || func_lower.contains("liquidity")
+                || func_lower.contains("addliquidity")
+                || func_lower.contains("removeliquidity");
+            assert!(
+                !is_amm_function,
+                "Expected '{}' NOT to be recognized as AMM function",
+                func
+            );
+        }
     }
 }

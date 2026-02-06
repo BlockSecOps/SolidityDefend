@@ -63,14 +63,33 @@ impl AmmKInvariantViolationDetector {
             || func_source.contains("balance0 * balance1")
             || func_source.contains("reserveIn * reserveOut");
 
-        let has_k_check = func_source.contains(">=")
+        // Recognize both require(newK >= oldK) and if (newK < oldK) revert patterns
+        let has_k_check_gte = func_source.contains(">=")
             && (func_source.contains("* balance")
                 || func_source.contains("* reserve")
                 || func_source.contains("kLast"));
 
-        let has_require_with_k = func_source.contains("require(") && has_k_calculation;
+        // Recognize if (product < k) revert ... pattern (equivalent to require(product >= k))
+        let has_k_check_lt = func_source.contains("<")
+            && has_k_calculation
+            && (func_source.contains("revert") || func_source.contains("require("));
 
-        if modifies_reserves && !has_k_check && !has_require_with_k {
+        let has_k_check = has_k_check_gte || has_k_check_lt;
+
+        let has_require_with_k = (func_source.contains("require(")
+            || func_source.contains("revert"))
+            && has_k_calculation;
+
+        // Also recognize fee-adjusted invariant checks (e.g., balance0Adjusted * balance1Adjusted)
+        let has_adjusted_k_check = (func_source.contains("Adjusted")
+            || func_source.contains("adjusted"))
+            && func_source.contains("*")
+            && (func_source.contains("<")
+                || func_source.contains(">=")
+                || func_source.contains("require(")
+                || func_source.contains("revert"));
+
+        if modifies_reserves && !has_k_check && !has_require_with_k && !has_adjusted_k_check {
             return Some(
                 "Reserve updates don't verify constant product (K) invariant (x*y >= k), \
                 allowing pool imbalance and potential value extraction"
@@ -104,7 +123,19 @@ impl AmmKInvariantViolationDetector {
             || func_source.contains("actualAmount")
             || func_source.contains("receivedAmount");
 
-        if has_transfer && !has_balance_before && !calculates_actual_amount {
+        // Check if the function reads actual balances via balanceOf and syncs reserves
+        // This is the Uniswap V2 pattern: transfer, then read balanceOf, then _update
+        // which correctly handles FOT tokens by using actual remaining balances
+        let reads_actual_balance_and_syncs = func_source.contains("balanceOf(address(this))")
+            && (func_source.contains("_update(")
+                || func_source.contains("reserve0 =")
+                || func_source.contains("reserve1 ="));
+
+        if has_transfer
+            && !has_balance_before
+            && !calculates_actual_amount
+            && !reads_actual_balance_and_syncs
+        {
             return Some(
                 "Token transfers don't account for fee-on-transfer tokens, \
                 incorrect reserve calculations may result in pool drainage"
@@ -113,11 +144,13 @@ impl AmmKInvariantViolationDetector {
         }
 
         // Check if reserves are synced with actual balances
+        // Recognize both direct assignments and _update() calls as valid sync mechanisms
         let syncs_with_balance = func_source.contains("balanceOf")
             && (func_source.contains("reserve0 =")
                 || func_source.contains("reserve1 =")
                 || func_source.contains("reserve0 +=")
-                || func_source.contains("reserve1 +="));
+                || func_source.contains("reserve1 +=")
+                || func_source.contains("_update("));
 
         if has_transfer && has_balance_check && !syncs_with_balance {
             return Some(
@@ -131,7 +164,11 @@ impl AmmKInvariantViolationDetector {
     }
 
     /// Check for inadequate reserve updates
-    fn check_reserve_updates(&self, func_source: &str) -> Option<String> {
+    fn check_reserve_updates_with_ast(
+        &self,
+        func_source: &str,
+        function: &ast::Function<'_>,
+    ) -> Option<String> {
         let updates_reserves = (func_source.contains("reserve0 =")
             || func_source.contains("reserve1 =")
             || func_source.contains("_update("))
@@ -141,18 +178,23 @@ impl AmmKInvariantViolationDetector {
             return None;
         }
 
-        // Check for reentrancy protection during updates
-        let has_reentrancy_guard = func_source.contains("nonReentrant")
-            || func_source.contains("locked")
-            || func_source.contains("_status")
-            || func_source.contains("lock()");
+        // Use AST-aware reentrancy check that includes function modifiers
+        let has_reentrancy_guard = self.has_reentrancy_protection(func_source, function);
 
+        // Only flag truly external calls (low-level .call, .transfer, .send)
+        // Internal functions like _mint/_burn (prefixed with _) are not external calls
+        // and don't introduce reentrancy risk from external actors
         let has_external_call = func_source.contains(".call")
             || func_source.contains(".transfer")
-            || func_source.contains("_mint")
-            || func_source.contains("_burn");
+            || func_source.contains(".send(");
 
-        if updates_reserves && has_external_call && !has_reentrancy_guard {
+        // Also check for safeTransfer/safeTransferFrom which are external ERC20 calls
+        let has_safe_transfer =
+            func_source.contains("safeTransfer") || func_source.contains("safeTransferFrom");
+
+        let has_risky_external_call = has_external_call || has_safe_transfer;
+
+        if updates_reserves && has_risky_external_call && !has_reentrancy_guard {
             return Some(
                 "Reserve updates occur without reentrancy protection, \
                 enabling manipulation during callbacks"
@@ -165,7 +207,7 @@ impl AmmKInvariantViolationDetector {
             && func_source.matches("reserve1 =").count() > 0
             && !func_source.contains("_update(");
 
-        if separate_updates && has_external_call {
+        if separate_updates && has_risky_external_call && !has_reentrancy_guard {
             return Some(
                 "Reserves updated separately instead of atomically, \
                 creating window for manipulation between updates"
@@ -262,16 +304,51 @@ impl AmmKInvariantViolationDetector {
     }
 
     /// Get function source code
+    ///
+    /// Note: function.location lines are 1-based, so we convert to 0-based
+    /// indices when indexing into the source_lines vector.
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
         let start = function.location.start().line();
         let end = function.location.end().line();
 
+        // Lines are 1-based; convert to 0-based index for the source_lines vec
+        if start == 0 {
+            return String::new();
+        }
+        let start_idx = start - 1;
+        let end_idx = end.saturating_sub(1);
+
         let source_lines: Vec<&str> = ctx.source_code.lines().collect();
-        if start < source_lines.len() && end < source_lines.len() {
-            source_lines[start..=end].join("\n")
+        if start_idx < source_lines.len() && end_idx < source_lines.len() {
+            source_lines[start_idx..=end_idx].join("\n")
         } else {
             String::new()
         }
+    }
+
+    /// Check if a function has a reentrancy guard modifier (including from AST modifiers)
+    fn has_reentrancy_protection(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+        // Check source text for common reentrancy guard patterns
+        if func_source.contains("nonReentrant")
+            || func_source.contains("locked")
+            || func_source.contains("_status")
+            || func_source.contains("lock()")
+        {
+            return true;
+        }
+
+        // Also check the AST modifier list for reentrancy guard modifiers
+        for modifier in function.modifiers.iter() {
+            let mod_name = modifier.name.name.to_lowercase();
+            if mod_name.contains("nonreentrant")
+                || mod_name.contains("lock")
+                || mod_name.contains("mutex")
+            {
+                return true;
+            }
+        }
+
+        false
     }
 }
 
@@ -359,8 +436,8 @@ impl Detector for AmmKInvariantViolationDetector {
                 issues.push(issue);
             }
 
-            // Check for reserve update issues
-            if let Some(issue) = self.check_reserve_updates(&func_source) {
+            // Check for reserve update issues (AST-aware for reentrancy guard detection)
+            if let Some(issue) = self.check_reserve_updates_with_ast(&func_source, function) {
                 issues.push(issue);
             }
 
@@ -429,6 +506,7 @@ impl Detector for AmmKInvariantViolationDetector {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::test_utils::create_mock_ast_function;
 
     #[test]
     fn test_detector_properties() {
@@ -464,7 +542,7 @@ mod tests {
                 .is_some()
         );
 
-        // Should not flag code with K validation
+        // Should not flag code with K validation using require(>=)
         let safe_code = "function swap() external {
             uint256 kBefore = reserve0 * reserve1;
             reserve0 = balance0;
@@ -472,6 +550,47 @@ mod tests {
             require(reserve0 * reserve1 >= kBefore, \"K\");
         }";
         assert!(detector.check_k_invariant_validation(safe_code).is_none());
+    }
+
+    #[test]
+    fn test_k_invariant_revert_pattern() {
+        let detector = AmmKInvariantViolationDetector::new();
+
+        // Should not flag code that uses if (x < y) revert pattern
+        // This is the Uniswap V2 / modern Solidity style
+        let safe_revert_code = "function swap() external {
+            uint256 balance0Adjusted = balance0 * 1000 - amount0In * 3;
+            uint256 balance1Adjusted = balance1 * 1000 - amount1In * 3;
+            if (balance0Adjusted * balance1Adjusted < uint256(_reserve0) * _reserve1 * 1000000) {
+                revert InvariantViolation();
+            }
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }";
+        assert!(
+            detector
+                .check_k_invariant_validation(safe_revert_code)
+                .is_none(),
+            "Should not flag revert-based K invariant checks"
+        );
+    }
+
+    #[test]
+    fn test_k_invariant_adjusted_balance_pattern() {
+        let detector = AmmKInvariantViolationDetector::new();
+
+        // Should not flag code with fee-adjusted invariant check
+        let safe_adjusted_code = "function swap() external {
+            uint256 balance0Adjusted = balance0 * 1000 - fee0;
+            uint256 balance1Adjusted = balance1 * 1000 - fee1;
+            require(balance0Adjusted * balance1Adjusted >= kBefore * 1000000);
+            _update(balance0, balance1, reserve0, reserve1);
+        }";
+        assert!(
+            detector
+                .check_k_invariant_validation(safe_adjusted_code)
+                .is_none(),
+            "Should not flag adjusted balance K invariant checks"
+        );
     }
 
     #[test]
@@ -496,8 +615,28 @@ mod tests {
     }
 
     #[test]
+    fn test_fot_update_function_sync() {
+        let detector = AmmKInvariantViolationDetector::new();
+
+        // Should not flag when reserves are synced via _update() after balanceOf check
+        let safe_update_code = "function swap() external {
+            token0.safeTransfer(to, amount0Out);
+            uint256 balance0 = token0.balanceOf(address(this));
+            uint256 balance1 = token1.balanceOf(address(this));
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }";
+        assert!(
+            detector
+                .check_fot_token_handling(safe_update_code)
+                .is_none(),
+            "Should not flag when _update() syncs reserves with actual balances"
+        );
+    }
+
+    #[test]
     fn test_reserve_update_checks() {
         let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
 
         // Should detect unprotected reserve updates with external calls
         let vulnerable_code = "function swap() external {
@@ -505,14 +644,78 @@ mod tests {
             reserve0 = balance0;
             reserve1 = balance1;
         }";
-        assert!(detector.check_reserve_updates(vulnerable_code).is_some());
+        let func = create_mock_ast_function(
+            &arena,
+            "swap",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(vulnerable_code, &func)
+                .is_some()
+        );
 
-        // Should not flag protected updates
+        // Should not flag protected updates (nonReentrant in source text)
         let safe_code = "function swap() external nonReentrant {
             token.transfer(msg.sender, amount);
             _update(balance0, balance1);
         }";
-        assert!(detector.check_reserve_updates(safe_code).is_none());
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(safe_code, &func)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_reserve_updates_internal_mint_burn() {
+        let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
+
+        // Internal _mint/_burn should not be treated as external calls
+        // even without nonReentrant (they are internal AMM accounting)
+        let code_with_internal_calls = "function mint(address to) external {
+            _mint(to, liquidity);
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }";
+        let func = create_mock_ast_function(
+            &arena,
+            "mint",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(code_with_internal_calls, &func)
+                .is_none(),
+            "Internal _mint/_burn should not trigger reentrancy warning"
+        );
+    }
+
+    #[test]
+    fn test_reserve_updates_safe_transfer_with_guard() {
+        let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
+
+        // safeTransfer with nonReentrant guard should be safe
+        let safe_code = "function burn(address to) external nonReentrant {
+            token0.safeTransfer(to, amount0);
+            token1.safeTransfer(to, amount1);
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }";
+        let func = create_mock_ast_function(
+            &arena,
+            "burn",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(safe_code, &func)
+                .is_none(),
+            "safeTransfer with nonReentrant should not flag"
+        );
     }
 
     #[test]
@@ -542,6 +745,150 @@ mod tests {
             detector
                 .check_slippage_validation(safe_code, true)
                 .is_none()
+        );
+    }
+
+    #[test]
+    fn test_safe_amm_pool_swap_pattern() {
+        let detector = AmmKInvariantViolationDetector::new();
+
+        // Emulate the safe_amm_pool.sol swap function pattern
+        // Uses: revert-based K check, safeTransfer + balanceOf + _update, deadline + minAmountOut
+        let safe_swap = r#"function swap(
+            uint256 amount0Out,
+            uint256 amount1Out,
+            address to,
+            uint256 minAmountOut,
+            uint256 deadline
+        ) external nonReentrant {
+            if (block.timestamp > deadline) {
+                revert DeadlineExpired();
+            }
+            uint256 totalOut = amount0Out + amount1Out;
+            if (totalOut < minAmountOut) {
+                revert SlippageExceeded();
+            }
+            (uint112 _reserve0, uint112 _reserve1,) = getReserves();
+            if (amount0Out > 0) token0.safeTransfer(to, amount0Out);
+            if (amount1Out > 0) token1.safeTransfer(to, amount1Out);
+            uint256 balance0 = token0.balanceOf(address(this));
+            uint256 balance1 = token1.balanceOf(address(this));
+            uint256 balance0Adjusted = balance0 * 1000 - amount0In * 3;
+            uint256 balance1Adjusted = balance1 * 1000 - amount1In * 3;
+            if (balance0Adjusted * balance1Adjusted < uint256(_reserve0) * _reserve1 * 1000000) {
+                revert InvariantViolation();
+            }
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }"#;
+
+        // K invariant check should pass (revert-based check recognized)
+        assert!(
+            detector.check_k_invariant_validation(safe_swap).is_none(),
+            "Safe AMM swap should not trigger K invariant violation"
+        );
+
+        // FOT check should pass (_update syncs reserves)
+        assert!(
+            detector.check_fot_token_handling(safe_swap).is_none(),
+            "Safe AMM swap should not trigger FOT warning"
+        );
+
+        // Slippage check should pass (has minAmountOut and deadline)
+        assert!(
+            detector
+                .check_slippage_validation(safe_swap, true)
+                .is_none(),
+            "Safe AMM swap should not trigger slippage warning"
+        );
+
+        // Reserve update check should pass (nonReentrant present)
+        let arena = ast::AstArena::new();
+        let func = create_mock_ast_function(
+            &arena,
+            "swap",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(safe_swap, &func)
+                .is_none(),
+            "Safe AMM swap should not trigger reserve update warning"
+        );
+    }
+
+    #[test]
+    fn test_safe_amm_pool_mint_pattern() {
+        let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
+
+        // Emulate the safe_amm_pool.sol mint function pattern
+        let safe_mint = r#"function mint(address to) external nonReentrant returns (uint256 liquidity) {
+            (uint112 _reserve0, uint112 _reserve1,) = getReserves();
+            uint256 balance0 = token0.balanceOf(address(this));
+            uint256 balance1 = token1.balanceOf(address(this));
+            uint256 amount0 = balance0 - _reserve0;
+            uint256 amount1 = balance1 - _reserve1;
+            _mint(to, liquidity);
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }"#;
+
+        let func = create_mock_ast_function(
+            &arena,
+            "mint",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+
+        // Reserve update check should pass (nonReentrant + _mint is internal)
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(safe_mint, &func)
+                .is_none(),
+            "Safe AMM mint should not trigger reserve update warning"
+        );
+    }
+
+    #[test]
+    fn test_safe_amm_pool_burn_pattern() {
+        let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
+
+        // Emulate the safe_amm_pool.sol burn function pattern
+        let safe_burn = r#"function burn(address to) external nonReentrant returns (uint256 amount0, uint256 amount1) {
+            (uint112 _reserve0, uint112 _reserve1,) = getReserves();
+            uint256 balance0 = token0.balanceOf(address(this));
+            uint256 balance1 = token1.balanceOf(address(this));
+            uint256 liquidity = balanceOf[address(this)];
+            amount0 = (liquidity * balance0) / totalSupply;
+            amount1 = (liquidity * balance1) / totalSupply;
+            _burn(address(this), liquidity);
+            token0.safeTransfer(to, amount0);
+            token1.safeTransfer(to, amount1);
+            balance0 = token0.balanceOf(address(this));
+            balance1 = token1.balanceOf(address(this));
+            _update(balance0, balance1, _reserve0, _reserve1);
+        }"#;
+
+        let func = create_mock_ast_function(
+            &arena,
+            "burn",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+
+        // Reserve update check should pass (nonReentrant + safeTransfer is protected)
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(safe_burn, &func)
+                .is_none(),
+            "Safe AMM burn should not trigger reserve update warning"
+        );
+
+        // FOT check should pass (_update syncs reserves with balanceOf)
+        assert!(
+            detector.check_fot_token_handling(safe_burn).is_none(),
+            "Safe AMM burn should not trigger FOT warning"
         );
     }
 }

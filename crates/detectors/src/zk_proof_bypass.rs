@@ -52,9 +52,15 @@ impl Detector for ZkProofBypassDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
-        // NEW: Only run this detector on ZK rollup contracts
+        // Only run this detector on ZK rollup contracts
         if !contract_classification::is_zk_rollup_contract(ctx) {
             return Ok(findings); // Not a ZK rollup - skip analysis
+        }
+
+        // Exclude EIP-4844 blob/data-availability contracts that may share
+        // some ZK terminology but are not ZK rollup proof verifiers
+        if self.is_blob_or_da_contract(ctx) {
+            return Ok(findings);
         }
 
         for function in ctx.get_functions() {
@@ -64,19 +70,23 @@ impl Detector for ZkProofBypassDetector {
             }
 
             let func_source = self.get_function_source(function, ctx);
+            let is_view_or_pure = function.mutability == ast::StateMutability::View
+                || function.mutability == ast::StateMutability::Pure;
 
-            // Check for batch submission functions
-            if self.is_batch_submission_function(function.name.name, &func_source) {
+            // Check for batch submission functions (state-changing only)
+            if !is_view_or_pure
+                && self.is_batch_submission_function(function.name.name, &func_source)
+            {
                 let issues = self.check_proof_verification(&func_source);
 
-                for issue in issues {
+                if !issues.is_empty() {
+                    let issues_text = issues.join(" ");
                     let message = format!(
                         "Function '{}' submits batches without proper ZK proof verification. {} \
                         Missing verification allows invalid state transitions to be accepted.",
-                        function.name.name, issue
+                        function.name.name, issues_text
                     );
 
-                    // NEW: High confidence since this IS a ZK rollup contract
                     let finding = self
                         .base
                         .create_finding(
@@ -87,7 +97,7 @@ impl Detector for ZkProofBypassDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                        .with_confidence(Confidence::High) // NEW: Set confidence
+                        .with_confidence(Confidence::High)
                         .with_fix_suggestion(format!(
                             "Add ZK proof verification to '{}': \
                             (1) Call verifier contract with proof and public inputs, \
@@ -104,13 +114,14 @@ impl Detector for ZkProofBypassDetector {
 
             // Check for proof verification functions
             if self.is_proof_verification_function(function.name.name, &func_source) {
-                let issues = self.check_verification_implementation(&func_source);
+                let issues = self.check_verification_implementation(&func_source, is_view_or_pure);
 
-                for issue in issues {
+                if !issues.is_empty() {
+                    let issues_text = issues.join(" ");
                     let message = format!(
                         "Function '{}' implements proof verification with potential bypasses. {} \
                         Weak verification undermines the security guarantees of the ZK rollup.",
-                        function.name.name, issue
+                        function.name.name, issues_text
                     );
 
                     let finding = self
@@ -123,7 +134,7 @@ impl Detector for ZkProofBypassDetector {
                             function.name.name.len() as u32,
                         )
                         .with_cwe(20) // CWE-20: Improper Input Validation
-                        .with_confidence(Confidence::High) // NEW: Set confidence
+                        .with_confidence(Confidence::High)
                         .with_fix_suggestion(format!(
                             "Strengthen verification in '{}': \
                             (1) Implement replay protection using proof hash or batch ID, \
@@ -138,15 +149,16 @@ impl Detector for ZkProofBypassDetector {
                 }
             }
 
-            // Check for public input handling
-            if self.is_public_input_function(function.name.name, &func_source) {
+            // Check for public input handling (state-changing only)
+            if !is_view_or_pure && self.is_public_input_function(function.name.name, &func_source) {
                 let issues = self.check_public_input_validation(&func_source);
 
-                for issue in issues {
+                if !issues.is_empty() {
+                    let issues_text = issues.join(" ");
                     let message = format!(
                         "Function '{}' handles public inputs without proper validation. {} \
                         Public input manipulation can lead to accepting invalid proofs.",
-                        function.name.name, issue
+                        function.name.name, issues_text
                     );
 
                     let finding = self
@@ -188,37 +200,101 @@ impl ZkProofBypassDetector {
             || function.visibility == ast::Visibility::Public
     }
 
-    fn is_batch_submission_function(&self, name: &str, source: &str) -> bool {
+    /// Check if the contract is an EIP-4844 blob or data-availability contract.
+    /// These contracts share some ZK-like terminology (proof, verify, batch,
+    /// stateRoot) but are not ZK rollup proof verifiers.
+    fn is_blob_or_da_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+        let name_lower = ctx.contract.name.name.to_lowercase();
+
+        // Strong blob/DA indicators
+        let has_blob_indicator = source_lower.contains("blobhash")
+            || source_lower.contains("blob_hash")
+            || source_lower.contains("eip4844")
+            || source_lower.contains("eip-4844")
+            || source.contains("point_evaluation_precompile")
+            || source.contains("POINT_EVALUATION_PRECOMPILE")
+            || source_lower.contains("versionedhash")
+            || name_lower.contains("blob");
+
+        // Must also lack strong ZK-specific indicators to be classified as blob-only
+        let has_strong_zk = source_lower.contains("snark")
+            || source_lower.contains("stark")
+            || source_lower.contains("plonk")
+            || source_lower.contains("groth16")
+            || source_lower.contains("pairing")
+            || source_lower.contains("bn256")
+            || source_lower.contains("bls12");
+
+        has_blob_indicator && !has_strong_zk
+    }
+
+    fn is_batch_submission_function(&self, name: &str, _source: &str) -> bool {
+        let name_lower = name.to_lowercase();
+
+        // Only match explicit batch submission function names.
+        // The previous source-content fallback (checking for "batch" + "commit"/"execute"
+        // in the function body) was too broad and matched non-ZK batch operations.
         let patterns = [
-            "commitBatches",
-            "executeBatches",
-            "proveBatches",
-            "submitBatch",
-            "commitBlocks",
-            "verifyAndExecuteBatch",
+            "commitbatches",
+            "executebatches",
+            "provebatches",
+            "submitbatch",
+            "commitblocks",
+            "verifyandexecutebatch",
         ];
 
-        let name_lower = name.to_lowercase();
-        patterns
-            .iter()
-            .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("batch")
-                && (source.contains("commit") || source.contains("execute")))
+        patterns.iter().any(|pattern| name_lower.contains(pattern))
     }
 
     fn is_proof_verification_function(&self, name: &str, source: &str) -> bool {
-        let patterns = [
-            "verifyProof",
-            "verifyAggregatedProof",
-            "verifyBatchProof",
-            "verify",
+        let name_lower = name.to_lowercase();
+
+        // Exclude functions that manage verification parameters rather than
+        // performing proof verification (e.g., updateVerifyingKey, setVerifyingKey,
+        // verifyContribution, verifyContributor)
+        let excluded_prefixes = ["update", "set", "get", "remove", "delete", "init"];
+        let excluded_suffixes = [
+            "contribution",
+            "contributor",
+            "key",
+            "keys",
+            "identity",
+            "ic",
+            "srs",
         ];
 
-        let name_lower = name.to_lowercase();
-        patterns
+        for prefix in &excluded_prefixes {
+            if name_lower.starts_with(prefix) {
+                return false;
+            }
+        }
+        for suffix in &excluded_suffixes {
+            if name_lower.ends_with(suffix) {
+                return false;
+            }
+        }
+
+        // Strong name-based matches: function name explicitly involves proof verification
+        let strong_patterns = ["verifyproof", "verifybatchproof", "verifyaggregatedproof"];
+        if strong_patterns
             .iter()
-            .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || (source.contains("proof") && source.contains("verify"))
+            .any(|pattern| name_lower.contains(pattern))
+        {
+            return true;
+        }
+
+        // Moderate name-based match: function is named exactly "verify" or starts
+        // with "verify" and the function body references proof-related terms
+        if name_lower == "verify"
+            || (name_lower.starts_with("verify")
+                && (source.contains("proof") || source.contains("Proof")))
+        {
+            return true;
+        }
+
+        false
     }
 
     fn is_public_input_function(&self, name: &str, source: &str) -> bool {
@@ -246,7 +322,7 @@ impl ZkProofBypassDetector {
 
         if !has_verifier_call {
             issues.push(
-                "No verifier contract call detected. Must call external verifier to validate ZK proof"
+                "No verifier contract call detected. Must call external verifier to validate ZK proof."
                     .to_string(),
             );
         }
@@ -254,7 +330,7 @@ impl ZkProofBypassDetector {
         // Pattern 2: No require check on verification result
         if source.contains("verify") && !source.contains("require") && !source.contains("revert") {
             issues.push(
-                "Verification result not enforced with require(). Proof verification can be bypassed"
+                "Verification result not enforced with require(). Proof verification can be bypassed."
                     .to_string(),
             );
         }
@@ -262,18 +338,7 @@ impl ZkProofBypassDetector {
         // Pattern 3: Missing public input validation
         if !source.contains("publicInput") && !source.contains("public_input") {
             issues.push(
-                "No public input parameter. ZK proofs must be verified against specific public inputs"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 4: No proof replay protection
-        if !source.contains("proofHash")
-            && !source.contains("batchId")
-            && !source.contains("commitmentHash")
-        {
-            issues.push(
-                "Missing proof replay protection. Store proof hash or batch ID to prevent reuse"
+                "No public input parameter. ZK proofs must be verified against specific public inputs."
                     .to_string(),
             );
         }
@@ -281,50 +346,57 @@ impl ZkProofBypassDetector {
         issues
     }
 
-    fn check_verification_implementation(&self, source: &str) -> Vec<String> {
+    fn check_verification_implementation(
+        &self,
+        source: &str,
+        is_view_or_pure: bool,
+    ) -> Vec<String> {
         let mut issues = Vec::new();
 
-        // Pattern 1: Missing replay protection
-        if source.contains("verify") && !source.contains("proven") && !source.contains("verified") {
+        // Pattern 1: No proof format validation -- this is the strongest signal
+        // of a weak verifier implementation
+        if source.contains("proof") && !source.contains("length") && !source.contains(".length") {
             issues.push(
-                "No replay protection. Should track verified proofs to prevent replay attacks"
+                "Missing proof format validation. Should check proof data length and structure."
                     .to_string(),
             );
         }
 
-        // Pattern 2: No proof format validation
-        if source.contains("proof") && !source.contains("length") {
-            issues.push(
-                "Missing proof format validation. Should check proof data length and structure"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 3: Missing public input reconstruction
-        if !source.contains("keccak256") && !source.contains("sha256") && !source.contains("hash") {
-            issues.push(
-                "No public input hash computation. Should reconstruct hash from batch data to prevent manipulation"
-                    .to_string(),
-            );
-        }
-
-        // Pattern 4: No verifier address validation
-        if source.contains("verifier")
-            && !source.contains("immutable")
-            && !source.contains("constant")
+        // Pattern 2: Missing public input reconstruction
+        if !source.contains("keccak256")
+            && !source.contains("sha256")
+            && !source.contains("hash")
+            && !source.contains("Hash")
         {
             issues.push(
-                "Verifier address not immutable. Should use immutable verifier address to prevent upgrades to malicious verifier"
+                "No public input hash computation. Should reconstruct hash from batch data to prevent manipulation."
                     .to_string(),
             );
         }
 
-        // Pattern 5: Missing event emission
-        if !source.contains("emit") {
-            issues.push(
-                "No event emission for proof verification. Should emit event for monitoring and auditing"
-                    .to_string(),
-            );
+        // The following checks only apply to state-changing functions since
+        // view/pure functions cannot emit events or write state for replay tracking.
+        if !is_view_or_pure {
+            // Pattern 3: Missing replay protection
+            if source.contains("verify")
+                && !source.contains("proven")
+                && !source.contains("verified")
+                && !source.contains("nullifier")
+                && !source.contains("used")
+            {
+                issues.push(
+                    "No replay protection. Should track verified proofs to prevent replay attacks."
+                        .to_string(),
+                );
+            }
+
+            // Pattern 4: Missing event emission
+            if !source.contains("emit") {
+                issues.push(
+                    "No event emission for proof verification. Should emit event for monitoring and auditing."
+                        .to_string(),
+                );
+            }
         }
 
         issues
@@ -336,7 +408,7 @@ impl ZkProofBypassDetector {
         // Pattern 1: No hash comparison
         if source.contains("publicInput") && !source.contains("==") {
             issues.push(
-                "Public input not compared against reconstructed value. Attacker can provide manipulated inputs"
+                "Public input not compared against reconstructed value. Attacker can provide manipulated inputs."
                     .to_string(),
             );
         }
@@ -347,7 +419,7 @@ impl ZkProofBypassDetector {
             && !source.contains("stateRoot")
         {
             issues.push(
-                "Missing state root in public inputs. Should validate state root transitions"
+                "Missing state root in public inputs. Should validate state root transitions."
                     .to_string(),
             );
         }
@@ -355,7 +427,7 @@ impl ZkProofBypassDetector {
         // Pattern 3: No batch metadata validation
         if !source.contains("batchNumber") && !source.contains("timestamp") {
             issues.push(
-                "Missing batch metadata validation. Should verify batch number and timestamp in public inputs"
+                "Missing batch metadata validation. Should verify batch number and timestamp in public inputs."
                     .to_string(),
             );
         }
@@ -363,7 +435,7 @@ impl ZkProofBypassDetector {
         // Pattern 4: Missing range checks
         if source.contains("publicInput") && !source.contains("require") {
             issues.push(
-                "No require statements for public input validation. Should enforce value ranges and constraints"
+                "No require statements for public input validation. Should enforce value ranges and constraints."
                     .to_string(),
             );
         }
@@ -409,20 +481,103 @@ mod tests {
     fn test_is_batch_submission_function() {
         let detector = ZkProofBypassDetector::new();
 
+        // True positives: explicit batch submission names
         assert!(detector.is_batch_submission_function("commitBatches", ""));
         assert!(detector.is_batch_submission_function("executeBatches", ""));
         assert!(detector.is_batch_submission_function("proveBatches", ""));
+        assert!(detector.is_batch_submission_function("submitBatch", ""));
+
+        // True negatives: non-batch functions
         assert!(!detector.is_batch_submission_function("withdraw", ""));
+        assert!(!detector.is_batch_submission_function("deposit", ""));
+
+        // False positive reduction: source-content fallback no longer matches
+        assert!(!detector.is_batch_submission_function("processData", "batch commit execute"));
     }
 
     #[test]
     fn test_is_proof_verification_function() {
         let detector = ZkProofBypassDetector::new();
 
+        // True positives: proof verification functions
         assert!(detector.is_proof_verification_function("verifyProof", ""));
         assert!(detector.is_proof_verification_function("verifyAggregatedProof", ""));
         assert!(detector.is_proof_verification_function("verify", ""));
+        assert!(detector.is_proof_verification_function("verifyBatch", "proof verification"));
+
+        // True negatives: non-verification functions
         assert!(!detector.is_proof_verification_function("submit", ""));
+        assert!(!detector.is_proof_verification_function("deposit", ""));
+
+        // False positive reduction: parameter/key management functions excluded
+        assert!(!detector.is_proof_verification_function("updateVerifyingKey", "proof"));
+        assert!(!detector.is_proof_verification_function("setVerifyingKey", "proof"));
+        assert!(!detector.is_proof_verification_function("getVerifyingKey", "proof"));
+        assert!(!detector.is_proof_verification_function("verifyContribution", "proof"));
+        assert!(!detector.is_proof_verification_function("verifyContributor", "proof"));
+        assert!(!detector.is_proof_verification_function("verifyIdentity", "proof"));
+    }
+
+    #[test]
+    fn test_is_proof_verification_function_verify_prefix_needs_proof_context() {
+        let detector = ZkProofBypassDetector::new();
+
+        // "verify" prefix without proof context should not match
+        assert!(!detector.is_proof_verification_function("verifyOwner", ""));
+        assert!(!detector.is_proof_verification_function("verifySignature", "signature ecrecover"));
+
+        // "verify" prefix with proof context should match
+        assert!(detector.is_proof_verification_function("verifyWithPublicInputs", "proof data"));
+        assert!(detector.is_proof_verification_function("verifyRecursive", "recursive proof"));
+    }
+
+    #[test]
+    fn test_blob_da_contract_exclusion() {
+        let detector = ZkProofBypassDetector::new();
+
+        // EIP-4844 blob contracts should be excluded (uses source-level indicators)
+        let blob_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract BlobProcessor {
+                    address constant POINT_EVALUATION_PRECOMPILE = address(0x0a);
+                    function processBlobData(bytes32 versionedHash) external {
+                        // Uses blobhash opcode for EIP-4844
+                    }
+                    function verifyBlobProof(bytes memory proof) external view returns (bool) {
+                        (bool success,) = POINT_EVALUATION_PRECOMPILE.staticcall(
+                            abi.encode(versionedHash, proof)
+                        );
+                        return success;
+                    }
+                }
+                "#,
+        );
+        assert!(detector.is_blob_or_da_contract(&blob_ctx));
+
+        // Real ZK contracts with pairing should not be excluded
+        let zk_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKVerifier {
+                    function verifyProof(uint256[8] calldata proof) external returns (bool) {
+                        return pairing(proof);
+                    }
+                }
+                "#,
+        );
+        assert!(!detector.is_blob_or_da_contract(&zk_ctx));
+
+        // Contract with both blob and ZK (snark) indicators should not be excluded
+        let mixed_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKBlobVerifier {
+                    function verifyProof(uint256[8] calldata proof) external returns (bool) {
+                        // Uses both blobhash and snark verification
+                        return snark_verify(proof);
+                    }
+                }
+                "#,
+        );
+        assert!(!detector.is_blob_or_da_contract(&mixed_ctx));
     }
 
     #[test]
@@ -456,10 +611,26 @@ mod tests {
         let detector = ZkProofBypassDetector::new();
         let source =
             "function verifyProof(bytes calldata proof) public returns (bool) { return true; }";
-        let issues = detector.check_verification_implementation(source);
+        let issues = detector.check_verification_implementation(source, false);
 
         assert!(!issues.is_empty());
         assert!(issues.iter().any(|i| i.contains("replay protection")));
+    }
+
+    #[test]
+    fn test_check_verification_skips_state_checks_for_view_pure() {
+        let detector = ZkProofBypassDetector::new();
+
+        // A view function: should not flag replay protection or event emission
+        let source = "function verifyProof(bytes calldata proof) public view returns (bool) { return true; }";
+        let issues = detector.check_verification_implementation(source, true);
+
+        // Should not contain replay or event emission issues
+        assert!(!issues.iter().any(|i| i.contains("replay protection")));
+        assert!(!issues.iter().any(|i| i.contains("event emission")));
+
+        // Should still flag proof format validation and hash computation
+        assert!(issues.iter().any(|i| i.contains("proof format")));
     }
 
     #[test]
@@ -486,5 +657,40 @@ mod tests {
 
         // Should have fewer issues with proper validation
         assert!(issues.len() < 2);
+    }
+
+    #[test]
+    fn test_consolidated_findings_per_function() {
+        // Verify that check methods return multiple issues but the detect loop
+        // consolidates them into a single finding per function
+        let detector = ZkProofBypassDetector::new();
+        let source = "function verify(bytes calldata proof) public { return true; }";
+        let issues = detector.check_verification_implementation(source, false);
+
+        // Multiple issues should exist
+        assert!(
+            issues.len() >= 2,
+            "Expected multiple issues, got {}",
+            issues.len()
+        );
+
+        // But when reported, they would be joined into one finding (tested
+        // at integration level via the detect method)
+    }
+
+    #[test]
+    fn test_batch_submission_no_longer_matches_generic_source() {
+        let detector = ZkProofBypassDetector::new();
+
+        // Previously this would match due to source-content fallback
+        // Now it should not match because the function name is not a batch name
+        assert!(!detector.is_batch_submission_function(
+            "withdraw",
+            "process batch and commit data then execute"
+        ));
+        assert!(!detector.is_batch_submission_function(
+            "processBlob",
+            "submitBatch commit execute batch stateRoot"
+        ));
     }
 }

@@ -24,25 +24,67 @@ impl YieldFarmingDetector {
         }
     }
 
+    /// Check if the contract is primarily a non-yield-farming contract type.
+    /// These contracts may incidentally contain words like "deposit" or "shares"
+    /// but are not yield farming vaults and should not be analyzed by this detector.
+    fn is_non_yield_farming_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code.to_lowercase();
+
+        // Delegation/operator management contracts (e.g. EigenLayer DelegationManager)
+        if source.contains("delegationmanager") || source.contains("delegationdirectory") {
+            return true;
+        }
+
+        // Strategy management contracts that manage strategy whitelists, not vaults
+        if source.contains("strategymanager") && source.contains("whitelisted") {
+            return true;
+        }
+
+        // Bridge contracts
+        if source.contains("bridge") && source.contains("relay") {
+            return true;
+        }
+
+        // Pure governance contracts
+        if source.contains("governor") && source.contains("proposal") && !source.contains("vault") {
+            return true;
+        }
+
+        false
+    }
+
     fn is_yield_vault(&self, ctx: &AnalysisContext) -> bool {
+        // First, exclude contracts that are clearly not yield farming
+        if self.is_non_yield_farming_contract(ctx) {
+            return false;
+        }
+
         let source = &ctx.source_code.to_lowercase();
 
         // Strong signals - any of these is definitive
-        if source.contains("erc4626") || source.contains("vault") && source.contains("shares") {
+        // Fix: parenthesize the OR properly so "vault && shares" is grouped
+        if source.contains("erc4626") || (source.contains("vault") && source.contains("shares")) {
             return true;
         }
 
-        if source.contains("staking") && source.contains("reward") {
+        // Staking + reward is a strong signal, but only if the contract actually
+        // has deposit/stake functions (not just a reward claim contract)
+        if source.contains("staking")
+            && source.contains("reward")
+            && (source.contains("deposit") || source.contains("stake("))
+        {
             return true;
         }
 
-        // Count medium-strength indicators
+        // Count medium-strength indicators -- require stronger evidence
         let mut indicator_count = 0;
 
+        // Deposit + shares is a signal for vault-like contracts
         if source.contains("deposit") && source.contains("shares") {
             indicator_count += 1;
         }
 
+        // Withdraw + shares is a signal for vault-like contracts
         if source.contains("withdraw") && source.contains("shares") {
             indicator_count += 1;
         }
@@ -55,12 +97,92 @@ impl YieldFarmingDetector {
             indicator_count += 1;
         }
 
-        if source.contains("stake") && source.contains("unstake") {
+        if source.contains("stake(") && source.contains("unstake") {
             indicator_count += 1;
         }
 
         // Require 2+ medium-strength indicators
         indicator_count >= 2
+    }
+
+    /// Check if a function name indicates an admin/governance function
+    /// that should not be analyzed for yield farming vulnerabilities.
+    fn is_admin_function(&self, func_name: &str) -> bool {
+        let name = func_name.to_lowercase();
+
+        // Whitelist/config management
+        if name.starts_with("set") || name.starts_with("add") || name.starts_with("remove") {
+            // These are admin functions unless they are core vault operations
+            // like "addLiquidity" or "removeLiquidity"
+            if name.contains("liquidity") {
+                return false;
+            }
+            return true;
+        }
+
+        // Pause/unpause
+        if name == "pause" || name == "unpause" {
+            return true;
+        }
+
+        // Ownership transfer
+        if name.contains("transferownership") || name.contains("renounceownership") {
+            return true;
+        }
+
+        // Initialize/upgrade
+        if name == "initialize" || name == "reinitialize" || name.contains("upgrade") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if a function delegates to a parent implementation via super.
+    /// When this happens, the parent (e.g. OpenZeppelin ERC4626) handles
+    /// share/asset calculations, so we should skip redundant checks.
+    fn delegates_to_super(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+        lower.contains("super.deposit(")
+            || lower.contains("super.withdraw(")
+            || lower.contains("super.redeem(")
+            || lower.contains("super.mint(")
+    }
+
+    /// Check if the function is a queuing/batching mechanism rather than
+    /// a direct share-to-asset redemption.
+    fn is_queue_or_batch_function(&self, func_name: &str) -> bool {
+        let name = func_name.to_lowercase();
+        name.contains("queue")
+            || name.contains("request")
+            || name.contains("process")
+            || name.contains("complete")
+            || name.contains("batch")
+    }
+
+    /// Check if a reward/claim function is a simple claim-from-mapping pattern
+    /// that does not perform reward calculations (just reads and transfers).
+    fn is_simple_reward_claim(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Simple pattern: reads from mapping, zeroes it, transfers
+        // e.g. uint256 amount = rewards[msg.sender]; rewards[msg.sender] = 0; token.transfer(...)
+        let has_mapping_read = lower.contains("rewards[") || lower.contains("lockedrewards[");
+        let has_zeroing = lower.contains("] = 0");
+        let has_transfer = lower.contains("transfer(") || lower.contains("transferfrom(");
+
+        // If it reads from a mapping, zeros it, and transfers, it's a simple claim
+        if has_mapping_read && has_zeroing && has_transfer {
+            return true;
+        }
+
+        // If the function is very short (few lines) and just does mapping read + transfer
+        let line_count = lower.lines().count();
+        if line_count <= 10 && has_mapping_read && has_transfer {
+            return true;
+        }
+
+        false
     }
 
     /// Get function source code
@@ -93,10 +215,15 @@ impl YieldFarmingDetector {
         // Also get contract-level source for things like state variable checks
         let contract_source_lower = ctx.source_code.to_lowercase();
 
+        // Skip if function delegates to super (parent handles share math)
+        let uses_super = self.delegates_to_super(&func_source);
+
         // Check deposit functions
-        if name.contains("deposit") || name.contains("stake") {
+        // Use exact name matching: the function name should BE a deposit-like
+        // function, not merely contain "deposit" as a substring in a longer name
+        if self.is_deposit_function(&name) {
             // Skip inflation-related checks if contract has protection patterns
-            if !skip_inflation_checks {
+            if !skip_inflation_checks && !uses_super {
                 // Check for share inflation attack protection (check function body)
                 let has_min_deposit = has_contract_min_deposit
                     || source_lower.contains("minimum")
@@ -127,37 +254,41 @@ impl YieldFarmingDetector {
                 }
             }
 
-            // Check for share calculation (in function body)
-            let has_share_calc = source_lower.contains("totalsupply")
-                && (source_lower.contains("totalassets") || source_lower.contains("balance"));
+            // Skip share calculation checks if delegating to super
+            if !uses_super {
+                // Check for share calculation (in function body)
+                let has_share_calc = source_lower.contains("totalsupply")
+                    && (source_lower.contains("totalassets") || source_lower.contains("balance"));
 
-            // Only flag if function explicitly deals with shares
-            if source_lower.contains("shares =") && !has_share_calc {
-                issues.push((
-                    "Share calculation doesn't use totalSupply and totalAssets".to_string(),
-                    Severity::High,
-                    "Calculate shares: shares = (amount * totalSupply()) / totalAssets();"
-                        .to_string(),
-                ));
-            }
-
-            // Check for rounding errors (only if shares are calculated in this function)
-            if source_lower.contains("shares =") {
-                let has_rounding_check =
-                    source_lower.contains("shares > 0") || source_lower.contains("require(shares");
-
-                if !has_rounding_check {
+                // Only flag if function explicitly deals with shares
+                if source_lower.contains("shares =") && !has_share_calc {
                     issues.push((
-                        "No zero-share validation (rounding error exploitation)".to_string(),
+                        "Share calculation doesn't use totalSupply and totalAssets".to_string(),
                         Severity::High,
-                        "Validate shares: require(shares > 0, \"Shares must be non-zero\");"
+                        "Calculate shares: shares = (amount * totalSupply()) / totalAssets();"
                             .to_string(),
                     ));
+                }
+
+                // Check for rounding errors (only if shares are calculated in this function)
+                if source_lower.contains("shares =") {
+                    let has_rounding_check = source_lower.contains("shares > 0")
+                        || source_lower.contains("require(shares");
+
+                    if !has_rounding_check {
+                        issues.push((
+                            "No zero-share validation (rounding error exploitation)".to_string(),
+                            Severity::High,
+                            "Validate shares: require(shares > 0, \"Shares must be non-zero\");"
+                                .to_string(),
+                        ));
+                    }
                 }
             }
 
             // Check for fee-on-transfer token support (only for functions using transferFrom)
-            if source_lower.contains("transferfrom") {
+            // Skip if delegating to super (parent handles token transfer)
+            if !uses_super && source_lower.contains("transferfrom") {
                 let has_actual_amount = source_lower.contains("balancebefore")
                     || source_lower.contains("balanceafter")
                     || source_lower.contains("balance -");
@@ -173,100 +304,117 @@ impl YieldFarmingDetector {
         }
 
         // Check withdraw functions
-        if name.contains("withdraw") || name.contains("unstake") || name.contains("redeem") {
-            // NOTE: Withdrawal fees are a design choice, not a vulnerability
-            // Removed the withdrawal fee check as it created false positives
+        // Use exact name matching for withdrawal functions
+        if self.is_withdraw_function(&name) {
+            // Skip queue/batch mechanisms -- these are not direct redemptions
+            if !self.is_queue_or_batch_function(&name) && !uses_super {
+                // NOTE: Withdrawal fees are a design choice, not a vulnerability
+                // Removed the withdrawal fee check as it created false positives
 
-            // Check for asset calculation
-            let has_asset_calc = source_lower.contains("shares")
-                && (source_lower.contains("totalsupply") || source_lower.contains("totalassets"));
+                // Check for asset calculation -- only if the function actually
+                // does share-to-asset conversion (contains "shares" reference)
+                if source_lower.contains("shares") {
+                    let has_asset_calc = source_lower.contains("totalsupply")
+                        || source_lower.contains("totalassets");
 
-            if !has_asset_calc {
-                issues.push((
-                    "Asset calculation missing totalSupply/totalAssets".to_string(),
-                    Severity::High,
-                    "Calculate assets: assets = (shares * totalAssets()) / totalSupply();"
-                        .to_string(),
-                ));
-            }
+                    if !has_asset_calc {
+                        issues.push((
+                            "Asset calculation missing totalSupply/totalAssets".to_string(),
+                            Severity::High,
+                            "Calculate assets: assets = (shares * totalAssets()) / totalSupply();"
+                                .to_string(),
+                        ));
+                    }
+                }
 
-            // Check for zero-asset validation
-            let has_zero_check = source_lower.contains("assets > 0")
-                || (source_lower.contains("require") && source_lower.contains("!= 0"));
+                // Check for zero-asset validation -- only if function references "assets"
+                // as a variable (not just in comments or event names)
+                if source_lower.contains("assets =") || source_lower.contains("assets;") {
+                    let has_zero_check = source_lower.contains("assets > 0")
+                        || source_lower.contains("assets != 0")
+                        || (source_lower.contains("require") && source_lower.contains("!= 0"));
 
-            if source_lower.contains("assets") && !has_zero_check {
-                issues.push((
-                    "No validation for zero assets on withdrawal".to_string(),
-                    Severity::Medium,
-                    "Validate assets: require(assets > 0, \"Assets must be non-zero\");"
-                        .to_string(),
-                ));
-            }
+                    if !has_zero_check {
+                        issues.push((
+                            "No validation for zero assets on withdrawal".to_string(),
+                            Severity::Medium,
+                            "Validate assets: require(assets > 0, \"Assets must be non-zero\");"
+                                .to_string(),
+                        ));
+                    }
+                }
 
-            // Check for slippage protection
-            let has_min_output = source_lower.contains("minassets")
-                || source_lower.contains("minamount")
-                || (source_lower.contains("amount") && source_lower.contains(">="));
+                // Check for slippage protection
+                let has_min_output = source_lower.contains("minassets")
+                    || source_lower.contains("minamount")
+                    || (source_lower.contains("amount") && source_lower.contains(">="));
 
-            if !has_min_output {
-                issues.push((
-                    "No slippage protection on withdrawal".to_string(),
-                    Severity::Medium,
-                    "Add slippage: require(assets >= minAssets, \"Slippage too high\");"
-                        .to_string(),
-                ));
+                if !has_min_output {
+                    issues.push((
+                        "No slippage protection on withdrawal".to_string(),
+                        Severity::Medium,
+                        "Add slippage: require(assets >= minAssets, \"Slippage too high\");"
+                            .to_string(),
+                    ));
+                }
             }
         }
 
         // Check reward calculation functions
+        // Only flag if the function actually performs reward math, not simple claims
         if name.contains("reward") || name.contains("earn") || name.contains("claim") {
-            // Check for reward per token calculation
-            let has_reward_calc = source_lower.contains("rewardpertoken")
-                || (source_lower.contains("reward") && source_lower.contains("totalsupply"));
+            // Skip simple claim-from-mapping patterns
+            if !self.is_simple_reward_claim(&func_source) {
+                // Check for reward per token calculation
+                let has_reward_calc = source_lower.contains("rewardpertoken")
+                    || (source_lower.contains("reward") && source_lower.contains("totalsupply"));
 
-            if !has_reward_calc {
-                issues.push((
-                    "Reward calculation doesn't account for totalSupply".to_string(),
-                    Severity::High,
-                    "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;".to_string()
-                ));
-            }
+                if !has_reward_calc {
+                    issues.push((
+                        "Reward calculation doesn't account for totalSupply".to_string(),
+                        Severity::High,
+                        "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;".to_string()
+                    ));
+                }
 
-            // Check for timestamp validation
-            let has_time_check = source_lower.contains("lastupdatetime")
-                || source_lower.contains("lastclaimtime")
-                || (source_lower.contains("timestamp") && source_lower.contains("require"));
+                // Check for timestamp validation
+                let has_time_check = source_lower.contains("lastupdatetime")
+                    || source_lower.contains("lastclaimtime")
+                    || source_lower.contains("lastupdate")
+                    || (source_lower.contains("timestamp") && source_lower.contains("require"));
 
-            if !has_time_check {
-                issues.push((
-                    "No timestamp tracking for reward accrual".to_string(),
-                    Severity::High,
-                    "Track time: lastUpdateTime = block.timestamp; Use for accurate reward calculation".to_string()
-                ));
-            }
+                if !has_time_check {
+                    issues.push((
+                        "No timestamp tracking for reward accrual".to_string(),
+                        Severity::High,
+                        "Track time: lastUpdateTime = block.timestamp; Use for accurate reward calculation".to_string()
+                    ));
+                }
 
-            // Check for reward debt accounting
-            let has_reward_debt =
-                source_lower.contains("rewarddebt") || source_lower.contains("paidreward");
+                // Check for reward debt accounting
+                let has_reward_debt =
+                    source_lower.contains("rewarddebt") || source_lower.contains("paidreward");
 
-            if !has_reward_debt {
-                issues.push((
-                    "Missing reward debt tracking (double-claim risk)".to_string(),
-                    Severity::Critical,
-                    "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;"
-                        .to_string(),
-                ));
-            }
+                if !has_reward_debt {
+                    issues.push((
+                        "Missing reward debt tracking (double-claim risk)".to_string(),
+                        Severity::Critical,
+                        "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;"
+                            .to_string(),
+                    ));
+                }
 
-            // Check for precision loss
-            let has_precision = source_lower.contains("1e18") || source_lower.contains("precision");
+                // Check for precision loss
+                let has_precision =
+                    source_lower.contains("1e18") || source_lower.contains("precision");
 
-            if !has_precision {
-                issues.push((
-                    "Reward calculation without precision multiplier (rounding errors)".to_string(),
-                    Severity::Medium,
-                    "Add precision: Use 1e18 multiplier for reward calculations to minimize rounding errors".to_string()
-                ));
+                if !has_precision {
+                    issues.push((
+                        "Reward calculation without precision multiplier (rounding errors)".to_string(),
+                        Severity::Medium,
+                        "Add precision: Use 1e18 multiplier for reward calculations to minimize rounding errors".to_string()
+                    ));
+                }
             }
         }
 
@@ -304,6 +452,74 @@ impl YieldFarmingDetector {
         }
 
         issues
+    }
+
+    /// Check if a function name represents a deposit-like operation.
+    /// Uses tighter matching to avoid false positives on admin functions
+    /// whose names merely contain "deposit" as a substring.
+    fn is_deposit_function(&self, name: &str) -> bool {
+        // Exact matches for common deposit function names
+        if name == "deposit" || name == "stake" || name == "depositassets" {
+            return true;
+        }
+
+        // Functions that start with "deposit" and are actual deposit operations
+        if name.starts_with("deposit") {
+            // Exclude admin/config functions that happen to start with "deposit"
+            let suffix = &name["deposit".len()..];
+            if suffix.is_empty()
+                || suffix.starts_with("into")
+                || suffix.starts_with("for")
+                || suffix.starts_with("with")
+                || suffix.starts_with("eth")
+                || suffix.starts_with("token")
+            {
+                return true;
+            }
+        }
+
+        // Functions named "stake" with suffixes
+        if name.starts_with("stake") && !name.contains("whitelist") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if a function name represents a withdrawal-like operation.
+    /// Uses tighter matching to avoid false positives on admin functions
+    /// and queue/batch mechanisms.
+    fn is_withdraw_function(&self, name: &str) -> bool {
+        // Exact matches
+        if name == "withdraw" || name == "unstake" || name == "redeem" {
+            return true;
+        }
+
+        // Functions that start with "withdraw" -- actual withdrawal operations
+        if name.starts_with("withdraw") {
+            let suffix = &name["withdraw".len()..];
+            if suffix.is_empty()
+                || suffix.starts_with("token")
+                || suffix.starts_with("eth")
+                || suffix.starts_with("asset")
+                || suffix.starts_with("share")
+                || suffix.starts_with("for")
+            {
+                return true;
+            }
+        }
+
+        // Emergency withdrawals are legitimate withdrawal functions
+        if name.starts_with("emergency") && name.contains("withdraw") {
+            return true;
+        }
+
+        // Redeem variants
+        if name.starts_with("redeem") {
+            return true;
+        }
+
+        false
     }
 }
 
@@ -382,6 +598,11 @@ impl Detector for YieldFarmingDetector {
                 continue;
             }
 
+            // Skip admin/governance functions
+            if self.is_admin_function(&func_name_lower) {
+                continue;
+            }
+
             let issues = self.check_function(function, ctx, skip_inflation_checks, has_min_deposit);
             for (message, severity, remediation) in issues {
                 let finding = self
@@ -407,5 +628,217 @@ impl Detector for YieldFarmingDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::detector::Detector;
+
+    fn create_context(source: &str) -> AnalysisContext<'static> {
+        crate::types::test_utils::create_test_context(source)
+    }
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = YieldFarmingDetector::new();
+        assert_eq!(detector.name(), "Yield Farming Exploits");
+        assert_eq!(detector.default_severity(), Severity::High);
+        assert!(detector.is_enabled());
+    }
+
+    // -- is_yield_vault tests --
+
+    #[test]
+    fn test_erc4626_vault_detected() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context("contract MyVault is ERC4626 { function deposit() {} }");
+        assert!(detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_vault_with_shares_detected() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context("contract MyVault { uint256 shares; function deposit() {} }");
+        assert!(detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_staking_reward_with_deposit_detected() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context("contract Staking { function deposit() {} uint256 reward; }");
+        assert!(detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_delegation_manager_excluded() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            "contract DelegationManager { \
+             function deposit() {} \
+             uint256 shares; \
+             function withdraw() {} \
+             mapping(address => uint256) rewards; \
+             }",
+        );
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_strategy_manager_with_whitelist_excluded() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            "contract StrategyManager { \
+             mapping(address => bool) whitelisted; \
+             function deposit() {} \
+             uint256 shares; \
+             }",
+        );
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_simple_contract_not_detected() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context("contract SimpleToken { function transfer() {} }");
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_staking_without_deposit_not_detected() {
+        let detector = YieldFarmingDetector::new();
+        // staking + reward but no deposit/stake function
+        let ctx = create_context(
+            "contract RewardClaim { \
+             string public name = 'staking reward'; \
+             function claimRewards() {} \
+             }",
+        );
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    // -- Admin function tests --
+
+    #[test]
+    fn test_admin_function_detection() {
+        let detector = YieldFarmingDetector::new();
+        assert!(detector.is_admin_function("setMaxDepositLimit"));
+        assert!(detector.is_admin_function("addStrategiesToDepositWhitelist"));
+        assert!(detector.is_admin_function("removeStrategiesFromDepositWhitelist"));
+        assert!(detector.is_admin_function("setEmergencyWithdraw"));
+        assert!(detector.is_admin_function("pause"));
+        assert!(detector.is_admin_function("initialize"));
+    }
+
+    #[test]
+    fn test_non_admin_functions_not_excluded() {
+        let detector = YieldFarmingDetector::new();
+        assert!(!detector.is_admin_function("deposit"));
+        assert!(!detector.is_admin_function("withdraw"));
+        assert!(!detector.is_admin_function("stake"));
+        assert!(!detector.is_admin_function("redeem"));
+        assert!(!detector.is_admin_function("claimRewards"));
+        assert!(!detector.is_admin_function("harvest"));
+        // addLiquidity should NOT be treated as admin
+        assert!(!detector.is_admin_function("addLiquidity"));
+    }
+
+    // -- Deposit function name tests --
+
+    #[test]
+    fn test_deposit_function_matching() {
+        let detector = YieldFarmingDetector::new();
+        assert!(detector.is_deposit_function("deposit"));
+        assert!(detector.is_deposit_function("stake"));
+        assert!(detector.is_deposit_function("depositinto"));
+        assert!(detector.is_deposit_function("depositforuser"));
+        assert!(detector.is_deposit_function("depositwithpermit"));
+        assert!(detector.is_deposit_function("depositeth"));
+    }
+
+    #[test]
+    fn test_non_deposit_function_not_matched() {
+        let detector = YieldFarmingDetector::new();
+        // Admin functions that contain "deposit" should NOT match
+        assert!(!detector.is_deposit_function("removedeposit"));
+        assert!(!detector.is_deposit_function("unstake"));
+    }
+
+    // -- Withdraw function name tests --
+
+    #[test]
+    fn test_withdraw_function_matching() {
+        let detector = YieldFarmingDetector::new();
+        assert!(detector.is_withdraw_function("withdraw"));
+        assert!(detector.is_withdraw_function("unstake"));
+        assert!(detector.is_withdraw_function("redeem"));
+        assert!(detector.is_withdraw_function("emergencywithdraw"));
+        assert!(detector.is_withdraw_function("redeemshares"));
+    }
+
+    // -- Simple reward claim tests --
+
+    #[test]
+    fn test_simple_claim_pattern_detected() {
+        let detector = YieldFarmingDetector::new();
+        let source = r#"
+            uint256 amount = rewards[msg.sender];
+            rewards[msg.sender] = 0;
+            token.transfer(msg.sender, amount);
+        "#;
+        assert!(detector.is_simple_reward_claim(source));
+    }
+
+    #[test]
+    fn test_complex_reward_not_simple_claim() {
+        let detector = YieldFarmingDetector::new();
+        let source = r#"
+            uint256 accumulatedReward = userBalance * rewardPerToken / 1e18;
+            uint256 pending = accumulatedReward - userRewardDebt[msg.sender];
+            if (pending > 0) {
+                rewardToken.transfer(msg.sender, pending);
+                userRewardDebt[msg.sender] = accumulatedReward;
+                totalRewardsPaid += pending;
+                emit RewardClaimed(msg.sender, pending);
+            }
+        "#;
+        assert!(!detector.is_simple_reward_claim(source));
+    }
+
+    // -- Queue/batch function tests --
+
+    #[test]
+    fn test_queue_functions_detected() {
+        let detector = YieldFarmingDetector::new();
+        assert!(detector.is_queue_or_batch_function("queueWithdrawals"));
+        assert!(detector.is_queue_or_batch_function("requestWithdrawal"));
+        assert!(detector.is_queue_or_batch_function("completeQueuedWithdrawal"));
+        assert!(detector.is_queue_or_batch_function("processWithdrawals"));
+        assert!(detector.is_queue_or_batch_function("batchWithdraw"));
+    }
+
+    #[test]
+    fn test_direct_withdraw_not_queue() {
+        let detector = YieldFarmingDetector::new();
+        assert!(!detector.is_queue_or_batch_function("withdraw"));
+        assert!(!detector.is_queue_or_batch_function("redeem"));
+        assert!(!detector.is_queue_or_batch_function("unstake"));
+    }
+
+    // -- Super delegation tests --
+
+    #[test]
+    fn test_super_delegation_detected() {
+        let detector = YieldFarmingDetector::new();
+        assert!(detector.delegates_to_super("shares = super.deposit(assets, receiver);"));
+        assert!(detector.delegates_to_super("shares = super.withdraw(assets, receiver, owner);"));
+        assert!(detector.delegates_to_super("assets = super.redeem(shares, receiver, owner);"));
+    }
+
+    #[test]
+    fn test_no_super_delegation() {
+        let detector = YieldFarmingDetector::new();
+        assert!(!detector.delegates_to_super("shares = amount * totalSupply() / totalAssets();"));
     }
 }

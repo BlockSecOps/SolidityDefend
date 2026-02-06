@@ -69,6 +69,18 @@ impl Detector for GovernanceDetector {
             return Ok(findings);
         }
 
+        // Phase 56 FP Reduction: Skip contracts that are clearly not governance contracts.
+        // Non-governance contract types that commonly trigger false positives:
+        // - Restaking/delegation protocols (EigenLayer, etc.)
+        // - Proxy upgrade contracts
+        // - Metamorphic/factory contracts
+        // - ZK verification contracts
+        // - EIP-7702 delegation contracts
+        // These use "propose", "cancel", "queue", "vote" in non-governance contexts.
+        if self.is_non_governance_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Run all governance vulnerability detection methods
         findings.extend(self.detect_flash_loan_governance_attacks(ctx)?);
         findings.extend(self.detect_missing_snapshot_protection(ctx)?);
@@ -83,6 +95,62 @@ impl Detector for GovernanceDetector {
 }
 
 impl GovernanceDetector {
+    /// Phase 56 FP Reduction: Detect non-governance contracts that commonly trigger FPs.
+    /// These contract types use governance-like keywords (propose, cancel, queue, vote)
+    /// but in non-governance contexts.
+    fn is_non_governance_contract(&self, ctx: &AnalysisContext) -> bool {
+        let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
+        let lower = cleaned.to_lowercase();
+
+        // Restaking/delegation protocols (EigenLayer, etc.)
+        // These use "queue", "cancel", "delegate" for staking operations, not governance
+        let is_restaking = (lower.contains("queuewithdrawal")
+            || lower.contains("queuedwithdrawal")
+            || lower.contains("completequeuedwithdrawal"))
+            && (lower.contains("staker")
+                || lower.contains("operator")
+                || lower.contains("strategymanager")
+                || lower.contains("delegationmanager"));
+
+        if is_restaking {
+            return true;
+        }
+
+        // Proxy upgrade contracts use "proposeUpgrade", "cancelUpgrade", etc.
+        let is_proxy_upgrade = (lower.contains("proposeupgrade")
+            || lower.contains("cancelupgrade")
+            || lower.contains("executeupgrade"))
+            && (lower.contains("implementation")
+                || lower.contains("proxy")
+                || lower.contains("upgrade_delay")
+                || lower.contains("upgradeability"));
+
+        if is_proxy_upgrade {
+            return true;
+        }
+
+        // Metamorphic/factory contracts with selfdestruct proposals
+        let is_metamorphic = (lower.contains("selfdestruct")
+            || lower.contains("metamorphic")
+            || lower.contains("create2"))
+            && (lower.contains("factory") || lower.contains("deployer"));
+
+        if is_metamorphic {
+            return true;
+        }
+
+        // EIP-7702 delegation contracts
+        let is_eip7702 = lower.contains("eip7702")
+            || lower.contains("eip-7702")
+            || (lower.contains("delegation") && lower.contains("extcodesize"));
+
+        if is_eip7702 {
+            return true;
+        }
+
+        false
+    }
+
     fn detect_flash_loan_governance_attacks(
         &self,
         ctx: &AnalysisContext<'_>,
@@ -166,6 +234,13 @@ impl GovernanceDetector {
     fn detect_temporal_control_issues(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // Phase 56 FP Reduction: Only flag temporal issues if the contract actually
+        // has governance token patterns. Simple voting contracts (commit-reveal, ZK voting)
+        // are not governance token contracts and should not be flagged for missing timelocks.
+        if !self.has_governance_token_patterns(ctx) {
+            return Ok(findings);
+        }
+
         for func in &ctx.contract.functions {
             if func.body.is_none() {
                 continue;
@@ -205,14 +280,44 @@ impl GovernanceDetector {
     fn is_governance_function(&self, func: &ast::Function) -> bool {
         let func_name = func.name.as_str().to_lowercase();
 
-        // Only flag functions that are specifically governance-related
-        // "execute" and "delegate" alone are too generic (used in proxies, wallets, etc.)
-        let governance_specific_patterns = ["propose", "vote", "castvote", "queue", "cancel"];
+        // Phase 56 FP Reduction: Skip view/pure functions -- they cannot modify state
+        // and are not vulnerable to governance manipulation attacks.
+        if func.mutability == ast::StateMutability::View
+            || func.mutability == ast::StateMutability::Pure
+        {
+            return false;
+        }
 
-        // Check for governance-specific function names
-        if governance_specific_patterns
-            .iter()
-            .any(|&pattern| func_name.contains(pattern))
+        // Phase 56 FP Reduction: Skip access-controlled functions.
+        // Functions with onlyOwner, onlyAdmin, onlyGuardian, etc. are admin-only
+        // and not vulnerable to flash loan governance attacks (attacker cannot call them).
+        if self.has_access_control_modifier(func) {
+            return false;
+        }
+
+        // Only flag functions that are specifically governance-voting-related.
+        // "castvote" is the clearest governance voting pattern.
+        if func_name.contains("castvote") {
+            return true;
+        }
+
+        // "vote" is governance-related only if it's a standalone vote function,
+        // not "commitVote", "revealVote", "voteWeight" etc. which are commit-reveal
+        // or utility patterns. Must be exactly "vote" or start with "vote" followed
+        // by non-alphabetic chars (like "vote(") or combined with governance terms.
+        if func_name == "vote"
+            || func_name.starts_with("vote(")
+            || (func_name.contains("vote") && func_name.contains("proposal"))
+        {
+            return true;
+        }
+
+        // "propose" is governance-related ONLY when combined with governance terms,
+        // not "proposeUpgrade", "proposeSelfDestruct", etc.
+        if func_name.contains("propose")
+            && (func_name.contains("proposal")
+                || func_name.contains("vote")
+                || func_name.contains("governance"))
         {
             return true;
         }
@@ -227,7 +332,34 @@ impl GovernanceDetector {
             return true;
         }
 
+        // Phase 56 FP Reduction: Removed "queue" and "cancel" as standalone patterns.
+        // These are far too generic and match restaking (queueWithdrawals),
+        // proxy upgrade (cancelUpgrade), metamorphic (cancelSelfDestruct), etc.
+        // Only match them when combined with clear governance terms.
+        if (func_name.contains("queue") || func_name.contains("cancel"))
+            && (func_name.contains("proposal") || func_name.contains("vote"))
+        {
+            return true;
+        }
+
         false
+    }
+
+    /// Phase 56 FP Reduction: Check if function has access control modifiers.
+    /// Access-controlled functions (onlyOwner, onlyAdmin, etc.) are not vulnerable
+    /// to flash loan governance attacks since arbitrary users cannot call them.
+    fn has_access_control_modifier(&self, func: &ast::Function) -> bool {
+        func.modifiers.iter().any(|modifier| {
+            let name = modifier.name.as_str().to_lowercase();
+            name.contains("only")
+                || name.contains("auth")
+                || name.contains("role")
+                || name.contains("admin")
+                || name.contains("owner")
+                || name.contains("guardian")
+                || name.contains("operator")
+                || name.contains("whennotpaused")
+        })
     }
 
     fn uses_current_balance_for_voting(&self, ctx: &AnalysisContext, func: &ast::Function) -> bool {
@@ -289,39 +421,52 @@ impl GovernanceDetector {
         let cleaned = utils::clean_source_for_search(ctx.source_code.as_str());
         let source_lower = cleaned.to_lowercase();
 
-        // Strong positive indicators - contract MUST have at least one of these
-        // These indicate actual governance functionality, not just ownership patterns
-        let strong_governance_indicators = [
+        // Phase 56 FP Reduction: Require ACTUAL governance token infrastructure.
+        // A contract must have governance TOKEN patterns (not just voting or proposals).
+        // Contracts like commit-reveal voting, ZK voting, metamorphic factories, etc.
+        // may contain "proposal" or "vote" but are NOT governance token contracts.
+
+        // Tier 1: Definitive governance token indicators (any one is sufficient)
+        let definitive_indicators = [
             "votingtoken",
             "governancetoken",
-            "proposal",          // Proposal creation/management
-            "castVote",          // Voting functions
-            "getVotes",          // Voting power queries
-            "getPriorVotes",     // Historical voting power
-            "getPastVotes",      // Historical voting power (OZ)
-            "quorum",            // Quorum requirements
-            "proposalThreshold", // Proposal creation threshold
-            "votingPeriod",      // Voting period configuration
-            "votingDelay",       // Voting delay configuration
-            "IGovernor",         // Governor interface
+            "igovernor",
+            "proposalthreshold",
+            "votingperiod",
+            "votingdelay",
+            "getpriorvotes",
+            "getpastvotes",
+            "getvotes(",
         ];
 
-        let has_strong_indicator = strong_governance_indicators
+        let has_definitive = definitive_indicators
             .iter()
-            .any(|&indicator| source_lower.contains(&indicator.to_lowercase()));
+            .any(|&indicator| source_lower.contains(indicator));
 
-        // If no strong indicator, this is NOT a governance contract
-        // Simple wallets with "owner" or contracts with "delegate" for proxies
-        // should NOT be flagged
-        if !has_strong_indicator {
-            return false;
+        if has_definitive {
+            return true;
         }
 
-        // Additional check: Must have voting-related state or functions
-        let has_voting_mechanism = source_lower.contains("vote")
-            && (source_lower.contains("proposal") || source_lower.contains("ballot"));
+        // Tier 2: Must have BOTH voting mechanism AND governance token patterns.
+        // "proposal" alone is not sufficient (used in upgrade proposals, selfdestruct proposals).
+        // "vote" alone is not sufficient (used in commit-reveal, ZK voting, etc.).
+        // Require governance token patterns: quorum, or token-based voting power.
+        //
+        // Phase 56 FP Reduction: "delegate(" is too broad -- it matches _delegate(),
+        // setDelegate(), recursiveDelegate(), etc. in proxy/delegatecall contracts.
+        // Even "function delegate(address" matches restaking delegation.
+        // Only match delegation when combined with voting context.
+        let has_governance_delegation = (source_lower.contains("delegatee")
+            || source_lower.contains("delegatevote"))
+            || (source_lower.contains("function delegate(address")
+                && (source_lower.contains("vote") || source_lower.contains("voting")));
 
-        has_strong_indicator || has_voting_mechanism
+        let has_governance_token_infra = source_lower.contains("quorum")
+            || source_lower.contains("votingpower")
+            || has_governance_delegation
+            || (source_lower.contains("castvote") && source_lower.contains("proposal"));
+
+        has_governance_token_infra
     }
 
     fn has_snapshot_mechanisms(&self, ctx: &AnalysisContext) -> bool {
@@ -1220,6 +1365,305 @@ mod tests {
         assert_eq!(detector.id().to_string(), "test-governance");
         assert_eq!(detector.name(), "Governance Attacks");
         assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    // ============ Phase 56 FP Reduction: GovernanceDetector Tests ============
+
+    #[test]
+    fn test_fp_restaking_delegation_not_flagged() {
+        // Restaking contracts with delegate/queue/cancel should NOT be flagged
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract VulnerableRestaking {
+                mapping(address => uint256) public stakes;
+                function delegate(address operator, uint256 amount) external {
+                    stakes[operator] += amount;
+                }
+                function queueWithdrawals(uint256 amount) external {
+                    stakes[msg.sender] -= amount;
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Restaking delegation contract should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_proxy_upgrade_propose_cancel_not_flagged() {
+        // Proxy upgrade contracts with proposeUpgrade/cancelUpgrade
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract SecureProxyUpgrade {
+                address public implementation;
+                function proposeUpgrade(address newImplementation) external onlyAdmin {
+                    implementation = newImplementation;
+                }
+                function cancelUpgrade(bytes32 upgradeId) external onlyAdmin {
+                    delete pendingUpgrades[upgradeId];
+                }
+                function executeUpgrade(bytes32 upgradeId) external onlyAdmin {
+                    _setImplementation(pending.implementation);
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Proxy upgrade contract should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_metamorphic_factory_not_flagged() {
+        // Metamorphic factory with proposeSelfDestruct/cancelSelfDestruct
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract LegitimateMetamorphicFactory {
+                address public factory;
+                function deployMetamorphic(bytes32 salt) external {
+                    bytes memory code = type(MetamorphicChild).creationCode;
+                    address deployed;
+                    assembly { deployed := create2(0, add(code, 0x20), mload(code), salt) }
+                }
+            }
+            contract MetamorphicChild {
+                function proposeSelfDestruct(address recipient) external onlyOwner {
+                    emergencyRecipient = recipient;
+                }
+                function cancelSelfDestruct() external onlyOwner {
+                    emergencyRecipient = address(0);
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Metamorphic factory contract should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_simple_voting_without_governance_tokens_not_flagged() {
+        // Simple voting (commit-reveal pattern) without governance token infrastructure
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract VulnerableVoting {
+                mapping(uint256 => uint256) public votes;
+                mapping(address => mapping(uint256 => bool)) public hasVoted;
+                function vote(uint256 proposalId) external {
+                    require(!hasVoted[msg.sender][proposalId], "Already voted");
+                    votes[proposalId]++;
+                    hasVoted[msg.sender][proposalId] = true;
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "Simple voting without governance token patterns should not be flagged"
+        );
+    }
+
+    #[test]
+    fn test_fp_zk_voting_not_flagged() {
+        // ZK voting contracts should NOT be flagged as governance
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract ZKVoting {
+                uint256 public yesVotes;
+                uint256 public noVotes;
+                mapping(bytes32 => bool) public hasVoted;
+                function vote(bytes32 voterId, bool voteValue, uint256[8] calldata proof) external {
+                    require(!hasVoted[voterId], "Already voted");
+                    hasVoted[voterId] = true;
+                    if (voteValue) { yesVotes += 1; } else { noVotes += 1; }
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "ZK voting contract should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_eigenlayer_delegation_manager_not_flagged() {
+        // EigenLayer-style DelegationManager with queueWithdrawals
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract DelegationManager {
+                mapping(address => address) public delegatedTo;
+                function queueWithdrawals(uint256[] calldata params)
+                    external onlyWhenNotPaused nonReentrant returns (bytes32[] memory) {
+                    // Staker queue withdrawal logic
+                }
+                function completeQueuedWithdrawal(uint256 withdrawal) external {
+                    // Complete withdrawal logic
+                }
+                function getQueuedWithdrawals(address staker) external view returns (uint256[] memory) {
+                    // View function
+                }
+                function cancelSalt(bytes32 salt) external {
+                    operatorSaltIsSpent[msg.sender][salt] = true;
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "EigenLayer DelegationManager should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_fp_eip7702_delegation_not_flagged() {
+        // EIP-7702 delegation contracts should be skipped
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            // EIP-7702 delegation contract
+            contract DelegationDeFiAttacks {
+                function deposit() external payable {
+                    deposits[msg.sender] += msg.value;
+                }
+                function borrow(uint256 amount) external {
+                    uint256 size;
+                    assembly { size := extcodesize(caller()) }
+                    require(size == 0, "Contracts not allowed");
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        let result = detector.detect(&ctx).unwrap();
+        assert!(
+            result.is_empty(),
+            "EIP-7702 delegation contract should not trigger governance findings"
+        );
+    }
+
+    #[test]
+    fn test_tp_actual_governance_contract_patterns_detected() {
+        // A contract with actual governance token patterns should be recognized
+        let detector = GovernanceDetector::new();
+        let source = r#"
+            contract VulnerableGovernance {
+                mapping(address => uint256) public votingPower;
+                uint256 public quorum;
+                function castVote(uint256 proposalId, bool support) external {
+                    uint256 power = token.balanceOf(msg.sender);
+                    require(power > 0, "No voting power");
+                    votes[proposalId] += power;
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        // Verify governance token patterns are detected (quorum + castVote + proposal)
+        assert!(
+            detector.has_governance_token_patterns(&ctx),
+            "Should recognize governance token patterns (quorum, castVote, proposal)"
+        );
+        // Verify this is NOT classified as a non-governance contract
+        assert!(
+            !detector.is_non_governance_contract(&ctx),
+            "Actual governance contract should not be classified as non-governance"
+        );
+    }
+
+    #[test]
+    fn test_governance_token_patterns_tier1() {
+        let detector = GovernanceDetector::new();
+
+        // Tier 1 indicators should be recognized
+        let tier1_sources = [
+            "contract Gov { IGovernor public governor; }",
+            "contract Gov { uint256 public votingPeriod = 7 days; }",
+            "contract Gov { uint256 public votingDelay = 1 days; }",
+            "contract Gov { uint256 public proposalThreshold = 1000; }",
+            "contract Gov { function getPriorVotes(address, uint256) external view returns (uint256); }",
+            "contract Gov { function getPastVotes(address, uint256) external view returns (uint256); }",
+            "contract Gov { function getVotes(address account) external view returns (uint256); }",
+            "contract Gov { IERC20 public votingToken; }",
+            "contract Gov { address public governanceToken; }",
+        ];
+
+        for source in &tier1_sources {
+            let ctx = create_test_context(source);
+            assert!(
+                detector.has_governance_token_patterns(&ctx),
+                "Should recognize tier 1 governance pattern in: {}",
+                source
+            );
+        }
+    }
+
+    #[test]
+    fn test_governance_token_patterns_non_governance() {
+        let detector = GovernanceDetector::new();
+
+        // Non-governance contracts should NOT match
+        let non_gov_sources = [
+            "contract Vault { function deposit() external payable {} }",
+            "contract Proxy { function _delegate(address impl) internal {} }",
+            "contract Restaking { function delegate(address operator, uint256 amount) external {} }",
+            "contract ZKVoting { function vote(bytes32 id, bool val) external {} }",
+            "contract CommitReveal { mapping(uint256 => uint256) public votes; }",
+            "contract Factory { function proposeSelfDestruct(address r) external {} }",
+        ];
+
+        for source in &non_gov_sources {
+            let ctx = create_test_context(source);
+            assert!(
+                !detector.has_governance_token_patterns(&ctx),
+                "Should NOT recognize governance pattern in: {}",
+                source
+            );
+        }
+    }
+
+    #[test]
+    fn test_is_non_governance_contract_detection() {
+        let detector = GovernanceDetector::new();
+
+        // Restaking protocol
+        let source = "contract DelegationManager { function queueWithdrawals() external {} mapping(address => address) public delegatedTo; function completeQueuedWithdrawal() external {} address public strategyManager; }";
+        let ctx = create_test_context(source);
+        assert!(
+            detector.is_non_governance_contract(&ctx),
+            "Should detect restaking protocol"
+        );
+
+        // Proxy upgrade
+        let source = "contract Proxy { function proposeUpgrade(address impl) external {} function cancelUpgrade() external {} address public implementation; }";
+        let ctx = create_test_context(source);
+        assert!(
+            detector.is_non_governance_contract(&ctx),
+            "Should detect proxy upgrade contract"
+        );
+
+        // Metamorphic factory
+        let source = "contract MetamorphicFactory { function deploy(bytes32 salt) external { assembly { create2(0, 0, 0, salt) } } address public factory; }";
+        let ctx = create_test_context(source);
+        assert!(
+            detector.is_non_governance_contract(&ctx),
+            "Should detect metamorphic factory"
+        );
+
+        // Actual governance should NOT be detected as non-governance
+        let source = "contract Governor { function castVote(uint256 proposalId) external {} uint256 public quorum; }";
+        let ctx = create_test_context(source);
+        assert!(
+            !detector.is_non_governance_contract(&ctx),
+            "Actual governance contract should NOT be detected as non-governance"
+        );
     }
 
     // ============ ExternalCallsLoopDetector Tests ============

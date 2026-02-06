@@ -119,10 +119,16 @@ impl MissingTransactionDeadlineDetector {
             return None;
         }
 
-        // Check for deadline protection
+        // Skip AMM pair/pool-level swap functions (deadline enforced at router level)
+        if self.is_amm_pool_function(&func_source, &func_name_lower, ctx) {
+            return None;
+        }
+
+        // Check for deadline protection (including alternative mechanisms)
         let has_deadline = self.has_deadline_parameter(function)
             || self.has_deadline_validation(&func_source)
-            || self.has_expiration_check(&func_source);
+            || self.has_expiration_check(&func_source)
+            || self.has_alternative_timing_protection(&func_source);
 
         if !has_deadline {
             let operation_type = self.get_operation_type(&func_name_lower);
@@ -147,9 +153,10 @@ impl MissingTransactionDeadlineDetector {
             || func_name.contains("exchange")
             || func_name.contains("fill"); // Order fill
 
-        // Buy/sell only if price-sensitive (DEX context)
+        // Buy/sell only if price-sensitive (DEX context), not ticket/NFT purchases
         let is_price_sensitive_buy_sell = (func_name.contains("buy") || func_name.contains("sell"))
-            && self.has_price_calculation(source);
+            && self.has_price_calculation(source)
+            && !self.is_fixed_price_purchase(source, func_name);
 
         // Source contains DEX/trading operations
         let source_indicates_trading = source.contains(".swap(")
@@ -168,9 +175,11 @@ impl MissingTransactionDeadlineDetector {
         let is_liquidation = func_name.contains("liquidat")
             && (source.contains("price") || source.contains("collateral"));
 
-        // Execute/redeem only if they're order/swap execution, not general contract calls
+        // Execute/redeem only if they're order/swap execution in a DEX context,
+        // not general multisig execute or allowance-based order systems
         let is_order_execution = (func_name.contains("execute") || func_name.contains("redeem"))
-            && (source.contains("order") || source.contains("swap") || source.contains("price"));
+            && (source.contains("order") || source.contains("swap") || source.contains("price"))
+            && !self.is_non_trading_execution(source, func_name);
 
         // EXPLICITLY NOT time-sensitive (no deadline needed):
         // - Simple withdraw() - just pulls user's balance, no price exposure
@@ -195,6 +204,156 @@ impl MissingTransactionDeadlineDetector {
             || source.contains("quoter")
             || source.contains("sqrt")
             || source.contains("k = ") // x * y = k AMM
+    }
+
+    /// Checks if a buy/sell function is a fixed-price purchase (lottery ticket, NFT mint, etc.)
+    /// These are NOT time-sensitive DEX operations
+    fn is_fixed_price_purchase(&self, source: &str, func_name: &str) -> bool {
+        // Lottery ticket, NFT mint, or fixed-price token purchase patterns
+        let is_ticket_or_nft =
+            func_name.contains("ticket") || func_name.contains("mint") || func_name.contains("nft");
+
+        // Fixed price patterns: exact price constants (not dynamic getPrice() calls)
+        let has_fixed_price_constant = source.contains("ticketPrice")
+            || source.contains("mintPrice")
+            || source.contains("msg.value == ticketPrice")
+            || source.contains("msg.value == mintPrice");
+
+        // participants.push pattern (lottery)
+        let is_lottery = source.contains("participants.push");
+
+        // Only consider it fixed-price if there is no dynamic price fetching
+        let has_dynamic_price = source.contains("getPrice")
+            || source.contains("getAmount")
+            || source.contains("oracle")
+            || source.contains("latestRoundData");
+
+        is_ticket_or_nft || is_lottery || (has_fixed_price_constant && !has_dynamic_price)
+    }
+
+    /// Checks if an execute/redeem function is NOT a trading execution
+    /// (multisig execute, allowance-based order management, etc.)
+    fn is_non_trading_execution(&self, source: &str, func_name: &str) -> bool {
+        // Multisig pattern: signature verification, not trading
+        let is_multisig = source.contains("ecrecover")
+            || source.contains("signatures")
+            || source.contains("threshold")
+            || source.contains("signers");
+
+        // Pure allowance-based order execution (no price dependency)
+        // Has "order" but operates on allowance, not price
+        let is_allowance_order = source.contains("allowance")
+            && !source.contains("getAmount")
+            && !source.contains("amountOut")
+            && !source.contains("swap");
+
+        // Generic execute with just "data" parameter (proxy/multisig pattern)
+        let is_generic_execute = func_name == "execute"
+            && !source.contains("swap")
+            && !source.contains("amountOut")
+            && !source.contains("getAmount");
+
+        is_multisig || is_allowance_order || is_generic_execute
+    }
+
+    /// Checks if this is an AMM pair/pool-level swap function
+    /// Pool-level swap functions intentionally do NOT have deadlines;
+    /// deadlines are enforced at the router level.
+    fn is_amm_pool_function(&self, source: &str, func_name: &str, ctx: &AnalysisContext) -> bool {
+        if !func_name.contains("swap") {
+            return false;
+        }
+
+        let contract_source = &ctx.source_code;
+
+        // UniswapV2Pair/V3Pool patterns: K invariant, reserve updates, lock modifier
+        let has_k_invariant = source.contains("* uint(") // K = x * y check
+            || source.contains(">= uint(")  // balance check pattern
+            || source.contains("_update(");
+
+        let has_pool_patterns = contract_source.contains("getReserves")
+            && (contract_source.contains("_reserve0") || contract_source.contains("reserve0"))
+            && (contract_source.contains("token0") || contract_source.contains("token1"));
+
+        // Reentrancy lock is common in pool contracts
+        let has_lock = source.contains("lock") || contract_source.contains("modifier lock");
+
+        // Pool contracts typically have mint/burn/sync alongside swap
+        let has_pool_lifecycle = contract_source.contains("fn mint")
+            || contract_source.contains("function mint")
+            || (contract_source.contains("function burn")
+                && contract_source.contains("function sync"));
+
+        // Must match multiple pool indicators to avoid false matches
+        (has_k_invariant && has_lock) || (has_pool_patterns && has_pool_lifecycle)
+    }
+
+    /// Checks if the function has alternative timing/price protection mechanisms
+    /// that serve a similar purpose to deadlines.
+    ///
+    /// NOTE: Slippage protection alone (minAmountOut) is NOT sufficient to replace
+    /// a deadline. A MEV bot can hold a transaction until the price reaches exactly
+    /// the minimum output, then execute it. Only stronger mechanisms qualify:
+    /// TWAP, circuit breakers, price bounds, multi-oracle, price impact validation.
+    fn has_alternative_timing_protection(&self, source: &str) -> bool {
+        // TWAP usage (resistant to single-block manipulation, implies time-averaged pricing)
+        // Use comment-aware check since "TWAP" often appears in vulnerability comments
+        let has_twap = self.has_keyword_in_code(source, "TWAP")
+            || self.has_keyword_in_code(source, "twap")
+            || self.has_keyword_in_code(source, "getTWAP")
+            || self.has_keyword_in_code(source, "observe(");
+
+        // Price bounds (minPrice/maxPrice require checks - bidirectional constraint)
+        let has_price_bounds = (self.has_keyword_in_code(source, "minPrice")
+            || self.has_keyword_in_code(source, "maxPrice"))
+            && source.contains("require");
+
+        // Circuit breaker protection (halts trading during volatility)
+        let has_circuit_breaker = self.has_keyword_in_code(source, "circuitBreaker")
+            || self.has_keyword_in_code(source, "circuit_breaker")
+            || self.has_keyword_in_code(source, "CircuitBreaker");
+
+        // Price impact validation (before/after price checks)
+        // Require actual variable usage, not just mentioned in comments
+        let has_price_impact_check = (self.has_keyword_in_code(source, "priceBefore")
+            && self.has_keyword_in_code(source, "priceAfter"))
+            || self.has_keyword_in_code(source, "MAX_IMPACT")
+            || self.has_keyword_in_code(source, "maxImpact")
+            || self.has_keyword_in_code(source, "maxPriceImpact");
+
+        // Multi-oracle / median price (resistant to single oracle manipulation)
+        let has_multi_oracle = self.has_keyword_in_code(source, "getMedianPrice")
+            || self.has_keyword_in_code(source, "medianPrice")
+            || self.has_keyword_in_code(source, "MIN_ORACLES");
+
+        has_twap
+            || has_price_bounds
+            || has_circuit_breaker
+            || has_price_impact_check
+            || has_multi_oracle
+    }
+
+    /// Checks if a keyword appears in actual code lines (not just in comments).
+    /// This prevents false matches on patterns mentioned in comments like
+    /// "// VULNERABLE: no TWAP" or "// Should check: priceAfter"
+    fn has_keyword_in_code(&self, source: &str, keyword: &str) -> bool {
+        for line in source.lines() {
+            let trimmed = line.trim();
+            // Skip full-line comments
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                continue;
+            }
+            // For lines with inline comments, only check the code portion
+            let code_part = if let Some(idx) = trimmed.find("//") {
+                &trimmed[..idx]
+            } else {
+                trimmed
+            };
+            if code_part.contains(keyword) {
+                return true;
+            }
+        }
+        false
     }
 
     /// Checks if function has deadline parameter
@@ -362,5 +521,141 @@ mod tests {
         assert!(categories.contains(&DetectorCategory::MEV));
         assert!(categories.contains(&DetectorCategory::Logic));
         assert!(categories.contains(&DetectorCategory::DeFi));
+    }
+
+    #[test]
+    fn test_fixed_price_purchase_detection() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // Lottery ticket purchase - should be detected as fixed price
+        assert!(detector.is_fixed_price_purchase(
+            "require(msg.value == ticketPrice); participants.push(msg.sender);",
+            "buyticket"
+        ));
+
+        // NFT mint by function name - should be detected as fixed price
+        assert!(detector.is_fixed_price_purchase("require(msg.value >= mintPrice);", "mintnft"));
+
+        // DEX buy with getAmountOut - should NOT be detected as fixed price
+        assert!(!detector.is_fixed_price_purchase(
+            "uint256 amountOut = getAmountOut(amountIn); price = oracle.getPrice();",
+            "buytokens"
+        ));
+
+        // DEX buy with dynamic getPrice() - should NOT be detected as fixed price
+        assert!(!detector.is_fixed_price_purchase(
+            "uint256 price = getPrice(); uint256 cost = amount * price; require(msg.value >= cost);",
+            "buy"
+        ));
+    }
+
+    #[test]
+    fn test_non_trading_execution_detection() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // Multisig execute - should be detected as non-trading
+        assert!(detector.is_non_trading_execution(
+            "bytes32 dataHash = keccak256(data); address recovered = ecrecover(dataHash, v, r, s); require(signers[recovered]);",
+            "execute"
+        ));
+
+        // Allowance-based order - should be detected as non-trading
+        assert!(detector.is_non_trading_execution(
+            "uint256 allowance = token.allowance(order.trader, address(this)); require(allowance >= order.amount);",
+            "executeorder"
+        ));
+
+        // Generic execute without swap context - should be detected as non-trading
+        assert!(detector.is_non_trading_execution(
+            "require(msg.sender == owner); (bool success,) = target.call(data);",
+            "execute"
+        ));
+
+        // DEX order execution - should NOT be detected as non-trading
+        assert!(!detector.is_non_trading_execution(
+            "uint256 amountOut = getAmountOut(order.amount); swap(order.tokenIn, order.tokenOut);",
+            "executeorder"
+        ));
+    }
+
+    #[test]
+    fn test_alternative_timing_protection() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // TWAP usage in actual code - qualifies as alternative protection
+        assert!(detector.has_alternative_timing_protection("uint256 twapPrice = getTWAP();"));
+
+        // TWAP mentioned only in a comment - should NOT qualify
+        assert!(!detector.has_alternative_timing_protection(
+            "// VULNERABLE: no TWAP\nuint256 amountOut = getAmountOut(amountIn);"
+        ));
+
+        // Price bounds - qualifies as alternative protection
+        assert!(detector.has_alternative_timing_protection(
+            "require(price >= minPrice && price <= maxPrice, 'Price out of bounds');"
+        ));
+
+        // Circuit breaker - qualifies as alternative protection
+        assert!(detector.has_alternative_timing_protection(
+            "require(!circuitBreakerActive, 'Circuit breaker active');"
+        ));
+
+        // Price impact check with both priceBefore and priceAfter in code
+        assert!(detector.has_alternative_timing_protection(
+            "uint256 priceBefore = getPrice();\n// do swap\nuint256 priceAfter = getPrice();"
+        ));
+
+        // Price impact check with priceAfter only in comment - should NOT qualify
+        assert!(!detector.has_alternative_timing_protection(
+            "uint256 priceBefore = getPrice();\n// Should check: priceAfter <= priceBefore * 1.01"
+        ));
+
+        // Multi-oracle median - qualifies as alternative protection
+        assert!(detector.has_alternative_timing_protection("uint256 price = getMedianPrice();"));
+
+        // Slippage protection alone does NOT qualify (MEV can wait for exact minAmountOut)
+        assert!(!detector.has_alternative_timing_protection(
+            "require(amountOut >= minAmountOut, 'Slippage too high');"
+        ));
+
+        // No protection at all - should return false
+        assert!(!detector.has_alternative_timing_protection(
+            "uint256 amountOut = amountIn * reserveB / reserveA; token.transfer(msg.sender, amountOut);"
+        ));
+    }
+
+    #[test]
+    fn test_is_time_sensitive_excludes_lottery() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // Lottery buyTicket should NOT be time-sensitive
+        // ticketPrice contains "price" which triggers has_price_calculation,
+        // but is_fixed_price_purchase should catch it
+        assert!(!detector.is_time_sensitive(
+            "require(msg.value == ticketPrice, 'Wrong price'); participants.push(msg.sender);",
+            "buyticket"
+        ));
+    }
+
+    #[test]
+    fn test_is_time_sensitive_keeps_real_dex_swap() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // Real DEX swap should remain time-sensitive
+        assert!(detector.is_time_sensitive(
+            "uint256 amountOut = getAmountOut(amountIn); token.transfer(msg.sender, amountOut);",
+            "swap"
+        ));
+    }
+
+    #[test]
+    fn test_is_time_sensitive_excludes_multisig_execute() {
+        let detector = MissingTransactionDeadlineDetector::new();
+
+        // Multisig execute with signature verification - not time-sensitive
+        assert!(!detector.is_time_sensitive(
+            "bytes32 hash = keccak256(data); address signer = ecrecover(hash, v, r, s); require(signers[signer]); (bool ok,) = target.call(data);",
+            "execute"
+        ));
     }
 }
