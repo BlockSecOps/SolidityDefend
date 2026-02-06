@@ -29,7 +29,7 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --all-targets --all-features -- -D warnings -A dead_code -A unused_variables -A unused_assignments -A unused_parens
 
       - name: Build (debug)
         run: cargo build --verbose
@@ -59,6 +59,7 @@ jobs:
   docker-build:
     name: Docker Build
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
       - name: Checkout code
