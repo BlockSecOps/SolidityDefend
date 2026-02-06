@@ -102,6 +102,42 @@ impl PriceManipulationFrontrunDetector {
             return None;
         }
 
+        // Phase 6 FP Reduction: Skip ALL view/pure functions
+        // View/pure functions cannot modify state and thus cannot be front-run
+        // for price manipulation. They only read data.
+        if function.mutability == ast::StateMutability::View
+            || function.mutability == ast::StateMutability::Pure
+        {
+            return None;
+        }
+
+        // Phase 6 FP Reduction: Skip flash loan provider functions
+        // Flash loan providers use balanceOf for accounting (before/after checks),
+        // not for pricing. This is a standard safety pattern.
+        if self.is_flash_loan_provider_function(&func_source, &func_name_lower) {
+            return None;
+        }
+
+        // Phase 6 FP Reduction: Skip governance functions
+        // Governance functions use balanceOf for voting power / proposal threshold
+        // checks, not for price calculations.
+        if self.is_governance_function(&func_source, &func_name_lower) {
+            return None;
+        }
+
+        // Phase 6 FP Reduction: Skip ERC-4626 vault standard functions
+        // These use balanceOf as part of the standard accounting pattern.
+        if self.is_erc4626_standard_function(&func_name_lower) {
+            return None;
+        }
+
+        // Phase 6 FP Reduction: Skip functions with access control modifiers
+        // Functions restricted to owner/admin/authorized cannot be front-run
+        // by arbitrary users.
+        if self.has_access_control(&func_source) {
+            return None;
+        }
+
         // Phase 5 FP Reduction: Skip oracle implementation functions
         // If contract IS an oracle (provides prices), not a consumer
         let is_oracle_implementation = ctx.source_code.contains("function latestRoundData")
@@ -317,6 +353,85 @@ impl PriceManipulationFrontrunDetector {
         (source.contains("minPrice") && source.contains("maxPrice"))
             || (source.contains("min") && source.contains("max") && source.contains("price"))
             || (source.contains("minAmountOut") || source.contains("amountOutMin"))
+    }
+
+    /// Phase 6 FP Reduction: Check if function is a flash loan provider function
+    /// Flash loan providers use balanceOf for before/after accounting checks,
+    /// not for pricing. This is a standard safety pattern (ERC-3156).
+    fn is_flash_loan_provider_function(&self, source: &str, func_name: &str) -> bool {
+        let name_indicates_flash_loan = func_name.contains("flashloan")
+            || func_name.contains("flashmint")
+            || func_name.contains("onflashloan")
+            || func_name == "flashfee"
+            || func_name == "maxflashloan";
+
+        let source_indicates_flash_loan = source.contains("onFlashLoan")
+            || source.contains("IFlashBorrower")
+            || source.contains("FlashBorrower")
+            || source.contains("ERC3156")
+            || (source.contains("balanceBefore") && source.contains("balanceAfter"))
+            || source.contains("Flash loan")
+            || source.contains("flash loan");
+
+        name_indicates_flash_loan || source_indicates_flash_loan
+    }
+
+    /// Phase 6 FP Reduction: Check if function is a governance function
+    /// Governance functions use balanceOf for voting power and proposal threshold
+    /// checks, which is not price manipulation.
+    fn is_governance_function(&self, source: &str, func_name: &str) -> bool {
+        let name_indicates_governance = func_name.contains("propose")
+            || func_name.contains("vote")
+            || func_name.contains("delegate")
+            || func_name.contains("quorum")
+            || func_name.contains("queue")
+            || func_name.contains("cancel");
+
+        let source_indicates_governance = source.contains("proposalThreshold")
+            || source.contains("votingPower")
+            || source.contains("proposal")
+            || source.contains("Proposal")
+            || source.contains("governance")
+            || source.contains("delegatee");
+
+        name_indicates_governance && source_indicates_governance
+    }
+
+    /// Phase 6 FP Reduction: Check if function is an ERC-4626 standard function
+    /// ERC-4626 vaults use balanceOf as part of their standard accounting pattern.
+    fn is_erc4626_standard_function(&self, func_name: &str) -> bool {
+        func_name == "totalassets"
+            || func_name == "deposit"
+            || func_name == "withdraw"
+            || func_name == "mint"
+            || func_name == "redeem"
+            || func_name == "converttoassets"
+            || func_name == "converttoshares"
+            || func_name == "previewdeposit"
+            || func_name == "previewmint"
+            || func_name == "previewredeem"
+            || func_name == "previewwithdraw"
+            || func_name == "maxdeposit"
+            || func_name == "maxmint"
+            || func_name == "maxredeem"
+            || func_name == "maxwithdraw"
+    }
+
+    /// Phase 6 FP Reduction: Check if function has access control
+    /// Functions with access control modifiers cannot be front-run by arbitrary users.
+    fn has_access_control(&self, source: &str) -> bool {
+        source.contains("onlyOwner")
+            || source.contains("onlyAdmin")
+            || source.contains("onlyAuthorized")
+            || source.contains("onlyRole")
+            || source.contains("onlyGuardian")
+            || source.contains("onlyOperator")
+            || source.contains("onlyMinter")
+            || source.contains("onlyGovernance")
+            || source.contains("requireRole")
+            || (source.contains("require")
+                && source.contains("msg.sender")
+                && source.contains("owner"))
     }
 
     /// Phase 5 FP Reduction: Check if function is in trading context

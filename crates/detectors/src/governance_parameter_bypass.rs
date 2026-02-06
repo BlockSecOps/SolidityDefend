@@ -33,6 +33,125 @@ impl GovernanceParameterBypassDetector {
         }
     }
 
+    /// Check if a line is a state variable declaration rather than an assignment
+    fn is_state_variable_declaration(&self, trimmed: &str) -> bool {
+        let type_prefixes = [
+            "uint256", "uint128", "uint64", "uint32", "uint16", "uint8", "uint", "int256",
+            "int128", "int64", "int32", "int16", "int8", "int", "address", "bool", "bytes32",
+            "bytes", "string", "mapping",
+        ];
+        for prefix in &type_prefixes {
+            if trimmed.starts_with(prefix) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a function signature contains access control modifiers
+    fn has_access_control(&self, func_sig: &str) -> bool {
+        let access_modifiers = [
+            "onlyOwner",
+            "onlyAdmin",
+            "onlyRole",
+            "onlyGovernor",
+            "onlyGovernance",
+            "onlyGuardian",
+            "onlyTimelock",
+            "onlyController",
+            "onlyAuthorized",
+            "onlyOperator",
+            "onlyMinter",
+            "requiresAuth",
+        ];
+        for modifier in &access_modifiers {
+            if func_sig.contains(modifier) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a function name represents a governance mechanism itself
+    /// (these functions ARE the governance process, not a bypass of it)
+    fn is_governance_mechanism(&self, func_name: &str) -> bool {
+        let gov_mechanisms = [
+            "propose",
+            "vote",
+            "castVote",
+            "execute",
+            "queue",
+            "cancel",
+            "_castVote",
+            "_execute",
+            "_queue",
+            "_cancel",
+            "updateParameters",
+            "initialize",
+        ];
+        let name_lower = func_name.to_lowercase();
+        for mechanism in &gov_mechanisms {
+            if name_lower == mechanism.to_lowercase() {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if a line is inside an interface definition (not a contract body)
+    fn is_inside_interface(&self, lines: &[&str], line_num: usize) -> bool {
+        let mut depth: i32 = 0;
+        for i in (0..=line_num).rev() {
+            let trimmed = lines[i].trim();
+            for c in trimmed.chars().rev() {
+                match c {
+                    '}' => depth += 1,
+                    '{' => {
+                        depth -= 1;
+                        if depth < 0 {
+                            if trimmed.starts_with("interface ") || trimmed.contains(" interface ")
+                            {
+                                return true;
+                            }
+                            if i > 0 {
+                                let prev = lines[i - 1].trim();
+                                if prev.starts_with("interface ") || prev.contains(" interface ") {
+                                    return true;
+                                }
+                            }
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+        }
+        false
+    }
+
+    /// Returns the full function signature line containing the given line number
+    fn find_containing_function_signature(&self, lines: &[&str], line_num: usize) -> String {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                let mut sig = trimmed.to_string();
+                if sig.contains('{') || sig.contains(';') {
+                    return sig;
+                }
+                for j in (i + 1)..lines.len().min(i + 10) {
+                    let next = lines[j].trim();
+                    sig.push(' ');
+                    sig.push_str(next);
+                    if next.contains('{') || next.contains(';') {
+                        break;
+                    }
+                }
+                return sig;
+            }
+        }
+        String::new()
+    }
+
     /// Find parameter changes without timelock
     fn find_untimelocked_params(&self, source: &str) -> Vec<(u32, String, String)> {
         let mut findings = Vec::new();
@@ -45,6 +164,11 @@ impl GovernanceParameterBypassDetector {
 
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+
+            // Skip lines inside interface definitions
+            if self.is_inside_interface(&lines, line_num) {
+                continue;
+            }
 
             // Look for setter functions for governance parameters
             if trimmed.contains("function set")
@@ -71,7 +195,10 @@ impl GovernanceParameterBypassDetector {
                         || func_body.contains("require(msg.sender == timelock")
                         || func_body.contains("_checkTimelock");
 
-                    if !has_timelock_check && !has_timelock {
+                    // Check for access control modifiers on the setter itself
+                    let has_access_ctrl = self.has_access_control(trimmed);
+
+                    if !has_timelock_check && !has_timelock && !has_access_ctrl {
                         let issue =
                             "No timelock protection on governance parameter setter".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
@@ -86,7 +213,25 @@ impl GovernanceParameterBypassDetector {
                 || trimmed.contains("proposalThreshold ="))
                 && !trimmed.starts_with("//")
             {
-                let func_name = self.find_containing_function(&lines, line_num);
+                // Skip state variable declarations (e.g., "uint256 public votingDelay = 1 days;")
+                if self.is_state_variable_declaration(trimmed) {
+                    continue;
+                }
+
+                // Get the containing function's full signature to check access control
+                let func_sig = self.find_containing_function_signature(&lines, line_num);
+                let func_name = self.extract_function_name(&func_sig);
+
+                // Skip if the containing function has access control modifiers
+                if self.has_access_control(&func_sig) {
+                    continue;
+                }
+
+                // Skip if the function IS a governance mechanism (propose, vote, execute, etc.)
+                if self.is_governance_mechanism(&func_name) {
+                    continue;
+                }
+
                 let issue = "Direct governance parameter modification".to_string();
                 findings.push((line_num as u32 + 1, func_name, issue));
             }
@@ -275,5 +420,78 @@ mod tests {
         let detector = GovernanceParameterBypassDetector::new();
         assert_eq!(detector.name(), "Governance Parameter Bypass");
         assert_eq!(detector.default_severity(), Severity::Critical);
+    }
+
+    #[test]
+    fn test_skips_state_variable_declarations() {
+        let detector = GovernanceParameterBypassDetector::new();
+        assert!(detector.is_state_variable_declaration("uint256 public votingDelay = 1 days;"));
+        assert!(detector.is_state_variable_declaration("uint256 public votingPeriod = 3 days;"));
+        assert!(
+            detector.is_state_variable_declaration("uint256 public proposalThreshold = 100000e18;")
+        );
+        assert!(!detector.is_state_variable_declaration("votingDelay = _votingDelay;"));
+        assert!(!detector.is_state_variable_declaration("proposalThreshold = newThreshold;"));
+    }
+
+    #[test]
+    fn test_has_access_control() {
+        let detector = GovernanceParameterBypassDetector::new();
+        assert!(
+            detector
+                .has_access_control("function updateParameters(uint256 x) external onlyOwner {")
+        );
+        assert!(detector.has_access_control("function setFee(uint256 x) external onlyGuardian {"));
+        assert!(
+            detector.has_access_control("function setDelay(uint256 x) external onlyGovernance {")
+        );
+        assert!(!detector.has_access_control("function setDelay(uint256 x) external {"));
+        assert!(!detector.has_access_control("function setDelay(uint256 x) public {"));
+    }
+
+    #[test]
+    fn test_is_governance_mechanism() {
+        let detector = GovernanceParameterBypassDetector::new();
+        assert!(detector.is_governance_mechanism("propose"));
+        assert!(detector.is_governance_mechanism("execute"));
+        assert!(detector.is_governance_mechanism("queue"));
+        assert!(detector.is_governance_mechanism("cancel"));
+        assert!(detector.is_governance_mechanism("castVote"));
+        assert!(detector.is_governance_mechanism("updateParameters"));
+        assert!(!detector.is_governance_mechanism("setFee"));
+        assert!(!detector.is_governance_mechanism("withdrawFunds"));
+    }
+
+    #[test]
+    fn test_is_inside_interface() {
+        let detector = GovernanceParameterBypassDetector::new();
+        let source = "interface IERC20 {\n    function transfer(address to, uint256 amount) external returns (bool);\n    function balanceOf(address account) external view returns (uint256);\n}\n\ncontract MyContract {\n    uint256 public votingDelay = 1 days;\n}";
+        let lines: Vec<&str> = source.lines().collect();
+        assert!(detector.is_inside_interface(&lines, 1));
+        assert!(detector.is_inside_interface(&lines, 2));
+        assert!(!detector.is_inside_interface(&lines, 6));
+    }
+
+    #[test]
+    fn test_no_fp_on_access_controlled_assignments() {
+        let detector = GovernanceParameterBypassDetector::new();
+        let source = "contract Gov {\n    uint256 public votingDelay = 1 days;\n    uint256 public votingPeriod = 3 days;\n\n    function updateParameters(uint256 _delay, uint256 _period) external onlyOwner {\n        votingDelay = _delay;\n        votingPeriod = _period;\n    }\n}";
+        let findings = detector.find_untimelocked_params(source);
+        assert!(
+            findings.is_empty(),
+            "Should not flag access-controlled assignments, got: {:?}",
+            findings
+        );
+    }
+
+    #[test]
+    fn test_detects_unprotected_setter() {
+        let detector = GovernanceParameterBypassDetector::new();
+        let source = "contract Gov {\n    uint256 public votingDelay;\n\n    function setDelay(uint256 _delay) external {\n        votingDelay = _delay;\n    }\n}";
+        let findings = detector.find_untimelocked_params(source);
+        assert!(
+            !findings.is_empty(),
+            "Should flag unprotected direct modification"
+        );
     }
 }

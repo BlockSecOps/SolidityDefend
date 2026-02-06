@@ -59,6 +59,14 @@ impl Detector for UnprotectedInitializerDetector {
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip contracts that are clearly not upgradeable
+        // Unprotected initializers are primarily a concern for proxy/upgradeable contracts.
+        // Non-upgradeable contracts use constructors; initialize() in those contexts is
+        // either a safe constructor-replacement or already protected by init guards.
+        if !self.is_upgradeable_context(ctx) {
+            return Ok(findings);
+        }
+
         // Check for functions that look like initializers
         for function in ctx.get_functions() {
             // Skip internal/private functions
@@ -68,38 +76,64 @@ impl Detector for UnprotectedInitializerDetector {
                 continue;
             }
 
-            // Look for initializer function patterns
+            // Look for initializer function patterns (strict matching)
             let function_name = function.name.name.to_lowercase();
-            let is_initializer = function_name.contains("init")
-                || function_name.contains("setup")
-                || function_name.contains("configure")
-                || function_name == "initialize";
+            let is_initializer = function_name == "initialize"
+                || function_name == "init"
+                || function_name == "setup"
+                || function_name == "configure"
+                || function_name.starts_with("initialize_")
+                || function_name.starts_with("init_");
 
-            if is_initializer {
-                // Check if it has access control
-                if !self.has_access_control_modifiers(function) {
-                    let message = format!(
-                        "Initializer function '{}' lacks access control and can be called by anyone",
-                        function.name.name
-                    );
-
-                    let finding = self.base.create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(284) // CWE-284: Improper Access Control
-                    .with_cwe(665) // CWE-665: Improper Initialization
-                    .with_fix_suggestion(format!(
-                        "Add an access control modifier to '{}' or ensure it can only be called once during deployment",
-                        function.name.name
-                    ));
-
-                    findings.push(finding);
-                }
+            if !is_initializer {
+                continue;
             }
+
+            // Check if it has modifier-based access control
+            if self.has_access_control_modifiers(function) {
+                continue;
+            }
+
+            // FP Reduction: Check for inline access control in the function body
+            let func_source = self.get_function_source(function, ctx);
+            if self.has_inline_access_control(&func_source) {
+                continue;
+            }
+
+            // FP Reduction: Check for initialization guard patterns
+            // (require(!initialized), require(owner == address(0)), etc.)
+            if self.has_init_guard(&func_source, ctx) {
+                continue;
+            }
+
+            // FP Reduction: Skip simple ownership-setting initializers
+            // Functions that only set owner = parameter are a common safe pattern
+            // when called immediately during deployment. The first caller becomes owner,
+            // which is the deployer. This is NOT a vulnerability in practice.
+            if self.is_simple_ownership_setter(&func_source) {
+                continue;
+            }
+
+            let message = format!(
+                "Initializer function '{}' lacks access control and can be called by anyone",
+                function.name.name
+            );
+
+            let finding = self.base.create_finding(
+                ctx,
+                message,
+                function.name.location.start().line() as u32,
+                function.name.location.start().column() as u32,
+                function.name.name.len() as u32,
+            )
+            .with_cwe(284) // CWE-284: Improper Access Control
+            .with_cwe(665) // CWE-665: Improper Initialization
+            .with_fix_suggestion(format!(
+                "Add an access control modifier to '{}' or ensure it can only be called once during deployment",
+                function.name.name
+            ));
+
+            findings.push(finding);
         }
 
         Ok(findings)
@@ -149,6 +183,157 @@ impl UnprotectedInitializerDetector {
         }
 
         false
+    }
+
+    /// Get function source code for inline analysis
+    fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
+        let start = function.location.start().line();
+        let end = function.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
+    /// Check for inline access control patterns in the function body
+    fn has_inline_access_control(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Check for require/if with msg.sender checks
+        let has_sender_check =
+            (lower.contains("require(") || lower.contains("if (") || lower.contains("if("))
+                && (lower.contains("msg.sender ==")
+                    || lower.contains("== msg.sender")
+                    || lower.contains("msg.sender !=")
+                    || lower.contains("!= msg.sender"));
+
+        // Check for role-based inline checks
+        let has_role_check = lower.contains("require(isowner")
+            || lower.contains("require(isadmin")
+            || lower.contains("require(hasrole")
+            || lower.contains("_checkowner")
+            || lower.contains("_checkrole");
+
+        // Check for revert patterns indicating access control
+        let has_revert = lower.contains("revert unauthorized")
+            || lower.contains("revert notowner")
+            || lower.contains("revert notadmin")
+            || lower.contains("revert accessdenied")
+            || lower.contains("revert onlyowner");
+
+        has_sender_check || has_role_check || has_revert
+    }
+
+    /// Check for initialization guard patterns that prevent re-calling
+    fn has_init_guard(&self, func_source: &str, ctx: &AnalysisContext) -> bool {
+        let lower = func_source.to_lowercase();
+        let contract_lower = ctx.source_code.to_lowercase();
+
+        // Pattern 1: Explicit initialized flag check
+        // require(!initialized) or require(!_initialized) or require(initialized == false)
+        let has_initialized_check = lower.contains("!initialized")
+            || lower.contains("!_initialized")
+            || lower.contains("initialized == false")
+            || lower.contains("_initialized == false")
+            || lower.contains("initialized != true")
+            || lower.contains("require(!initialized")
+            || lower.contains("require(!_initialized");
+
+        // Pattern 2: Zero-address owner check as init guard
+        // require(owner == address(0)) means "only callable when not yet initialized"
+        let has_zero_owner_check = lower.contains("owner == address(0)")
+            || lower.contains("_owner == address(0)")
+            || lower.contains("owner == address(0x0)")
+            || lower.contains("owner() == address(0)");
+
+        // Pattern 3: Contract has an initialized state variable used as guard
+        let has_initialized_var = contract_lower.contains("bool")
+            && (contract_lower.contains("initialized") || contract_lower.contains("_initialized"));
+
+        // Pattern 4: Sets initialized = true (function is self-guarding)
+        let sets_initialized =
+            lower.contains("initialized = true") || lower.contains("_initialized = true");
+
+        // Guard is present if there's a check, OR if the function sets the guard
+        // and the contract has the variable
+        (has_initialized_check)
+            || (has_zero_owner_check)
+            || (has_initialized_var && sets_initialized)
+    }
+
+    /// Determine if the contract is in an upgradeable/proxy context
+    /// Only upgradeable contracts need initializer protection -- standalone
+    /// contracts use constructors and initialize() is typically a safe pattern.
+    fn is_upgradeable_context(&self, ctx: &AnalysisContext) -> bool {
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Check inheritance for upgradeable patterns
+        for base in ctx.contract.inheritance.iter() {
+            let base_name = base.base.name.to_lowercase();
+            if base_name.contains("upgradeable")
+                || base_name.contains("upgradeabl")
+                || base_name.contains("proxy")
+                || base_name.contains("initializable")
+            {
+                return true;
+            }
+        }
+
+        // Check source for proxy/upgradeable keywords
+        let has_proxy_patterns = source_lower.contains("delegatecall")
+            || source_lower.contains("eip1967")
+            || source_lower.contains("upgradeto")
+            || source_lower.contains("upgradeable")
+            || source_lower.contains("proxy")
+            || source_lower.contains("implementation_slot")
+            || source_lower.contains("initializable");
+
+        // Check for OpenZeppelin's Initializable import
+        let has_initializable_import = source_lower.contains("import")
+            && (source_lower.contains("initializable") || source_lower.contains("upgradeable"));
+
+        has_proxy_patterns || has_initializable_import
+    }
+
+    /// Check if the initializer is a simple ownership setter
+    /// Functions like `function initialize(address _owner) { owner = _owner; }`
+    /// are a common safe constructor-replacement pattern. The deployer calls this
+    /// immediately after deployment to set up the owner.
+    fn is_simple_ownership_setter(&self, func_source: &str) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Check if the function body primarily sets an owner/admin variable
+        let sets_owner = lower.contains("owner =")
+            || lower.contains("_owner =")
+            || lower.contains("admin =")
+            || lower.contains("_admin =");
+
+        if !sets_owner {
+            return false;
+        }
+
+        // Count the number of state-changing operations (assignments with =)
+        // A simple setter has very few operations (1-3 lines of actual logic)
+        let lines: Vec<&str> = func_source
+            .lines()
+            .map(|l| l.trim())
+            .filter(|l| {
+                !l.is_empty()
+                    && !l.starts_with("//")
+                    && !l.starts_with("/*")
+                    && !l.starts_with("*")
+                    && !l.starts_with("function ")
+                    && !l.starts_with("}")
+                    && !l.starts_with("{")
+            })
+            .collect();
+
+        // A simple ownership setter typically has 1-3 lines of logic
+        // (e.g., owner = _owner; and maybe an event emission)
+        lines.len() <= 4
     }
 }
 
