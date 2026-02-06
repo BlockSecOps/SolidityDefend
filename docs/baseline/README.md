@@ -82,7 +82,8 @@ done
 ## Baselines
 
 See individual baseline files:
-- [v1.10.19-baseline.md](v1.10.19-baseline.md) — Current baseline (after FP reduction v5)
+- [v1.10.20-baseline.md](v1.10.20-baseline.md) — Current baseline (after FP reduction v6)
+- [v1.10.19-baseline.md](v1.10.19-baseline.md) — Previous baseline (after FP reduction v5)
 
 ## FP Reduction History
 
@@ -93,3 +94,4 @@ See individual baseline files:
 | v1.10.17 | v3 | 10 | 88 | — | — |
 | v1.10.18 | v4 | 10 | 52 (net -22) | 1,776 | 45 |
 | v1.10.19 | v5 | 20 | 191 | 1,585 | 42 |
+| v1.10.20 | v6 | 30 | 585 | 1,000 | 26 |
