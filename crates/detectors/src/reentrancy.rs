@@ -791,6 +791,7 @@ impl Detector for ClassicReentrancyDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -1104,6 +1105,7 @@ impl Detector for ReadOnlyReentrancyDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

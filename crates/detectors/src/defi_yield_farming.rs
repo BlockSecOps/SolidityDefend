@@ -311,51 +311,62 @@ impl YieldFarmingDetector {
                 // NOTE: Withdrawal fees are a design choice, not a vulnerability
                 // Removed the withdrawal fee check as it created false positives
 
-                // Check for asset calculation -- only if the function actually
-                // does share-to-asset conversion (contains "shares" reference)
-                if source_lower.contains("shares") {
-                    let has_asset_calc = source_lower.contains("totalsupply")
-                        || source_lower.contains("totalassets");
+                // FP Reduction: Skip share/asset calculation checks for
+                // Masterchef-style staking withdrawals. These use amount-based
+                // accounting (user.amount) with rewardDebt, not share-to-asset
+                // conversion. Only ERC4626-style vaults need these checks.
+                let is_masterchef_withdraw = source_lower.contains("rewarddebt")
+                    || source_lower.contains("accrewardpershare")
+                    || source_lower.contains("totalstaked")
+                    || contract_source_lower.contains("accrewardpershare");
 
-                    if !has_asset_calc {
-                        issues.push((
-                            "Asset calculation missing totalSupply/totalAssets".to_string(),
-                            Severity::High,
-                            "Calculate assets: assets = (shares * totalAssets()) / totalSupply();"
-                                .to_string(),
-                        ));
+                if !is_masterchef_withdraw {
+                    // Check for asset calculation -- only if the function actually
+                    // does share-to-asset conversion (contains "shares" reference)
+                    if source_lower.contains("shares") {
+                        let has_asset_calc = source_lower.contains("totalsupply")
+                            || source_lower.contains("totalassets");
+
+                        if !has_asset_calc {
+                            issues.push((
+                                "Asset calculation missing totalSupply/totalAssets".to_string(),
+                                Severity::High,
+                                "Calculate assets: assets = (shares * totalAssets()) / totalSupply();"
+                                    .to_string(),
+                            ));
+                        }
                     }
-                }
 
-                // Check for zero-asset validation -- only if function references "assets"
-                // as a variable (not just in comments or event names)
-                if source_lower.contains("assets =") || source_lower.contains("assets;") {
-                    let has_zero_check = source_lower.contains("assets > 0")
-                        || source_lower.contains("assets != 0")
-                        || (source_lower.contains("require") && source_lower.contains("!= 0"));
+                    // Check for zero-asset validation -- only if function references "assets"
+                    // as a variable (not just in comments or event names)
+                    if source_lower.contains("assets =") || source_lower.contains("assets;") {
+                        let has_zero_check = source_lower.contains("assets > 0")
+                            || source_lower.contains("assets != 0")
+                            || (source_lower.contains("require") && source_lower.contains("!= 0"));
 
-                    if !has_zero_check {
+                        if !has_zero_check {
+                            issues.push((
+                                "No validation for zero assets on withdrawal".to_string(),
+                                Severity::Medium,
+                                "Validate assets: require(assets > 0, \"Assets must be non-zero\");"
+                                    .to_string(),
+                            ));
+                        }
+                    }
+
+                    // Check for slippage protection
+                    let has_min_output = source_lower.contains("minassets")
+                        || source_lower.contains("minamount")
+                        || (source_lower.contains("amount") && source_lower.contains(">="));
+
+                    if !has_min_output {
                         issues.push((
-                            "No validation for zero assets on withdrawal".to_string(),
+                            "No slippage protection on withdrawal".to_string(),
                             Severity::Medium,
-                            "Validate assets: require(assets > 0, \"Assets must be non-zero\");"
+                            "Add slippage: require(assets >= minAssets, \"Slippage too high\");"
                                 .to_string(),
                         ));
                     }
-                }
-
-                // Check for slippage protection
-                let has_min_output = source_lower.contains("minassets")
-                    || source_lower.contains("minamount")
-                    || (source_lower.contains("amount") && source_lower.contains(">="));
-
-                if !has_min_output {
-                    issues.push((
-                        "No slippage protection on withdrawal".to_string(),
-                        Severity::Medium,
-                        "Add slippage: require(assets >= minAssets, \"Slippage too high\");"
-                            .to_string(),
-                    ));
                 }
             }
         }
@@ -365,55 +376,78 @@ impl YieldFarmingDetector {
         if name.contains("reward") || name.contains("earn") || name.contains("claim") {
             // Skip simple claim-from-mapping patterns
             if !self.is_simple_reward_claim(&func_source) {
-                // Check for reward per token calculation
-                let has_reward_calc = source_lower.contains("rewardpertoken")
-                    || (source_lower.contains("reward") && source_lower.contains("totalsupply"));
+                // FP Reduction: Check contract-level source for reward infrastructure.
+                // Masterchef-style contracts use accRewardPerShare + rewardDebt at
+                // the contract level, and individual functions reference them via
+                // struct access (e.g., user.rewardDebt, pool.accRewardPerShare).
+                // These should not be flagged for missing reward accounting.
+                let has_masterchef_pattern = contract_source_lower.contains("accrewardpershare")
+                    || contract_source_lower.contains("rewardpershare")
+                    || (contract_source_lower.contains("rewarddebt")
+                        && contract_source_lower.contains("accumulatedrewards"));
 
-                if !has_reward_calc {
-                    issues.push((
-                        "Reward calculation doesn't account for totalSupply".to_string(),
-                        Severity::High,
-                        "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;".to_string()
-                    ));
-                }
+                // Also check if the function itself references reward infrastructure
+                // via struct member access (e.g., user.rewardDebt, pool.accRewardPerShare)
+                let func_has_reward_infra = source_lower.contains("rewarddebt")
+                    || source_lower.contains("accrewardpershare")
+                    || source_lower.contains("rewardpershare")
+                    || source_lower.contains("accumulatedrewards")
+                    || source_lower.contains("pending");
 
-                // Check for timestamp validation
-                let has_time_check = source_lower.contains("lastupdatetime")
-                    || source_lower.contains("lastclaimtime")
-                    || source_lower.contains("lastupdate")
-                    || (source_lower.contains("timestamp") && source_lower.contains("require"));
+                // Skip all reward sub-checks if contract uses Masterchef pattern
+                // or the function references established reward infrastructure
+                if !has_masterchef_pattern && !func_has_reward_infra {
+                    // Check for reward per token calculation
+                    let has_reward_calc = source_lower.contains("rewardpertoken")
+                        || (source_lower.contains("reward") && source_lower.contains("totalsupply"));
 
-                if !has_time_check {
-                    issues.push((
-                        "No timestamp tracking for reward accrual".to_string(),
-                        Severity::High,
-                        "Track time: lastUpdateTime = block.timestamp; Use for accurate reward calculation".to_string()
-                    ));
-                }
+                    if !has_reward_calc {
+                        issues.push((
+                            "Reward calculation doesn't account for totalSupply".to_string(),
+                            Severity::High,
+                            "Calculate rewards: rewardPerToken = (rewardRate * timeDelta * 1e18) / totalSupply;".to_string()
+                        ));
+                    }
 
-                // Check for reward debt accounting
-                let has_reward_debt =
-                    source_lower.contains("rewarddebt") || source_lower.contains("paidreward");
+                    // Check for timestamp validation
+                    let has_time_check = source_lower.contains("lastupdatetime")
+                        || source_lower.contains("lastclaimtime")
+                        || source_lower.contains("lastupdate")
+                        || source_lower.contains("lastrewardtime")
+                        || (source_lower.contains("timestamp") && source_lower.contains("require"));
 
-                if !has_reward_debt {
-                    issues.push((
-                        "Missing reward debt tracking (double-claim risk)".to_string(),
-                        Severity::Critical,
-                        "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;"
-                            .to_string(),
-                    ));
-                }
+                    if !has_time_check {
+                        issues.push((
+                            "No timestamp tracking for reward accrual".to_string(),
+                            Severity::High,
+                            "Track time: lastUpdateTime = block.timestamp; Use for accurate reward calculation".to_string()
+                        ));
+                    }
 
-                // Check for precision loss
-                let has_precision =
-                    source_lower.contains("1e18") || source_lower.contains("precision");
+                    // Check for reward debt accounting
+                    let has_reward_debt =
+                        source_lower.contains("rewarddebt") || source_lower.contains("paidreward");
 
-                if !has_precision {
-                    issues.push((
-                        "Reward calculation without precision multiplier (rounding errors)".to_string(),
-                        Severity::Medium,
-                        "Add precision: Use 1e18 multiplier for reward calculations to minimize rounding errors".to_string()
-                    ));
+                    if !has_reward_debt {
+                        issues.push((
+                            "Missing reward debt tracking (double-claim risk)".to_string(),
+                            Severity::Critical,
+                            "Track debt: userRewardDebt[user] = (userBalance * rewardPerToken) / 1e18;"
+                                .to_string(),
+                        ));
+                    }
+
+                    // Check for precision loss
+                    let has_precision =
+                        source_lower.contains("1e18") || source_lower.contains("precision");
+
+                    if !has_precision {
+                        issues.push((
+                            "Reward calculation without precision multiplier (rounding errors)".to_string(),
+                            Severity::Medium,
+                            "Add precision: Use 1e18 multiplier for reward calculations to minimize rounding errors".to_string()
+                        ));
+                    }
                 }
             }
         }
@@ -438,9 +472,15 @@ impl YieldFarmingDetector {
 
         // Check updateReward modifier or function
         if name.contains("update") && source_lower.contains("reward") {
-            // Check for zero supply handling
+            // FP Reduction: Skip if the function already has zero-supply
+            // guard via early return or lpSupply check (Masterchef pattern:
+            // "if (lpSupply == 0) { ... return; }")
             let has_zero_supply = source_lower.contains("totalsupply() == 0")
-                || source_lower.contains("totalsupply > 0");
+                || source_lower.contains("totalsupply > 0")
+                || source_lower.contains("totalsupply() > 0")
+                || source_lower.contains("lpsupply == 0")
+                || source_lower.contains("lpsupply != 0")
+                || (source_lower.contains("== 0") && source_lower.contains("return"));
 
             if !has_zero_supply {
                 issues.push((
@@ -556,6 +596,16 @@ impl Detector for YieldFarmingDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         if !self.is_yield_vault(ctx) {
             return Ok(findings);
@@ -623,6 +673,7 @@ impl Detector for YieldFarmingDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

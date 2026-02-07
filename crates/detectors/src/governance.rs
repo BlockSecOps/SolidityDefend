@@ -47,6 +47,16 @@ impl Detector for GovernanceDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip lending protocols - they are NOT governance tokens
         // Lending protocol tokens (cTokens, aTokens) have "delegate" for proxy patterns,
@@ -86,6 +96,7 @@ impl Detector for GovernanceDetector {
         findings.extend(self.detect_missing_snapshot_protection(ctx)?);
         findings.extend(self.detect_temporal_control_issues(ctx)?);
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -190,6 +201,7 @@ impl GovernanceDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -228,6 +240,7 @@ impl GovernanceDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -274,6 +287,7 @@ impl GovernanceDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -597,6 +611,16 @@ impl Detector for ExternalCallsLoopDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)
@@ -631,6 +655,7 @@ impl Detector for ExternalCallsLoopDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -877,6 +902,16 @@ impl Detector for SignatureReplayDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
 
         // Phase 53 FP Reduction: Skip well-known signature verification libraries
@@ -938,6 +973,7 @@ impl Detector for SignatureReplayDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -988,6 +1024,31 @@ impl EmergencyPauseCentralizationDetector {
 
         if !is_emergency_function {
             return false;
+        }
+
+        // FP Reduction: Skip emergency functions that only withdraw funds to the owner.
+        // "emergencyWithdraw" with onlyOwner that sends to owner() is standard practice
+        // for simple contracts, not a centralization risk.
+        let func_start = func.location.start().line();
+        let func_end = func.location.end().line();
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if func_start < source_lines.len() && func_end < source_lines.len() {
+            let func_source: String = source_lines[func_start..=func_end].join("\n");
+            let func_lower = func_source.to_lowercase();
+
+            // If function only sends to owner (owner(), msg.sender with onlyOwner),
+            // it's a standard emergency withdrawal pattern
+            let sends_to_owner = func_lower.contains("owner()")
+                || func_lower.contains("payable(owner")
+                || func_lower.contains("payable(msg.sender)");
+            let is_simple_withdrawal = func_lower.contains("withdraw")
+                && sends_to_owner
+                && !func_lower.contains("users")
+                && !func_lower.contains("depositors");
+
+            if is_simple_withdrawal {
+                return false;
+            }
         }
 
         // Check if function has centralized access control modifiers
@@ -1047,6 +1108,16 @@ impl Detector for EmergencyPauseCentralizationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)
@@ -1078,6 +1149,7 @@ impl Detector for EmergencyPauseCentralizationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

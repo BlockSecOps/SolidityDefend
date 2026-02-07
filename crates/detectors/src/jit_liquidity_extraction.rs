@@ -152,8 +152,15 @@ impl JitLiquidityExtractionDetector {
             }
         }
 
-        // If has both add and remove without timelock
-        if has_add_liquidity && has_remove_liquidity && !has_timelock {
+        // FP Reduction: Skip pools with MINIMUM_LIQUIDITY dead shares (Uniswap V2 pattern).
+        // Dead shares mitigate first-depositor inflation attacks and are a standard design choice.
+        let has_dead_shares = source.contains("MINIMUM_LIQUIDITY")
+            || source.contains("_mint(address(0)")
+            || source.contains("mint(address(0)")
+            || source.contains("dead shares");
+
+        // If has both add and remove without timelock AND no dead shares protection
+        if has_add_liquidity && has_remove_liquidity && !has_timelock && !has_dead_shares {
             findings.push((add_line, "liquidity_functions".to_string()));
         }
 
@@ -333,6 +340,16 @@ impl Detector for JitLiquidityExtractionDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
@@ -464,6 +481,7 @@ impl Detector for JitLiquidityExtractionDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

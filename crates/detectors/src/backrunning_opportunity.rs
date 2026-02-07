@@ -622,6 +622,7 @@ impl Detector for BackrunningOpportunityDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

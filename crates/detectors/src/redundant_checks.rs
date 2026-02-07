@@ -57,6 +57,16 @@ impl Detector for RedundantChecksDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         for function in ctx.get_functions() {
             if let Some(redundant_issues) = self.check_redundant_checks(function, ctx) {
@@ -92,6 +102,7 @@ impl Detector for RedundantChecksDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -335,6 +346,13 @@ impl RedundantChecksDetector {
         // Flash loan execution
         if name_lower.contains("flashloan") || name_lower.contains("flash_loan") {
             if source_lower.contains("flashloan") || source_lower.contains("flash") {
+                return true;
+            }
+        }
+
+        // AMM pool swap/mint/burn functions
+        if name_lower.contains("swap") || name_lower.contains("mint") || name_lower.contains("burn") {
+            if source_lower.contains("reserve") || source_lower.contains("liquidity") || source_lower.contains("amm") || source_lower.contains("invariant") {
                 return true;
             }
         }

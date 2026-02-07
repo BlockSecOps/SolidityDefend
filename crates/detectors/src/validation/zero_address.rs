@@ -75,7 +75,8 @@ impl ZeroAddressDetector {
             || func_name_lower == "mint"  // Mint often allows flexible recipient
             || func_name_lower == "mintto"
             || func_name_lower == "redeem"  // ERC-4626 vault function
-            || func_name_lower == "deposit"; // ERC-4626 vault function
+            || func_name_lower == "deposit" // ERC-4626 vault function
+            || func_name_lower == "withdraw"; // ERC-4626 vault function - owner param is beneficiary
 
         if is_standard_token_function {
             return findings;
@@ -702,6 +703,16 @@ impl Detector for ZeroAddressDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // FP Reduction Phase 2: Skip test/mock contracts
         let file_path = ctx.file_path.to_lowercase();
@@ -728,6 +739,7 @@ impl Detector for ZeroAddressDetector {
             findings.extend(self.analyze_function(function, ctx)?);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -788,6 +800,7 @@ impl AstAnalyzer for ZeroAddressDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

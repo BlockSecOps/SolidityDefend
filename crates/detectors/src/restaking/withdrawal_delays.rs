@@ -44,6 +44,186 @@ impl RestakingWithdrawalDelaysDetector {
         }
     }
 
+    // ========================================================================
+    // FP Reduction: Context-Aware Helpers
+    // ========================================================================
+
+    /// Returns true if the function is view, pure, internal, or private.
+    /// These functions cannot process actual withdrawals so flagging them is an FP.
+    fn is_non_mutating_or_non_public(function: &ast::Function) -> bool {
+        matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) || matches!(
+            function.visibility,
+            ast::Visibility::Internal | ast::Visibility::Private
+        )
+    }
+
+    /// Returns true if the function has admin/owner-only modifiers.
+    /// Admin-only withdrawal functions are configuration or emergency functions,
+    /// not user-facing withdrawal paths that need delay enforcement.
+    fn is_admin_only_function(function: &ast::Function, ctx: &AnalysisContext) -> bool {
+        // Check modifiers on the AST for owner/admin/role guards
+        let admin_modifier_names = [
+            "onlyowner",
+            "onlyadmin",
+            "onlyrole",
+            "onlygovernance",
+            "onlyguardian",
+            "onlymultisig",
+            "onlyoperator",
+            "onlymanager",
+            "onlyauthorized",
+        ];
+
+        for modifier in function.modifiers.iter() {
+            let mod_name_lower = modifier.name.name.to_lowercase();
+            if admin_modifier_names
+                .iter()
+                .any(|&admin| mod_name_lower.contains(admin))
+            {
+                return true;
+            }
+        }
+
+        // Also check function source for inline admin checks
+        let func_source = get_function_source(function, ctx).to_lowercase();
+        func_source.contains("require(msg.sender == owner")
+            || func_source.contains("require(msg.sender == admin")
+            || func_source.contains("require(msg.sender == governance")
+            || func_source.contains("_checkowner()")
+            || func_source.contains("_checkrole(")
+    }
+
+    /// Returns true if the contract delegates to a separate withdrawal queue contract.
+    /// Contracts that use an external queue (e.g., IWithdrawalQueue, withdrawalQueue)
+    /// handle delays in the queue contract, so flagging the wrapper is an FP.
+    fn uses_external_withdrawal_queue(ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Interface references to external withdrawal queue
+        source.contains("IWithdrawalQueue")
+            || source.contains("WithdrawalQueue")
+            || source_lower.contains("withdrawalqueue")
+            || source_lower.contains("withdrawal_queue")
+            // Delegation to external queue contract storage variable
+            || source_lower.contains("withdrawqueue")
+            || source_lower.contains("withdrawrouter")
+            // EigenLayer-specific queue delegation
+            || source.contains("IDelayedWithdrawalRouter")
+            || source.contains("delayedWithdrawalRouter")
+    }
+
+    /// Returns true if the contract already has delay enforcement at the contract level.
+    /// This includes delay constants, timelock patterns, and block-based delay checks.
+    fn has_contract_level_delay_enforcement(ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+
+        // Delay constants
+        source.contains("WITHDRAWAL_DELAY")
+            || source.contains("withdrawalDelay")
+            || source.contains("WITHDRAWAL_PERIOD")
+            || source.contains("MIN_WITHDRAWAL_DELAY")
+            || source.contains("MIN_WITHDRAWAL_DELAY_BLOCKS")
+            // Timelock patterns
+            || source_lower.contains("timelock")
+            || source_lower.contains("timelockcontroller")
+            // Explicit 7-day delay references
+            || (source_lower.contains("withdrawal") && source.contains("7 days"))
+            // Block-based delay enforcement (EigenLayer uses block-based delays)
+            || (source_lower.contains("withdrawal") && source.contains("minDelayBlocks"))
+            // Unbonding period (common in staking protocols)
+            || source.contains("unbondingPeriod")
+            || source.contains("UNBONDING_PERIOD")
+            || source.contains("cooldownPeriod")
+            || source.contains("COOLDOWN_PERIOD")
+    }
+
+    /// Returns true if the contract uses EigenLayer-style withdrawal patterns.
+    /// EigenLayer uses queueWithdrawals/completeQueuedWithdrawals with built-in
+    /// delay enforcement, so contracts delegating to these are safe.
+    fn has_eigenlayer_withdrawal_pattern(ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // EigenLayer queue withdrawal pattern
+        (source.contains("queueWithdrawal") || source.contains("queueWithdrawals"))
+            && (source.contains("completeQueuedWithdrawal")
+                || source.contains("completeQueuedWithdrawals"))
+    }
+
+    /// Returns true if the contract has timestamp-based delay checks in any function.
+    /// Patterns: require(block.timestamp >= ...), block.timestamp > ... + delay
+    fn has_timestamp_delay_check(ctx: &AnalysisContext) -> bool {
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Look for timestamp comparison patterns that enforce delays
+        (source_lower.contains("block.timestamp >=") || source_lower.contains("block.timestamp >"))
+            && (source_lower.contains("requesttime")
+                || source_lower.contains("request_time")
+                || source_lower.contains("withdrawaltime")
+                || source_lower.contains("withdrawal_time")
+                || source_lower.contains("queuedtime")
+                || source_lower.contains("queued_time")
+                || source_lower.contains("submittedtime")
+                || source_lower.contains("+ delay")
+                || source_lower.contains("+ withdrawal")
+                || source_lower.contains("+ cooldown")
+                || source_lower.contains("+ unbonding"))
+    }
+
+    /// Returns true if the contract is a non-staking context where withdrawal delay
+    /// findings would be false positives (simple token, bridge, governance, etc.)
+    fn is_non_restaking_withdrawal_context(ctx: &AnalysisContext) -> bool {
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Simple ERC-20 token contracts that happen to match restaking keywords in comments
+        let is_simple_token = source_lower.contains("erc20")
+            && !source_lower.contains("restaking")
+            && !source_lower.contains("eigenlayer")
+            && !source_lower.contains("staking");
+
+        if is_simple_token {
+            return true;
+        }
+
+        // Governance contracts with withdraw functions (not restaking)
+        let is_governance = source_lower.contains("governance")
+            && source_lower.contains("proposal")
+            && source_lower.contains("vote");
+
+        if is_governance {
+            return true;
+        }
+
+        // Test/mock contracts
+        let is_test = source_lower.contains("contract mock")
+            || source_lower.contains("contract test")
+            || source_lower.contains("// spdx-license-identifier") && source_lower.contains("test");
+
+        if is_test && !source_lower.contains("restaking") && !source_lower.contains("eigenlayer") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Checks if a withdrawal function name indicates a "complete" or "claim" step
+    /// in a two-step pattern, which inherently implies delay is enforced at request time.
+    fn is_completion_step_function(func_name_lower: &str) -> bool {
+        func_name_lower.contains("complete")
+            || func_name_lower.contains("claim")
+            || func_name_lower.contains("finalize")
+            || func_name_lower.contains("execute")
+            || func_name_lower.contains("process")
+    }
+
+    // ========================================================================
+    // Core Detection Methods
+    // ========================================================================
+
     /// Checks withdrawal functions for delay enforcement
     fn check_withdrawal_delay(
         &self,
@@ -51,6 +231,16 @@ impl RestakingWithdrawalDelaysDetector {
         ctx: &AnalysisContext,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
+
+        // FP Reduction: Skip non-mutating or non-public functions
+        if Self::is_non_mutating_or_non_public(function) {
+            return findings;
+        }
+
+        // FP Reduction: Skip admin-only functions
+        if Self::is_admin_only_function(function, ctx) {
+            return findings;
+        }
 
         let func_name_lower = function.name.name.to_lowercase();
 
@@ -64,6 +254,13 @@ impl RestakingWithdrawalDelaysDetector {
 
         // Skip request functions, check complete/execute functions
         if func_name_lower.contains("request") {
+            return findings;
+        }
+
+        // FP Reduction: Skip completion-step functions (complete/claim/finalize)
+        // as they are the second step in a two-step pattern where the delay
+        // is already enforced by the request step or within the completion logic
+        if Self::is_completion_step_function(&func_name_lower) {
             return findings;
         }
 
@@ -143,17 +340,31 @@ impl RestakingWithdrawalDelaysDetector {
     fn check_two_step_withdrawal(&self, ctx: &AnalysisContext) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        // Find withdrawal functions
-        let has_withdrawal = ctx.get_functions().iter().any(|f| {
+        // Find user-facing withdrawal functions (skip internal/private/view/pure)
+        let has_user_facing_withdrawal = ctx.get_functions().iter().any(|f| {
             let name = f.name.name.to_lowercase();
-            name.contains("withdraw") || name.contains("redeem") || name.contains("unstake")
+            let is_withdrawal_name =
+                name.contains("withdraw") || name.contains("redeem") || name.contains("unstake");
+            let is_public_mutable = !Self::is_non_mutating_or_non_public(f);
+            is_withdrawal_name && is_public_mutable
         });
 
-        if !has_withdrawal {
+        if !has_user_facing_withdrawal {
             return findings;
         }
 
-        // Check for two-step pattern
+        // FP Reduction: Recognize EigenLayer-style queue patterns as valid two-step
+        if Self::has_eigenlayer_withdrawal_pattern(ctx) {
+            return findings;
+        }
+
+        // FP Reduction: Also check for broader two-step patterns beyond the strict
+        // requestWithdrawal/completeWithdrawal naming convention
+        if self.has_broad_two_step_pattern(ctx) {
+            return findings;
+        }
+
+        // Check for two-step pattern (strict naming)
         if !is_two_step_withdrawal(ctx) {
             let finding = self.base.create_finding_with_severity(
                 ctx,
@@ -199,6 +410,56 @@ impl RestakingWithdrawalDelaysDetector {
         findings
     }
 
+    /// Checks for broader two-step withdrawal patterns beyond strict naming.
+    /// Recognizes patterns like queue+claim, initiate+finalize, submit+execute.
+    fn has_broad_two_step_pattern(&self, ctx: &AnalysisContext) -> bool {
+        let functions: Vec<String> = ctx
+            .get_functions()
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+
+        // Pattern: queue + claim/complete
+        let has_queue = functions
+            .iter()
+            .any(|n| n.contains("queue") && n.contains("withdraw"));
+        let has_claim_or_complete = functions.iter().any(|n| {
+            (n.contains("claim") || n.contains("complete") || n.contains("finalize"))
+                && (n.contains("withdraw") || n.contains("queued"))
+        });
+
+        if has_queue && has_claim_or_complete {
+            return true;
+        }
+
+        // Pattern: initiate + finalize/execute
+        let has_initiate = functions.iter().any(|n| {
+            (n.contains("initiate") || n.contains("submit") || n.contains("start"))
+                && (n.contains("withdraw") || n.contains("unstake") || n.contains("redeem"))
+        });
+        let has_finalize = functions.iter().any(|n| {
+            (n.contains("finalize") || n.contains("execute") || n.contains("process"))
+                && (n.contains("withdraw") || n.contains("unstake") || n.contains("redeem"))
+        });
+
+        if has_initiate && has_finalize {
+            return true;
+        }
+
+        // Pattern: separate request/pending tracking with any withdrawal completion
+        let source_lower = ctx.source_code.to_lowercase();
+        let has_pending_tracking = source_lower.contains("pendingwithdrawals")
+            || source_lower.contains("pending_withdrawals")
+            || source_lower.contains("withdrawalrequests")
+            || source_lower.contains("withdrawal_requests");
+
+        if has_pending_tracking && has_claim_or_complete {
+            return true;
+        }
+
+        false
+    }
+
     /// Checks deposit functions for liquidity reserve
     fn check_liquidity_reserve(
         &self,
@@ -207,6 +468,16 @@ impl RestakingWithdrawalDelaysDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip non-mutating or non-public functions
+        if Self::is_non_mutating_or_non_public(function) {
+            return findings;
+        }
+
+        // FP Reduction: Skip admin-only functions
+        if Self::is_admin_only_function(function, ctx) {
+            return findings;
+        }
+
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check deposit/stake functions
@@ -214,6 +485,11 @@ impl RestakingWithdrawalDelaysDetector {
             && !func_name_lower.contains("stake")
             && !func_name_lower.contains("mint")
         {
+            return findings;
+        }
+
+        // FP Reduction: Skip internal helper functions like _deposit, _stake
+        if func_name_lower.starts_with('_') {
             return findings;
         }
 
@@ -279,13 +555,24 @@ impl RestakingWithdrawalDelaysDetector {
     fn check_withdrawal_delay_constant(&self, ctx: &AnalysisContext) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        // Only check if contract has withdrawal functions
-        let has_withdrawal = ctx
-            .get_functions()
-            .iter()
-            .any(|f| f.name.name.to_lowercase().contains("withdraw"));
+        // Only check if contract has user-facing withdrawal functions
+        let has_user_facing_withdrawal = ctx.get_functions().iter().any(|f| {
+            let name = f.name.name.to_lowercase();
+            name.contains("withdraw") && !Self::is_non_mutating_or_non_public(f)
+        });
 
-        if !has_withdrawal {
+        if !has_user_facing_withdrawal {
+            return findings;
+        }
+
+        // FP Reduction: Skip if contract already has delay enforcement at contract level
+        // (broader check than just the constant name)
+        if Self::has_contract_level_delay_enforcement(ctx) {
+            return findings;
+        }
+
+        // FP Reduction: Skip if contract has timestamp-based delay checks
+        if Self::has_timestamp_delay_check(ctx) {
             return findings;
         }
 
@@ -328,10 +615,30 @@ impl RestakingWithdrawalDelaysDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip non-mutating or non-public functions
+        if Self::is_non_mutating_or_non_public(function) {
+            return findings;
+        }
+
+        // FP Reduction: Skip admin-only functions (emergency withdraw, etc.)
+        if Self::is_admin_only_function(function, ctx) {
+            return findings;
+        }
+
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check withdraw/redeem functions
         if !func_name_lower.contains("withdraw") && !func_name_lower.contains("redeem") {
+            return findings;
+        }
+
+        // FP Reduction: Skip completion-step functions
+        if Self::is_completion_step_function(&func_name_lower) {
+            return findings;
+        }
+
+        // FP Reduction: Skip request functions (they queue, not instant-withdraw)
+        if func_name_lower.contains("request") || func_name_lower.contains("queue") {
             return findings;
         }
 
@@ -418,9 +725,24 @@ impl Detector for RestakingWithdrawalDelaysDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Only run on restaking/LRT contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip non-restaking contexts that may have matched keywords
+        if Self::is_non_restaking_withdrawal_context(ctx) {
             return Ok(findings);
         }
 
@@ -429,6 +751,26 @@ impl Detector for RestakingWithdrawalDelaysDetector {
         // Level 1: Strong restaking protocol protections (return early)
         if vault_patterns::has_eigenlayer_delegation_pattern(ctx) {
             // EigenLayer has battle-tested withdrawal queue with 7-day delay
+            return Ok(findings);
+        }
+
+        // Level 2: Contract uses EigenLayer-style queue withdrawal pattern
+        if Self::has_eigenlayer_withdrawal_pattern(ctx) {
+            return Ok(findings);
+        }
+
+        // Level 3: Contract delegates to an external withdrawal queue contract
+        if Self::uses_external_withdrawal_queue(ctx) {
+            return Ok(findings);
+        }
+
+        // Level 4: Contract already has delay enforcement at the contract level
+        if Self::has_contract_level_delay_enforcement(ctx) {
+            return Ok(findings);
+        }
+
+        // Level 5: Contract has timestamp-based delay checks
+        if Self::has_timestamp_delay_check(ctx) {
             return Ok(findings);
         }
 
@@ -443,6 +785,7 @@ impl Detector for RestakingWithdrawalDelaysDetector {
         findings.extend(self.check_two_step_withdrawal(ctx));
         findings.extend(self.check_withdrawal_delay_constant(ctx));
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

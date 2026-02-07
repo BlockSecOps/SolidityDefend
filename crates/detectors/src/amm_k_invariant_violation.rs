@@ -37,14 +37,23 @@ impl AmmKInvariantViolationDetector {
 
     /// Check if function is an AMM swap function
     fn is_swap_function(&self, func_name: &str, func_source: &str) -> bool {
-        let swap_keywords = ["swap", "exchange", "trade", "convert"];
+        let name_lower = func_name.to_lowercase();
 
-        swap_keywords
+        // Strong name-based signals: function name explicitly involves swapping
+        let swap_name_keywords = ["swap", "exchange", "trade"];
+        let name_match = swap_name_keywords
             .iter()
-            .any(|&keyword| func_name.to_lowercase().contains(keyword))
-            || func_source.contains("SwapParams")
-            || func_source.contains("amountOut")
-            || func_source.contains("amountIn")
+            .any(|&keyword| name_lower.contains(keyword));
+
+        if name_match {
+            return true;
+        }
+
+        // Source-based signals only if name is ambiguous
+        // Require both SwapParams (struct type) to be definitive
+        // FP Reduction: Removed amountOut/amountIn as standalone signals
+        // because mint/burn functions also reference these in AMM pools
+        func_source.contains("SwapParams")
     }
 
     /// Check for missing K invariant validation
@@ -337,12 +346,19 @@ impl AmmKInvariantViolationDetector {
             return true;
         }
 
+        // Uniswap V2 pattern: `unlocked` state variable check
+        // modifier lock() { require(unlocked == 1); unlocked = 0; _; unlocked = 1; }
+        if func_source.contains("unlocked") {
+            return true;
+        }
+
         // Also check the AST modifier list for reentrancy guard modifiers
         for modifier in function.modifiers.iter() {
             let mod_name = modifier.name.name.to_lowercase();
             if mod_name.contains("nonreentrant")
-                || mod_name.contains("lock")
+                || mod_name == "lock"
                 || mod_name.contains("mutex")
+                || mod_name.contains("noreentr")
             {
                 return true;
             }
@@ -379,6 +395,16 @@ impl Detector for AmmKInvariantViolationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // NEW: Only run this detector on AMM contracts
         if !contract_classification::is_amm_contract(ctx) {
@@ -422,13 +448,36 @@ impl Detector for AmmKInvariantViolationDetector {
                 continue;
             }
 
+            // FP Reduction: Skip admin/config/constructor functions
+            // These don't perform swaps or modify AMM invariants
+            if func_name_lower.starts_with("set")
+                || func_name_lower.starts_with("update")
+                || func_name_lower.starts_with("init")
+                || func_name_lower == "constructor"
+                || func_name_lower == "initialize"
+                || func_name_lower == "skim"
+                || func_name_lower == "sync"
+            {
+                continue;
+            }
+
             let is_swap = self.is_swap_function(func_name, &func_source);
 
             let mut issues = Vec::new();
 
-            // Check for K invariant validation
-            if let Some(issue) = self.check_k_invariant_validation(&func_source) {
-                issues.push(issue);
+            // FP Reduction: Only check K invariant for swap functions.
+            // mint/burn functions add/remove liquidity proportionally and
+            // don't need K invariant checks (this is standard AMM design).
+            let is_mint_or_burn = func_name_lower == "mint"
+                || func_name_lower == "burn"
+                || func_name_lower.contains("addliquidity")
+                || func_name_lower.contains("removeliquidity");
+
+            if !is_mint_or_burn {
+                // Check for K invariant validation
+                if let Some(issue) = self.check_k_invariant_validation(&func_source) {
+                    issues.push(issue);
+                }
             }
 
             // Check for fee-on-transfer token handling
@@ -441,14 +490,20 @@ impl Detector for AmmKInvariantViolationDetector {
                 issues.push(issue);
             }
 
-            // Check for slippage validation
-            if let Some(issue) = self.check_slippage_validation(&func_source, is_swap) {
-                issues.push(issue);
+            // Check for slippage validation (swap functions only)
+            if is_swap {
+                if let Some(issue) = self.check_slippage_validation(&func_source, is_swap) {
+                    issues.push(issue);
+                }
             }
 
-            // Check for fee calculation issues
-            if let Some(issue) = self.check_fee_calculation(&func_source) {
-                issues.push(issue);
+            // Check for fee calculation issues (swap functions only)
+            // FP Reduction: Non-swap functions (mint, burn, addLiquidity) reference
+            // "fee" or "Fee" for protocol fees but don't need fee-adjusted K checks
+            if is_swap {
+                if let Some(issue) = self.check_fee_calculation(&func_source) {
+                    issues.push(issue);
+                }
             }
 
             // Check for explicit vulnerability marker
@@ -495,6 +550,7 @@ impl Detector for AmmKInvariantViolationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -889,6 +945,55 @@ mod tests {
         assert!(
             detector.check_fot_token_handling(safe_burn).is_none(),
             "Safe AMM burn should not trigger FOT warning"
+        );
+    }
+
+    #[test]
+    fn test_swap_function_detection_refined() {
+        let detector = AmmKInvariantViolationDetector::new();
+
+        // True positives: swap-like function names
+        assert!(detector.is_swap_function("swap", "function swap() external"));
+        assert!(detector.is_swap_function("exchange", "function exchange() public"));
+        assert!(detector.is_swap_function("tradeTokens", "function tradeTokens()"));
+
+        // True positive: SwapParams struct in source
+        assert!(detector.is_swap_function("process", "SwapParams memory params"));
+
+        // FP Reduction: amountOut/amountIn alone should NOT classify as swap
+        // because mint/burn functions also reference these in AMM pools
+        assert!(!detector.is_swap_function("mint", "amountOut = getAmountOut(amountIn);"));
+        assert!(!detector.is_swap_function("burn", "uint256 amountIn = balance - reserve;"));
+
+        // True negatives
+        assert!(!detector.is_swap_function("transfer", "function transfer() public"));
+        assert!(!detector.is_swap_function("mint", "function mint() external"));
+    }
+
+    #[test]
+    fn test_reentrancy_lock_modifier_detection() {
+        let detector = AmmKInvariantViolationDetector::new();
+        let arena = ast::AstArena::new();
+
+        // Uniswap V2 style: "unlocked" variable pattern
+        let code_with_unlocked = "function swap() external {
+            require(unlocked == 1, 'LOCKED');
+            unlocked = 0;
+            token.transfer(msg.sender, amount);
+            _update(balance0, balance1, _reserve0, _reserve1);
+            unlocked = 1;
+        }";
+        let func = create_mock_ast_function(
+            &arena,
+            "swap",
+            ast::Visibility::External,
+            ast::StateMutability::NonPayable,
+        );
+        assert!(
+            detector
+                .check_reserve_updates_with_ast(code_with_unlocked, &func)
+                .is_none(),
+            "Uniswap V2 'unlocked' pattern should be recognized as reentrancy protection"
         );
     }
 }

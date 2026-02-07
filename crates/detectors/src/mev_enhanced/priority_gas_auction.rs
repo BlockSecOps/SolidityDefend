@@ -60,6 +60,16 @@ impl Detector for MEVPriorityGasAuctionDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Pattern 1: First-come-first-served minting
@@ -87,9 +97,22 @@ impl Detector for MEVPriorityGasAuctionDetector {
                 || lower.contains("require(isminter[msg.sender]")
                 || lower.contains("require(minters[msg.sender]");
 
+            // FP Reduction: Skip AMM pool mint/liquidity functions.
+            // AMM pools always have totalSupply and mint(), but these are liquidity
+            // operations, not FCFS token minting that creates PGA.
+            let is_amm_pool = lower.contains("reserve0")
+                || lower.contains("reserve1")
+                || lower.contains("getreserves")
+                || lower.contains("swap(")
+                || lower.contains("function swap")
+                || lower.contains("addliquidity")
+                || lower.contains("removeliquidity")
+                || lower.contains("twap")
+                || lower.contains("pricecumulative");
+
             // Only flag if FCFS, no queue system, AND no access control
             // Access-controlled mint = only authorized addresses can call = no PGA
-            if is_fcfs && !has_queue && !has_access_control {
+            if is_fcfs && !has_queue && !has_access_control && !is_amm_pool {
                 let finding = self.base.create_finding(
                     ctx,
                     "First-come-first-served mint - creates PGA where users bid up gas to mint first".to_string(),
@@ -177,6 +200,7 @@ impl Detector for MEVPriorityGasAuctionDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

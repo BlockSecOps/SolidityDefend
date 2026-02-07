@@ -1,5 +1,31 @@
 /// Shared utility functions for context detection and pattern recognition
 use crate::types::AnalysisContext;
+use crate::types::Finding;
+
+/// Check if the contract is an interface (AST-based).
+/// Interface contracts have no implementation — all findings are false positives.
+pub fn is_interface_contract(ctx: &AnalysisContext) -> bool {
+    ctx.contract.contract_type == ast::ContractType::Interface
+}
+
+/// Check if the contract is a library (AST-based).
+/// Libraries cannot hold state or receive Ether — most security findings are FPs.
+pub fn is_library_contract(ctx: &AnalysisContext) -> bool {
+    ctx.contract.contract_type == ast::ContractType::Library
+}
+
+/// Filter out findings that occur inside view/pure, internal/private, or constructor
+/// functions. These contexts are generally safe from exploitation. Also filters
+/// findings in admin-only functions for DoS/frontrunning/MEV detectors.
+///
+/// Call this at the end of `detect()` before returning:
+/// ```ignore
+/// let findings = crate::utils::filter_fp_findings(findings, ctx);
+/// Ok(findings)
+/// ```
+pub fn filter_fp_findings(findings: Vec<Finding>, ctx: &AnalysisContext<'_>) -> Vec<Finding> {
+    crate::fp_filter::FpFilter::new().filter(findings, ctx)
+}
 
 /// Detects if the contract is an ERC-4626 compliant vault or vault-like contract
 ///

@@ -50,6 +50,38 @@ impl Detector for L2FeeManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only fire on contracts with actual L2-specific patterns.
+        // Generic fee functions in AMM pools, vaults, and flash loan providers
+        // are not L2 fee manipulation vulnerabilities.
+        let source_lower = ctx.source_code.to_lowercase();
+        let has_l2_context = source_lower.contains("l1fee")
+            || source_lower.contains("l2fee")
+            || source_lower.contains("l1datafee")
+            || source_lower.contains("l1block")
+            || source_lower.contains("sequencer")
+            || source_lower.contains("crossdomain")
+            || source_lower.contains("l2messenger")
+            || source_lower.contains("rollup")
+            || source_lower.contains("optimism")
+            || source_lower.contains("arbitrum")
+            || source_lower.contains("zksync")
+            || source_lower.contains("basefee") && source_lower.contains("l1")
+            || source_lower.contains("gaspriceoracle")
+            || source_lower.contains("l1gasoracle")
+            || source_lower.contains("l2outputoracle");
+        if !has_l2_context {
+            return Ok(findings);
+        }
 
         for function in ctx.get_functions() {
             // Skip internal/private functions
@@ -200,6 +232,7 @@ impl Detector for L2FeeManipulationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

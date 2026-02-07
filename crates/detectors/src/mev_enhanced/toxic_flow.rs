@@ -185,6 +185,16 @@ impl Detector for MEVToxicFlowDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip standard AMM implementations (Uniswap V2/V3, Curve, Balancer)
         // These protocols intentionally don't have dynamic fees or toxic flow protection
@@ -357,6 +367,7 @@ impl Detector for MEVToxicFlowDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

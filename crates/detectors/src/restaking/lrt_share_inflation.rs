@@ -416,6 +416,16 @@ impl Detector for LRTShareInflationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Only run on LRT contracts (Liquid Restaking Tokens / ERC-4626 vaults)
         if !is_lrt_contract(ctx) && !is_erc4626_vault(ctx) {
@@ -447,6 +457,7 @@ impl Detector for LRTShareInflationDetector {
         findings.extend(self.check_tracked_assets_storage(ctx));
         findings.extend(self.check_minimum_deposit(ctx));
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

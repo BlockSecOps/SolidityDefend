@@ -51,6 +51,16 @@ impl Detector for ZkProofBypassDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Only run this detector on ZK rollup contracts
         if !contract_classification::is_zk_rollup_contract(ctx) {
@@ -60,6 +70,15 @@ impl Detector for ZkProofBypassDetector {
         // Exclude EIP-4844 blob/data-availability contracts that may share
         // some ZK terminology but are not ZK rollup proof verifiers
         if self.is_blob_or_da_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: This detector is specifically about ZK *rollup* proof
+        // verification bypass (batch submission, state transitions). Contracts
+        // that use ZK proofs for other purposes (voting, identity, privacy
+        // pools, bridges, oracles, MEV protection, gas griefing) are not
+        // rollup verifiers and should be skipped.
+        if !self.has_rollup_signals(ctx) {
             return Ok(findings);
         }
 
@@ -186,6 +205,7 @@ impl Detector for ZkProofBypassDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -198,6 +218,74 @@ impl ZkProofBypassDetector {
     fn is_external_or_public(&self, function: &ast::Function<'_>) -> bool {
         function.visibility == ast::Visibility::External
             || function.visibility == ast::Visibility::Public
+    }
+
+    /// Check if the contract has rollup-specific signals (batch submission,
+    /// state root transitions, L2/rollup terminology).
+    ///
+    /// Many contracts use ZK proofs (voting, identity, privacy pools, bridges,
+    /// oracles, etc.) but are not rollup verifiers. This detector specifically
+    /// targets rollup proof verification bypass, so we require at least one
+    /// rollup-specific signal to avoid FPs on non-rollup ZK contracts.
+    fn has_rollup_signals(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let source_lower = source.to_lowercase();
+        let name_lower = ctx.contract.name.name.to_lowercase();
+
+        // Contract name contains rollup-related terms
+        if name_lower.contains("rollup")
+            || name_lower.contains("sequencer")
+            || name_lower.contains("batchverif")
+        {
+            return true;
+        }
+
+        // Batch submission patterns (the primary target of this detector)
+        if source_lower.contains("submitbatch")
+            || source_lower.contains("commitbatch")
+            || source_lower.contains("executebatch")
+            || source_lower.contains("provebatch")
+            || source_lower.contains("commitblocks")
+        {
+            return true;
+        }
+
+        // State root transition patterns (hallmark of rollups)
+        let has_state_root = source_lower.contains("stateroot")
+            || source.contains("stateRoot")
+            || source.contains("state_root");
+        let has_batch_or_l2 = source_lower.contains("batch")
+            || source_lower.contains("l2")
+            || source_lower.contains("rollup");
+
+        if has_state_root && has_batch_or_l2 {
+            return true;
+        }
+
+        // Verifier contract name with rollup context
+        if name_lower.contains("verifier")
+            && (source_lower.contains("batch")
+                || source_lower.contains("stateroot")
+                || source_lower.contains("rollup"))
+        {
+            return true;
+        }
+
+        // Strong ZK proof system indicators (snark/stark/plonk/groth16)
+        // combined with batch or state root signals
+        let has_strong_zk = source_lower.contains("snark")
+            || source_lower.contains("stark")
+            || source_lower.contains("plonk")
+            || source_lower.contains("groth16")
+            || source_lower.contains("pairing")
+            || source_lower.contains("bn256")
+            || source_lower.contains("bls12");
+
+        if has_strong_zk && has_state_root {
+            return true;
+        }
+
+        false
     }
 
     /// Check if the contract is an EIP-4844 blob or data-availability contract.
@@ -297,7 +385,7 @@ impl ZkProofBypassDetector {
         false
     }
 
-    fn is_public_input_function(&self, name: &str, source: &str) -> bool {
+    fn is_public_input_function(&self, name: &str, _source: &str) -> bool {
         let patterns = [
             "validatePublicInput",
             "checkPublicInput",
@@ -305,10 +393,14 @@ impl ZkProofBypassDetector {
         ];
 
         let name_lower = name.to_lowercase();
+        // FP Reduction: Only match by function name, not by source content.
+        // The previous `source.contains("publicInput")` check was far too broad
+        // and matched every function in a ZK contract that takes publicInputs as
+        // a parameter, producing findings for generic verify/deposit/withdraw
+        // functions that merely accept public inputs but don't validate them.
         patterns
             .iter()
             .any(|pattern| name_lower.contains(&pattern.to_lowercase()))
-            || source.contains("publicInput")
     }
 
     fn check_proof_verification(&self, source: &str) -> Vec<String> {
@@ -691,6 +783,122 @@ mod tests {
         assert!(!detector.is_batch_submission_function(
             "processBlob",
             "submitBatch commit execute batch stateRoot"
+        ));
+    }
+
+    #[test]
+    fn test_has_rollup_signals_batch_submission() {
+        let detector = ZkProofBypassDetector::new();
+
+        // Contracts with batch submission patterns should have rollup signals
+        let rollup_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKRollup {
+                    function submitBatch(uint256[8] calldata proof) external {
+                        // Submit batch
+                    }
+                }
+            "#,
+        );
+        assert!(detector.has_rollup_signals(&rollup_ctx));
+    }
+
+    #[test]
+    fn test_has_rollup_signals_state_root_with_batch() {
+        let detector = ZkProofBypassDetector::new();
+
+        // Contracts with stateRoot + batch should have rollup signals
+        let rollup_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKVerifier {
+                    bytes32 public stateRoot;
+                    function processBatch(bytes calldata batch, uint256[8] calldata proof) external {
+                        stateRoot = keccak256(batch);
+                    }
+                }
+            "#,
+        );
+        assert!(detector.has_rollup_signals(&rollup_ctx));
+    }
+
+    #[test]
+    fn test_has_rollup_signals_false_for_non_rollup_zk() {
+        let detector = ZkProofBypassDetector::new();
+
+        // ZK voting contract should not have rollup signals
+        let voting_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKVoting {
+                    function vote(uint256[8] calldata proof) external {
+                        // Vote with proof
+                    }
+                }
+            "#,
+        );
+        assert!(!detector.has_rollup_signals(&voting_ctx));
+
+        // ZK identity contract should not have rollup signals
+        let identity_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKIdentity {
+                    function verifyIdentity(uint256[8] calldata proof) external {
+                        // Verify identity
+                    }
+                }
+            "#,
+        );
+        assert!(!detector.has_rollup_signals(&identity_ctx));
+
+        // ZK privacy pool should not have rollup signals
+        let privacy_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKPrivacyPool {
+                    function withdraw(uint256[8] calldata proof, bytes32 nullifier) external {
+                        // Privacy pool withdrawal
+                    }
+                }
+            "#,
+        );
+        assert!(!detector.has_rollup_signals(&privacy_ctx));
+    }
+
+    #[test]
+    fn test_has_rollup_signals_snark_with_state_root() {
+        let detector = ZkProofBypassDetector::new();
+
+        // Strong ZK (snark) + stateRoot should have rollup signals
+        let rollup_ctx = crate::types::test_utils::create_test_context(
+            r#"
+                contract ZKVerifier {
+                    bytes32 public stateRoot;
+                    function verify(uint256[8] calldata proof) external returns (bool) {
+                        // SNARK verification for state transition
+                        return snark_verify(proof);
+                    }
+                }
+            "#,
+        );
+        assert!(detector.has_rollup_signals(&rollup_ctx));
+    }
+
+    #[test]
+    fn test_is_public_input_function_name_only() {
+        let detector = ZkProofBypassDetector::new();
+
+        // Function name should match
+        assert!(detector.is_public_input_function("validatePublicInput", ""));
+        assert!(detector.is_public_input_function("checkPublicInput", ""));
+        assert!(detector.is_public_input_function("reconstructPublicInput", ""));
+
+        // Source containing "publicInput" alone should NOT match
+        // (this was the FP-heavy pattern before the fix)
+        assert!(!detector.is_public_input_function(
+            "verifyProof",
+            "require(verifier.verify(proof, publicInput))"
+        ));
+        assert!(!detector.is_public_input_function(
+            "withdraw",
+            "uint256[] calldata publicInput"
         ));
     }
 }

@@ -124,8 +124,9 @@ impl CliApp {
         Self::new_with_config(None)
     }
 
-    /// Display the wizard banner with version
-    fn display_banner() {
+    /// Display the wizard banner with version.
+    /// When json_mode is true, output goes to stderr to avoid contaminating JSON stdout.
+    fn display_banner(json_mode: bool) {
         let version = env!("CARGO_PKG_VERSION");
         let version_line = format!("v{}", version);
         let total_width = 39; // Width between the box borders
@@ -133,19 +134,35 @@ impl CliApp {
         let left_padding = padding / 2;
         let right_padding = padding - left_padding;
 
-        println!("╔═══════════════════════════════════════╗");
-        println!("║       🧙  SOLIDITY DEFEND 🧙          ║");
-        println!("║    Smart Contract Security Analyzer   ║");
-        println!(
-            "║{:left_pad$}{}{:right_pad$}║",
-            "",
-            version_line,
-            "",
-            left_pad = left_padding,
-            right_pad = right_padding
-        );
-        println!("╚═══════════════════════════════════════╝");
-        println!();
+        if json_mode {
+            eprintln!("╔═══════════════════════════════════════╗");
+            eprintln!("║       🧙  SOLIDITY DEFEND 🧙          ║");
+            eprintln!("║    Smart Contract Security Analyzer   ║");
+            eprintln!(
+                "║{:left_pad$}{}{:right_pad$}║",
+                "",
+                version_line,
+                "",
+                left_pad = left_padding,
+                right_pad = right_padding
+            );
+            eprintln!("╚═══════════════════════════════════════╝");
+            eprintln!();
+        } else {
+            println!("╔═══════════════════════════════════════╗");
+            println!("║       🧙  SOLIDITY DEFEND 🧙          ║");
+            println!("║    Smart Contract Security Analyzer   ║");
+            println!(
+                "║{:left_pad$}{}{:right_pad$}║",
+                "",
+                version_line,
+                "",
+                left_pad = left_padding,
+                right_pad = right_padding
+            );
+            println!("╚═══════════════════════════════════════╝");
+            println!();
+        }
     }
 
     pub fn new_with_config(config_file: Option<&Path>) -> Result<Self> {
@@ -732,8 +749,14 @@ impl CliApp {
         deps_only: bool,
         verbose: bool,
     ) -> Result<()> {
-        Self::display_banner();
-        println!("Starting project analysis...");
+        let json_mode = matches!(format, OutputFormat::Json);
+        macro_rules! info_print {
+            ($($arg:tt)*) => {
+                if json_mode { eprintln!($($arg)*); } else { println!($($arg)*); }
+            }
+        }
+        Self::display_banner(json_mode);
+        info_print!("Starting project analysis...");
         let start_time = Instant::now();
 
         // Load the project
@@ -1383,21 +1406,29 @@ impl CliApp {
         use_cache: bool,
         exit_config: ExitCodeConfig,
     ) -> Result<()> {
-        Self::display_banner();
-        println!("Starting analysis...");
+        let json_mode = matches!(format, OutputFormat::Json);
+        // In JSON mode, send informational messages to stderr to keep stdout clean
+        macro_rules! info_print {
+            ($($arg:tt)*) => {
+                if json_mode { eprintln!($($arg)*); } else { println!($($arg)*); }
+            }
+        }
+
+        Self::display_banner(json_mode);
+        info_print!("Starting analysis...");
         let start_time = Instant::now();
 
         let mut analysis_summary = AnalysisSummary::default();
         let mut all_findings = Vec::new();
 
         for file_path in files {
-            println!("Analyzing: {}", file_path);
+            info_print!("Analyzing: {}", file_path);
             analysis_summary.total_files += 1;
 
             match self.analyze_file(file_path, min_severity, min_confidence, use_cache) {
                 Ok((findings, from_cache)) => {
                     let cache_indicator = if from_cache { " (cached)" } else { "" };
-                    println!("  Found {} issues{}", findings.len(), cache_indicator);
+                    info_print!("  Found {} issues{}", findings.len(), cache_indicator);
 
                     analysis_summary.successful_files += 1;
 
@@ -1431,44 +1462,44 @@ impl CliApp {
             Some(path) => {
                 self.output_manager
                     .write_to_file(&all_findings, format, &path)?;
-                println!("Results written to: {}", path.display());
+                info_print!("Results written to: {}", path.display());
             }
             None => {
                 self.output_manager.write_to_stdout(&all_findings, format)?;
             }
         }
 
-        println!("\nAnalysis complete:");
-        println!("  Files analyzed: {}", analysis_summary.total_files);
-        println!("  Successful: {}", analysis_summary.successful_files);
+        info_print!("\nAnalysis complete:");
+        info_print!("  Files analyzed: {}", analysis_summary.total_files);
+        info_print!("  Successful: {}", analysis_summary.successful_files);
         if analysis_summary.failed_files > 0 {
-            println!("  Failed: {}", analysis_summary.failed_files);
+            info_print!("  Failed: {}", analysis_summary.failed_files);
         }
-        println!("  Issues found: {}", deduplicated_count);
+        info_print!("  Issues found: {}", deduplicated_count);
         if duplicates_removed > 0 {
-            println!("  Duplicates removed: {}", duplicates_removed);
+            info_print!("  Duplicates removed: {}", duplicates_removed);
         }
-        println!("  Time taken: {:.2}s", duration.as_secs_f64());
+        info_print!("  Time taken: {:.2}s", duration.as_secs_f64());
 
         // Determine exit code based on configuration
         let exit_code = self.determine_exit_code(&analysis_summary, &exit_config);
 
         if exit_code != ExitCode::Success {
-            println!("\nExiting with code {} due to:", exit_code.as_code());
+            info_print!("\nExiting with code {} due to:", exit_code.as_code());
             if analysis_summary.failed_files > 0 && exit_config.error_on_analysis_failure {
-                println!(
+                info_print!(
                     "  - {} file(s) failed to analyze",
                     analysis_summary.failed_files
                 );
             }
             if let Some(severity) = &exit_config.error_on_severity {
                 if analysis_summary.has_findings_at_or_above(severity) {
-                    println!("  - Found {} or higher severity issues", severity);
+                    info_print!("  - Found {} or higher severity issues", severity);
                 }
             } else if exit_config.error_on_high_severity
                 && analysis_summary.has_findings_at_or_above(&Severity::High)
             {
-                println!("  - Found high or critical severity issues");
+                info_print!("  - Found high or critical severity issues");
             }
             exit_code.exit();
         }
@@ -1788,8 +1819,13 @@ impl CliApp {
         min_confidence: detectors::types::Confidence,
         use_cache: bool,
     ) -> Result<()> {
-        Self::display_banner();
-        println!("🔍 Analyzing contract from URL: {}", url);
+        let json_mode = matches!(format, OutputFormat::Json);
+        Self::display_banner(json_mode);
+        if json_mode {
+            eprintln!("Analyzing contract from URL: {}", url);
+        } else {
+            println!("🔍 Analyzing contract from URL: {}", url);
+        }
 
         // Create URL fetcher with user API keys
         let fetcher = match crate::url_fetcher::UrlFetcher::with_user_api_keys() {
@@ -2001,7 +2037,7 @@ impl CliApp {
         use serde::{Deserialize, Serialize};
         use std::collections::HashMap as StdHashMap;
 
-        Self::display_banner();
+        Self::display_banner(false);
         println!("Running detector validation...\n");
 
         // Load ground truth dataset

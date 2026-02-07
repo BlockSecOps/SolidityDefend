@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::safe_call_patterns;
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 use crate::utils;
 
@@ -57,6 +58,16 @@ impl Detector for FrontRunningMitigationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip AMM pool contracts - front-running/sandwich attacks are EXPECTED on AMM swaps
         // AMMs enable arbitrage and MEV as part of their price discovery mechanism
@@ -109,6 +120,7 @@ impl Detector for FrontRunningMitigationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -130,6 +142,12 @@ impl FrontRunningMitigationDetector {
 
         // === False positive reduction: skip functions that cannot be front-run ===
 
+        // Skip view/pure functions - they do not modify state and therefore
+        // cannot be front-run in any meaningful way
+        if safe_call_patterns::is_view_or_pure_function(function) {
+            return None;
+        }
+
         // Skip internal/private functions - they cannot be called externally
         // so they cannot be front-run via the mempool
         if function.visibility == ast::Visibility::Internal
@@ -142,6 +160,21 @@ impl FrontRunningMitigationDetector {
         // even if visibility is not explicitly set, underscore-prefixed functions
         // are internal by convention
         if func_name.starts_with('_') {
+            return None;
+        }
+
+        // Skip functions with access control modifiers (onlyOwner, onlyAdmin, etc.)
+        // These can only be called by privileged accounts, making mempool-based
+        // front-running by arbitrary attackers impractical
+        if safe_call_patterns::has_access_control_modifier(function) {
+            return None;
+        }
+
+        // FP Reduction v3: Skip functions with nonReentrant modifier.
+        // nonReentrant prevents the same function from being called during execution,
+        // which significantly limits sandwich attack vectors. Combined with other
+        // protections, it makes front-running impractical.
+        if safe_call_patterns::has_reentrancy_modifier(function) {
             return None;
         }
 
@@ -166,17 +199,67 @@ impl FrontRunningMitigationDetector {
             return None;
         }
 
-        // Pattern 1: Bid/auction functions without commit-reveal
-        let is_bidding =
-            func_name.contains("bid") || func_name.contains("Bid") || func_name.contains("auction");
+        // FP Reduction v3: Skip staking/unstaking functions with cooldown/delay patterns.
+        // Cooldown periods prevent front-running by enforcing time delays.
+        if self.is_staking_with_cooldown(func_name, &func_source) {
+            return None;
+        }
 
-        if is_bidding {
+        // FP Reduction v3: Skip governance functions with timelock protection.
+        // Timelocked governance functions have a built-in delay that prevents
+        // front-running because the action is publicly known before execution.
+        if self.is_timelocked_governance_function(func_name, &func_source, ctx) {
+            return None;
+        }
+
+        // === Shared protection detection used across multiple patterns ===
+
+        // Broad slippage/price-bound detection: covers various naming conventions
+        let has_slippage_protection = self.has_slippage_or_price_bounds(&func_source);
+
+        // Deadline or temporal protection
+        let has_deadline_protection = func_source.contains("deadline")
+            || func_source.contains("expiry")
+            || func_source.contains("validUntil")
+            || func_source.contains("expirationTime")
+            || func_source.contains("block.timestamp");
+
+        // Strong price protection mechanisms that make slippage params less critical
+        let has_strong_price_protection = self.has_strong_price_protection(&func_source);
+
+        // Pattern 1: Bid/auction functions without commit-reveal
+        let func_name_lower = func_name.to_lowercase();
+        let is_bidding = func_name_lower.contains("bid") || func_name_lower.contains("auction");
+
+        // Exclude auction management functions that are not actual bids.
+        // Functions like finalizeAuction, endAuction, closeAuction, cancelAuction
+        // don't submit bid values and don't benefit from commit-reveal.
+        let is_auction_management = func_name_lower.contains("finalize")
+            || func_name_lower.contains("end")
+            || func_name_lower.contains("close")
+            || func_name_lower.contains("cancel")
+            || func_name_lower.contains("settle")
+            || func_name_lower.contains("resolve");
+
+        if is_bidding && !is_auction_management {
             let has_commit_reveal = func_source.contains("commit")
                 || func_source.contains("reveal")
                 || func_source.contains("hash")
                 || func_source.contains("secret");
 
-            if !has_commit_reveal {
+            // FP Reduction v3: Check for commit-reveal at the CONTRACT level.
+            // The bid function itself may not contain commit/reveal keywords,
+            // but the contract may have separate commit() and reveal() functions.
+            let has_contract_level_commit_reveal = self.has_contract_commit_reveal(ctx);
+
+            // Skip if the bid amount is fixed/deterministic (e.g. fixed ticket price)
+            // In that case there is no information advantage from seeing the bid
+            let has_fixed_price = func_source.contains("ticketPrice")
+                || func_source.contains("== price")
+                || func_source.contains("== cost")
+                || func_source.contains("fixedPrice");
+
+            if !has_commit_reveal && !has_contract_level_commit_reveal && !has_fixed_price {
                 return Some(format!(
                     "Bidding function '{}' lacks commit-reveal scheme. \
                     Attackers can see your bid and outbid you",
@@ -186,23 +269,24 @@ impl FrontRunningMitigationDetector {
         }
 
         // Pattern 2: Swap/trade functions without slippage protection
-        let is_trading = func_name.contains("swap")
-            || func_name.contains("trade")
-            || func_name.contains("exchange")
-            || func_name.contains("buy")
-            || func_name.contains("sell");
+        // Use case-insensitive matching to catch camelCase names like
+        // flashSwap, buyTokens, sellAssets, etc.
+        let is_trading = func_name_lower.contains("swap")
+            || func_name_lower.contains("trade")
+            || func_name_lower.contains("exchange")
+            || func_name_lower.contains("buy")
+            || func_name_lower.contains("sell");
 
         if is_trading {
-            let has_slippage = func_source.contains("minAmount")
-                || func_source.contains("minOut")
-                || func_source.contains("slippage")
-                || func_source.contains("amountOutMin");
+            // Skip trading functions that operate at fixed/predetermined prices.
+            // Sandwich attacks require the ability to move the execution price,
+            // which is impossible when the price is constant or oracle-determined.
+            let uses_fixed_price = self.uses_fixed_or_predetermined_price(&func_source);
 
-            let has_deadline = func_source.contains("deadline")
-                || func_source.contains("expiry")
-                || func_source.contains("block.timestamp");
-
-            if !has_slippage {
+            // If the function has strong price protection (TWAP, multi-oracle,
+            // price impact checks, circuit breakers), slippage params are
+            // not strictly necessary -- the price is already manipulation-resistant
+            if !has_slippage_protection && !has_strong_price_protection && !uses_fixed_price {
                 return Some(format!(
                     "Trading function '{}' missing slippage protection (minAmountOut). \
                     Vulnerable to sandwich attacks",
@@ -210,7 +294,10 @@ impl FrontRunningMitigationDetector {
                 ));
             }
 
-            if !has_deadline {
+            // Deadline is only critical if there is no strong price protection
+            // and the price is variable (pool-based). TWAP, oracle-based pricing,
+            // and fixed prices already prevent stale-price exploitation.
+            if !has_deadline_protection && !has_strong_price_protection && !uses_fixed_price {
                 return Some(format!(
                     "Trading function '{}' missing deadline parameter. \
                     Transaction can be held and executed at unfavorable time",
@@ -230,8 +317,8 @@ impl FrontRunningMitigationDetector {
             || func_name.contains("borrow");
 
         if uses_price && is_vulnerable_operation {
-            let has_protection = func_source.contains("TWAP")
-                || func_source.contains("timeWeighted")
+            let has_protection = has_strong_price_protection
+                || has_slippage_protection
                 || func_source.contains("oracle")
                 || func_source.contains("minAmount");
 
@@ -250,6 +337,19 @@ impl FrontRunningMitigationDetector {
             || func_source.contains("withdraw");
 
         if changes_critical_state {
+            // Skip Pattern 4 if the function already has slippage + deadline protection
+            // (i.e. it passed Pattern 2 checks), or has strong price protection.
+            // These functions are already well-protected against front-running.
+            if (has_slippage_protection && has_deadline_protection) || has_strong_price_protection {
+                return None;
+            }
+
+            // Skip if function has deadline protection -- temporal bounds limit
+            // the window for mempool observation attacks
+            if has_deadline_protection && is_trading {
+                return None;
+            }
+
             let has_nonce_or_commitment = func_source.contains("nonce")
                 || func_source.contains("commitment")
                 || func_source.contains("signature");
@@ -275,6 +375,113 @@ impl FrontRunningMitigationDetector {
         }
 
         None
+    }
+
+    /// Check if function has slippage protection or price bound parameters.
+    /// Covers various naming conventions across DeFi protocols.
+    fn has_slippage_or_price_bounds(&self, func_source: &str) -> bool {
+        // Standard slippage parameter names
+        func_source.contains("minAmount")
+            || func_source.contains("minOut")
+            || func_source.contains("slippage")
+            || func_source.contains("amountOutMin")
+            || func_source.contains("amountOutMinimum")
+            || func_source.contains("minReturn")
+            || func_source.contains("minReceived")
+            || func_source.contains("minimumAmount")
+            || func_source.contains("minTokens")
+            // Price bound parameters (equivalent to slippage for fixed-price ops)
+            || func_source.contains("minPrice")
+            || func_source.contains("maxPrice")
+            // Tolerance-based patterns
+            || func_source.contains("tolerance")
+    }
+
+    /// Check if function has strong price protection mechanisms that make
+    /// front-running impractical even without explicit slippage parameters.
+    fn has_strong_price_protection(&self, func_source: &str) -> bool {
+        // TWAP (Time-Weighted Average Price) -- resistant to flash-loan manipulation
+        let has_twap = func_source.contains("TWAP")
+            || func_source.contains("twap")
+            || func_source.contains("timeWeighted")
+            || func_source.contains("timeAverage")
+            || func_source.contains("cumulativePrice")
+            || func_source.contains("getTWAP");
+
+        // Multi-oracle / median price -- resistant to single-oracle manipulation
+        let has_multi_oracle = func_source.contains("getMedianPrice")
+            || func_source.contains("medianPrice")
+            || func_source.contains("getValidatedPrice")
+            || func_source.contains("crossValidat");
+
+        // Price impact checks -- detect and reject manipulated prices
+        let has_price_impact_check = (func_source.contains("priceBefore")
+            || func_source.contains("priceAfter"))
+            && func_source.contains("impact");
+
+        // Circuit breaker patterns -- halt trading during extreme price moves
+        let has_circuit_breaker = func_source.contains("circuitBreaker")
+            || func_source.contains("circuit_breaker")
+            || (func_source.contains("EXTREME_DEVIATION") && func_source.contains("require"));
+
+        has_twap || has_multi_oracle || has_price_impact_check || has_circuit_breaker
+    }
+
+    /// Check if a trading function operates at a fixed or predetermined price,
+    /// making sandwich attacks impossible because the attacker cannot move the price.
+    ///
+    /// Fixed-price patterns include:
+    /// - Constant/hardcoded ticket prices or costs
+    /// - External oracle price fetched via `getPrice()` without pool-based reserves
+    /// - Functions with no pricing mechanism at all (direct token operations with
+    ///   predetermined amounts, e.g. flash swaps that borrow and return same amount)
+    fn uses_fixed_or_predetermined_price(&self, func_source: &str) -> bool {
+        // Fixed price constants
+        let has_fixed_price = func_source.contains("ticketPrice")
+            || func_source.contains("fixedPrice")
+            || func_source.contains("costPerUnit")
+            || func_source.contains("PRICE");
+
+        // Oracle-determined price without AMM pool reserves -- the price
+        // is set externally and cannot be manipulated within the transaction
+        let uses_oracle_price = func_source.contains("getPrice()")
+            || func_source.contains("latestRoundData")
+            || func_source.contains("latestAnswer");
+
+        // AMM pool reserve-based pricing indicates the price IS variable and
+        // subject to sandwich attacks. If reserves are used, price is NOT fixed.
+        let uses_pool_reserves = func_source.contains("reserveA")
+            || func_source.contains("reserveB")
+            || func_source.contains("reserve0")
+            || func_source.contains("reserve1")
+            || func_source.contains("getReserves")
+            || func_source.contains("getAmountOut")
+            || func_source.contains("getAmountsOut");
+
+        // Router-based swaps are variable price
+        let uses_router = func_source.contains("router.")
+            || func_source.contains("Router.")
+            || func_source.contains("IUniswap")
+            || func_source.contains("IPancake")
+            || func_source.contains("ISushiSwap");
+
+        // Any price computation in the function body
+        let has_any_pricing = func_source.contains("price")
+            || func_source.contains("Price")
+            || func_source.contains("rate")
+            || func_source.contains("Rate")
+            || uses_pool_reserves
+            || uses_router;
+
+        // No pricing mechanism at all: the function doesn't compute or reference
+        // any price. This covers flash swaps that borrow and return the same amount,
+        // direct token transfers at predetermined amounts, etc.
+        if !has_any_pricing {
+            return true;
+        }
+
+        // Fixed price: has fixed indicators OR oracle price, but NOT pool/router pricing
+        (has_fixed_price || uses_oracle_price) && !uses_pool_reserves && !uses_router
     }
 
     fn get_function_source(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> String {
@@ -373,6 +580,118 @@ impl FrontRunningMitigationDetector {
         }
 
         false
+    }
+
+    /// Check if a staking/unstaking function has cooldown or delay protection.
+    /// FP Reduction v3: Cooldown periods prevent front-running by enforcing time
+    /// delays between stake/unstake operations. The attacker cannot profit because
+    /// they must wait through the same cooldown period.
+    fn is_staking_with_cooldown(&self, func_name: &str, func_source: &str) -> bool {
+        let name_lower = func_name.to_lowercase();
+
+        // Must be a staking-related function
+        let is_staking = name_lower.contains("stake")
+            || name_lower.contains("unstake")
+            || name_lower.contains("restake")
+            || name_lower.contains("cooldown")
+            || name_lower.contains("lock")
+            || name_lower.contains("unlock");
+
+        if !is_staking {
+            return false;
+        }
+
+        // Check for cooldown/delay patterns
+        func_source.contains("cooldown")
+            || func_source.contains("Cooldown")
+            || func_source.contains("lockPeriod")
+            || func_source.contains("lockDuration")
+            || func_source.contains("unstakeDelay")
+            || func_source.contains("withdrawDelay")
+            || func_source.contains("COOLDOWN_PERIOD")
+            || func_source.contains("LOCK_PERIOD")
+            || func_source.contains("block.timestamp >=")
+            || func_source.contains("block.timestamp >")
+            || func_source.contains("block.timestamp +")
+    }
+
+    /// Check if a governance function has timelock protection.
+    /// FP Reduction v3: Timelocked governance functions have a built-in delay
+    /// that makes front-running irrelevant because the action is publicly known
+    /// and has a mandatory waiting period before execution.
+    fn is_timelocked_governance_function(
+        &self,
+        func_name: &str,
+        func_source: &str,
+        ctx: &AnalysisContext,
+    ) -> bool {
+        let name_lower = func_name.to_lowercase();
+
+        // Must be a governance-related function
+        let is_governance = name_lower.contains("propose")
+            || name_lower.contains("execute")
+            || name_lower.contains("queue")
+            || name_lower.contains("vote")
+            || name_lower.contains("govern");
+
+        if !is_governance {
+            return false;
+        }
+
+        // Check function-level timelock patterns
+        let has_timelock = func_source.contains("timelock")
+            || func_source.contains("Timelock")
+            || func_source.contains("TimeLock")
+            || func_source.contains("delay")
+            || func_source.contains("eta")
+            || func_source.contains("queuedTransaction");
+
+        if has_timelock {
+            return true;
+        }
+
+        // Check contract-level timelock patterns
+        let contract_source = &ctx.source_code;
+        let has_contract_timelock = contract_source.contains("TimelockController")
+            || contract_source.contains("Timelock")
+            || contract_source.contains("GovernorTimelockControl");
+
+        has_contract_timelock
+    }
+
+    /// Check if the contract has commit-reveal scheme at the contract level.
+    /// FP Reduction v3: A contract may have separate commit() and reveal()
+    /// functions that protect bidding. The bid function itself may not contain
+    /// commit/reveal keywords.
+    fn has_contract_commit_reveal(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+
+        // Check for commit-reveal function pair
+        let has_commit_func =
+            source.contains("function commit") || source.contains("function submitCommitment");
+        let has_reveal_func =
+            source.contains("function reveal") || source.contains("function revealBid");
+
+        if has_commit_func && has_reveal_func {
+            return true;
+        }
+
+        // Check for commit-reveal state variables
+        let has_commit_mapping = source.contains("mapping") && source.contains("commit");
+        let has_reveal_phase = source.contains("revealPhase")
+            || source.contains("commitPhase")
+            || source.contains("CommitReveal");
+
+        if has_commit_mapping && has_reveal_phase {
+            return true;
+        }
+
+        // Check for sealed-bid pattern (hash-based commitment)
+        let has_sealed_bid = source.contains("sealedBid")
+            || source.contains("blindedBid")
+            || source.contains("commitHash");
+
+        has_sealed_bid
     }
 
     /// Check if a function is a flash loan callback.
@@ -682,5 +1001,122 @@ mod tests {
         assert!(detector.is_flash_loan_callback("OnFlashLoan"));
         assert!(detector.is_flash_loan_callback("onFlashLoan"));
         assert!(detector.is_flash_loan_callback("EXECUTEOPERATION"));
+    }
+
+    // =====================================================================
+    // FP Reduction v3: Staking with cooldown tests
+    // =====================================================================
+
+    #[test]
+    fn test_skip_staking_with_cooldown() {
+        let detector = FrontRunningMitigationDetector::new();
+        let func_source_with_cooldown = r#"
+            function unstake(uint256 amount) external {
+                require(block.timestamp >= lastStakeTime[msg.sender] + COOLDOWN_PERIOD, "cooldown");
+                _burn(msg.sender, amount);
+            }
+        "#;
+        assert!(detector.is_staking_with_cooldown("unstake", func_source_with_cooldown));
+        assert!(detector.is_staking_with_cooldown("stake", "require(cooldown > 0)"));
+    }
+
+    #[test]
+    fn test_no_skip_staking_without_cooldown() {
+        let detector = FrontRunningMitigationDetector::new();
+        // Staking function without cooldown should NOT be skipped
+        assert!(!detector.is_staking_with_cooldown("unstake", "balances[msg.sender] -= amount"));
+    }
+
+    #[test]
+    fn test_no_skip_non_staking_with_cooldown() {
+        let detector = FrontRunningMitigationDetector::new();
+        // Non-staking function should not be skipped even with cooldown keyword
+        assert!(!detector.is_staking_with_cooldown("swap", "require(cooldown > 0)"));
+        assert!(!detector.is_staking_with_cooldown("deposit", "COOLDOWN_PERIOD"));
+    }
+
+    // =====================================================================
+    // FP Reduction v3: Timelocked governance tests
+    // =====================================================================
+
+    #[test]
+    fn test_skip_timelocked_governance() {
+        let detector = FrontRunningMitigationDetector::new();
+        let func_source = "require(block.timestamp >= eta, 'timelock'); execute(target, value, data);";
+        let source = r#"
+            contract Governor is TimelockController {
+                function execute(address target, uint256 value, bytes calldata data) external {
+                    require(block.timestamp >= eta, "timelock");
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        assert!(detector.is_timelocked_governance_function("execute", func_source, &ctx));
+    }
+
+    #[test]
+    fn test_no_skip_non_governance() {
+        let detector = FrontRunningMitigationDetector::new();
+        let source = r#"
+            contract Exchange {
+                function swap(uint256 amount) external { }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        assert!(!detector.is_timelocked_governance_function("swap", "some source", &ctx));
+    }
+
+    // =====================================================================
+    // FP Reduction v3: Contract-level commit-reveal tests
+    // =====================================================================
+
+    #[test]
+    fn test_contract_commit_reveal() {
+        let detector = FrontRunningMitigationDetector::new();
+        let source = r#"
+            contract BlindAuction {
+                mapping(address => bytes32) public commitments;
+                function commit(bytes32 hash) external {
+                    commitments[msg.sender] = hash;
+                }
+                function reveal(uint256 amount, bytes32 nonce) external {
+                    require(keccak256(abi.encodePacked(amount, nonce)) == commitments[msg.sender]);
+                }
+                function bid() external payable {
+                    // actual bidding
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        assert!(detector.has_contract_commit_reveal(&ctx));
+    }
+
+    #[test]
+    fn test_no_contract_commit_reveal() {
+        let detector = FrontRunningMitigationDetector::new();
+        let source = r#"
+            contract SimpleAuction {
+                function bid() external payable {
+                    require(msg.value > highestBid);
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        assert!(!detector.has_contract_commit_reveal(&ctx));
+    }
+
+    #[test]
+    fn test_sealed_bid_pattern() {
+        let detector = FrontRunningMitigationDetector::new();
+        let source = r#"
+            contract SealedBidAuction {
+                mapping(address => bytes32) public sealedBid;
+                function placeBid(bytes32 hash) external {
+                    sealedBid[msg.sender] = hash;
+                }
+            }
+        "#;
+        let ctx = create_test_context(source);
+        assert!(detector.has_contract_commit_reveal(&ctx));
     }
 }
