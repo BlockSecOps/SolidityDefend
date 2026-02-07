@@ -66,7 +66,6 @@ impl Detector for RewardCalculationDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_reward_manipulation(function, ctx) {
                 let message = format!(

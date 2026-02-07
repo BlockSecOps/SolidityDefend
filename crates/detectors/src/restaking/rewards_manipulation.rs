@@ -434,7 +434,6 @@ impl Detector for RestakingRewardsManipulationDetector {
             return Ok(findings);
         }
 
-
         // Only run on restaking contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
             return Ok(findings);

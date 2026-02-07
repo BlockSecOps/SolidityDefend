@@ -67,7 +67,6 @@ impl Detector for RedundantChecksDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(redundant_issues) = self.check_redundant_checks(function, ctx) {
                 for issue_desc in redundant_issues {
@@ -351,8 +350,13 @@ impl RedundantChecksDetector {
         }
 
         // AMM pool swap/mint/burn functions
-        if name_lower.contains("swap") || name_lower.contains("mint") || name_lower.contains("burn") {
-            if source_lower.contains("reserve") || source_lower.contains("liquidity") || source_lower.contains("amm") || source_lower.contains("invariant") {
+        if name_lower.contains("swap") || name_lower.contains("mint") || name_lower.contains("burn")
+        {
+            if source_lower.contains("reserve")
+                || source_lower.contains("liquidity")
+                || source_lower.contains("amm")
+                || source_lower.contains("invariant")
+            {
                 return true;
             }
         }

@@ -195,7 +195,6 @@ impl Detector for MEVToxicFlowDetector {
             return Ok(findings);
         }
 
-
         // Skip standard AMM implementations (Uniswap V2/V3, Curve, Balancer)
         // These protocols intentionally don't have dynamic fees or toxic flow protection
         // and operate with known MEV risks as part of their design

@@ -227,7 +227,6 @@ impl Detector for TransientStorageStateLeakDetector {
             return Ok(findings);
         }
 
-
         if !has_transient_storage_declarations(ctx) {
             return Ok(findings);
         }

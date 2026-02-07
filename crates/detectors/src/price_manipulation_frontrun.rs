@@ -572,7 +572,6 @@ impl Detector for PriceManipulationFrontrunDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue) = self.has_price_manipulation(function, ctx) {
                 let message = format!(

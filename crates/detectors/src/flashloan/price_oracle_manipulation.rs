@@ -121,7 +121,6 @@ impl Detector for FlashloanPriceOracleManipulationDetector {
             return Ok(findings);
         }
 
-
         if !self.is_defi_protocol(ctx) {
             return Ok(findings);
         }

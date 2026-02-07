@@ -418,7 +418,6 @@ impl Detector for LendingBorrowBypassDetector {
             return Ok(findings);
         }
 
-
         // Skip known lending protocols - they have audited implementations
         // Compound cTokens, Aave LendingPool, MakerDAO Vat have proper:
         // - Health factor checks (accountLiquidity, healthFactor)

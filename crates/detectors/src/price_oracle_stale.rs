@@ -66,7 +66,6 @@ impl Detector for PriceOracleStaleDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(oracle_issue) = self.check_stale_oracle(function, ctx) {
                 let message = format!(

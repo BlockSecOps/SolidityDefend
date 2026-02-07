@@ -67,7 +67,6 @@ impl Detector for ValidatorFrontRunningDetector {
             return Ok(findings);
         }
 
-
         // Skip AMM pool contracts - validator MEV is expected and inherent to their design
         // AMMs enable price discovery and arbitrage through validator ordering
         if utils::is_amm_pool(ctx) {

@@ -257,7 +257,6 @@ impl Detector for TransientStorageReentrancyDetector {
             return Ok(findings);
         }
 
-
         // Check if contract might be affected by transient storage
         // (either using it directly or callable by contracts that do)
         let uses_transient = uses_transient_storage(ctx);

@@ -66,7 +66,6 @@ impl Detector for GasPriceManipulationDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_gas_price_bypass(function, ctx) {
                 let message = format!(

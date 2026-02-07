@@ -1402,7 +1402,6 @@ impl Detector for ParameterConsistencyDetector {
             return Ok(findings);
         }
 
-
         // Phase 9 FP Reduction: Use centralized test contract detection
         if is_test_contract(ctx) {
             return Ok(findings);

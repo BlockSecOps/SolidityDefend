@@ -405,7 +405,6 @@ impl Detector for AmmKInvariantViolationDetector {
             return Ok(findings);
         }
 
-
         // NEW: Only run this detector on AMM contracts
         if !contract_classification::is_amm_contract(ctx) {
             return Ok(findings); // Not an AMM - skip analysis

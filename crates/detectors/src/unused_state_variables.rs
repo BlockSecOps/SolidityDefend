@@ -404,7 +404,10 @@ impl UnusedStateVariablesDetector {
         }
 
         // Initialization tracking variables (OpenZeppelin Initializable pattern)
-        if name_lower == "_initialized" || name_lower == "initialized" || name_lower == "_initializing" {
+        if name_lower == "_initialized"
+            || name_lower == "initialized"
+            || name_lower == "_initializing"
+        {
             return true;
         }
 

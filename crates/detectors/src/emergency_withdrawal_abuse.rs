@@ -66,7 +66,6 @@ impl Detector for EmergencyWithdrawalAbuseDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_withdrawal_abuse(function, ctx) {
                 let message = format!(

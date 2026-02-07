@@ -95,7 +95,6 @@ impl Detector for FallbackDelegatecallUnprotectedDetector {
             return Ok(findings);
         }
 
-
         // Phase 52 FP Reduction: Skip legitimate proxy contracts
         // Proxy contracts MUST use delegatecall in fallback to forward calls to implementation.
         // This is by design per EIP-1967 and other proxy standards (Safe, OpenZeppelin, etc.).

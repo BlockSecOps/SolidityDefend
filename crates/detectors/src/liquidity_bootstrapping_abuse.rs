@@ -66,7 +66,6 @@ impl Detector for LiquidityBootstrappingAbuseDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(lbp_issue) = self.check_lbp_abuse(function, ctx) {
                 let message = format!(

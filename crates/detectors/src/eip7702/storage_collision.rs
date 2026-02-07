@@ -70,7 +70,6 @@ impl Detector for EIP7702StorageCollisionDetector {
             return Ok(findings);
         }
 
-
         if !is_eip7702_delegate(ctx) {
             return Ok(findings);
         }

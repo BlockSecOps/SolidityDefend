@@ -174,7 +174,6 @@ impl Detector for UnprotectedSelfdestructDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             let func_source = self.get_function_source(function, ctx);
 

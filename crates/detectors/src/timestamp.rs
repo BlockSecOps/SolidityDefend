@@ -59,7 +59,6 @@ impl Detector for BlockDependencyDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some((has_dependency, manipulation_type)) =
                 self.has_timestamp_dependency(function, ctx)

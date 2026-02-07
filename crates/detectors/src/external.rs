@@ -59,7 +59,6 @@ impl Detector for UncheckedCallDetector {
             return Ok(findings);
         }
 
-
         // Phase 15 FP Reduction: Skip test contracts
         if crate::utils::is_test_contract(ctx) {
             return Ok(findings);

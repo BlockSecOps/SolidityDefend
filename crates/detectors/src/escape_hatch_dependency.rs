@@ -242,7 +242,6 @@ impl Detector for EscapeHatchDependencyDetector {
             return Ok(findings);
         }
 
-
         // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
         // This detector is for L2 escape hatch mechanisms, NOT simple emergency withdrawals.
         // A regular onlyOwner emergencyWithdraw on an L1 contract is NOT an L2 escape hatch.

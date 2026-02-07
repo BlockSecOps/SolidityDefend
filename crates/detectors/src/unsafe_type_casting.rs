@@ -67,7 +67,6 @@ impl Detector for UnsafeTypeCastingDetector {
             return Ok(findings);
         }
 
-
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {
             return Ok(findings);
@@ -331,9 +330,12 @@ impl UnsafeTypeCastingDetector {
     fn is_int_to_uint(&self, line: &str) -> bool {
         // Check for uint cast of a signed int value.
         // Must ensure "int" is standalone (not substring of "uint").
-        let has_signed_int = line.contains(" int ") || line.contains(" int256")
-            || line.contains("(int ") || line.contains("(int256")
-            || line.contains(",int ") || line.contains(",int256");
+        let has_signed_int = line.contains(" int ")
+            || line.contains(" int256")
+            || line.contains("(int ")
+            || line.contains("(int256")
+            || line.contains(",int ")
+            || line.contains(",int256");
 
         (line.contains("uint(") && has_signed_int)
             || (line.contains("uint256(") && has_signed_int)
@@ -344,12 +346,18 @@ impl UnsafeTypeCastingDetector {
         // Check for int cast of an unsigned uint value.
         // Must ensure "int(" is standalone (not substring of "uint("),
         // and "int256(" is not a substring of "uint256(".
-        let has_int_cast = line.contains(" int(") || line.contains("(int(")
-            || line.contains(",int(") || line.contains("=int(");
-        let has_int256_cast = line.contains(" int256(") || line.contains("(int256(")
-            || line.contains(",int256(") || line.contains("=int256(");
-        let has_int128_cast = line.contains(" int128(") || line.contains("(int128(")
-            || line.contains(",int128(") || line.contains("=int128(");
+        let has_int_cast = line.contains(" int(")
+            || line.contains("(int(")
+            || line.contains(",int(")
+            || line.contains("=int(");
+        let has_int256_cast = line.contains(" int256(")
+            || line.contains("(int256(")
+            || line.contains(",int256(")
+            || line.contains("=int256(");
+        let has_int128_cast = line.contains(" int128(")
+            || line.contains("(int128(")
+            || line.contains(",int128(")
+            || line.contains("=int128(");
 
         (has_int_cast && line.contains("uint"))
             || (has_int256_cast && line.contains("uint256"))

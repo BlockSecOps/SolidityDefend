@@ -67,7 +67,6 @@ impl Detector for MissingInputValidationDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(validation_issue) = self.check_missing_validation(function, ctx) {
                 let message = format!(

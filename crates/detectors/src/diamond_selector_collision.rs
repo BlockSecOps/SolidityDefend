@@ -60,7 +60,6 @@ impl Detector for DiamondSelectorCollisionDetector {
             return Ok(findings);
         }
 
-
         // Check if this looks like a Diamond proxy contract
         let is_diamond_contract = self.is_diamond_contract(&ctx.source_code);
 

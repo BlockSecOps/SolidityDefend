@@ -330,7 +330,6 @@ impl Detector for StorageLayoutUpgradeDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_storage_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

@@ -67,7 +67,6 @@ impl Detector for SelfdestructAbuseDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(selfdestruct_issue) = self.has_selfdestruct_abuse(function, ctx) {
                 let message = format!(

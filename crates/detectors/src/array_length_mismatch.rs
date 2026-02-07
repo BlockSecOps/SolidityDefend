@@ -370,7 +370,6 @@ impl Detector for ArrayLengthMismatchDetector {
             return Ok(findings);
         }
 
-
         // Check all functions
         for function in ctx.get_functions() {
             if function.body.is_none() {
@@ -582,14 +581,18 @@ mod tests {
             uint[] memory results = new uint[](inputs.length);\n\
             for (uint i = 0; i < inputs.length; i++) { extra[i]; }\n\
         }";
-        assert!(ArrayLengthMismatchDetector::has_derived_array_length(source_with_derived));
+        assert!(ArrayLengthMismatchDetector::has_derived_array_length(
+            source_with_derived
+        ));
 
         let source_without_derived = "function process(\n\
             uint[] memory inputs, uint[] memory extra\n\
         ) external {\n\
             for (uint i = 0; i < inputs.length; i++) { extra[i]; }\n\
         }";
-        assert!(!ArrayLengthMismatchDetector::has_derived_array_length(source_without_derived));
+        assert!(!ArrayLengthMismatchDetector::has_derived_array_length(
+            source_without_derived
+        ));
     }
 
     #[test]
@@ -608,13 +611,17 @@ mod tests {
             uint len = a.length < b.length ? a.length : b.length;\n\
             for (uint i = 0; i < len; i++) { b[i]; }\n\
         }";
-        assert!(ArrayLengthMismatchDetector::uses_min_length_bound(with_ternary_min));
+        assert!(ArrayLengthMismatchDetector::uses_min_length_bound(
+            with_ternary_min
+        ));
 
         let without_min = "function process(\n\
             uint[] memory a, uint[] memory b\n\
         ) external {\n\
             for (uint i = 0; i < a.length; i++) { b[i]; }\n\
         }";
-        assert!(!ArrayLengthMismatchDetector::uses_min_length_bound(without_min));
+        assert!(!ArrayLengthMismatchDetector::uses_min_length_bound(
+            without_min
+        ));
     }
 }

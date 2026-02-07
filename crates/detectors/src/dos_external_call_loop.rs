@@ -415,8 +415,9 @@ impl DosExternalCallLoopDetector {
                             .collect();
                         // Named constants: ALL_CAPS with underscores, or MAX_/MIN_ prefix
                         if !bound_name.is_empty() {
-                            let is_all_caps =
-                                bound_name.chars().all(|c| c.is_ascii_uppercase() || c == '_');
+                            let is_all_caps = bound_name
+                                .chars()
+                                .all(|c| c.is_ascii_uppercase() || c == '_');
                             let has_max_min_prefix = bound_name.starts_with("MAX_")
                                 || bound_name.starts_with("MIN_")
                                 || bound_name.starts_with("LIMIT_")
@@ -439,7 +440,8 @@ impl DosExternalCallLoopDetector {
     fn has_gas_bounded_iteration(&self, loop_body: &str) -> bool {
         // Pattern: if (gasleft() < threshold) break;
         // Pattern: require(gasleft() > threshold);
-        loop_body.contains("gasleft()") && (loop_body.contains("break") || loop_body.contains("return"))
+        loop_body.contains("gasleft()")
+            && (loop_body.contains("break") || loop_body.contains("return"))
     }
 
     /// Check if all external calls in the loop use SafeERC20 wrapper.
@@ -1290,12 +1292,19 @@ mod tests {
     fn test_is_bounded_by_named_constant() {
         let detector = DosExternalCallLoopDetector::new();
         // Named constants (ALL_CAPS) should be considered bounded
-        assert!(detector.is_bounded_by_named_constant("for (uint i = 0; i < MAX_RECIPIENTS; i++) {"));
-        assert!(detector.is_bounded_by_named_constant("for (uint i = 0; i < MAX_BATCH_SIZE; i++) {"));
+        assert!(
+            detector.is_bounded_by_named_constant("for (uint i = 0; i < MAX_RECIPIENTS; i++) {")
+        );
+        assert!(
+            detector.is_bounded_by_named_constant("for (uint i = 0; i < MAX_BATCH_SIZE; i++) {")
+        );
         assert!(detector.is_bounded_by_named_constant("for (uint i = 0; i < LIMIT_COUNT; i++) {"));
         assert!(detector.is_bounded_by_named_constant("for (uint i = 0; i < CAP_SIZE; i++) {"));
         // Non-constant names should NOT be considered bounded
-        assert!(!detector.is_bounded_by_named_constant("for (uint i = 0; i < recipients.length; i++) {"));
+        assert!(
+            !detector
+                .is_bounded_by_named_constant("for (uint i = 0; i < recipients.length; i++) {")
+        );
         assert!(!detector.is_bounded_by_named_constant("for (uint i = 0; i < count; i++) {"));
         assert!(!detector.is_bounded_by_named_constant("for (uint i = 0; i < maxCount; i++) {"));
         // While loops are not matched

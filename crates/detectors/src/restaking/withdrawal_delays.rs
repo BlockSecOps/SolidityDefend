@@ -735,7 +735,6 @@ impl Detector for RestakingWithdrawalDelaysDetector {
             return Ok(findings);
         }
 
-
         // Only run on restaking/LRT contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
             return Ok(findings);

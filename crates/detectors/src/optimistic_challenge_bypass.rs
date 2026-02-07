@@ -60,7 +60,6 @@ impl Detector for OptimisticChallengeBypassDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             // Skip internal/private functions
             if !self.is_external_or_public(function) {

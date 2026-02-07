@@ -347,7 +347,6 @@ impl Detector for Create2FrontrunningDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_create2_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

@@ -101,7 +101,8 @@ impl Detector for PrivateVariableExposureDetector {
                     // substring false positives (e.g., "pin" in "mapping")
                     let is_match = if keyword.len() <= 4 {
                         // For short keywords, require word boundaries
-                        line_lower.split(|c: char| !c.is_alphanumeric() && c != '_')
+                        line_lower
+                            .split(|c: char| !c.is_alphanumeric() && c != '_')
                             .any(|word| word == *keyword)
                     } else {
                         line_lower.contains(keyword)

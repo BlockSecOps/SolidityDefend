@@ -223,7 +223,6 @@ impl Detector for TransientStorageComposabilityDetector {
             return Ok(findings);
         }
 
-
         if !uses_transient_storage(ctx) {
             return Ok(findings);
         }

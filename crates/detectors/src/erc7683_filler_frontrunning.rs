@@ -122,7 +122,6 @@ impl Detector for FillerFrontrunningDetector {
             return Ok(findings);
         }
 
-
         if !self.is_erc7683_contract(ctx) {
             return Ok(findings);
         }

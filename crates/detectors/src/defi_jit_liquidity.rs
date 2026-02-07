@@ -255,7 +255,6 @@ impl Detector for JitLiquidityDetector {
             return Ok(findings);
         }
 
-
         if !self.is_liquidity_pool(ctx) {
             return Ok(findings);
         }

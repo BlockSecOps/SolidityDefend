@@ -78,7 +78,6 @@ impl Detector for AmmInvariantManipulationDetector {
             return Ok(findings);
         }
 
-
         // Skip standard AMM implementations (UniswapV2/V3, Curve, Balancer)
         // These are battle-tested implementations with proper invariant checks
         // This detector should focus on custom AMM implementations

@@ -66,7 +66,6 @@ impl Detector for GasGriefingDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(gas_issue) = self.check_gas_griefing(function, ctx) {
                 let message = format!(

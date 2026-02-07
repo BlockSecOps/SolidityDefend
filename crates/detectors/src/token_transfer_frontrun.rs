@@ -427,7 +427,6 @@ impl Detector for TokenTransferFrontrunDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue) = self.has_vulnerable_transfer(function, ctx) {
                 let message = format!(

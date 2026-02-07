@@ -426,7 +426,6 @@ impl Detector for LRTShareInflationDetector {
             return Ok(findings);
         }
 
-
         // Only run on LRT contracts (Liquid Restaking Tokens / ERC-4626 vaults)
         if !is_lrt_contract(ctx) && !is_erc4626_vault(ctx) {
             return Ok(findings);

@@ -71,7 +71,6 @@ impl Detector for IntentCrossChainValidationDetector {
             return Ok(findings);
         }
 
-
         if !is_intent_contract(ctx) {
             return Ok(findings);
         }

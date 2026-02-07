@@ -71,7 +71,6 @@ impl Detector for OracleTimeWindowAttackDetector {
             return Ok(findings);
         }
 
-
         // Skip AMM pool contracts - they ARE the oracle/price source, not consumers
         // UniswapV2/V3 pools provide TWAP data via cumulative price tracking
         if utils::is_amm_pool(ctx) {

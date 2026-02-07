@@ -79,7 +79,6 @@ impl Detector for PriceImpactManipulationDetector {
             return Ok(findings);
         }
 
-
         // Contract-level check: if this is a well-formed AMM pool with proper
         // protections at the contract level, skip entirely. AMM pools ARE the
         // price mechanism; they protect via K-invariant, not trade size caps.

@@ -66,7 +66,6 @@ impl Detector for DelegationLoopDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_delegation_loop_vulnerability(function, ctx) {
                 let message = format!(

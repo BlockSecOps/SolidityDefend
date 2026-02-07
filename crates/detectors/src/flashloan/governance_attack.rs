@@ -119,7 +119,6 @@ impl Detector for FlashloanGovernanceAttackDetector {
             return Ok(findings);
         }
 
-
         if !self.is_governance_contract(ctx) {
             return Ok(findings);
         }

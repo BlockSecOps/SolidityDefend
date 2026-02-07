@@ -67,7 +67,6 @@ impl Detector for SandwichResistantSwapDetector {
             return Ok(findings);
         }
 
-
         // Skip if this is an AMM pool - AMM pools ARE the market maker
         // They don't need sandwich protection because they SET the price
         // Only contracts that CONSUME AMM prices need sandwich protection

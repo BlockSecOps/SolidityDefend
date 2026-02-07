@@ -114,7 +114,6 @@ impl Detector for ExcessiveGasUsageDetector {
             return Ok(findings);
         }
 
-
         // Skip test contracts - gas optimization is less critical for tests
         if contract_classification::is_test_contract(ctx) {
             return Ok(findings);

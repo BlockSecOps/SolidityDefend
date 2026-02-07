@@ -68,7 +68,6 @@ impl Detector for DosUnboundedOperationDetector {
             return Ok(findings);
         }
 
-
         // Phase 16 FP Reduction: Skip deployment tooling files
         if is_deployment_tooling(ctx) {
             return Ok(findings);

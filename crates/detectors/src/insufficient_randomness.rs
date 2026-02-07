@@ -67,7 +67,6 @@ impl Detector for InsufficientRandomnessDetector {
             return Ok(findings);
         }
 
-
         // Phase 52 FP Reduction: Skip interface-only contracts
         if utils::is_interface_only(ctx) {
             return Ok(findings);

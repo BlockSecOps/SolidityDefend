@@ -211,7 +211,6 @@ impl Detector for VaultHookReentrancyDetector {
             return Ok(findings);
         }
 
-
         // FP Reduction: Skip contracts that are not vaults
         // This detector is specifically for ERC-4626 vault hook reentrancy.
         // Generic withdraw/deposit functions in non-vault contracts are not relevant.

@@ -357,7 +357,6 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
             return Ok(findings);
         }
 
-
         // Get contract source for state variable analysis
         let contract_source = self.get_state_variables(ctx);
 

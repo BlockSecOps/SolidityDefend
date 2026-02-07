@@ -83,7 +83,6 @@ impl Detector for FlashloanCallbackReentrancyDetector {
             return Ok(findings);
         }
 
-
         // Skip flash loan PROVIDERS - they MUST call back to borrowers
         // Flash loan providers (Aave, Compound, ERC-3156) are REQUIRED to:
         // 1. Call onFlashLoan() callback on the borrower

@@ -283,7 +283,6 @@ impl Detector for EnhancedInputValidationDetector {
             return Ok(findings);
         }
 
-
         // Phase 10: Skip test contracts and secure examples
         if is_test_contract(ctx) || is_secure_example_file(ctx) {
             return Ok(findings);

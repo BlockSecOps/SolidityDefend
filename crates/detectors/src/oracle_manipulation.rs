@@ -69,7 +69,6 @@ impl Detector for OracleManipulationDetector {
             return Ok(findings);
         }
 
-
         // Skip AMM pool contracts - they ARE the oracle source, not consumers
         // Uniswap V2/V3 pools implement TWAP oracles themselves (cumulative price tracking)
         // This detector should focus on contracts that CONSUME oracle data unsafely

@@ -291,7 +291,6 @@ impl Detector for DelegatecallReturnIgnoredDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue_description) = self.has_unchecked_delegatecall(function, ctx) {
                 let func_type = if self.is_fallback_or_receive(function) {

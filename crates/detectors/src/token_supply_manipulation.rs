@@ -69,7 +69,6 @@ impl Detector for TokenSupplyManipulationDetector {
             return Ok(findings);
         }
 
-
         // Skip if this is an ERC-4626 vault - shares don't need max supply caps
         // Also check for additional vault patterns that utils::is_erc4626_vault might miss
         let is_vault = utils::is_erc4626_vault(ctx) || self.is_vault_contract(ctx);

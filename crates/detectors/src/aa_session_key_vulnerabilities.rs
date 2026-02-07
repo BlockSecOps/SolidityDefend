@@ -277,7 +277,6 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
             return Ok(findings);
         }
 
-
         if !self.is_session_key_contract(ctx) {
             return Ok(findings);
         }

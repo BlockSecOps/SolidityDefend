@@ -300,7 +300,6 @@ impl Detector for NftMintMevDetector {
             return Ok(findings);
         }
 
-
         // CRITICAL FP FIX: Only analyze NFT contracts (ERC721/ERC1155)
         // This detector is for NFT mint MEV, NOT ERC20 token minting.
         // ERC20 tokens with mint functions should not be flagged.

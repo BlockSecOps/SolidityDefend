@@ -66,7 +66,6 @@ impl Detector for WeakCommitRevealDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_weak_commit_reveal(function, ctx) {
                 let message = format!(

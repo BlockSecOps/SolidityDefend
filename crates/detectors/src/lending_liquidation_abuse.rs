@@ -67,7 +67,6 @@ impl Detector for LendingLiquidationAbuseDetector {
             return Ok(findings);
         }
 
-
         // Early exit for contracts with comprehensive oracle safety
         // These contracts use manipulation-resistant price feeds
         if oracle_patterns::has_comprehensive_oracle_safety(ctx) {

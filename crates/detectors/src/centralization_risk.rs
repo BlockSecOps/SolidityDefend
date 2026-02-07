@@ -70,7 +70,6 @@ impl Detector for CentralizationRiskDetector {
             return Ok(findings);
         }
 
-
         // Check contract-level centralization
         if let Some(contract_issue) = self.check_contract_centralization(ctx) {
             let message = format!(

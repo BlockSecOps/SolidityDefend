@@ -262,7 +262,6 @@ impl Detector for ExtcodesizeBypassDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_extcodesize_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

@@ -282,7 +282,6 @@ impl Detector for CrossRollupStateMismatchDetector {
             return Ok(findings);
         }
 
-
         // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
         // Cross-rollup state mismatch only applies to contracts deployed across multiple chains.
         // Simple L1 contracts cannot have cross-rollup state issues.

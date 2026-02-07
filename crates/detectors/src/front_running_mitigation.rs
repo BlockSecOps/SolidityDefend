@@ -68,7 +68,6 @@ impl Detector for FrontRunningMitigationDetector {
             return Ok(findings);
         }
 
-
         // Skip AMM pool contracts - front-running/sandwich attacks are EXPECTED on AMM swaps
         // AMMs enable arbitrage and MEV as part of their price discovery mechanism
         // This detector should focus on user-facing contracts that consume AMM data
@@ -1042,7 +1041,8 @@ mod tests {
     #[test]
     fn test_skip_timelocked_governance() {
         let detector = FrontRunningMitigationDetector::new();
-        let func_source = "require(block.timestamp >= eta, 'timelock'); execute(target, value, data);";
+        let func_source =
+            "require(block.timestamp >= eta, 'timelock'); execute(target, value, data);";
         let source = r#"
             contract Governor is TimelockController {
                 function execute(address target, uint256 value, bytes calldata data) external {

@@ -82,7 +82,6 @@ impl Detector for ProxyStorageCollisionDetector {
             return Ok(findings);
         }
 
-
         // Check for storage collision risks in the contract
         if let Some(risk_description) = self.has_storage_collision_risk(ctx) {
             let message = format!(

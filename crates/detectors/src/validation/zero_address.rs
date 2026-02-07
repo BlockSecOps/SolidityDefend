@@ -713,7 +713,6 @@ impl Detector for ZeroAddressDetector {
             return Ok(findings);
         }
 
-
         // FP Reduction Phase 2: Skip test/mock contracts
         let file_path = ctx.file_path.to_lowercase();
         if file_path.contains("/mock")

@@ -75,7 +75,6 @@ impl Detector for AASessionKeyVulnerabilitiesDetector {
             return Ok(findings);
         }
 
-
         if !has_session_keys(ctx) {
             return Ok(findings);
         }

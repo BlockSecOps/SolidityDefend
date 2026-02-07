@@ -66,7 +66,6 @@ impl Detector for EmergencyFunctionAbuseDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_emergency_abuse(function, ctx) {
                 let message = format!(

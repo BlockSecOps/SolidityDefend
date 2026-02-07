@@ -289,7 +289,6 @@ impl Detector for UniswapV4HookIssuesDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             let func_source = self.get_function_source(function, ctx);
             let func_name = &function.name.name;

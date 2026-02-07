@@ -399,7 +399,8 @@ impl YieldFarmingDetector {
                 if !has_masterchef_pattern && !func_has_reward_infra {
                     // Check for reward per token calculation
                     let has_reward_calc = source_lower.contains("rewardpertoken")
-                        || (source_lower.contains("reward") && source_lower.contains("totalsupply"));
+                        || (source_lower.contains("reward")
+                            && source_lower.contains("totalsupply"));
 
                     if !has_reward_calc {
                         issues.push((
@@ -605,7 +606,6 @@ impl Detector for YieldFarmingDetector {
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
         }
-
 
         if !self.is_yield_vault(ctx) {
             return Ok(findings);
