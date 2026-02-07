@@ -263,6 +263,39 @@ impl BridgeMerkleBypassDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Check whether the contract actually uses or claims to use merkle proofs.
+    ///
+    /// This detector is specifically about merkle proof bypass vulnerabilities.
+    /// If a bridge contract does not use merkle proofs at all (e.g., it relies
+    /// purely on signature-based authentication, validator sets, or optimistic
+    /// verification), this detector should not fire. Not all bridges need
+    /// merkle proofs -- many use alternative authentication mechanisms.
+    ///
+    /// We look for concrete merkle-related patterns:
+    /// - merkleRoot / merkle_root state variables
+    /// - merkleProof / proof parameters in function signatures
+    /// - verifyMerkleProof / MerkleProof library calls
+    /// - stateRoot with proof verification
+    fn contract_uses_merkle_proofs(&self, source: &str) -> bool {
+        let lower = source.to_lowercase();
+
+        // Strong signals: explicit merkle-related declarations or usage
+        let has_merkle_root = lower.contains("merkleroot")
+            || lower.contains("merkle_root")
+            || lower.contains("stateroot");
+
+        let has_merkle_proof = lower.contains("merkleproof")
+            || lower.contains("merkle_proof")
+            || lower.contains("verifymerkleproof")
+            || lower.contains("verifyproof")
+            || lower.contains("checkproof");
+
+        let has_merkle_library = source.contains("MerkleProof") || source.contains("MerkleTree");
+
+        // Require at least one strong merkle signal
+        has_merkle_root || has_merkle_proof || has_merkle_library
+    }
 }
 
 impl Detector for BridgeMerkleBypassDetector {
@@ -326,6 +359,14 @@ impl Detector for BridgeMerkleBypassDetector {
         // Phase 9 FP Reduction: Strict bridge context gate
         // Only fire if contract is actually a bridge/cross-chain contract
         if !is_bridge_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: This detector is specifically about merkle proof bypass.
+        // Only fire on contracts that actually use merkle proofs. Bridges that use
+        // signature-only authentication or other methods should NOT be flagged by
+        // this detector -- they may have their own detectors.
+        if !self.contract_uses_merkle_proofs(source) {
             return Ok(findings);
         }
 
@@ -444,5 +485,79 @@ mod tests {
         let detector = BridgeMerkleBypassDetector::new();
         assert_eq!(detector.name(), "Bridge Merkle Bypass");
         assert_eq!(detector.default_severity(), Severity::Critical);
+    }
+
+    #[test]
+    fn test_contract_uses_merkle_proofs_positive() {
+        let detector = BridgeMerkleBypassDetector::new();
+
+        // Contract with merkleRoot
+        assert!(
+            detector.contract_uses_merkle_proofs("contract Bridge { bytes32 public merkleRoot; }")
+        );
+
+        // Contract with MerkleProof library
+        assert!(detector.contract_uses_merkle_proofs(
+            "import {MerkleProof} from \"@openzeppelin/contracts/utils/cryptography/MerkleProof.sol\";"
+        ));
+
+        // Contract with stateRoot
+        assert!(
+            detector.contract_uses_merkle_proofs("contract Bridge { bytes32 public stateRoot; }")
+        );
+
+        // Contract with verifyMerkleProof function
+        assert!(detector.contract_uses_merkle_proofs(
+            "function verifyMerkleProof(bytes32 root, bytes32 leaf) internal {}"
+        ));
+
+        // Contract with checkProof function
+        assert!(detector.contract_uses_merkle_proofs(
+            "function checkProof(bytes32[] calldata proof) external {}"
+        ));
+    }
+
+    #[test]
+    fn test_contract_uses_merkle_proofs_negative() {
+        let detector = BridgeMerkleBypassDetector::new();
+
+        // Signature-only bridge
+        assert!(!detector.contract_uses_merkle_proofs(
+            "contract Bridge { function processMessage(bytes calldata message) external { address signer = ecrecover(hash, v, r, s); } }"
+        ));
+
+        // Simple relay bridge without merkle
+        assert!(!detector.contract_uses_merkle_proofs(
+            "contract VulnerableBridge { function processMessage(bytes calldata message) external { _executeMessage(message); } }"
+        ));
+
+        // Access-control-only bridge
+        assert!(!detector.contract_uses_merkle_proofs(
+            "contract Bridge { mapping(address => bool) public relayers; function relay(bytes calldata msg) external { require(relayers[msg.sender]); } }"
+        ));
+    }
+
+    #[test]
+    fn test_find_missing_proof_in_merkle_bridge() {
+        let detector = BridgeMerkleBypassDetector::new();
+
+        // Bridge with merkle code but missing proof in withdraw
+        let source = r#"
+            contract Bridge {
+                bytes32 public merkleRoot;
+                function withdraw(address to, uint256 amount) external {
+                    balances[to] -= amount;
+                    payable(to).transfer(amount);
+                }
+                function verifyMerkleProof(bytes32 root, bytes32 leaf, bytes32[] calldata proof) internal pure returns (bool) {
+                    return true;
+                }
+            }
+        "#;
+        let findings = detector.find_missing_proof_validation(source);
+        assert!(
+            !findings.is_empty(),
+            "Bridge with merkle code but missing proof in withdraw should produce findings"
+        );
     }
 }

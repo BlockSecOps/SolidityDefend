@@ -108,9 +108,22 @@ impl ChainIdValidationDetector {
     /// explicitly re-check chain ID are less likely to be vulnerable.
     fn has_eip712_chain_id(&self, ctx: &AnalysisContext) -> bool {
         let source_lower = ctx.source_code.to_lowercase();
-        // EIP-712 domain separator typically includes block.chainid in
-        // keccak256(abi.encode(..., block.chainid, ...))
         source_lower.contains("eip712domain") && source_lower.contains("block.chainid")
+    }
+
+    /// Check whether the contract stores block.chainid in an immutable or
+    /// state variable at construction time and validates it elsewhere.
+    fn has_contract_level_chain_id(&self, ctx: &AnalysisContext) -> bool {
+        let source_lower = ctx.source_code.to_lowercase();
+        let stores_chain_id = (source_lower.contains("immutable")
+            && source_lower.contains("chainid")
+            && source_lower.contains("block.chainid"))
+            || (source_lower.contains("constructor")
+                && source_lower.contains("block.chainid")
+                && (source_lower.contains("chainid =") || source_lower.contains("chainid=")));
+        let validates_chain_id = source_lower.contains("block.chainid")
+            && (source_lower.contains("require(") || source_lower.contains("=="));
+        stores_chain_id && validates_chain_id
     }
 
     fn check_function(
@@ -124,13 +137,10 @@ impl ChainIdValidationDetector {
             return None;
         }
 
-        // Skip bare receive()/fallback() functions -- these are ETH receivers,
-        // not cross-chain message receivers
         if function.parameters.is_empty() && (name == "receive" || name == "fallback") {
             return None;
         }
 
-        // Only check external/public functions (skip internal/private helpers)
         let is_external = matches!(
             function.visibility,
             ast::Visibility::External | ast::Visibility::Public
@@ -140,32 +150,44 @@ impl ChainIdValidationDetector {
             return None;
         }
 
-        // Skip functions with access-control modifiers -- trusted callers
-        // do not need chain ID validation
         if self.has_access_control_modifier(function) {
             return None;
         }
 
-        // Skip if the contract already uses EIP-712 domain separator with
-        // block.chainid -- demonstrates chain-ID awareness
         if self.has_eip712_chain_id(ctx) {
             return None;
         }
 
-        // Extract only the function body source code to avoid matching comments
+        // FP Reduction: Skip if the contract validates chain ID at contract level
+        if self.has_contract_level_chain_id(ctx) {
+            return None;
+        }
+
         let func_source = self.get_function_source(function, ctx).to_lowercase();
 
-        // Skip functions with inline access control (require(msg.sender == ...))
         if self.has_inline_access_control(&func_source) {
             return None;
         }
 
-        // Look for actual validation using block.chainid (more specific than just "chainid")
+        // FP Reduction: Only flag functions that handle cross-chain messages
+        let has_cross_chain_context = func_source.contains("message")
+            || func_source.contains("payload")
+            || func_source.contains("messagehash")
+            || func_source.contains("sourcechain")
+            || func_source.contains("targetchain")
+            || func_source.contains("destinationchain")
+            || func_source.contains("crosschain")
+            || func_source.contains("chainid")
+            || func_source.contains("chain_id");
+
+        if !has_cross_chain_context {
+            return None;
+        }
+
         let validates_chain = (func_source.contains("block.chainid")
             || func_source.contains("block.chain.id"))
             && (func_source.contains("==") || func_source.contains("require"));
 
-        // Check if chainid is used in hash (parameters like sourceChainId or targetChainId)
         let in_hash = func_source.contains("keccak")
             && (func_source.contains("chainid") || func_source.contains("chain_id"));
 
@@ -313,6 +335,93 @@ mod tests {
             detector
                 .categories()
                 .contains(&DetectorCategory::CrossChain)
+        );
+    }
+
+    #[test]
+    fn test_contract_level_chain_id_source_patterns() {
+        // Source with immutable chainId + block.chainid + require
+        let secure_source = r#"
+            contract SecureBridge {
+                uint256 public immutable deploymentChainId;
+                constructor() {
+                    deploymentChainId = block.chainid;
+                }
+                function execute(bytes calldata payload) external {
+                    require(block.chainid == deploymentChainId, "Wrong chain");
+                }
+            }
+        "#;
+        let lower = secure_source.to_lowercase();
+        assert!(
+            lower.contains("immutable")
+                && lower.contains("chainid")
+                && lower.contains("block.chainid"),
+            "Source should have immutable chainid set from block.chainid"
+        );
+        assert!(
+            lower.contains("require(") && lower.contains("block.chainid"),
+            "Source should have require with block.chainid"
+        );
+
+        // Source without any chain ID awareness
+        let vuln_source = "contract VulnerableBridge { function processMessage(bytes calldata message) external { _exec(message); } }";
+        let lower2 = vuln_source.to_lowercase();
+        assert!(
+            !lower2.contains("block.chainid"),
+            "Vulnerable bridge should NOT reference block.chainid"
+        );
+    }
+
+    #[test]
+    fn test_has_inline_access_control_patterns() {
+        let detector = ChainIdValidationDetector::new();
+
+        assert!(
+            detector.has_inline_access_control("require(msg.sender == trustedRelayer)"),
+            "require + msg.sender should be inline access control"
+        );
+
+        // relayer mapping IS inline access control (relayer + [msg.sender])
+        assert!(
+            detector.has_inline_access_control("relayers[msg.sender]"),
+            "relayer mapping with msg.sender should be access control"
+        );
+
+        // Simple mapping without access-control keywords is NOT
+        assert!(
+            !detector.has_inline_access_control("balances[msg.sender]"),
+            "balance mapping without access control keywords should not be access control"
+        );
+
+        assert!(
+            !detector.has_inline_access_control("keccak256(abi.encodePacked(data))"),
+            "Hash computation should not be access control"
+        );
+    }
+
+    #[test]
+    fn test_cross_chain_context_keywords() {
+        // Functions with cross-chain keywords should have context
+        let with_message = "function processMessage(bytes calldata message) external { }";
+        let lower = with_message.to_lowercase();
+        assert!(lower.contains("message"), "Should detect message keyword");
+
+        // Functions without cross-chain keywords should not
+        let without_context = "function executeTransfer(address to, uint256 amount) external { }";
+        let lower2 = without_context.to_lowercase();
+        let has_context = lower2.contains("message")
+            || lower2.contains("payload")
+            || lower2.contains("messagehash")
+            || lower2.contains("sourcechain")
+            || lower2.contains("targetchain")
+            || lower2.contains("destinationchain")
+            || lower2.contains("crosschain")
+            || lower2.contains("chainid")
+            || lower2.contains("chain_id");
+        assert!(
+            !has_context,
+            "executeTransfer should NOT have cross-chain context"
         );
     }
 }

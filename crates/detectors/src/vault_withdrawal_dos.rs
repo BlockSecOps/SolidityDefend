@@ -288,16 +288,35 @@ impl VaultWithdrawalDosDetector {
     }
 
     /// Phase 5 FP Reduction: Check if contract has vault-like context
-    /// Requires withdrawal queue patterns or vault mechanics
+    /// Requires withdrawal queue patterns or vault mechanics combined with
+    /// actual withdrawal functionality.
     fn has_vault_context(&self, ctx: &AnalysisContext) -> bool {
         let source = &ctx.source_code;
 
-        // Withdrawal queue patterns
+        // First, the contract must have actual withdrawal/redeem functions.
+        // Without these, it cannot be a vault susceptible to withdrawal DOS.
+        let has_withdrawal_function = source.contains("function withdraw(")
+            || source.contains("function redeem(")
+            || source.contains("function processWithdrawals(")
+            || source.contains("function claimWithdrawal(");
+
+        if !has_withdrawal_function {
+            return false;
+        }
+
+        // Withdrawal queue patterns (specific data structures, not generic words)
         let has_queue = source.contains("withdrawalQueue")
             || source.contains("WithdrawalQueue")
-            || source.contains("pendingWithdrawals")
             || source.contains("withdrawRequests")
             || source.contains("queuedWithdrawals");
+
+        // pendingWithdrawals is only vault-related if combined with share/asset mechanics
+        // or actual vault deposit patterns (not just a mapping in ZK/bridge contracts)
+        let has_pending_withdrawal_vault = source.contains("pendingWithdrawals")
+            && (source.contains("totalSupply")
+                || source.contains("totalAssets")
+                || source.contains("shares")
+                || source.contains("function deposit("));
 
         // Vault share mechanics
         let has_share_mechanics = (source.contains("totalAssets")
@@ -305,13 +324,14 @@ impl VaultWithdrawalDosDetector {
             || source.contains("convertToShares")
             || source.contains("convertToAssets");
 
-        // Staking/unstaking patterns with queues
+        // Staking/unstaking patterns with explicit queue data structures
+        // Require actual queue/withdrawal queue keywords, not just generic "pending"
         let has_staking_queue = (source.contains("stake") || source.contains("unstake"))
-            && (source.contains("queue")
-                || source.contains("pending")
-                || source.contains("cooldown"));
+            && (source.contains("withdrawalQueue")
+                || source.contains("unstakeQueue")
+                || source.contains("cooldownQueue"));
 
-        has_queue || has_share_mechanics || has_staking_queue
+        has_queue || has_pending_withdrawal_vault || has_share_mechanics || has_staking_queue
     }
 
     /// Check for withdrawal DOS vulnerabilities
@@ -741,6 +761,7 @@ contract SimpleWallet {
     #[test]
     fn test_vault_context_for_queue_contract() {
         let detector = VaultWithdrawalDosDetector::new();
+        // Contract must have both withdrawalQueue AND a withdrawal function
         let source = r#"
 contract WithdrawalManager {
     address[] public withdrawalQueue;
@@ -752,7 +773,90 @@ contract WithdrawalManager {
         let ctx = make_context(source);
         assert!(
             detector.has_vault_context(&ctx),
-            "Contract with withdrawalQueue should have vault context"
+            "Contract with withdrawalQueue and processWithdrawals should have vault context"
+        );
+    }
+
+    #[test]
+    fn test_no_vault_context_for_yield_farm() {
+        let detector = VaultWithdrawalDosDetector::new();
+        // LiquidityMining-style contract: has "stake"/"pending" but is not a vault
+        let source = r#"
+contract LiquidityMining {
+    mapping(address => uint256) public staked;
+    mapping(address => uint256) public pendingRewards;
+    uint256 public rewardPerBlock;
+
+    function stake(uint256 amount) external {
+        staked[msg.sender] += amount;
+    }
+
+    function claimRewards() external {
+        uint256 pending = pendingRewards[msg.sender];
+        pendingRewards[msg.sender] = 0;
+    }
+
+    function emergencyWithdraw(uint256 pid) external {
+        staked[msg.sender] = 0;
+    }
+}
+"#;
+        let ctx = make_context(source);
+        assert!(
+            !detector.has_vault_context(&ctx),
+            "Yield farm with stake/pending should NOT have vault context"
+        );
+    }
+
+    #[test]
+    fn test_no_vault_context_for_zk_contract() {
+        let detector = VaultWithdrawalDosDetector::new();
+        // ZK rollup contract with pendingWithdrawals but no vault mechanics
+        let source = r#"
+contract ZKRollupIntegration {
+    bytes32 public stateRoot;
+    uint256 public batchNumber;
+    mapping(bytes32 => bool) public pendingWithdrawals;
+
+    function submitBatch(uint256 batchId, bytes32 newStateRoot) external {
+        stateRoot = newStateRoot;
+        batchNumber = batchId;
+    }
+
+    function requestWithdrawal(bytes32 withdrawalHash) external {
+        pendingWithdrawals[withdrawalHash] = true;
+    }
+}
+"#;
+        let ctx = make_context(source);
+        assert!(
+            !detector.has_vault_context(&ctx),
+            "ZK rollup contract with pendingWithdrawals but no vault mechanics should NOT have vault context"
+        );
+    }
+
+    #[test]
+    fn test_vault_context_for_actual_vault_with_pending() {
+        let detector = VaultWithdrawalDosDetector::new();
+        // Actual vault with pendingWithdrawals AND vault mechanics
+        let source = r#"
+contract VaultWithQueue {
+    uint256 public totalSupply;
+    mapping(address => uint256) public pendingWithdrawals;
+
+    function deposit(uint256 assets) external {
+        totalSupply += assets;
+    }
+
+    function withdraw(uint256 shares) external {
+        pendingWithdrawals[msg.sender] = shares;
+    }
+}
+"#;
+        let ctx = make_context(source);
+        assert!(
+            detector.has_vault_context(&ctx),
+            "Vault with pendingWithdrawals and totalSupply/deposit/withdraw should have vault context"
         );
     }
 

@@ -24,10 +24,96 @@ impl YieldFarmingDetector {
         }
     }
 
+    /// Check if the contract is an ERC-4626 vault contract.
+    /// ERC-4626 vaults have their own dedicated detectors (vault-share-inflation,
+    /// vault-donation-attack, etc.) and should NOT be analyzed by the yield farming
+    /// detector. This prevents false positives on vault contracts that share keywords
+    /// like "deposit", "shares", "totalAssets" with yield farming patterns.
+    ///
+    /// Exception: If the contract also has yield farming infrastructure (Masterchef-style
+    /// patterns like accRewardPerShare, rewardDebt, allocPoint, PoolInfo), it IS a yield
+    /// farming contract that happens to use ERC-4626, so we should NOT exclude it.
+    fn is_erc4626_vault_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Check for explicit ERC-4626 markers
+        let has_erc4626_explicit = source.contains("ERC4626")
+            || source.contains("IERC4626")
+            || source.contains("ERC-4626");
+
+        // Check for ERC-4626 standard function signatures
+        let has_deposit = source.contains("function deposit(");
+        let has_redeem = source.contains("function redeem(");
+        let has_total_assets = source.contains("function totalAssets(");
+        let has_shares = lower.contains("shares");
+        let has_convert = lower.contains("converttoshares") || lower.contains("converttoassets");
+        let has_preview = lower.contains("previewdeposit") || lower.contains("previewredeem");
+
+        // Check for yield farming infrastructure (Masterchef-style patterns).
+        // If the contract has these, it is a yield farming contract that may also
+        // implement ERC-4626, so we should NOT exclude it from this detector.
+        let has_reward_per_share =
+            lower.contains("accrewardpershare") || lower.contains("rewardpershare");
+        let has_alloc_point = lower.contains("allocpoint");
+        let has_reward_per_block = lower.contains("rewardperblock") || lower.contains("rewardrate");
+        let has_pool_info = lower.contains("poolinfo");
+        let has_user_reward_debt = lower.contains("rewarddebt") && lower.contains("userinfo");
+
+        let yield_farming_signals = [
+            has_reward_per_share,
+            has_alloc_point,
+            has_reward_per_block,
+            has_pool_info,
+            has_user_reward_debt,
+        ]
+        .iter()
+        .filter(|&&x| x)
+        .count();
+
+        // If contract has yield farming infrastructure, it is NOT a pure ERC-4626 vault
+        if yield_farming_signals >= 2 {
+            return false;
+        }
+
+        // Path 1: Explicit ERC-4626 inheritance/interface
+        if has_erc4626_explicit {
+            return true;
+        }
+
+        // Path 2: ERC-4626 standard function signature pattern
+        // Need at least 2 of deposit/redeem/totalAssets + shares + conversion or preview
+        let vault_function_count = [has_deposit, has_redeem, has_total_assets]
+            .iter()
+            .filter(|&&x| x)
+            .count();
+
+        if vault_function_count >= 2 && has_shares && (has_convert || has_preview) {
+            return true;
+        }
+
+        // Path 3: Vault-like with deposit(uint256, address receiver) + redeem(uint256, address receiver) + totalAssets + shares
+        let has_vault_deposit_sig = source.contains("deposit(uint256")
+            && (source.contains("address receiver") || source.contains("address _receiver"));
+        let has_vault_redeem_sig =
+            source.contains("redeem(uint256") && source.contains("address receiver");
+
+        if has_vault_deposit_sig && has_vault_redeem_sig && has_total_assets && has_shares {
+            return true;
+        }
+
+        false
+    }
+
     /// Check if the contract is primarily a non-yield-farming contract type.
     /// These contracts may incidentally contain words like "deposit" or "shares"
     /// but are not yield farming vaults and should not be analyzed by this detector.
     fn is_non_yield_farming_contract(&self, ctx: &AnalysisContext) -> bool {
+        // ERC-4626 vaults have their own dedicated detectors
+        if self.is_erc4626_vault_contract(ctx) {
+            return true;
+        }
+
         let source = &ctx.source_code.to_lowercase();
 
         // Delegation/operator management contracts (e.g. EigenLayer DelegationManager)
@@ -702,10 +788,12 @@ mod tests {
     // -- is_yield_vault tests --
 
     #[test]
-    fn test_erc4626_vault_detected() {
+    fn test_erc4626_vault_not_yield_farming() {
+        // ERC-4626 vaults should NOT be classified as yield farming vaults.
+        // They have their own dedicated detectors (vault-share-inflation, etc.)
         let detector = YieldFarmingDetector::new();
         let ctx = create_context("contract MyVault is ERC4626 { function deposit() {} }");
-        assert!(detector.is_yield_vault(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
     }
 
     #[test]
@@ -767,6 +855,164 @@ mod tests {
              }",
         );
         assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    // -- ERC-4626 vault exclusion tests --
+
+    #[test]
+    fn test_erc4626_explicit_inheritance_excluded() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract SecureVault is ERC4626 {
+                function deposit(uint256 assets, address receiver) public returns (uint256 shares) {
+                    shares = previewDeposit(assets);
+                    _mint(receiver, shares);
+                }
+                function withdraw(uint256 assets) public returns (uint256 shares) {}
+                function totalAssets() public view returns (uint256) {}
+                function convertToShares(uint256 assets) public view returns (uint256) {}
+            }
+            "#,
+        );
+        assert!(detector.is_erc4626_vault_contract(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_ierc4626_interface_excluded() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract VaultImpl is IERC4626 {
+                function deposit(uint256 assets, address receiver) external returns (uint256) {}
+                function redeem(uint256 shares, address receiver, address owner) external returns (uint256) {}
+                function totalAssets() external view returns (uint256) {}
+            }
+            "#,
+        );
+        assert!(detector.is_erc4626_vault_contract(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_erc4626_function_signatures_excluded() {
+        // Contract without explicit ERC4626 inheritance but with standard ERC-4626 signatures
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract CustomVault {
+                function deposit(uint256 assets, address receiver) public returns (uint256 shares) {
+                    shares = convertToShares(assets);
+                    _mint(receiver, shares);
+                }
+                function redeem(uint256 shares, address receiver, address owner) public returns (uint256 assets) {
+                    assets = convertToAssets(shares);
+                    _burn(owner, shares);
+                }
+                function totalAssets() public view returns (uint256) {
+                    return token.balanceOf(address(this));
+                }
+                function convertToShares(uint256 assets) public view returns (uint256) {}
+                function convertToAssets(uint256 shares) public view returns (uint256) {}
+            }
+            "#,
+        );
+        assert!(detector.is_erc4626_vault_contract(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_erc4626_with_preview_functions_excluded() {
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract PreviewVault {
+                function deposit(uint256 assets, address receiver) public returns (uint256 shares) {}
+                function redeem(uint256 shares, address receiver, address owner) public returns (uint256) {}
+                function totalAssets() public view returns (uint256) {}
+                function previewDeposit(uint256 assets) public view returns (uint256) {}
+                function previewRedeem(uint256 shares) public view returns (uint256) {}
+            }
+            "#,
+        );
+        assert!(detector.is_erc4626_vault_contract(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_masterchef_with_erc4626_not_excluded() {
+        // A yield farming contract that happens to use ERC-4626 should NOT be excluded
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract FarmVault is ERC4626 {
+                struct PoolInfo { uint256 allocPoint; uint256 accRewardPerShare; }
+                struct UserInfo { uint256 amount; uint256 rewardDebt; }
+                uint256 public rewardPerBlock;
+                mapping(uint256 => PoolInfo) public poolInfo;
+                mapping(uint256 => mapping(address => UserInfo)) public userInfo;
+                function deposit(uint256 assets, address receiver) public returns (uint256 shares) {}
+                function totalAssets() public view returns (uint256) {}
+            }
+            "#,
+        );
+        // Should NOT be classified as a pure ERC-4626 vault because it has Masterchef patterns
+        assert!(!detector.is_erc4626_vault_contract(&ctx));
+        // Should be classified as a yield farming contract
+        assert!(detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_vulnerable_vault_with_deposit_receiver_excluded() {
+        // Simulate a vulnerable ERC-4626 vault (no inflation protection) -- should still
+        // be excluded from yield farming detector because it IS an ERC-4626 vault
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract VulnerableVault {
+                function deposit(uint256 assets, address _receiver) public returns (uint256 shares) {
+                    shares = assets * totalSupply() / totalAssets();
+                    _mint(_receiver, shares);
+                }
+                function redeem(uint256 shares, address receiver, address owner) public returns (uint256 assets) {
+                    assets = shares * totalAssets() / totalSupply();
+                    _burn(owner, shares);
+                    token.transfer(receiver, assets);
+                }
+                function totalAssets() public view returns (uint256) {
+                    return token.balanceOf(address(this));
+                }
+                function previewDeposit(uint256 assets) public view returns (uint256) {}
+            }
+            "#,
+        );
+        assert!(detector.is_erc4626_vault_contract(&ctx));
+        assert!(!detector.is_yield_vault(&ctx));
+    }
+
+    #[test]
+    fn test_plain_staking_contract_not_erc4626() {
+        // Plain staking contract without ERC-4626 signatures should NOT be excluded
+        let detector = YieldFarmingDetector::new();
+        let ctx = create_context(
+            r#"
+            contract StakingPool {
+                uint256 public totalStaked;
+                uint256 public rewardRate;
+                mapping(address => uint256) public balances;
+                function stake(uint256 amount) public {
+                    balances[msg.sender] += amount;
+                    totalStaked += amount;
+                }
+                function unstake(uint256 amount) public {
+                    balances[msg.sender] -= amount;
+                    totalStaked -= amount;
+                }
+            }
+            "#,
+        );
+        assert!(!detector.is_erc4626_vault_contract(&ctx));
     }
 
     // -- Admin function tests --

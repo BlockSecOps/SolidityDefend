@@ -26,6 +26,53 @@ impl OracleTimeWindowAttackDetector {
             ),
         }
     }
+
+    /// Check if the contract has actual oracle infrastructure usage.
+    /// This requires real oracle interface patterns (function calls to oracle contracts,
+    /// price feed interfaces, Chainlink aggregators, etc.), not just the word "price"
+    /// appearing in comments or variable names.
+    fn has_oracle_infrastructure(&self, source: &str) -> bool {
+        // Oracle interface patterns: actual oracle contract usage
+        let has_oracle_interface = source.contains("IOracle")
+            || source.contains("IPriceOracle")
+            || source.contains("IPriceFeed")
+            || source.contains("AggregatorV3Interface")
+            || source.contains("AggregatorV2V3Interface")
+            || source.contains("IChainlinkOracle");
+
+        // Oracle function call patterns: calling oracle methods
+        let has_oracle_call = source.contains(".getPrice(")
+            || source.contains(".latestRoundData(")
+            || source.contains(".latestAnswer(")
+            || source.contains(".getRoundData(")
+            || source.contains(".consult(")
+            || source.contains(".getTWAP(");
+
+        // Uniswap price oracle usage (actual interface, not just a comment)
+        let has_uniswap_oracle =
+            source.contains("IUniswap") || source.contains("uniswap") || source.contains("Uniswap");
+
+        // DEX price feed patterns (actual on-chain price data retrieval)
+        let has_dex_price = source.contains("getReserves")
+            || source.contains("price0CumulativeLast")
+            || source.contains("price1CumulativeLast");
+
+        has_oracle_interface || has_oracle_call || has_uniswap_oracle || has_dex_price
+    }
+
+    /// Check if the contract makes actual oracle function calls to retrieve prices.
+    /// More strict than has_oracle_infrastructure -- requires actual price retrieval calls.
+    fn has_oracle_call_pattern(&self, source: &str) -> bool {
+        source.contains(".getPrice(")
+            || source.contains(".latestRoundData(")
+            || source.contains(".latestAnswer(")
+            || source.contains(".getRoundData(")
+            || source.contains(".consult(")
+            || source.contains("IOracle(")
+            || source.contains("IPriceOracle(")
+            || source.contains("IPriceFeed(")
+            || source.contains("AggregatorV3Interface(")
+    }
 }
 
 impl Default for OracleTimeWindowAttackDetector {
@@ -79,11 +126,17 @@ impl Detector for OracleTimeWindowAttackDetector {
 
         let source = &ctx.source_code;
 
-        // Check for oracle usage
-        let has_oracle = source.contains("oracle")
-            || source.contains("Oracle")
-            || source.contains("price")
-            || source.contains("Price");
+        // FP Reduction: Require actual oracle infrastructure usage, not just the word "price"
+        // in comments or variable names. Contracts that mention "share price" or "price impact"
+        // in comments are not oracle consumers.
+        let has_oracle_interface = self.has_oracle_infrastructure(source);
+
+        // If the contract does not use any oracle infrastructure, skip entirely.
+        // This prevents FPs on vault contracts, ZK contracts, bridge contracts, etc.
+        // that happen to mention "price" in comments or non-oracle contexts.
+        if !has_oracle_interface {
+            return Ok(findings);
+        }
 
         let has_uniswap =
             source.contains("uniswap") || source.contains("Uniswap") || source.contains("IUniswap");
@@ -137,7 +190,12 @@ impl Detector for OracleTimeWindowAttackDetector {
         }
 
         // General oracle without time-averaging
-        if has_oracle && !has_twap && !source.contains("chainlink") && !source.contains("Chainlink")
+        // Only flag if contract has actual oracle call patterns (interface calls, price feeds)
+        let has_oracle_call = self.has_oracle_call_pattern(source);
+        if has_oracle_call
+            && !has_twap
+            && !source.contains("chainlink")
+            && !source.contains("Chainlink")
         {
             let finding = self
                 .base
@@ -222,5 +280,223 @@ impl Detector for OracleTimeWindowAttackDetector {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::test_utils::create_mock_ast_contract;
+
+    fn make_context(source: &str) -> AnalysisContext<'static> {
+        let arena = Box::leak(Box::new(ast::AstArena::new()));
+        let contract = Box::leak(Box::new(create_mock_ast_contract(
+            arena,
+            "TestContract",
+            vec![],
+        )));
+        AnalysisContext::new(
+            contract,
+            semantic::SymbolTable::new(),
+            source.to_string(),
+            "test.sol".to_string(),
+        )
+    }
+
+    #[test]
+    fn test_detector_properties() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        assert_eq!(detector.name(), "Oracle Time Window Attack");
+        assert_eq!(detector.default_severity(), Severity::High);
+        assert!(detector.is_enabled());
+    }
+
+    #[test]
+    fn test_no_fp_on_vault_contract_with_price_in_comments() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // This vault contract mentions "share price" in comments but does NOT use oracles
+        let source = r#"
+contract VulnerableVault {
+    // VULNERABILITY: Share price can be manipulated
+    uint256 public totalSupply;
+    mapping(address => uint256) public balanceOf;
+
+    function deposit(uint256 assets) public returns (uint256 shares) {
+        shares = totalSupply == 0 ? assets : (assets * totalSupply) / totalAssets();
+        balanceOf[msg.sender] += shares;
+        totalSupply += shares;
+    }
+
+    function totalAssets() public view returns (uint256) {
+        return address(this).balance;
+    }
+}
+"#;
+        assert!(
+            !detector.has_oracle_infrastructure(source),
+            "Vault contract with 'price' only in comments should not be detected as oracle user"
+        );
+    }
+
+    #[test]
+    fn test_no_fp_on_zk_contract() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // ZK contract that does not use oracles
+        let source = r#"
+contract ZKVerifier {
+    function verify(uint256[8] calldata proof, uint256 amount) external pure returns (bool) {
+        return proof[0] != 0 && amount > 0;
+    }
+}
+"#;
+        assert!(
+            !detector.has_oracle_infrastructure(source),
+            "ZK contract should not be detected as oracle user"
+        );
+    }
+
+    #[test]
+    fn test_no_fp_on_bridge_contract() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // Bridge contract that mentions "price" in comments but no oracle usage
+        let source = r#"
+contract BridgeVault {
+    // Time-based oracle manipulation mentioned in docs
+    mapping(bytes32 => bool) public processedRequests;
+    function bridge(uint256 amount) external {
+        processedRequests[keccak256(abi.encode(msg.sender, amount))] = true;
+    }
+}
+"#;
+        assert!(
+            !detector.has_oracle_infrastructure(source),
+            "Bridge contract without oracle calls should not be detected"
+        );
+    }
+
+    #[test]
+    fn test_detects_actual_oracle_consumer() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // Contract that actually uses an oracle
+        let source = r#"
+interface IOracle {
+    function getPrice(address token) external view returns (uint256);
+}
+
+contract OracleConsumer {
+    IOracle public priceOracle;
+
+    function getTokenPrice(address token) external view returns (uint256) {
+        return priceOracle.getPrice(token);
+    }
+}
+"#;
+        assert!(
+            detector.has_oracle_infrastructure(source),
+            "Contract with IOracle interface and .getPrice() should be detected as oracle user"
+        );
+        assert!(
+            detector.has_oracle_call_pattern(source),
+            "Contract with .getPrice() should match oracle call pattern"
+        );
+    }
+
+    #[test]
+    fn test_detects_uniswap_price_consumer() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // Contract that uses Uniswap for pricing
+        let source = r#"
+interface IUniswapV2Pair {
+    function getReserves() external view returns (uint112, uint112, uint32);
+}
+
+contract AMMConsumer {
+    function getSpotPrice(address pair) external view returns (uint256) {
+        (uint112 r0, uint112 r1,) = IUniswapV2Pair(pair).getReserves();
+        return uint256(r1) * 1e18 / uint256(r0);
+    }
+}
+"#;
+        assert!(
+            detector.has_oracle_infrastructure(source),
+            "Contract using IUniswapV2Pair.getReserves() should be detected as oracle user"
+        );
+    }
+
+    #[test]
+    fn test_detects_chainlink_consumer() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        let source = r#"
+interface AggregatorV3Interface {
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80);
+}
+
+contract ChainlinkConsumer {
+    AggregatorV3Interface public priceFeed;
+
+    function getLatestPrice() external view returns (int256) {
+        (, int256 price,,,) = priceFeed.latestRoundData();
+        return price;
+    }
+}
+"#;
+        assert!(
+            detector.has_oracle_infrastructure(source),
+            "Contract using Chainlink AggregatorV3Interface should be detected as oracle user"
+        );
+    }
+
+    #[test]
+    fn test_no_fp_on_simple_yield_farm() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // Yield farm without oracle usage
+        let source = r#"
+contract SimpleYieldFarm {
+    uint256 public rewardPerBlock;
+    mapping(address => uint256) public staked;
+
+    function stake(uint256 amount) external {
+        staked[msg.sender] += amount;
+    }
+
+    function withdraw(uint256 amount) external {
+        require(staked[msg.sender] >= amount);
+        staked[msg.sender] -= amount;
+    }
+}
+"#;
+        assert!(
+            !detector.has_oracle_infrastructure(source),
+            "Simple yield farm without oracle usage should not be detected"
+        );
+    }
+
+    #[test]
+    fn test_no_fp_on_curve_pool_without_oracle() {
+        let detector = OracleTimeWindowAttackDetector::new();
+        // Curve-style pool that has "price" in function names but no external oracle usage
+        let source = r#"
+contract CurvePool {
+    uint256 public totalSupply;
+    uint256 public token0Balance;
+    uint256 public token1Balance;
+
+    function get_virtual_price() external view returns (uint256) {
+        if (totalSupply == 0) return 0;
+        uint256 value = token0Balance + token1Balance;
+        return (value * 1e18) / totalSupply;
+    }
+
+    function removeLiquidity(uint256 shares) external {
+        uint256 amount0 = (shares * token0Balance) / totalSupply;
+        (bool success, ) = msg.sender.call{value: amount0}("");
+        require(success);
+    }
+}
+"#;
+        assert!(
+            !detector.has_oracle_infrastructure(source),
+            "Curve pool without external oracle calls should not be detected"
+        );
     }
 }
