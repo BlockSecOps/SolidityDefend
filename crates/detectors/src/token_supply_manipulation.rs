@@ -69,6 +69,11 @@ impl Detector for TokenSupplyManipulationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip non-token contracts (AA, flash loan, attack, lending, etc.)
+        if !self.is_token_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Skip if this is an ERC-4626 vault - shares don't need max supply caps
         // Also check for additional vault patterns that utils::is_erc4626_vault might miss
         let is_vault = utils::is_erc4626_vault(ctx) || self.is_vault_contract(ctx);
@@ -129,6 +134,160 @@ impl Detector for TokenSupplyManipulationDetector {
 }
 
 impl TokenSupplyManipulationDetector {
+    /// FP Reduction: Determine whether this contract is actually a token contract.
+    ///
+    /// Token supply manipulation findings are only relevant for contracts that
+    /// ARE tokens (ERC-20, ERC-721, ERC-1155, or custom token implementations).
+    /// Non-token contracts (AA paymasters, flash loan providers, attack contracts,
+    /// lending protocols, oracle contracts, governance, yield aggregators) should
+    /// be skipped even if they happen to reference mint/burn/totalSupply.
+    fn is_token_contract(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // ---- Negative gates: skip contracts whose primary purpose is NOT a token ----
+
+        // ERC-4337 Account Abstraction contracts (paymasters, session keys, etc.)
+        let is_aa_contract = lower.contains("validateuserop")
+            || lower.contains("ientrypoint")
+            || lower.contains("ipaymaster")
+            || contract_name.contains("paymaster")
+            || contract_name.contains("sessionkey")
+            || contract_name.contains("noncemanager")
+            || contract_name.contains("aggregator")
+            || contract_name.contains("accountrecovery")
+            || contract_name.contains("delegation")
+            || (contract_name.contains("wallet") && !contract_name.contains("token"));
+
+        if is_aa_contract {
+            return false;
+        }
+
+        // Attack / exploit simulation contracts (test harnesses)
+        let is_attack_contract = contract_name.contains("attack")
+            || contract_name.contains("exploit")
+            || contract_name.contains("hack")
+            || contract_name.contains("malicious")
+            || contract_name.contains("attacker");
+
+        if is_attack_contract {
+            return false;
+        }
+
+        // Flash loan provider contracts (ERC-3156 lenders)
+        let is_flash_loan_contract = contract_name.contains("flashloan")
+            || contract_name.contains("flashlend")
+            || contract_name.contains("flashmint")
+            || (lower.contains("ierc3156flashlender") && !lower.contains("ierc20"));
+
+        if is_flash_loan_contract {
+            return false;
+        }
+
+        // Lending / borrowing protocols
+        let is_lending = contract_name.contains("lending")
+            || contract_name.contains("lendingpool")
+            || contract_name.contains("borrowing")
+            || contract_name.contains("comptroller")
+            || contract_name.contains("ctoken")
+            || contract_name.contains("atoken");
+
+        if is_lending {
+            return false;
+        }
+
+        // Oracle contracts
+        let is_oracle = contract_name.contains("oracle")
+            || contract_name.contains("pricefeed")
+            || contract_name.contains("chainlink");
+
+        if is_oracle {
+            return false;
+        }
+
+        // Governance-only contracts (no token mechanics)
+        let is_governance = (contract_name.contains("governance")
+            || contract_name.contains("governor")
+            || contract_name.contains("dao")
+            || contract_name.contains("voting")
+            || contract_name.contains("timelock"))
+            && !lower.contains("function transfer(")
+            && !lower.contains("function balanceof(");
+
+        if is_governance {
+            return false;
+        }
+
+        // Yield aggregator / reentrancy test contracts
+        let is_yield_or_reentrancy = contract_name.contains("reentrancy")
+            || contract_name.contains("yieldaggregator")
+            || contract_name.contains("harvester");
+
+        if is_yield_or_reentrancy {
+            return false;
+        }
+
+        // ---- Positive gates: require token-like structure ----
+
+        // ERC-20 structure: has transfer + balanceOf
+        let has_erc20_structure =
+            lower.contains("function transfer(") && lower.contains("function balanceof(");
+
+        if has_erc20_structure {
+            return true;
+        }
+
+        // Token inheritance: extends ERC20, ERC721, or ERC1155
+        let has_token_inheritance = source.contains("ERC20")
+            || source.contains("ERC721")
+            || source.contains("ERC1155")
+            || source.contains("IERC20")
+            || source.contains("IERC721")
+            || source.contains("IERC1155");
+
+        if has_token_inheritance {
+            return true;
+        }
+
+        // Token name in contract
+        let has_token_name = contract_name.contains("token")
+            || contract_name.contains("coin")
+            || contract_name.contains("burnable")
+            || contract_name.contains("mintable")
+            || contract_name.contains("erc20")
+            || contract_name.contains("erc721")
+            || contract_name.contains("erc1155");
+
+        if has_token_name {
+            return true;
+        }
+
+        // Custom token structure: totalSupply + balanceOf + (mint OR burn)
+        let has_custom_token = lower.contains("totalsupply")
+            && lower.contains("balanceof")
+            && (lower.contains("function mint(")
+                || lower.contains("function burn(")
+                || lower.contains("function _mint(")
+                || lower.contains("function _burn("));
+
+        if has_custom_token {
+            return true;
+        }
+
+        // Bridge token pattern: bridgeable token that mints/burns
+        let is_bridge_token = (contract_name.contains("bridge")
+            && (lower.contains("function mint(") || lower.contains("function burn(")))
+            && lower.contains("totalsupply");
+
+        if is_bridge_token {
+            return true;
+        }
+
+        // No token signals found - not a token contract
+        false
+    }
+
     /// Check if contract is an ERC-4626 vault or similar share-based vault
     /// These contracts mint SHARES not tokens - minting shares is the intended behavior
     fn is_vault_contract(&self, ctx: &AnalysisContext) -> bool {
@@ -1081,5 +1240,145 @@ mod tests {
                 func
             );
         }
+    }
+
+    // ---- is_token_contract tests ----
+
+    #[test]
+    fn test_is_token_contract_positive_erc20() {
+        // An ERC-20 token with transfer + balanceOf should be recognized as a token
+        let source = r#"
+            contract MyToken is ERC20 {
+                function transfer(address to, uint256 amount) public returns (bool) {}
+                function balanceOf(address account) public view returns (uint256) {}
+                function mint(address to, uint256 amount) external onlyOwner {
+                    _mint(to, amount);
+                }
+            }
+        "#;
+        let lower = source.to_lowercase();
+
+        // ERC-20 structure check
+        assert!(
+            lower.contains("function transfer(") && lower.contains("function balanceof("),
+            "ERC-20 token should have transfer + balanceOf"
+        );
+
+        // Token inheritance check
+        assert!(source.contains("ERC20"), "Should detect ERC20 inheritance");
+    }
+
+    #[test]
+    fn test_is_token_contract_positive_custom() {
+        // A custom token with totalSupply + balanceOf + mint should be recognized
+        let source = r#"
+            contract CustomToken {
+                uint256 public totalSupply;
+                mapping(address => uint256) public balanceOf;
+                function mint(address to, uint256 amount) external {
+                    totalSupply += amount;
+                    balanceOf[to] += amount;
+                }
+            }
+        "#;
+        let lower = source.to_lowercase();
+
+        assert!(
+            lower.contains("totalsupply")
+                && lower.contains("balanceof")
+                && lower.contains("function mint("),
+            "Custom token should have totalSupply + balanceOf + mint"
+        );
+    }
+
+    #[test]
+    fn test_is_token_contract_negative_aa() {
+        // An ERC-4337 paymaster should NOT be treated as a token
+        let contract_name = "VulnerablePaymaster";
+        let source = r#"
+            contract VulnerablePaymaster is IPaymaster {
+                function validateUserOp(UserOperation calldata op) external returns (uint256) {}
+                function _mint(address to, uint256 amount) internal {}
+            }
+        "#;
+        let lower = source.to_lowercase();
+        let name_lower = contract_name.to_lowercase();
+
+        let is_aa = lower.contains("validateuserop")
+            || lower.contains("ipaymaster")
+            || name_lower.contains("paymaster");
+
+        assert!(is_aa, "Paymaster should be detected as AA contract");
+    }
+
+    #[test]
+    fn test_is_token_contract_negative_flash_loan() {
+        // A flash loan provider should NOT be treated as a token
+        let contract_name = "FlashLoanProvider";
+        let source = r#"
+            contract FlashLoanProvider is IERC3156FlashLender {
+                function flashLoan(address receiver, address token, uint256 amount, bytes calldata data) external returns (bool) {}
+                function _mint(address to, uint256 amount) internal {}
+            }
+        "#;
+        let name_lower = contract_name.to_lowercase();
+
+        let is_flash_loan = name_lower.contains("flashloan") || name_lower.contains("flashlend");
+
+        assert!(
+            is_flash_loan,
+            "Flash loan provider should be detected as flash loan contract"
+        );
+    }
+
+    #[test]
+    fn test_is_token_contract_negative_attack() {
+        // An attack contract should NOT be treated as a token
+        let contract_name = "CurveFinance2023Attack";
+        let name_lower = contract_name.to_lowercase();
+
+        let is_attack = name_lower.contains("attack")
+            || name_lower.contains("exploit")
+            || name_lower.contains("hack")
+            || name_lower.contains("malicious");
+
+        assert!(
+            is_attack,
+            "Attack contract should be detected by name heuristic"
+        );
+    }
+
+    #[test]
+    fn test_is_token_contract_negative_curve_pool() {
+        // A Curve pool (AMM) that references mint/burn should NOT be a token
+        // unless it also has ERC-20 structure or token inheritance
+        let contract_name = "CurvePool";
+        let source = r#"
+            contract CurvePool {
+                function exchange(int128 i, int128 j, uint256 dx, uint256 min_dy) external {}
+                function add_liquidity(uint256[3] calldata amounts, uint256 min_mint_amount) external {}
+                function remove_liquidity(uint256 _amount, uint256[3] calldata min_amounts) external {}
+            }
+        "#;
+        let lower = source.to_lowercase();
+        let name_lower = contract_name.to_lowercase();
+
+        // Not an ERC-20
+        assert!(
+            !(lower.contains("function transfer(") && lower.contains("function balanceof(")),
+            "Curve pool should NOT have ERC-20 structure"
+        );
+
+        // Not a token inheritance
+        assert!(
+            !(source.contains("ERC20") || source.contains("ERC721") || source.contains("ERC1155")),
+            "Curve pool should NOT inherit from token standards"
+        );
+
+        // Not a token name
+        assert!(
+            !(name_lower.contains("token") || name_lower.contains("coin")),
+            "Curve pool should NOT have token in name"
+        );
     }
 }

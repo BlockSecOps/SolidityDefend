@@ -248,6 +248,64 @@ impl CompoundCallbackChainDetector {
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
         ctx.contract.name.name.to_string()
     }
+
+    /// Detect ERC-4626 vault contracts to skip compound callback analysis.
+    ///
+    /// ERC-4626 vaults have mint/redeem/deposit/withdraw as standard operations.
+    /// These share names with Compound cToken operations but are fundamentally
+    /// different -- vault mint/redeem are share management, not lending operations.
+    /// Flagging these as compound callback chains is a false positive.
+    fn is_erc4626_vault(&self, ctx: &AnalysisContext) -> bool {
+        let source = &ctx.source_code;
+        let lower = source.to_lowercase();
+
+        // Explicit ERC-4626 markers
+        if source.contains("ERC4626") || source.contains("IERC4626") || source.contains("ERC-4626")
+        {
+            return true;
+        }
+
+        // Compound-specific markers that indicate this IS a Compound protocol
+        let has_compound_marker = lower.contains("ctoken")
+            || lower.contains("comptroller")
+            || lower.contains("dotransferin")
+            || lower.contains("dotransferout")
+            || lower.contains("accounttokens")
+            || lower.contains("totalborrow")
+            || lower.contains("borrowrate")
+            || lower.contains("exchangeratestored");
+
+        // If it has Compound markers, it is NOT an ERC-4626 vault
+        if has_compound_marker {
+            return false;
+        }
+
+        // ERC-4626 standard function signatures
+        let has_deposit = source.contains("function deposit(");
+        let has_redeem = source.contains("function redeem(");
+        let has_total_assets = source.contains("function totalAssets(");
+        let has_shares = lower.contains("shares");
+
+        // ERC-4626 vault: has standard vault functions + shares + totalAssets
+        let vault_function_count = [has_deposit, has_redeem, has_total_assets]
+            .iter()
+            .filter(|&&x| x)
+            .count();
+
+        if vault_function_count >= 2 && has_shares {
+            return true;
+        }
+
+        // Vault-like: has deposit + totalAssets + share conversion patterns
+        let has_convert = lower.contains("converttoshares") || lower.contains("converttoassets");
+        let has_preview = lower.contains("previewdeposit") || lower.contains("previewredeem");
+
+        if has_deposit && has_total_assets && (has_convert || has_preview) {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl Detector for CompoundCallbackChainDetector {
@@ -284,6 +342,14 @@ impl Detector for CompoundCallbackChainDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip ERC-4626 vault contracts.
+        // ERC-4626 vaults have standard deposit/withdraw/mint/redeem functions
+        // that share names with Compound cToken operations. These are by-design
+        // vault callbacks, not compound callback chain vulnerabilities.
+        if self.is_erc4626_vault(ctx) {
             return Ok(findings);
         }
 
@@ -424,10 +490,118 @@ impl Detector for CompoundCallbackChainDetector {
 mod tests {
     use super::*;
 
+    fn create_context(source: &str) -> AnalysisContext<'static> {
+        crate::types::test_utils::create_test_context(source)
+    }
+
     #[test]
     fn test_detector_properties() {
         let detector = CompoundCallbackChainDetector::new();
         assert_eq!(detector.name(), "Compound Callback Chain");
         assert_eq!(detector.default_severity(), Severity::High);
+    }
+
+    // -- ERC-4626 vault exclusion tests --
+
+    #[test]
+    fn test_erc4626_explicit_marker_detected() {
+        let detector = CompoundCallbackChainDetector::new();
+        let ctx = create_context(
+            "contract MyVault is ERC4626 { \
+             function deposit(uint256 assets) public {} \
+             function mint(uint256 shares) public {} \
+             function redeem(uint256 shares) public {} \
+             }",
+        );
+        assert!(detector.is_erc4626_vault(&ctx));
+    }
+
+    #[test]
+    fn test_erc4626_vault_like_detected() {
+        let detector = CompoundCallbackChainDetector::new();
+        let ctx = create_context(
+            "contract SecureVault { \
+             uint256 public totalSupply; \
+             function deposit(uint256 assets, address receiver) public returns (uint256 shares) {} \
+             function redeem(uint256 shares, address receiver, address owner) public returns (uint256 assets) {} \
+             function totalAssets() public view returns (uint256) { return asset.balanceOf(address(this)); } \
+             function mint(uint256 shares) public returns (uint256 assets) {} \
+             }",
+        );
+        assert!(detector.is_erc4626_vault(&ctx));
+    }
+
+    #[test]
+    fn test_compound_protocol_not_excluded() {
+        let detector = CompoundCallbackChainDetector::new();
+        // Actual Compound-style contract should NOT be excluded
+        let ctx = create_context(
+            "contract CToken { \
+             address public comptroller; \
+             uint256 public totalBorrows; \
+             function mint(uint256 amount) external { \
+                 doTransferIn(msg.sender, amount); \
+                 accountTokens[msg.sender] += tokens; \
+                 totalSupply += tokens; \
+             } \
+             function redeem(uint256 tokens) external { \
+                 doTransferOut(msg.sender, amount); \
+                 accountTokens[msg.sender] -= tokens; \
+                 totalSupply -= tokens; \
+             } \
+             function borrow(uint256 amount) external { \
+                 uint256 rate = borrowRate; \
+                 doTransferOut(msg.sender, amount); \
+             } \
+             }",
+        );
+        assert!(!detector.is_erc4626_vault(&ctx));
+    }
+
+    #[test]
+    fn test_erc4626_vault_with_mint_redeem_excluded() {
+        let detector = CompoundCallbackChainDetector::new();
+        // ERC-4626 vault with mint/redeem (which overlap with Compound operations)
+        let ctx = create_context(
+            "contract VulnerableVault_HookReentrancy { \
+             IERC20 public immutable asset; \
+             uint256 public totalSupply; \
+             mapping(address => uint256) public balanceOf; \
+             function deposit(uint256 assets) public returns (uint256 shares) { \
+                 shares = totalSupply == 0 ? assets : (assets * totalSupply) / asset.balanceOf(address(this)); \
+                 asset.transferFrom(msg.sender, address(this), assets); \
+                 balanceOf[msg.sender] += shares; \
+                 totalSupply += shares; \
+             } \
+             function mint(uint256 shares) public returns (uint256 assets) { \
+                 assets = totalSupply == 0 ? shares : (shares * asset.balanceOf(address(this))) / totalSupply; \
+                 asset.transferFrom(msg.sender, address(this), assets); \
+                 balanceOf[msg.sender] += shares; \
+                 totalSupply += shares; \
+             } \
+             function redeem(uint256 shares) public returns (uint256 assets) { \
+                 assets = (shares * asset.balanceOf(address(this))) / totalSupply; \
+                 asset.transfer(msg.sender, assets); \
+                 balanceOf[msg.sender] -= shares; \
+                 totalSupply -= shares; \
+             } \
+             function totalAssets() public view returns (uint256) { return asset.balanceOf(address(this)); } \
+             }",
+        );
+        assert!(detector.is_erc4626_vault(&ctx));
+    }
+
+    #[test]
+    fn test_erc4626_with_preview_functions_excluded() {
+        let detector = CompoundCallbackChainDetector::new();
+        let ctx = create_context(
+            "contract MyVault { \
+             function deposit(uint256 assets) public returns (uint256 shares) {} \
+             function totalAssets() public view returns (uint256) {} \
+             function previewDeposit(uint256 assets) public view returns (uint256) {} \
+             function _convertToShares(uint256 assets) internal view returns (uint256) {} \
+             }",
+        );
+        assert!(detector.is_erc4626_vault(&ctx));
     }
 }
