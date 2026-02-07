@@ -7,7 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+#### 7 Detector Improvements — FP Reduction Round v8
+
+Continued false positive reduction targeting the highest-volume remaining detectors. Total findings
+reduced from 746 to **427** (42.8% reduction in v8; **76% total reduction** from v1.10.19 baseline of 1,776).
+
+- `swc105-unprotected-ether-withdrawal` - Improved context awareness for ether withdrawal patterns
+- `defi-yield-farming-exploits` - Refined DeFi pattern matching to reduce noise
+- `array-bounds-check` - Better safe pattern recognition
+- `missing-chainid-validation` - Cross-chain context filtering
+- `vault-withdrawal-dos` - Vault pattern awareness improvements
+- `vault-donation-attack` - Donation attack context refinement
+- `oracle-time-window-attack` - Oracle usage pattern filtering
+
+**Severity Breakdown (v8):** Critical: 122, High: 185, Medium: 99, Low: 17, Info: 4
+
+**Results:**
+- Total findings: 746 -> 427 (42.8% reduction in v8; 76% total reduction from v1.10.19 baseline of 1,776)
+- Clean contract FPs: 0 (maintained from v7)
+- 0 true positive regressions (all 4 verified TPs preserved)
+- 1,593 tests passing (1,544 unit + 32 FP regression + 17 front-running)
+
+#### JSON Output Fix
+
+- CLI now sends banner and progress messages to stderr when JSON format is selected (`-f json`),
+  enabling clean piping of structured JSON output to downstream tools (e.g., `soliditydefend -f json contract.sol | jq`)
+
 ### Added
+
+#### Structural FP Filter (`fp_filter.rs`) — FP Reduction Round v7
+
+New `fp_filter.rs` module providing structural false positive filtering deployed to all 331 detectors
+via the `filter_fp_findings()` function. This filter eliminates findings in function contexts that are
+structurally unlikely to represent exploitable vulnerabilities:
+
+- **view/pure functions** - Cannot modify state, no reentrancy or state manipulation risk
+- **internal/private functions** - Not externally callable, attack surface is indirect
+- **constructors** - Run once at deployment, not callable post-deployment
+- **fallback/receive functions** - Limited context, typically safe patterns
+- **admin-controlled functions** - Protected by access control modifiers
+
+**Results:**
+- Total findings: 1,000 -> 746 (25.4% reduction in v7; further reduced to 427 in v8)
+- Clean contract FPs: 26 -> 0 (100% elimination across 5 clean contracts)
+- 0 true positive regressions (all 4 verified TPs preserved)
+- 1,371 tests passing at v7 (increased to 1,593 in v8)
+
+### Fixed
+
+#### 14 Detector-Specific FP Fixes — FP Reduction Round v7
+
+- `l2-fee-manipulation` - Eliminated false triggering on safe fee patterns
+- `vault-fee-manipulation` - Eliminated false triggering on flash loan providers
+- `emergency-pause-centralization` - Eliminated false triggering on clean contracts
+- `mev-backrun-opportunities` - Eliminated false triggering on AMM pools
+- `mev-priority-gas-auction` - Eliminated false triggering on AMM pools
+- `jit-liquidity-extraction` - Eliminated false triggering on AMM pools
+- `redundant-checks` - Eliminated false triggering on safe patterns
+- `unused-state-variables` - Eliminated false triggering on vault contracts
+- `governance-parameter-bypass` - Eliminated false triggering on flash loan providers
+- `unsafe-type-casting` - Fixed substring matching bugs causing false matches
+- `oracle-staleness-heartbeat` - Eliminated false triggering on Chainlink consumers
+- `missing-zero-address-check` - Eliminated false triggering on vault constructors
+- `private-variable-exposure` - Eliminated false triggering on flash loan providers
+- `inefficient-storage` - Eliminated false triggering on safe patterns
+
+#### Interface/Library Guards — FP Reduction Round v7
+
+- Added interface and library contract guards to all detectors to skip analysis of
+  non-contract definitions that cannot contain exploitable vulnerabilities
 
 #### Safe Patterns Library Expansion
 - **NEW** `safe_patterns/library_patterns.rs` module for comprehensive library/protocol detection

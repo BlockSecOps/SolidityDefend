@@ -31,6 +31,22 @@ use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
 /// - CWE-670: Always-Incorrect Control Flow Implementation
 ///
 /// **Severity:** Medium
+///
+/// **FP Reduction v2 (comprehensive):**
+/// - Skip contracts that have no fallback or receive function
+/// - Skip view/pure functions (read-only, cannot shadow state-changing logic)
+/// - Skip internal/private functions
+/// - Skip standard proxy patterns: Diamond (EIP-2535), UUPS (EIP-1822), Beacon
+/// - Skip proxy admin functions with proper access control (onlyOwner, onlyAdmin, etc.)
+/// - Skip receive functions with empty bodies (intentional ETH acceptance)
+/// - Skip fallbacks that explicitly revert (not routing calls to implementation)
+///
+/// **FP Reduction v3:**
+/// - Skip contracts inheriting from known proxy base contracts (OpenZeppelin, etc.)
+/// - Skip Transparent Proxy pattern with admin-separation in inheritance chain
+/// - Skip EIP-1967 storage slot patterns with _beforeFallback() / _delegate() helpers
+/// - Skip minimal proxy (EIP-1167 clone) contracts
+/// - Skip fallback-only proxy contracts (no public/external non-fallback functions)
 pub struct FallbackFunctionShadowingDetector {
     base: BaseDetector,
 }
@@ -66,6 +82,18 @@ impl FallbackFunctionShadowingDetector {
         }
     }
 
+    /// Check if contract has any fallback or receive function.
+    /// FP Reduction: If a proxy contract has no fallback/receive, it cannot
+    /// perform delegation, so function shadowing is not applicable.
+    fn has_fallback_or_receive(&self, ctx: &AnalysisContext) -> bool {
+        ctx.get_functions().iter().any(|f| {
+            matches!(
+                f.function_type,
+                ast::FunctionType::Fallback | ast::FunctionType::Receive
+            )
+        })
+    }
+
     /// Check if contract looks like a proxy
     /// FP Reduction: Uses contract-scoped source instead of file-level source
     /// to avoid flagging non-proxy contracts that happen to share a file with a proxy
@@ -91,12 +119,190 @@ impl FallbackFunctionShadowingDetector {
         false
     }
 
+    /// Check if contract is a Diamond proxy (EIP-2535).
+    /// FP Reduction: Diamond proxies intentionally route selectors through a storage
+    /// mapping (selectorToFacet). This is by-design and not function shadowing.
+    fn is_diamond_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let source = self.get_contract_source(ctx.contract, ctx);
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Detect Diamond proxy by name
+        if contract_name.contains("diamond") {
+            return true;
+        }
+
+        // Detect Diamond proxy by storage pattern
+        if source.contains("diamond.standard.diamond.storage")
+            || source.contains("selectorToFacet")
+            || source.contains("selectorToFacetAndPosition")
+            || source.contains("IDiamondCut")
+            || source.contains("IDiamondLoupe")
+            || source.contains("facetAddress")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if contract is a UUPS proxy (EIP-1822).
+    /// FP Reduction: UUPS proxies have NO admin functions in the proxy itself;
+    /// all upgrade logic lives in the implementation. A minimal UUPS proxy only has
+    /// fallback + receive + constructor, so there is nothing to shadow.
+    fn is_uups_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        if contract_name.contains("uups") {
+            return true;
+        }
+
+        // UUPS pattern: proxy has EIP-1967 slots but NO public/external admin functions
+        // (only fallback, receive, constructor, and private helpers)
+        let source = self.get_contract_source(ctx.contract, ctx);
+        if source.contains("eip1967.proxy.implementation") {
+            let has_admin_functions = ctx.get_functions().iter().any(|f| {
+                matches!(
+                    f.visibility,
+                    ast::Visibility::Public | ast::Visibility::External
+                ) && !matches!(
+                    f.function_type,
+                    ast::FunctionType::Fallback
+                        | ast::FunctionType::Receive
+                        | ast::FunctionType::Constructor
+                )
+            });
+            if !has_admin_functions {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if contract is a Beacon proxy.
+    /// FP Reduction: Beacon proxies get their implementation from a separate beacon
+    /// contract. They have no admin functions in the proxy itself.
+    fn is_beacon_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let contract_name = ctx.contract.name.name.to_lowercase();
+        let source = self.get_contract_source(ctx.contract, ctx);
+
+        if contract_name.contains("beacon") {
+            return true;
+        }
+
+        // Beacon pattern: uses IBeacon interface to get implementation
+        if source.contains("IBeacon") && source.contains("implementation") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if contract is an immutable proxy (implementation cannot change).
+    /// FP Reduction: Immutable proxies have a fixed implementation set at construction
+    /// time. They cannot be upgraded and have minimal proxy interface.
+    fn is_immutable_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let source = self.get_contract_source(ctx.contract, ctx);
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        if contract_name.contains("immutable") {
+            return true;
+        }
+
+        // Immutable pattern: uses `immutable` keyword for implementation address
+        if source.contains("immutable implementation")
+            || source.contains("address public immutable")
+        {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if contract inherits from a known proxy base contract.
+    /// FP Reduction v3: OpenZeppelin and other standard proxy base contracts
+    /// have well-audited fallback routing. Contracts inheriting from them
+    /// follow established patterns and should not be flagged.
+    fn inherits_known_proxy_base(&self, ctx: &AnalysisContext) -> bool {
+        let source = self.get_contract_source(ctx.contract, ctx);
+
+        // OpenZeppelin proxy base contracts
+        let known_bases = [
+            "TransparentUpgradeableProxy",
+            "ERC1967Proxy",
+            "ERC1967Upgrade",
+            "UUPSUpgradeable",
+            "BeaconProxy",
+            "UpgradeableBeacon",
+            "ProxyAdmin",
+            "Proxy", // OpenZeppelin abstract Proxy base
+            "MinimalForwarder",
+        ];
+
+        // Check inheritance: `contract X is KnownBase` or `contract X is A, KnownBase`
+        for base in &known_bases {
+            // Check "is BaseContract" patterns in contract header
+            if source.contains(&format!("is {}", base))
+                || source.contains(&format!("is {}", base))
+                || source.contains(&format!(", {}", base))
+                || source.contains(&format!(", {} ", base))
+            {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Check if contract is a minimal proxy (EIP-1167 clone).
+    /// FP Reduction v3: Minimal proxies are created by clone factories and have
+    /// a fixed bytecode pattern. They have no admin functions and cannot be
+    /// upgraded. Flagging them is always a false positive.
+    fn is_minimal_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let source = self.get_contract_source(ctx.contract, ctx);
+        let contract_name = ctx.contract.name.name.to_lowercase();
+
+        // Name-based detection
+        if contract_name.contains("clone") || contract_name.contains("minimal") {
+            return true;
+        }
+
+        // EIP-1167 bytecode pattern (hex prefix of minimal proxy bytecode)
+        if source.contains("363d3d373d3d3d363d73") || source.contains("3d602d80600a3d3981f3") {
+            return true;
+        }
+
+        // OpenZeppelin Clones library usage
+        if source.contains("Clones.clone") || source.contains("Clones.cloneDeterministic") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if the proxy contract is a fallback-only proxy with no public/external
+    /// non-fallback functions beyond constructor.
+    /// FP Reduction v3: A proxy with only fallback+receive+constructor has nothing
+    /// to shadow. All calls go through fallback to the implementation.
+    fn is_fallback_only_proxy(&self, ctx: &AnalysisContext) -> bool {
+        let has_non_fallback_public = ctx.get_functions().iter().any(|f| {
+            matches!(
+                f.visibility,
+                ast::Visibility::Public | ast::Visibility::External
+            ) && !matches!(
+                f.function_type,
+                ast::FunctionType::Fallback
+                    | ast::FunctionType::Receive
+                    | ast::FunctionType::Constructor
+            )
+        });
+
+        !has_non_fallback_public
+    }
+
     /// Check if a function is a standard proxy admin/infrastructure function
     /// that is DESIGNED to exist in the proxy contract itself.
     /// These are NOT shadowing -- they are core proxy functionality.
-    /// Note: Not currently used in has_shadowing_risk to avoid false negatives
-    /// on non-transparent proxy contracts that define these functions.
-    #[allow(dead_code)]
     fn is_standard_proxy_function(&self, func_name: &str, func_source: &str) -> bool {
         // Standard proxy admin functions that modify proxy state (with access control)
         let proxy_admin_functions = [
@@ -128,8 +334,6 @@ impl FallbackFunctionShadowingDetector {
     }
 
     /// Check if function has any form of access control
-    /// Used by is_standard_proxy_function for proxy admin function identification
-    #[allow(dead_code)]
     fn has_access_control(&self, func_source: &str) -> bool {
         // Modifier-based access control
         func_source.contains("onlyOwner")
@@ -162,6 +366,32 @@ impl FallbackFunctionShadowingDetector {
             _ => {}
         }
 
+        // FP Reduction: Skip view/pure functions entirely.
+        // View/pure functions only read state -- they read the proxy's own state
+        // (e.g., implementation(), admin()) and do not shadow state-changing
+        // implementation functions.
+        if matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) {
+            return None;
+        }
+
+        // FP Reduction: Skip fallback/receive function types -- these are checked
+        // separately by has_hardcoded_selectors and has_receive_shadowing
+        if matches!(
+            function.function_type,
+            ast::FunctionType::Fallback | ast::FunctionType::Receive
+        ) {
+            return None;
+        }
+
+        // FP Reduction: Skip constructors -- they execute once at deployment
+        // and cannot shadow implementation functions
+        if matches!(function.function_type, ast::FunctionType::Constructor) {
+            return None;
+        }
+
         // Check for common proxy admin functions that might shadow implementation
         let risky_function_names = [
             "upgrade",
@@ -185,14 +415,30 @@ impl FallbackFunctionShadowingDetector {
             if func_name.contains(risky_name) {
                 // Check if this is in a proxy contract
                 if self.is_proxy_contract(ctx) {
-                    // FP Reduction: Check for broader access control patterns,
-                    // not just ifAdmin modifier
-                    if !self.has_if_admin_pattern(&source, ctx) {
-                        return Some(format!(
-                            "Function '{}' may shadow implementation's function. In transparent proxies, use ifAdmin pattern to separate admin and user calls",
-                            function.name.name
-                        ));
+                    // FP Reduction: If the function is a standard proxy admin function
+                    // with proper access control, it is intentional proxy infrastructure,
+                    // not shadowing.
+                    if self.is_standard_proxy_function(&func_name, &source) {
+                        return None;
                     }
+
+                    // FP Reduction: If the function has any form of access control
+                    // (onlyOwner, onlyAdmin, require(msg.sender == ...)), the developer
+                    // intentionally restricted it, reducing shadowing risk.
+                    if self.has_access_control(&source) {
+                        return None;
+                    }
+
+                    // FP Reduction: Check for broader transparent proxy admin-separation
+                    // patterns (ifAdmin modifier, admin check in fallback, etc.)
+                    if self.has_if_admin_pattern(&source, ctx) {
+                        return None;
+                    }
+
+                    return Some(format!(
+                        "Function '{}' may shadow implementation's function. In transparent proxies, use ifAdmin pattern to separate admin and user calls",
+                        function.name.name
+                    ));
                 }
             }
         }
@@ -213,6 +459,20 @@ impl FallbackFunctionShadowingDetector {
             function.function_type,
             ast::FunctionType::Fallback | ast::FunctionType::Receive
         ) {
+            return None;
+        }
+
+        // FP Reduction: Diamond proxies use storage-based selector routing via
+        // selectorToFacet mapping. This is the recommended approach and should
+        // not be flagged even though msg.sig is referenced.
+        if self.is_diamond_proxy(ctx) {
+            return None;
+        }
+
+        // FP Reduction: If the fallback uses a selector whitelist check
+        // (e.g., require(allowedSelectors[selector])), this is a security pattern,
+        // not hardcoded selector interception.
+        if source.contains("allowedSelectors") || source.contains("whitelistedSelectors") {
             return None;
         }
 
@@ -270,6 +530,28 @@ impl FallbackFunctionShadowingDetector {
             return true;
         }
 
+        // FP Reduction: Check for admin-separation in the fallback function itself.
+        // If the fallback blocks admin calls (transparent proxy pattern), the contract
+        // is properly separating admin/user interfaces.
+        let fallback_has_admin_separation = ctx.get_functions().iter().any(|f| {
+            if matches!(f.function_type, ast::FunctionType::Fallback) {
+                let fallback_source = self.get_function_source(f, ctx);
+                // Transparent proxy patterns in fallback:
+                // - require(msg.sender != _getAdmin(), ...)
+                // - if (msg.sender == _getAdmin()) { return; }
+                fallback_source.contains("msg.sender != _getAdmin")
+                    || fallback_source.contains("msg.sender == _getAdmin")
+                    || fallback_source.contains("msg.sender != admin")
+                    || fallback_source.contains("msg.sender == admin")
+            } else {
+                false
+            }
+        });
+
+        if fallback_has_admin_separation {
+            return true;
+        }
+
         false
     }
 
@@ -287,12 +569,36 @@ impl FallbackFunctionShadowingDetector {
         }
     }
 
+    /// Check if a receive function body is empty or minimal (just accepts ETH).
+    /// FP Reduction: An empty receive() function like `receive() external payable {}`
+    /// is a common pattern to accept ETH. It does not shadow any implementation logic
+    /// because it only triggers on plain ETH transfers with no calldata.
+    fn is_empty_receive(&self, function: &ast::Function<'_>, ctx: &AnalysisContext) -> bool {
+        let source = self.get_function_source(function, ctx);
+
+        // Trim the source and check if body is effectively empty
+        // Patterns: `receive() external payable {}` or with modifiers
+        let trimmed = source
+            .replace("receive", "")
+            .replace("external", "")
+            .replace("payable", "")
+            .replace("nonReentrant", "")
+            .replace("whenNotPaused", "")
+            .replace("()", "");
+        let trimmed = trimmed.trim();
+
+        // Empty body: just braces
+        trimmed == "{}" || trimmed == "{ }" || trimmed.is_empty()
+    }
+
     /// Check if receive function exists alongside fallback
     /// FP Reduction: Skip receive functions that delegate to the implementation
     /// (this is proper transparent proxy behavior, not shadowing)
     fn has_receive_shadowing(&self, ctx: &AnalysisContext) -> Option<String> {
         let mut has_receive = false;
         let mut receive_delegates = false;
+        let mut receive_is_empty = false;
+        let mut receive_calls_fallback = false;
         let mut has_fallback_with_delegatecall = false;
 
         for function in ctx.get_functions() {
@@ -303,6 +609,14 @@ impl FallbackFunctionShadowingDetector {
                     // FP Reduction: If receive() delegates to implementation, it's not shadowing
                     if source.contains("_delegate") || source.contains("delegatecall") {
                         receive_delegates = true;
+                    }
+                    // FP Reduction: If receive() is empty, it just accepts ETH
+                    if self.is_empty_receive(function, ctx) {
+                        receive_is_empty = true;
+                    }
+                    // FP Reduction: If receive() calls _fallback(), it routes to implementation
+                    if source.contains("_fallback") {
+                        receive_calls_fallback = true;
                     }
                 }
                 ast::FunctionType::Fallback => {
@@ -318,6 +632,18 @@ impl FallbackFunctionShadowingDetector {
         // FP Reduction: If receive() delegates to implementation, it's not shadowing
         // This is the correct transparent proxy pattern
         if receive_delegates {
+            return None;
+        }
+
+        // FP Reduction: If receive() calls _fallback() which delegates, it's not shadowing
+        if receive_calls_fallback {
+            return None;
+        }
+
+        // FP Reduction: If receive() has an empty body, it simply accepts ETH.
+        // This is standard practice in proxies (UUPS, Beacon, etc.) and does not
+        // shadow any implementation logic.
+        if receive_is_empty {
             return None;
         }
 
@@ -367,9 +693,75 @@ impl Detector for FallbackFunctionShadowingDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip if not a proxy contract
         if !self.is_proxy_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip if contract has no fallback or receive function.
+        // Without a fallback/receive, the contract cannot delegate calls to an
+        // implementation, so function shadowing is not possible.
+        if !self.has_fallback_or_receive(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip Diamond proxies entirely.
+        // Diamond proxies (EIP-2535) use a storage-based mapping of selectors to facets.
+        // Functions like facets(), facetAddress(), diamondCut() are part of the Diamond
+        // standard and are intentional, not shadowing.
+        if self.is_diamond_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip UUPS proxies.
+        // UUPS proxies (EIP-1822) have NO admin functions in the proxy itself.
+        // All upgrade logic lives in the implementation contract.
+        if self.is_uups_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip Beacon proxies.
+        // Beacon proxies get their implementation from a beacon contract.
+        // They typically have no admin functions in the proxy.
+        if self.is_beacon_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip Immutable proxies.
+        // Immutable proxies have a fixed implementation set at deployment.
+        // They cannot be upgraded and have minimal proxy interface.
+        if self.is_immutable_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v3: Skip contracts inheriting from known proxy base contracts.
+        // OpenZeppelin TransparentUpgradeableProxy, ERC1967Proxy, etc. have
+        // well-audited fallback routing. Inherited patterns are safe by design.
+        if self.inherits_known_proxy_base(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v3: Skip minimal proxies (EIP-1167 clones).
+        // These have fixed bytecode with no admin functions.
+        if self.is_minimal_proxy(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v3: Skip fallback-only proxies.
+        // If the proxy has no public/external functions besides fallback/receive/constructor,
+        // there is nothing to shadow. All calls route through fallback to implementation.
+        if self.is_fallback_only_proxy(ctx) {
             return Ok(findings);
         }
 
@@ -440,6 +832,7 @@ impl Detector for FallbackFunctionShadowingDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

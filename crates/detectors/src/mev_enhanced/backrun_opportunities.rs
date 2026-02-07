@@ -60,6 +60,16 @@ impl Detector for MEVBackrunOpportunitiesDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let lower = ctx.source_code.to_lowercase();
 
         // Check for state-changing operations
@@ -143,8 +153,13 @@ impl Detector for MEVBackrunOpportunitiesDetector {
         }
 
         // Pattern 4: Rebalancing operations
-        let has_rebalance =
-            lower.contains("rebalance") || lower.contains("reweight") || lower.contains("adjust");
+        // FP Reduction: Only match standalone function/keyword patterns, not substrings
+        // in variable names (e.g., "balance0Adjusted" should not match "adjust")
+        let has_rebalance = lower.contains("function rebalance")
+            || lower.contains("function reweight")
+            || lower.contains("function adjust")
+            || lower.contains("rebalance(")
+            || lower.contains("reweight(");
 
         if has_rebalance {
             let finding = self.base.create_finding(
@@ -161,6 +176,7 @@ impl Detector for MEVBackrunOpportunitiesDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

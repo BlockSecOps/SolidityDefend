@@ -499,6 +499,16 @@ impl Detector for IntentSettlementValidationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Only run on intent contracts
         if !is_intent_contract(ctx) {
@@ -517,6 +527,7 @@ impl Detector for IntentSettlementValidationDetector {
         // Check contract-level order ID handling
         findings.extend(self.check_order_id_handling(ctx));
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

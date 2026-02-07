@@ -198,7 +198,16 @@ impl GovernanceParameterBypassDetector {
                     // Check for access control modifiers on the setter itself
                     let has_access_ctrl = self.has_access_control(trimmed);
 
-                    if !has_timelock_check && !has_timelock && !has_access_ctrl {
+                    // FP Reduction: Skip fee setters that have explicit bounds checks.
+                    // require(newFee <= MAX_FEE) or similar bounds enforcement is
+                    // sufficient protection for non-governance fee parameters.
+                    let has_fee_bounds = func_body.contains("MAX_FEE")
+                        || func_body.contains("MAX_RATE")
+                        || func_body.contains("maxFee")
+                        || func_body.contains("FEE_LIMIT")
+                        || (func_body.contains("require(") && func_body.contains("<="));
+
+                    if !has_timelock_check && !has_timelock && !has_access_ctrl && !has_fee_bounds {
                         let issue =
                             "No timelock protection on governance parameter setter".to_string();
                         findings.push((line_num as u32 + 1, func_name, issue));
@@ -347,6 +356,16 @@ impl Detector for GovernanceParameterBypassDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
@@ -403,6 +422,7 @@ impl Detector for GovernanceParameterBypassDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

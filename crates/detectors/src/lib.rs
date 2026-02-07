@@ -1,5 +1,6 @@
 // Core detector framework
 pub mod detector;
+pub mod fp_filter;
 pub mod registry;
 pub mod types;
 
@@ -362,6 +363,7 @@ pub use detector::{
     AstAnalyzer, BaseDetector, ConfigurableDetector, DataFlowAnalyzer, Detector, DetectorCategory,
     MetricsDetector, TaintAnalyzer,
 };
+pub use fp_filter::FpFilter;
 pub use registry::{DetectorRegistry, DetectorRegistryBuilder, RegistryConfig};
 pub use types::{
     AnalysisContext, AnalysisResult, AnalysisStats, Confidence, DetectorId, Finding, Severity,

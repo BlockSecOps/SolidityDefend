@@ -57,6 +57,27 @@ impl Detector for VaultFeeManipulationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip ERC-3156 flash loan providers.
+        // Flash loan fee mechanisms follow a standardized pattern (ERC-3156)
+        // and are not vault fee manipulation vulnerabilities.
+        let source = &ctx.source_code;
+        let is_flash_loan_provider = source.contains("CALLBACK_SUCCESS")
+            || source.contains("ERC3156")
+            || source.contains("IERC3156FlashLender")
+            || (source.contains("flashLoan") && source.contains("onFlashLoan"));
+        if is_flash_loan_provider {
+            return Ok(findings);
+        }
 
         // Phase 2 Enhancement: Multi-level safe pattern detection with dynamic confidence
 
@@ -145,6 +166,7 @@ impl Detector for VaultFeeManipulationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -188,6 +210,19 @@ impl VaultFeeManipulationDetector {
             || func_source.contains("delay")
             || func_source.contains("scheduledTime")
             || func_source.contains("effectiveTime");
+
+        let has_fee_bounds = func_source.contains("require(")
+            && (func_source.contains("<= MAX")
+                || func_source.contains("<= max")
+                || func_source.contains("MAX_FEE")
+                || func_source.contains("FEE_LIMIT")
+                || func_source.contains("maxFee"));
+
+        if updates_fee && !has_timelock && has_fee_bounds {
+            // Fee setter has bounds but no timelock — reduced concern
+            // Skip this finding for bounded fee setters
+            return None;
+        }
 
         if updates_fee && !has_timelock {
             return Some(

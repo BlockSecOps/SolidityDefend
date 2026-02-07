@@ -352,6 +352,16 @@ impl Detector for FlashmintTokenInflationDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Early exit: skip flash loan consumer/borrower contracts entirely.
         // These contracts use flash loans from external providers but do not
@@ -406,6 +416,7 @@ impl Detector for FlashmintTokenInflationDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

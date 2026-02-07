@@ -57,6 +57,16 @@ impl Detector for UnusedStateVariablesDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = ctx.source_code.as_str();
 
         // Extract state variables and their locations
@@ -115,6 +125,7 @@ impl Detector for UnusedStateVariablesDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -389,6 +400,11 @@ impl UnusedStateVariablesDetector {
             || name_lower.contains("__unused")
             || name_lower.contains("_placeholder")
         {
+            return true;
+        }
+
+        // Initialization tracking variables (OpenZeppelin Initializable pattern)
+        if name_lower == "_initialized" || name_lower == "initialized" || name_lower == "_initializing" {
             return true;
         }
 

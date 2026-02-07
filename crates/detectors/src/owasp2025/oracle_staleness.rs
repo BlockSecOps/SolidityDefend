@@ -60,6 +60,16 @@ impl Detector for OracleStalenesDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
 
         // Check for Chainlink usage
@@ -77,7 +87,12 @@ impl Detector for OracleStalenesDetector {
         let has_heartbeat = source.contains("heartbeat")
             || source.contains("HEARTBEAT")
             || source.contains("maxDelay")
-            || source.contains("MAX_DELAY");
+            || source.contains("MAX_DELAY")
+            || source.contains("MAX_STALENESS")
+            || source.contains("STALENESS")
+            || source.contains("maxStaleness")
+            || source.contains("MAX_AGE")
+            || source.contains("maxAge");
 
         // Chainlink without staleness check
         if has_chainlink && has_latest_round && !has_staleness_check {
@@ -176,7 +191,11 @@ impl Detector for OracleStalenesDetector {
         // Using latestRoundData without all checks
         if has_latest_round {
             let has_round_check = source.contains("answeredInRound") && source.contains("roundId");
-            let has_price_check = source.contains("price > 0") || source.contains("price >= 0");
+            let has_price_check = source.contains("price > 0") || source.contains("price >= 0")
+                || source.contains("price <= 0") || source.contains("price < 0")
+                || source.contains("answer > 0") || source.contains("answer >= 0")
+                || source.contains("answer <= 0") || source.contains("answer < 0")
+                || source.contains("InvalidPrice") || source.contains("invalid price");
 
             if !has_round_check || !has_price_check {
                 let finding = self.base.create_finding_with_severity(
@@ -220,6 +239,7 @@ impl Detector for OracleStalenesDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

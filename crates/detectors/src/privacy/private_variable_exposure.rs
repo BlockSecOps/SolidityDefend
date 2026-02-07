@@ -61,6 +61,16 @@ impl Detector for PrivateVariableExposureDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let source = &ctx.source_code;
         let lines: Vec<&str> = source.lines().collect();
 
@@ -87,7 +97,16 @@ impl Detector for PrivateVariableExposureDetector {
             // Check for private variables with sensitive names
             if line_lower.contains("private") {
                 for keyword in &sensitive_keywords {
-                    if line_lower.contains(keyword) {
+                    // Use word-boundary matching for short keywords to avoid
+                    // substring false positives (e.g., "pin" in "mapping")
+                    let is_match = if keyword.len() <= 4 {
+                        // For short keywords, require word boundaries
+                        line_lower.split(|c: char| !c.is_alphanumeric() && c != '_')
+                            .any(|word| word == *keyword)
+                    } else {
+                        line_lower.contains(keyword)
+                    };
+                    if is_match {
                         let finding = self.base.create_finding_with_severity(
                             ctx,
                             format!("Sensitive data '{}' in 'private' variable - all blockchain storage is publicly readable", keyword),
@@ -125,6 +144,7 @@ impl Detector for PrivateVariableExposureDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

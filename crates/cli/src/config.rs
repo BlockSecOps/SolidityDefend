@@ -330,7 +330,7 @@ impl SolidityDefendConfig {
                     Ok(loaded_config) => {
                         // Merge loaded config with defaults
                         config = Self::merge_configs(config, loaded_config);
-                        println!("Loaded configuration from: {}", path.display());
+                        eprintln!("Loaded configuration from: {}", path.display());
                         break;
                     }
                     Err(e) => {

@@ -58,6 +58,16 @@ impl Detector for InefficientStorageDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
         let contract_source = ctx.source_code.as_str();
 
         // Check for inefficient storage patterns at contract level
@@ -87,6 +97,7 @@ impl Detector for InefficientStorageDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -96,11 +107,156 @@ impl Detector for InefficientStorageDetector {
 }
 
 impl InefficientStorageDetector {
+    /// Check if a line contains a Solidity visibility keyword (`public`,
+    /// `private`, or `internal`) as a standalone word. This avoids false
+    /// positives where the keyword appears inside an identifier, e.g.
+    /// `publicInputs` should NOT match `public`.
+    fn has_visibility_keyword(line: &str) -> bool {
+        for keyword in &["public", "private", "internal"] {
+            let kw_bytes = keyword.as_bytes();
+            let line_bytes = line.as_bytes();
+            let kw_len = kw_bytes.len();
+            if line_bytes.len() < kw_len {
+                continue;
+            }
+            for i in 0..=(line_bytes.len() - kw_len) {
+                if &line_bytes[i..i + kw_len] == kw_bytes {
+                    let before_ok = if i == 0 {
+                        true
+                    } else {
+                        let c = line_bytes[i - 1] as char;
+                        !c.is_alphanumeric() && c != '_'
+                    };
+                    let after_ok = if i + kw_len >= line_bytes.len() {
+                        true
+                    } else {
+                        let c = line_bytes[i + kw_len] as char;
+                        !c.is_alphanumeric() && c != '_'
+                    };
+                    if before_ok && after_ok {
+                        return true;
+                    }
+                }
+            }
+        }
+        false
+    }
+
+    /// Check if the contract source represents an interface or library,
+    /// which have no storage layout and should be skipped entirely.
+    fn is_interface_or_library(source: &str) -> bool {
+        for line in source.lines() {
+            let trimmed = line.trim();
+            // Match top-level interface/library declarations
+            if (trimmed.starts_with("interface ") || trimmed.starts_with("library "))
+                && (trimmed.contains('{') || trimmed.ends_with('{'))
+            {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if the contract uses direct storage slot manipulation (EIP-1967,
+    /// Diamond storage, or similar patterns). These contracts intentionally
+    /// manage their own storage layout and should not be flagged.
+    fn uses_direct_storage_slots(source: &str) -> bool {
+        let lower = source.to_lowercase();
+        // EIP-1967 proxy storage slot patterns
+        lower.contains("bytes32(uint256(keccak256(")
+            || lower.contains("eip1967")
+            || lower.contains("erc1967")
+            // Diamond storage pattern
+            || lower.contains("diamondstorage")
+            || lower.contains("diamond_storage")
+            || lower.contains("diamond.storage")
+            // AppStorage pattern (Diamond/EIP-2535)
+            || lower.contains("appstorage")
+            // assembly sstore/sload direct slot usage
+            || (lower.contains("sstore(") && lower.contains("sload("))
+    }
+
+    /// Count standalone state variables in the contract source (excludes
+    /// constants, immutables, mappings, dynamic arrays, and struct members).
+    fn count_state_variables(source: &str) -> usize {
+        let mut count = 0;
+        let mut in_struct = false;
+        let mut in_function = false;
+        let mut brace_depth: i32 = 0;
+
+        for line in source.lines() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("struct ") {
+                in_struct = true;
+            }
+            if trimmed.starts_with("function ")
+                || trimmed.starts_with("constructor(")
+                || trimmed.starts_with("modifier ")
+            {
+                in_function = true;
+            }
+
+            for ch in trimmed.chars() {
+                if ch == '{' {
+                    brace_depth += 1;
+                } else if ch == '}' {
+                    brace_depth -= 1;
+                    if brace_depth <= 1 {
+                        in_struct = false;
+                        in_function = false;
+                    }
+                }
+            }
+
+            // Only count lines that look like state variable declarations
+            // at the contract level (brace_depth == 1, not inside struct/function)
+            if !in_struct
+                && !in_function
+                && brace_depth == 1
+                && (trimmed.contains("public")
+                    || trimmed.contains("private")
+                    || trimmed.contains("internal"))
+                && !trimmed.starts_with("//")
+                && !trimmed.starts_with("*")
+                && !trimmed.starts_with("/*")
+                && !trimmed.starts_with("function ")
+                && !trimmed.starts_with("event ")
+                && !trimmed.starts_with("error ")
+                && !trimmed.starts_with("modifier ")
+                && !trimmed.starts_with("constructor")
+                && trimmed.contains(';')
+            {
+                count += 1;
+            }
+        }
+        count
+    }
+
     fn check_storage_layout(&self, contract_source: &str) -> Option<Vec<(u32, String)>> {
+        // FP Reduction: Skip interfaces and libraries -- they have no storage layout
+        if Self::is_interface_or_library(contract_source) {
+            return None;
+        }
+
+        // FP Reduction: Skip contracts using direct storage slot manipulation
+        // (EIP-1967 proxies, Diamond storage) -- they manage layout explicitly
+        if Self::uses_direct_storage_slots(contract_source) {
+            return None;
+        }
+
         let lines: Vec<&str> = contract_source.lines().collect();
         let mut issues = Vec::new();
 
-        // Track boolean storage variables for Pattern 2
+        // FP Reduction: Count state variables early. Contracts with very few
+        // state variables (0-2) have no meaningful packing opportunity, so
+        // skip Patterns 1-3 (struct packing, boolean bitmap, small uint).
+        let state_var_count = Self::count_state_variables(contract_source);
+        let has_enough_vars_for_packing = state_var_count >= 3;
+
+        // Track boolean storage variables for Pattern 2, per-contract.
+        // FP Reduction: Booleans in different contracts cannot be packed together,
+        // so we reset tracking when a new contract/interface/library is found.
         let mut bool_storage_vars: Vec<(u32, &str)> = Vec::new();
 
         // Pattern 1: Unpacked structs (mixed sizes without optimization)
@@ -112,6 +268,27 @@ impl InefficientStorageDetector {
 
         for (line_idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+
+            // FP Reduction: When encountering a new contract/interface/library
+            // boundary, flush the current boolean tracking. Booleans in
+            // different contracts are separate storage layouts.
+            if (trimmed.starts_with("contract ")
+                || trimmed.starts_with("interface ")
+                || trimmed.starts_with("library "))
+                && (trimmed.contains('{') || trimmed.ends_with('{'))
+            {
+                // Emit finding for the previous contract's booleans if 3+
+                if bool_storage_vars.len() >= 3 && has_enough_vars_for_packing {
+                    issues.push((
+                        bool_storage_vars[0].0,
+                        format!(
+                            "{} boolean storage variables found. Consider packing into uint256 bitmap for gas savings",
+                            bool_storage_vars.len()
+                        )
+                    ));
+                }
+                bool_storage_vars.clear();
+            }
 
             if trimmed.starts_with("struct ") {
                 in_struct = true;
@@ -149,25 +326,33 @@ impl InefficientStorageDetector {
             }
 
             // Track boolean storage variables (only at contract level)
+            // FP Reduction: Also skip immutable booleans (not in storage slots)
+            // FP Reduction: Use word-boundary visibility check to avoid matching
+            // identifiers like "publicInputs" as visibility "public"
             if !in_struct
                 && trimmed.contains("bool ")
-                && (trimmed.contains("public")
-                    || trimmed.contains("private")
-                    || trimmed.contains("internal"))
+                && Self::has_visibility_keyword(trimmed)
                 && !trimmed.contains("mapping")
                 && !trimmed.contains("constant")
+                && !trimmed.contains("immutable")
             {
                 bool_storage_vars.push(((line_idx + 1) as u32, trimmed));
             }
 
             // Pattern 3: Small uint types as standalone storage variables
             // Only flag if it's clearly inefficient (not semantically meaningful)
+            // FP Reduction: Also skip immutable variables (not in storage slots),
+            // skip mappings/arrays (occupy full slots regardless of type),
+            // and skip if there aren't enough state vars for packing to matter
             if !in_struct
+                && has_enough_vars_for_packing
                 && (trimmed.contains("uint8 ")
                     || trimmed.contains("uint16 "))
-                && (trimmed.contains("public")
-                    || trimmed.contains("private")
-                    || trimmed.contains("internal"))
+                && Self::has_visibility_keyword(trimmed)
+                && !trimmed.contains("immutable")
+                && !trimmed.contains("constant")
+                && !trimmed.contains("mapping")  // mappings use full slots
+                && !trimmed.contains("[]")       // arrays use full slots
                 && !trimmed.contains("decimals") // uint8 for decimals is standard
                 && !trimmed.contains("version")  // uint8 for version is acceptable
                 && !trimmed.contains("nonce")    // small nonces are intentional
@@ -176,8 +361,11 @@ impl InefficientStorageDetector {
                 && !trimmed.contains("index")    // indices can be intentionally small
                 && !trimmed.contains("count")    // counts can be intentionally bounded
                 && !trimmed.contains("id")       // IDs can be intentionally small
-                && !trimmed.contains("type")
-            // type codes are often uint8
+                && !trimmed.contains("type")     // type codes are often uint8
+                && !trimmed.contains("support")  // e.g. uint8 support in governance
+                && !trimmed.contains("level")    // level indicators
+                && !trimmed.contains("flag")
+            // flag values
             {
                 issues.push((
                     (line_idx + 1) as u32,
@@ -188,13 +376,14 @@ impl InefficientStorageDetector {
             // Pattern 4: Constant-like variables stored in storage
             // Only flag if it looks like a hardcoded constant that never changes
             if trimmed.contains(" = ")
-                && (trimmed.contains("public") || trimmed.contains("private"))
+                && Self::has_visibility_keyword(trimmed)
                 && !trimmed.contains("constant")
                 && !trimmed.contains("immutable")
                 && !trimmed.contains("mapping")
                 && !trimmed.contains("address")  // addresses aren't constants
-                && !trimmed.contains("bool")
-            // bools set to false/true are state
+                && !trimmed.contains("bool")     // bools set to false/true are state
+                && !trimmed.contains("string")
+            // string literals are not numeric constants
             {
                 // Check for common constant patterns (large round numbers)
                 let is_constant_like = (trimmed.contains("= 1000")
@@ -202,6 +391,34 @@ impl InefficientStorageDetector {
                     || trimmed.contains("= 100000")
                     || trimmed.contains("= 1e"))
                     && !trimmed.contains("block.");
+
+                // FP Reduction: Exclude variables with multiplication/exponentiation
+                // expressions (e.g., "1000000 * 10**18") -- these are often initial
+                // supply values that change at runtime via mint/burn.
+                let has_arithmetic = trimmed.contains("* 10**")
+                    || trimmed.contains("* 1e")
+                    || trimmed.contains("**18")
+                    || trimmed.contains("**6");
+
+                // FP Reduction: Exclude variables whose names indicate they change
+                // at runtime (supply, balance, pool, price, reward, etc.)
+                let is_runtime_variable = {
+                    let lower = trimmed.to_lowercase();
+                    lower.contains("supply")
+                        || lower.contains("balance")
+                        || lower.contains("pool")
+                        || lower.contains("price")
+                        || lower.contains("reward")
+                        || lower.contains("total")
+                        || lower.contains("reserve")
+                        || lower.contains("amount")
+                        || lower.contains("stake")
+                        || lower.contains("deposit")
+                        || lower.contains("liquidity")
+                        || lower.contains("rebase")
+                        || lower.contains("multiplier")
+                        || lower.contains("factor")
+                };
 
                 // Exclude governance/configurable parameters that are intentionally
                 // stored in storage because they can be updated via admin functions.
@@ -221,9 +438,17 @@ impl InefficientStorageDetector {
                     || trimmed.contains("min")
                     || trimmed.contains("max")
                     || trimmed.contains("Max")
-                    || trimmed.contains("Min");
+                    || trimmed.contains("Min")
+                    || trimmed.contains("boost")
+                    || trimmed.contains("Boost")
+                    || trimmed.contains("window")
+                    || trimmed.contains("Window");
 
-                if is_constant_like && !is_governance_param {
+                if is_constant_like
+                    && !is_governance_param
+                    && !has_arithmetic
+                    && !is_runtime_variable
+                {
                     issues.push((
                         (line_idx + 1) as u32,
                         "Variable initialized with constant value but not marked as constant/immutable. Use constant or immutable".to_string()
@@ -233,7 +458,9 @@ impl InefficientStorageDetector {
         }
 
         // Pattern 2: Only flag booleans if there are 3+ that could be packed
-        if bool_storage_vars.len() >= 3 {
+        // FP Reduction: Also require enough state variables overall for packing
+        // to be a meaningful optimization
+        if bool_storage_vars.len() >= 3 && has_enough_vars_for_packing {
             issues.push((
                 bool_storage_vars[0].0,
                 format!(
@@ -307,6 +534,56 @@ impl InefficientStorageDetector {
         None
     }
 
+    /// Extract parameter names from a function signature.
+    /// For example, `function permit(address owner, address spender, uint256 value)`
+    /// would return `["owner", "spender", "value"]`.
+    fn extract_function_params(function_source: &str) -> Vec<String> {
+        let mut params = Vec::new();
+
+        // Collect lines until we find the opening brace to get the full signature
+        let mut sig = String::new();
+        for line in function_source.lines() {
+            sig.push_str(line.trim());
+            sig.push(' ');
+            if line.contains('{') {
+                break;
+            }
+        }
+
+        // Extract the parameter list between the first '(' and its matching ')'
+        if let Some(start) = sig.find('(') {
+            let after_paren = &sig[start + 1..];
+            let mut depth = 1;
+            let mut end_idx = after_paren.len();
+            for (i, ch) in after_paren.char_indices() {
+                if ch == '(' {
+                    depth += 1;
+                } else if ch == ')' {
+                    depth -= 1;
+                    if depth == 0 {
+                        end_idx = i;
+                        break;
+                    }
+                }
+            }
+            let param_str = &after_paren[..end_idx];
+            // Split by commas and extract parameter names
+            for param in param_str.split(',') {
+                let tokens: Vec<&str> = param.trim().split_whitespace().collect();
+                // Parameter format: <type> [storage|memory|calldata] <name>
+                // The name is the last token (if there are at least 2 tokens)
+                if tokens.len() >= 2 {
+                    let name = tokens.last().unwrap().trim();
+                    // Skip empty or non-identifier names
+                    if !name.is_empty() && name.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        params.push(name.to_string());
+                    }
+                }
+            }
+        }
+        params
+    }
+
     fn has_redundant_storage_reads(&self, function_source: &str) -> bool {
         // Skip view/pure functions -- gas optimization is less critical for read-only functions
         let first_lines: String = function_source
@@ -339,6 +616,24 @@ impl InefficientStorageDetector {
             return false;
         }
 
+        // FP Reduction: Skip ERC-2612 permit functions and similar standard
+        // EIP functions. These use parameter names like "owner" that collide
+        // with common state variable names. The repeated usage is of the
+        // function parameter, not a redundant storage read.
+        let func_name_lower = source_lower.lines().next().unwrap_or("").trim().to_string();
+        if func_name_lower.contains("permit")
+            || func_name_lower.contains("approve")
+            || func_name_lower.contains("_approve")
+        {
+            return false;
+        }
+
+        // FP Reduction: Extract function parameter names so we can exclude
+        // them from the state variable read check. For example, in
+        // `function foo(address owner, ...)`, "owner" is a parameter, not
+        // a storage read.
+        let param_names = Self::extract_function_params(function_source);
+
         let state_vars = ["owner", "totalSupply", "paused", "balance"];
 
         // Remove comments to avoid false positives
@@ -354,6 +649,13 @@ impl InefficientStorageDetector {
             .join("\n");
 
         for var in &state_vars {
+            // FP Reduction: If the state variable name matches a function
+            // parameter, skip it -- the references are to the parameter,
+            // not to storage.
+            if param_names.iter().any(|p| p == var) {
+                continue;
+            }
+
             // Use word-boundary matching to avoid substring false positives.
             // For example, "balance" should not match "balanceBefore", "balanceOf",
             // "balanceAfter", or ".balance" (address property).
@@ -578,7 +880,7 @@ contract Governance {
         let detector = InefficientStorageDetector::new();
         let source = r#"
 contract Example {
-    uint256 public multiplier = 10000;
+    uint256 public precision = 10000;
 }
 "#;
         let issues = detector.check_storage_layout(source);

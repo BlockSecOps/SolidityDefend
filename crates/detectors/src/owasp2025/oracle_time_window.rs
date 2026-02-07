@@ -61,6 +61,16 @@ impl Detector for OracleTimeWindowAttackDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip AMM pool contracts - they ARE the oracle/price source, not consumers
         // UniswapV2/V3 pools provide TWAP data via cumulative price tracking
@@ -207,6 +217,7 @@ impl Detector for OracleTimeWindowAttackDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

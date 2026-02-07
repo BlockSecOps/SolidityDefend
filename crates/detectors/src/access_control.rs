@@ -58,6 +58,16 @@ impl Detector for UnprotectedInitializerDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // FP Reduction: Skip contracts that are clearly not upgradeable
         // Unprotected initializers are primarily a concern for proxy/upgradeable contracts.
@@ -136,6 +146,7 @@ impl Detector for UnprotectedInitializerDetector {
             findings.push(finding);
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -576,7 +587,22 @@ impl MissingModifiersDetector {
             || lower.contains("keeper == msg.sender")
             || lower.contains("operator == msg.sender");
 
-        has_sender_require || has_inline_only || has_revert_unauthorized || has_governance_check
+        // Check for tx.origin-based access control
+        // While tx.origin is discouraged for security reasons, it IS a form of access
+        // control that restricts who can call the function. Using tx.origin == owner
+        // prevents contracts from calling the function, limiting it to EOAs.
+        let has_tx_origin_guard = lower.contains("tx.origin ==")
+            || lower.contains("== tx.origin")
+            || lower.contains("tx.origin !=")
+            || lower.contains("!= tx.origin");
+        let has_tx_origin_check = has_tx_origin_guard
+            && (lower.contains("require(") || lower.contains("if (") || lower.contains("if("));
+
+        has_sender_require
+            || has_inline_only
+            || has_revert_unauthorized
+            || has_governance_check
+            || has_tx_origin_check
     }
 
     /// Phase 15 FP Reduction: Check if function has owner check
@@ -657,6 +683,190 @@ impl MissingModifiersDetector {
 
         has_assembly_storage || has_eip1967 || has_diamond_storage || has_slot_based_owner
     }
+
+    /// FP Reduction: Check if a function only modifies the caller's own state.
+    ///
+    /// Functions that exclusively operate on `mapping[msg.sender]` entries are user-facing
+    /// by design. Each caller can only affect their own data, so no admin access control
+    /// is needed. Common patterns:
+    /// - `withdraw()`: `investments[msg.sender] = 0; payable(msg.sender).transfer(amount);`
+    /// - `emergencyWithdraw()`: `userInfo[pid][msg.sender].amount = 0;`
+    /// - `revokeAllowance(spender)`: `allowance[msg.sender][spender] = 0;`
+    fn only_modifies_caller_state(&self, func_source: &str, function_name: &str) -> bool {
+        // Must reference msg.sender somewhere in the function
+        if !func_source.contains("msg.sender") {
+            return false;
+        }
+
+        // Check for state modifications that use msg.sender as mapping key
+        // Handles both direct mapping[msg.sender] and nested mapping[x][msg.sender]
+        let has_sender_mapping_write = func_source.contains("[msg.sender]")
+            && (func_source.contains("= 0")
+                || func_source.contains("-=")
+                || func_source.contains("+=")
+                || func_source.contains("= false")
+                || func_source.contains("= true")
+                || func_source.contains("delete "));
+
+        // Check that ETH/token transfers go to msg.sender (not arbitrary address)
+        let sends_to_sender = func_source.contains("payable(msg.sender)")
+            || func_source.contains("msg.sender.call")
+            || func_source.contains("msg.sender.transfer")
+            || func_source.contains("msg.sender.send")
+            // ERC20 token transfers to msg.sender: token.transfer(msg.sender, amount)
+            || func_source.contains(".transfer(msg.sender,")
+            || func_source.contains(".transfer(msg.sender)")
+            // safeTransfer patterns
+            || func_source.contains(".safeTransfer(msg.sender,");
+
+        // The function modifies caller's own state AND sends funds back to caller
+        // OR the function only modifies caller's own state entries (no external sends)
+        if has_sender_mapping_write
+            && (sends_to_sender || !self.sends_to_arbitrary_address(func_source))
+        {
+            return true;
+        }
+
+        // Special case: revokeAllowance / revokePermit patterns
+        // These only modify allowance[msg.sender][spender] which is caller's own data,
+        // OR call external functions with msg.sender as the subject (e.g., permit(msg.sender,...))
+        // Note: We use function_name because get_function_source may not include the
+        // signature line due to 1-based line number indexing.
+        let name_lower = function_name.to_lowercase();
+        if name_lower.contains("revoke") {
+            // revokeAllowance: modifies allowance[msg.sender]
+            if func_source.contains("[msg.sender]") {
+                return true;
+            }
+            // revokePermit: calls external function with msg.sender as subject.
+            // Handle both single-line and multiline function call patterns:
+            //   permit(msg.sender, ...)  OR  permit(\n    msg.sender, ...)
+            let collapsed = func_source.replace(['\n', '\r', ' '], "");
+            if collapsed.contains("(msg.sender,") {
+                return true;
+            }
+        }
+
+        // Pattern: function uses msg.sender as first argument to external calls
+        // AND modifies no other state. This covers DeFi withdraw patterns like
+        // aToken.burn(msg.sender, to, amount) where the caller's balance is affected.
+        if func_source.contains(".burn(msg.sender,") || func_source.contains(".burn(msg.sender)") {
+            return true;
+        }
+
+        false
+    }
+
+    /// Check if a function sends ETH/tokens to an arbitrary (non-msg.sender) address
+    fn sends_to_arbitrary_address(&self, func_source: &str) -> bool {
+        // Look for .transfer() or .call{value:} or .send() to non-msg.sender
+        let has_transfer =
+            func_source.contains(".transfer(") || func_source.contains(".call{value:");
+        let sends_only_to_sender = func_source.contains("payable(msg.sender).transfer")
+            || func_source.contains("msg.sender.call{value:")
+            || func_source.contains("payable(msg.sender).send")
+            // ERC20 token transfers to msg.sender
+            || func_source.contains(".transfer(msg.sender,")
+            || func_source.contains(".transfer(msg.sender)")
+            || func_source.contains(".safeTransfer(msg.sender,");
+
+        // If there's a transfer but it only goes to msg.sender, it's safe
+        has_transfer && !sends_only_to_sender
+    }
+
+    /// FP Reduction: Check if this is an AMM/DEX pool function.
+    ///
+    /// In AMM pairs (Uniswap, SushiSwap, Curve, etc.), `mint()` and `burn()` are
+    /// core user-facing functions for adding/removing liquidity. They are intentionally
+    /// public without access control modifiers because any user should be able to
+    /// provide or remove their own liquidity.
+    fn is_amm_pool_function(&self, function_name: &str, ctx: &AnalysisContext) -> bool {
+        let name_lower = function_name.to_lowercase();
+
+        // Only applies to mint/burn functions
+        if name_lower != "mint" && name_lower != "burn" {
+            return false;
+        }
+
+        let source_lower = ctx.source_code.to_lowercase();
+
+        // Check for AMM/DEX/Pool contract indicators
+        let is_amm_context = source_lower.contains("reserve0")
+            || source_lower.contains("reserve1")
+            || source_lower.contains("getreserves")
+            || source_lower.contains("liquidity")
+            || source_lower.contains("pair")
+            || source_lower.contains("uniswap")
+            || source_lower.contains("sushiswap")
+            || source_lower.contains("balancer")
+            || source_lower.contains("curve")
+            || source_lower.contains("amm")
+            || (source_lower.contains("token0") && source_lower.contains("token1"));
+
+        // Check for Compound/Aave lending pool context where mint = user deposit
+        let is_lending_context = source_lower.contains("compound")
+            || source_lower.contains("cdai")
+            || source_lower.contains("ctoken")
+            || source_lower.contains("delegatetoimplementation")
+            || (source_lower.contains("lendingpool") || source_lower.contains("atoken"))
+            || (source_lower.contains("totalsupply")
+                && source_lower.contains("exchangerate")
+                && source_lower.contains("borrow"));
+
+        is_amm_context || is_lending_context
+    }
+
+    /// FP Reduction: Check if this is a DeFi user-facing function with non-modifier
+    /// access control patterns.
+    ///
+    /// Some functions use cryptographic proofs, payment requirements, or other
+    /// mechanisms for access control instead of traditional modifiers:
+    /// - ZK proof verification: `require(_verify(proof, ...))` gates withdrawal
+    /// - Payment-gated minting: `transferFrom(msg.sender, ...)` requires payment
+    /// - Nullifier-based: `require(!usedNullifiers[nullifier])` prevents replay
+    fn is_defi_user_function(&self, func_source: &str, function_name: &str) -> bool {
+        let lower = func_source.to_lowercase();
+        let name_lower = function_name.to_lowercase();
+
+        // ZK proof-gated functions (withdraw with proof verification)
+        if name_lower == "withdraw" || name_lower == "claim" {
+            let has_proof_gate = lower.contains("_verify(")
+                || lower.contains("verify(")
+                || lower.contains("verifyproof(")
+                || lower.contains("nullifier")
+                || lower.contains("proof");
+
+            if has_proof_gate {
+                return true;
+            }
+        }
+
+        // Payment-gated mint functions (user pays to mint)
+        if name_lower == "mint" {
+            let has_payment = lower.contains("transferfrom(msg.sender")
+                || lower.contains("transferfrom( msg.sender")
+                || lower.contains("msg.value")
+                || lower.contains("payable");
+
+            if has_payment {
+                return true;
+            }
+        }
+
+        // tx.origin-based access control (while discouraged, it IS access control)
+        // e.g., require(tx.origin == owner) or if (tx.origin != owner) revert
+        let has_tx_origin_check = (lower.contains("tx.origin ==")
+            || lower.contains("== tx.origin")
+            || lower.contains("tx.origin !=")
+            || lower.contains("!= tx.origin"))
+            && (lower.contains("require(") || lower.contains("if (") || lower.contains("if("));
+
+        if has_tx_origin_check {
+            return true;
+        }
+
+        false
+    }
 }
 
 impl Detector for MissingModifiersDetector {
@@ -682,11 +892,44 @@ impl Detector for MissingModifiersDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+
+        // FP Reduction: Skip interfaces -- interface functions have no implementation
+        // and cannot contain access control logic. Flagging them is pure noise.
+        if ctx.contract.contract_type == ast::ContractType::Interface {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip libraries -- library functions are called via delegatecall
+        // from the calling contract's context. Access control is enforced by the caller,
+        // not the library itself. Flagging library functions produces false positives.
+        if ctx.contract.contract_type == ast::ContractType::Library {
+            return Ok(findings);
+        }
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
             // Skip interface functions (they have no body)
             if function.body.is_none() {
+                continue;
+            }
+
+            // FP Reduction: Skip constructor, fallback, and receive functions.
+            // - Constructors run only once at deployment and cannot be re-called.
+            // - Fallback/receive are triggered by ETH transfers, not admin operations.
+            if function.function_type == ast::FunctionType::Constructor
+                || function.function_type == ast::FunctionType::Fallback
+                || function.function_type == ast::FunctionType::Receive
+            {
                 continue;
             }
 
@@ -742,6 +985,30 @@ impl Detector for MissingModifiersDetector {
                     continue;
                 }
 
+                // FP Reduction: Skip functions that only modify the caller's own state.
+                // Functions that exclusively read/write mapping[msg.sender] entries are
+                // user-facing by design -- each caller can only affect their own data.
+                // Examples: withdraw() from own balance, emergencyWithdraw() from own stake,
+                // revokeAllowance() on own approvals.
+                if self.only_modifies_caller_state(&func_source, function.name.name) {
+                    continue;
+                }
+
+                // FP Reduction: Skip AMM/DEX pool functions (mint/burn liquidity).
+                // In AMM pairs (Uniswap, Sushi, etc.), mint() and burn() are user-facing
+                // functions that add/remove liquidity. They are intentionally public and
+                // operate on the caller's liquidity position, not admin operations.
+                if self.is_amm_pool_function(function.name.name, ctx) {
+                    continue;
+                }
+
+                // FP Reduction: Skip DeFi user-facing functions that are gated by
+                // cryptographic proofs, payment requirements, or other non-modifier
+                // access control patterns (e.g., ZK proof verification, transferFrom).
+                if self.is_defi_user_function(&func_source, function.name.name) {
+                    continue;
+                }
+
                 let message = format!(
                     "Function '{}' performs critical operations but lacks access control modifiers",
                     function.name.name
@@ -767,6 +1034,7 @@ impl Detector for MissingModifiersDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -854,6 +1122,16 @@ impl Detector for UnprotectedInitDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         for function in ctx.get_functions() {
             if self.is_initializer(function) && !self.has_initializer_protection(function) {
@@ -881,6 +1159,7 @@ impl Detector for UnprotectedInitDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -945,6 +1224,16 @@ impl Detector for DefaultVisibilityDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         if !self.uses_old_solidity(ctx) {
             return Ok(findings);
@@ -978,6 +1267,7 @@ impl Detector for DefaultVisibilityDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -1008,6 +1298,68 @@ impl StateVariableVisibilityDetector {
                 Severity::Low,
             ),
         }
+    }
+
+    /// Check if the contract uses Solidity >= 0.5.0 where visibility semantics are well-defined.
+    /// In Solidity >= 0.5.0, function visibility is required by the compiler. State variable
+    /// visibility still defaults to `internal` if omitted, but this is a well-known, safe default.
+    /// Flagging missing state variable visibility in modern Solidity produces noise because
+    /// developers intentionally rely on the `internal` default.
+    fn is_modern_solidity(&self, source: &str) -> bool {
+        // Match pragma solidity version patterns
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if !trimmed.starts_with("pragma solidity") {
+                continue;
+            }
+
+            // Skip 0.4.x versions -- these are pre-0.5 and visibility defaults are dangerous
+            if trimmed.contains("0.4.") || trimmed.contains("^0.4") {
+                return false;
+            }
+
+            // Any pragma with 0.5+ or ^0.5+ or >=0.5 is modern
+            // Also handles 0.6, 0.7, 0.8, etc.
+            if trimmed.contains("0.5.")
+                || trimmed.contains("^0.5")
+                || trimmed.contains(">=0.5")
+                || trimmed.contains("0.6.")
+                || trimmed.contains("^0.6")
+                || trimmed.contains(">=0.6")
+                || trimmed.contains("0.7.")
+                || trimmed.contains("^0.7")
+                || trimmed.contains(">=0.7")
+                || trimmed.contains("0.8.")
+                || trimmed.contains("^0.8")
+                || trimmed.contains(">=0.8")
+            {
+                return true;
+            }
+        }
+
+        // No pragma found -- assume modern Solidity (conservative: fewer FPs)
+        false
+    }
+
+    /// Check if the source line at a given position has an explicit visibility keyword.
+    /// This uses the source text around the variable declaration to confirm whether
+    /// visibility was explicitly written (since the AST parser defaults to Internal).
+    fn has_explicit_visibility_in_source(&self, source: &str, line_num: usize) -> bool {
+        let visibility_keywords = ["public", "private", "internal", "constant", "immutable"];
+
+        let lines: Vec<&str> = source.lines().collect();
+        if line_num >= lines.len() {
+            return false;
+        }
+
+        let line = lines[line_num];
+        let code_part = if let Some(idx) = line.find("//") {
+            line[..idx].trim()
+        } else {
+            line.trim()
+        };
+
+        visibility_keywords.iter().any(|kw| code_part.contains(kw))
     }
 
     fn is_state_variable_line(&self, line: &str) -> bool {
@@ -1082,6 +1434,82 @@ impl Detector for StateVariableVisibilityDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+
+        // FP Reduction: Skip interfaces -- interfaces cannot have state variables.
+        // Any state variable declaration inside an interface is a compiler error,
+        // so flagging visibility here is pure noise.
+        if ctx.contract.contract_type == ast::ContractType::Interface {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip libraries -- library state variables must be constant
+        // and are always internal. The compiler enforces these rules, so missing
+        // explicit visibility in libraries is not a real concern.
+        if ctx.contract.contract_type == ast::ContractType::Library {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip Solidity >= 0.5.0 contracts. In modern Solidity,
+        // state variable visibility defaults to `internal` which is well-defined
+        // and widely understood. Unlike pre-0.5 function visibility (which defaulted
+        // to public and was dangerous), state variable `internal` default is safe.
+        // Flagging these produces excessive noise in modern codebases.
+        if self.is_modern_solidity(&ctx.source_code) {
+            return Ok(findings);
+        }
+
+        // --- AST-based detection for pre-0.5 Solidity ---
+        // Use AST state_variables when available for precise detection.
+        // The parser defaults visibility to Internal when not specified, so we
+        // cross-reference with source text to distinguish "explicitly internal"
+        // from "no visibility keyword written".
+        let ast_vars = &ctx.contract.state_variables;
+        if !ast_vars.is_empty() {
+            for var in ast_vars.iter() {
+                let var_line = var.location.start().line();
+                // line() is 1-based in some implementations, 0-based in others.
+                // Normalize to 0-based for source indexing.
+                let line_idx = if var_line > 0 { var_line - 1 } else { var_line };
+
+                if !self.has_explicit_visibility_in_source(&ctx.source_code, line_idx) {
+                    let var_name = var.name.name;
+                    let message = format!(
+                        "State variable '{}' declared without explicit visibility modifier",
+                        var_name
+                    );
+
+                    let finding = self
+                        .base
+                        .create_finding(
+                            ctx,
+                            message,
+                            var_line as u32,
+                            var.location.start().column() as u32,
+                            var.name.name.len() as u32,
+                        )
+                        .with_cwe(710) // CWE-710: Improper Adherence to Coding Standards
+                        .with_fix_suggestion(format!(
+                            "Add explicit visibility: '{} private {};' or '{} internal {};'",
+                            "type", var_name, "type", var_name
+                        ));
+                    findings.push(finding);
+                }
+            }
+            return Ok(findings);
+        }
+
+        // --- Fallback: text-based detection for contracts without AST state variables ---
+        // This handles edge cases where the parser did not populate state_variables.
         let visibility_keywords = ["public", "private", "internal", "constant", "immutable"];
 
         // Track brace depth to distinguish contract-level (state) variables from local variables
@@ -1155,6 +1583,7 @@ impl Detector for StateVariableVisibilityDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

@@ -61,6 +61,16 @@ impl Detector for MEVSandwichVulnerableDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Skip AMM pool contracts - sandwich attacks on AMM swaps are expected/intentional
         // AMMs provide liquidity and price discovery through arbitrage (which includes sandwiches)
@@ -177,6 +187,7 @@ impl Detector for MEVSandwichVulnerableDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 

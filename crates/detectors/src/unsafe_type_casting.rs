@@ -57,6 +57,16 @@ impl Detector for UnsafeTypeCastingDetector {
 
     fn detect(&self, ctx: &AnalysisContext<'_>) -> Result<Vec<Finding>> {
         let mut findings = Vec::new();
+        // FP Reduction: Skip interface contracts (no implementation to exploit)
+        if crate::utils::is_interface_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
+        if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
 
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {
@@ -106,6 +116,7 @@ impl Detector for UnsafeTypeCastingDetector {
             }
         }
 
+        let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)
     }
 
@@ -318,15 +329,31 @@ impl UnsafeTypeCastingDetector {
     }
 
     fn is_int_to_uint(&self, line: &str) -> bool {
-        line.contains("uint(") && line.contains("int")
-            || line.contains("uint256(") && line.contains("int256")
-            || line.contains("uint128(") && line.contains("int128")
+        // Check for uint cast of a signed int value.
+        // Must ensure "int" is standalone (not substring of "uint").
+        let has_signed_int = line.contains(" int ") || line.contains(" int256")
+            || line.contains("(int ") || line.contains("(int256")
+            || line.contains(",int ") || line.contains(",int256");
+
+        (line.contains("uint(") && has_signed_int)
+            || (line.contains("uint256(") && has_signed_int)
+            || (line.contains("uint128(") && line.contains(" int128"))
     }
 
     fn is_uint_to_int(&self, line: &str) -> bool {
-        line.contains("int(") && line.contains("uint")
-            || line.contains("int256(") && line.contains("uint256")
-            || line.contains("int128(") && line.contains("uint128")
+        // Check for int cast of an unsigned uint value.
+        // Must ensure "int(" is standalone (not substring of "uint("),
+        // and "int256(" is not a substring of "uint256(".
+        let has_int_cast = line.contains(" int(") || line.contains("(int(")
+            || line.contains(",int(") || line.contains("=int(");
+        let has_int256_cast = line.contains(" int256(") || line.contains("(int256(")
+            || line.contains(",int256(") || line.contains("=int256(");
+        let has_int128_cast = line.contains(" int128(") || line.contains("(int128(")
+            || line.contains(",int128(") || line.contains("=int128(");
+
+        (has_int_cast && line.contains("uint"))
+            || (has_int256_cast && line.contains("uint256"))
+            || (has_int128_cast && line.contains("uint128"))
     }
 
     fn is_address_cast(&self, line: &str) -> bool {
@@ -405,7 +432,7 @@ impl UnsafeTypeCastingDetector {
     /// Phase 9 FP Reduction: Check for type(uintX).max bounds checks
     /// Pattern: require(value <= type(uint64).max, "...")
     fn has_type_max_check(&self, lines: &[&str], current_line: usize) -> bool {
-        let start = current_line.saturating_sub(5);
+        let start = current_line.saturating_sub(15);
 
         for i in start..current_line {
             let line = lines[i];
