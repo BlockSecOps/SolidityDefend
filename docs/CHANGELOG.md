@@ -9,6 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### 9 Detector Improvements — FP Reduction Round v9
+
+Continued false positive reduction targeting high-volume remaining detectors. Total findings
+reduced from 427 to **346** (19.0% reduction in v9; **81% total reduction** from v1.10.19 baseline of 1,776).
+
+- `swc105-unprotected-ether-withdrawal` - Further context refinement for withdrawal patterns
+- `defi-yield-farming-exploits` - Improved DeFi pattern filtering
+- `compound-callback-chain` - Callback context awareness improvements
+- `oracle-time-window-attack` - Tighter oracle usage filtering
+- `vault-withdrawal-dos` - Enhanced vault pattern recognition
+- `vault-donation-attack` - Improved donation attack context
+- `bridge-merkle-bypass` - Bridge pattern awareness
+- `missing-chainid-validation` - Refined cross-chain filtering
+- `token-supply-manipulation` - Supply pattern context improvements
+
+**Results:**
+- Total findings: 427 -> 346 (19.0% reduction in v9; 81% total reduction from v1.10.19 baseline of 1,776)
+- Clean contract FPs: 0 (maintained from v7)
+- 0 true positive regressions (all 4 verified TPs preserved)
+- 1,593 tests passing (1,392 detector + 32 FP regression + 17 front-running; 32 new tests added)
+
 #### 7 Detector Improvements — FP Reduction Round v8
 
 Continued false positive reduction targeting the highest-volume remaining detectors. Total findings

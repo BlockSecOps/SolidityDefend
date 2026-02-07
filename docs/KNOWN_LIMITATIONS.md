@@ -11,18 +11,17 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
 
-**v1.10.20 Improvements:** 8 rounds of FP reduction across 2 days (Feb 5-6, 2026):
+**v1.10.20 Improvements:** 9 rounds of FP reduction across 2 days (Feb 5-6, 2026):
 - **NEW** `fp_filter.rs` structural FP filter deployed to all 331 detectors via `filter_fp_findings()`
 - Filters findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
-- 14 detector-specific fixes (v7) and 7 additional detector improvements (v8)
+- 14 detector-specific fixes (v7), 7 detector improvements (v8), and 9 detector improvements (v9)
 - Interface/library guards added to all detectors
 - 80+ detectors individually improved across rounds v1-v6
 - JSON output fix: banner/progress messages now sent to stderr for clean piping
-- **Total findings: 1,776 -> 427 (76% reduction)** across 18 test targets
-- **Severity breakdown:** Critical: 122, High: 185, Medium: 99, Low: 17, Info: 4
+- **Total findings: 1,776 -> 346 (81% reduction)** across 18 test targets
 - **Clean contract FP rate: 0%** (26 -> 0 FPs across 5 clean contracts)
 - 0 true positive regressions (all 4 verified TPs preserved)
-- 1,593 tests passing (1,544 unit + 32 FP regression + 17 front-running)
+- 1,593 tests passing (1,392 detector + 32 FP regression + 17 front-running; 32 new tests added in v9)
 - 100% recall maintained on ground truth dataset
 
 **v1.10.14 Improvements:** Comprehensive False Positive Reduction (24 Categories):
@@ -445,9 +444,9 @@ payable(recipient).call{value: amount}("");
 ### FP Rate Summary (v1.10.20)
 
 - **Clean contract FP rate: 0%** -- Zero false positives across 5 clean/safe benchmark contracts
-- **Total findings reduced 76%** (1,776 -> 427) through 8 rounds of FP reduction
+- **Total findings reduced 81%** (1,776 -> 346) through 9 rounds of FP reduction
 - **Structural FP filter** (`fp_filter.rs`) applied to all 331 detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
-- **0 true positive regressions** across all 8 reduction rounds
+- **0 true positive regressions** across all 9 reduction rounds
 
 ### Detectors with Remaining Volume
 
@@ -455,13 +454,13 @@ Some detectors still produce high finding counts on intentionally vulnerable tes
 
 | Detector | Findings | Recommendation |
 |----------|----------|----------------|
-| `swc105-unprotected-ether-withdrawal` | 23 | Review withdrawal access control in context |
-| `defi-yield-farming-exploits` | 22 | Review carefully, may need further refinement |
+| `swc105-unprotected-ether-withdrawal` | 18 | Review withdrawal access control in context |
+| `defi-yield-farming-exploits` | 17 | Review carefully, may need further refinement |
 | `array-bounds-check` | 12 | Verify bounds checking patterns |
-| `missing-chainid-validation` | 11 | Review cross-chain context |
-| `vault-withdrawal-dos` | 10 | Review vault withdrawal patterns |
-| `vault-donation-attack` | 10 | Many are true positives in vault context |
-| `oracle-time-window-attack` | 10 | Review oracle integration patterns |
+| `missing-chainid-validation` | 8 | Review cross-chain context |
+| `vault-withdrawal-dos` | 7 | Review vault withdrawal patterns |
+| `vault-donation-attack` | 7 | Many are true positives in vault context |
+| `oracle-time-window-attack` | 7 | Review oracle integration patterns |
 
 **Best Practice:** Focus on Critical and High severity findings with low false positive rates:
 - `classic-reentrancy`
