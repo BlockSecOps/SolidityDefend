@@ -66,7 +66,6 @@ impl Detector for BlockStuffingVulnerableDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(stuffing_issue) = self.check_block_stuffing_vulnerability(function, ctx) {
                 let message = format!(

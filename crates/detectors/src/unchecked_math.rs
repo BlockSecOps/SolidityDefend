@@ -66,7 +66,6 @@ impl Detector for UncheckedMathDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(unchecked_issues) = self.check_unchecked_math(function, ctx) {
                 for issue_desc in unchecked_issues {

@@ -118,7 +118,6 @@ impl Detector for TxOriginDetector {
             return Ok(findings);
         }
 
-
         // Check all functions
         for function in ctx.get_functions() {
             if function.body.is_none() {

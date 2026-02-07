@@ -266,7 +266,6 @@ impl Detector for ChainIdValidationDetector {
             return Ok(findings);
         }
 
-
         if !self.is_bridge_contract(ctx) {
             return Ok(findings);
         }

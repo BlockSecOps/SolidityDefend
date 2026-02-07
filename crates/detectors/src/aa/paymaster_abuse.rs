@@ -83,7 +83,6 @@ impl Detector for ERC4337PaymasterAbuseDetector {
             return Ok(findings);
         }
 
-
         // Only run on paymaster contracts
         if !is_paymaster_contract(ctx) {
             return Ok(findings);

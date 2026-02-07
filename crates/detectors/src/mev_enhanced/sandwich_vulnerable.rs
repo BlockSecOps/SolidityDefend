@@ -71,7 +71,6 @@ impl Detector for MEVSandwichVulnerableDetector {
             return Ok(findings);
         }
 
-
         // Skip AMM pool contracts - sandwich attacks on AMM swaps are expected/intentional
         // AMMs provide liquidity and price discovery through arbitrage (which includes sandwiches)
         // This detector should focus on contracts that CONSUME AMM data without slippage protection

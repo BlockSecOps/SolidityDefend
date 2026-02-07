@@ -66,7 +66,6 @@ impl Detector for AuctionTimingDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_auction_timing_vulnerability(function, ctx) {
                 let message = format!(

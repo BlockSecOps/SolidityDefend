@@ -79,7 +79,6 @@ impl Detector for ProxyUpgradeUnprotectedDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(risk_description) = self.has_unprotected_upgrade(function, ctx) {
                 let message = format!(

@@ -310,7 +310,6 @@ impl Detector for SocialRecoveryDetector {
             return Ok(findings);
         }
 
-
         // Step 1: Check if this specific contract is a social recovery contract
         if !self.is_social_recovery_contract(ctx) {
             return Ok(findings);

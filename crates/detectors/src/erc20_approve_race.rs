@@ -66,7 +66,6 @@ impl Detector for Erc20ApproveRaceDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_approve_race(function, ctx) {
                 let message = format!(

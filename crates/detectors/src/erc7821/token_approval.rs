@@ -71,7 +71,6 @@ impl Detector for ERC7821TokenApprovalDetector {
             return Ok(findings);
         }
 
-
         if !is_erc7821_executor(ctx) {
             return Ok(findings);
         }

@@ -66,7 +66,6 @@ impl Detector for NonceReuseDetector {
             return Ok(findings);
         }
 
-
         // Contract-level early exit: skip contracts that have no nonce-related state
         // or code at all. This avoids scanning vaults, AMMs, staking contracts, etc.
         if !self.contract_has_nonce_context(&ctx.source_code) {

@@ -61,7 +61,6 @@ impl Detector for ZkProofBypassDetector {
             return Ok(findings);
         }
 
-
         // Only run this detector on ZK rollup contracts
         if !contract_classification::is_zk_rollup_contract(ctx) {
             return Ok(findings); // Not a ZK rollup - skip analysis
@@ -896,9 +895,6 @@ mod tests {
             "verifyProof",
             "require(verifier.verify(proof, publicInput))"
         ));
-        assert!(!detector.is_public_input_function(
-            "withdraw",
-            "uint256[] calldata publicInput"
-        ));
+        assert!(!detector.is_public_input_function("withdraw", "uint256[] calldata publicInput"));
     }
 }

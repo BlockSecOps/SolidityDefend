@@ -398,7 +398,6 @@ impl Detector for LiquidityPoolManipulationDetector {
             return Ok(findings);
         }
 
-
         if !self.is_amm_pool(ctx) {
             return Ok(findings);
         }

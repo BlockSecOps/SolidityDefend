@@ -76,7 +76,6 @@ impl Detector for JitLiquiditySandwichDetector {
             return Ok(findings);
         }
 
-
         // Skip standard AMM implementations (Uniswap V2/V3, Curve, Balancer)
         // These protocols intentionally allow instant liquidity provision/removal
         // JIT attacks are a known design tradeoff for capital efficiency

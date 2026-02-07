@@ -189,7 +189,6 @@ impl Detector for UnexpectedEtherBalanceDetector {
             return Ok(findings);
         }
 
-
         // Check if the contract uses internal accounting (reduces severity if so)
         let has_accounting = self.source_has_internal_accounting(&ctx.source_code);
 

@@ -416,7 +416,6 @@ impl Detector for MultisigBypassDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_multisig_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

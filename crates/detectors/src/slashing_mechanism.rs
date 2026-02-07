@@ -66,7 +66,6 @@ impl Detector for SlashingMechanismDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(slashing_issue) = self.check_slashing_vulnerability(function, ctx) {
                 let message = format!(

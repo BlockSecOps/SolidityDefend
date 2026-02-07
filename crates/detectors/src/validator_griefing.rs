@@ -79,7 +79,6 @@ impl Detector for ValidatorGriefingDetector {
             return Ok(findings);
         }
 
-
         // Early exit: only analyze contracts that are actually validator/staking systems
         if !self.is_validator_staking_contract(ctx) {
             return Ok(findings);

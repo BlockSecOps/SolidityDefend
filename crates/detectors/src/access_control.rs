@@ -68,7 +68,6 @@ impl Detector for UnprotectedInitializerDetector {
             return Ok(findings);
         }
 
-
         // FP Reduction: Skip contracts that are clearly not upgradeable
         // Unprotected initializers are primarily a concern for proxy/upgradeable contracts.
         // Non-upgradeable contracts use constructors; initialize() in those contexts is
@@ -902,7 +901,6 @@ impl Detector for MissingModifiersDetector {
             return Ok(findings);
         }
 
-
         // FP Reduction: Skip interfaces -- interface functions have no implementation
         // and cannot contain access control logic. Flagging them is pure noise.
         if ctx.contract.contract_type == ast::ContractType::Interface {
@@ -1132,7 +1130,6 @@ impl Detector for UnprotectedInitDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.is_initializer(function) && !self.has_initializer_protection(function) {
                 let message = format!(
@@ -1233,7 +1230,6 @@ impl Detector for DefaultVisibilityDetector {
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
         }
-
 
         if !self.uses_old_solidity(ctx) {
             return Ok(findings);
@@ -1443,7 +1439,6 @@ impl Detector for StateVariableVisibilityDetector {
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
         }
-
 
         // FP Reduction: Skip interfaces -- interfaces cannot have state variables.
         // Any state variable declaration inside an interface is a compiler error,

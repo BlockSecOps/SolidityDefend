@@ -331,7 +331,6 @@ impl Detector for MessageVerificationDetector {
             return Ok(findings);
         }
 
-
         if !self.is_bridge_contract(ctx) {
             return Ok(findings);
         }

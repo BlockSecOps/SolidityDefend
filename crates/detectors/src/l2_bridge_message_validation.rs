@@ -67,7 +67,6 @@ impl Detector for L2BridgeMessageValidationDetector {
             return Ok(findings);
         }
 
-
         // Skip governance contracts -- they may reference cross-chain execution
         // but are not L2 bridge message relay contracts
         if self.is_governance_contract(ctx) {

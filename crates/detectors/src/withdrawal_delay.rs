@@ -67,7 +67,6 @@ impl Detector for WithdrawalDelayDetector {
             return Ok(findings);
         }
 
-
         // Skip if this is an ERC-4626 vault - asset transfers are normal, not delays
         let is_vault = utils::is_erc4626_vault(ctx);
 

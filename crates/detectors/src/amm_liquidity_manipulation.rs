@@ -67,7 +67,6 @@ impl Detector for AmmLiquidityManipulationDetector {
             return Ok(findings);
         }
 
-
         // Skip if this is an ERC-3156 flash loan provider
         // Flash loans INTENTIONALLY manipulate liquidity - that's their purpose
         let is_flash_loan_provider = utils::is_erc3156_flash_loan(ctx);

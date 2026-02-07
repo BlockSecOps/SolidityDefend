@@ -67,7 +67,6 @@ impl Detector for Erc721CallbackReentrancyDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_nft_callback_reentrancy(function, ctx) {
                 let message = format!(

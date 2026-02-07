@@ -66,7 +66,6 @@ impl Detector for IntegerOverflowDetector {
             return Ok(findings);
         }
 
-
         // Check pragma version
         let solidity_version = self.extract_solidity_version(ctx);
         let is_pre_08 = self.is_pre_solidity_08(&solidity_version);

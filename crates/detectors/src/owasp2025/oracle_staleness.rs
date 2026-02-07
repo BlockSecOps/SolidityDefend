@@ -191,11 +191,16 @@ impl Detector for OracleStalenesDetector {
         // Using latestRoundData without all checks
         if has_latest_round {
             let has_round_check = source.contains("answeredInRound") && source.contains("roundId");
-            let has_price_check = source.contains("price > 0") || source.contains("price >= 0")
-                || source.contains("price <= 0") || source.contains("price < 0")
-                || source.contains("answer > 0") || source.contains("answer >= 0")
-                || source.contains("answer <= 0") || source.contains("answer < 0")
-                || source.contains("InvalidPrice") || source.contains("invalid price");
+            let has_price_check = source.contains("price > 0")
+                || source.contains("price >= 0")
+                || source.contains("price <= 0")
+                || source.contains("price < 0")
+                || source.contains("answer > 0")
+                || source.contains("answer >= 0")
+                || source.contains("answer <= 0")
+                || source.contains("answer < 0")
+                || source.contains("InvalidPrice")
+                || source.contains("invalid price");
 
             if !has_round_check || !has_price_check {
                 let finding = self.base.create_finding_with_severity(

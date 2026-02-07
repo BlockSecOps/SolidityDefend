@@ -471,7 +471,6 @@ impl Detector for PriceValidationDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.uses_oracle_data(function) && !self.has_price_validation(function) {
                 let message = format!(

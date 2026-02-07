@@ -68,7 +68,6 @@ impl Detector for VaultWithdrawalDosDetector {
             return Ok(findings);
         }
 
-
         // Check if this is an ERC-4626 vault
         let is_vault = utils::is_erc4626_vault(ctx);
 

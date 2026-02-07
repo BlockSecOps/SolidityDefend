@@ -68,7 +68,6 @@ impl Detector for MevExtractableValueDetector {
             return Ok(findings);
         }
 
-
         // Phase 9 FP Reduction: Skip test contracts
         if utils::is_test_contract(ctx) {
             return Ok(findings);

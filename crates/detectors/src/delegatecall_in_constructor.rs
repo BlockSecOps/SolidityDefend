@@ -387,7 +387,6 @@ impl Detector for DelegatecallInConstructorDetector {
             return Ok(findings);
         }
 
-
         // Phase 54 FP Reduction: Skip known proxy implementations
         if self.is_proxy_implementation(ctx) {
             return Ok(findings);

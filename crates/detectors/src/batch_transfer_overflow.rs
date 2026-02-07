@@ -212,7 +212,6 @@ impl Detector for BatchTransferOverflowDetector {
             return Ok(findings);
         }
 
-
         // Get source to check Solidity version
         let source = &ctx.source_code;
 

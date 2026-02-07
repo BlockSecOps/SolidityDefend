@@ -68,7 +68,6 @@ impl Detector for VaultDonationAttackDetector {
             return Ok(findings);
         }
 
-
         // Context gate: Only analyze actual ERC-4626 vaults
         // This detector is specifically for vault donation attacks, which only apply
         // to ERC-4626 share-based vaults. Simple ERC20 tokens or other contracts

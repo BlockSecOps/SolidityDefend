@@ -84,7 +84,6 @@ impl Detector for SandwichAttackDetector {
             return Ok(findings);
         }
 
-
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {
             return Ok(findings);
@@ -225,7 +224,6 @@ impl Detector for FrontRunningDetector {
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
         }
-
 
         // Phase 9 FP Reduction: Skip test contracts
         if is_test_contract(ctx) {

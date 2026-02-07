@@ -130,7 +130,6 @@ impl Detector for Permit2IntegrationDetector {
             return Ok(findings);
         }
 
-
         if !self.is_erc7683_contract(ctx) {
             return Ok(findings);
         }

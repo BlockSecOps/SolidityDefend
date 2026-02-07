@@ -73,7 +73,6 @@ impl Detector for ERC4337GasGriefingDetector {
             return Ok(findings);
         }
 
-
         if !is_aa_account(ctx) && !is_paymaster_contract(ctx) {
             return Ok(findings);
         }

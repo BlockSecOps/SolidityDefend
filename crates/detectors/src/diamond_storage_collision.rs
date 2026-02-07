@@ -60,7 +60,6 @@ impl Detector for DiamondStorageCollisionDetector {
             return Ok(findings);
         }
 
-
         // Check if this looks like a Diamond facet contract
         let is_potential_facet = self.is_potential_diamond_facet(&ctx.source_code);
 

@@ -68,7 +68,6 @@ impl Detector for VaultShareInflationDetector {
             return Ok(findings);
         }
 
-
         // CRITICAL FP FIX: Only analyze ERC4626 vaults, not simple ERC20 tokens
         // Vault share inflation is specific to ERC4626 vaults with share/asset conversion.
         // A simple ERC20 with mint() is NOT a vault.

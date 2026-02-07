@@ -73,7 +73,6 @@ impl Detector for AASocialRecoveryDetector {
             return Ok(findings);
         }
 
-
         if !has_social_recovery(ctx) {
             return Ok(findings);
         }

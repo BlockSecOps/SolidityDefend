@@ -67,7 +67,6 @@ impl Detector for FlashLoanStakingDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.is_vulnerable_to_flash_loan_staking(function, ctx) {
                 let message = format!(

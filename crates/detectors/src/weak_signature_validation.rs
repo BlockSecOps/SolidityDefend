@@ -66,7 +66,6 @@ impl Detector for WeakSignatureValidationDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if self.has_weak_signature_validation(function, ctx) {
                 let message = format!(

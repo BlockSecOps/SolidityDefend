@@ -110,11 +110,7 @@ impl FpFilter {
     /// Filter findings using AST context from the analyzed contract.
     ///
     /// Returns only findings that pass all filter rules (i.e., are not suppressed).
-    pub fn filter<'a>(
-        &self,
-        findings: Vec<Finding>,
-        ctx: &AnalysisContext<'a>,
-    ) -> Vec<Finding> {
+    pub fn filter<'a>(&self, findings: Vec<Finding>, ctx: &AnalysisContext<'a>) -> Vec<Finding> {
         // Rule 1: Skip all findings for interface contracts
         if ctx.contract.contract_type == ContractType::Interface {
             return Vec::new();
@@ -256,12 +252,16 @@ mod tests {
     #[test]
     fn test_fp_filter_creation() {
         let filter = FpFilter::new();
-        assert!(filter
-            .view_pure_exceptions
-            .contains("missing-visibility-modifier"));
-        assert!(filter
-            .internal_private_exceptions
-            .contains("unused-state-variables"));
+        assert!(
+            filter
+                .view_pure_exceptions
+                .contains("missing-visibility-modifier")
+        );
+        assert!(
+            filter
+                .internal_private_exceptions
+                .contains("unused-state-variables")
+        );
         assert!(filter.admin_exceptions.contains("centralization-risk"));
     }
 

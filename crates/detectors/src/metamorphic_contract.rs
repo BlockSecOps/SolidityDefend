@@ -433,7 +433,6 @@ impl Detector for MetamorphicContractDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_metamorphic_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

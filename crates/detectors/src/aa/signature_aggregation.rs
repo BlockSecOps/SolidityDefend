@@ -75,7 +75,6 @@ impl Detector for AASignatureAggregationDetector {
             return Ok(findings);
         }
 
-
         if !uses_signature_aggregation(ctx) {
             return Ok(findings);
         }

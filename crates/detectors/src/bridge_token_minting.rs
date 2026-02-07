@@ -167,7 +167,6 @@ impl Detector for TokenMintingDetector {
             return Ok(findings);
         }
 
-
         if !self.is_bridge_contract(ctx) {
             return Ok(findings);
         }

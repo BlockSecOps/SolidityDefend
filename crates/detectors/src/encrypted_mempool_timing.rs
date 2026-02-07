@@ -233,7 +233,6 @@ impl Detector for EncryptedMempoolTimingDetector {
             return Ok(findings);
         }
 
-
         // Phase 10: Skip test contracts, secure examples, and standard tokens
         // This detector is for MEV-sensitive commit-reveal patterns, not regular contracts
         if is_test_contract(ctx) || is_secure_example_file(ctx) || is_standard_token(ctx) {

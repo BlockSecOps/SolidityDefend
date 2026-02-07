@@ -57,7 +57,6 @@ impl Detector for GovernanceDetector {
             return Ok(findings);
         }
 
-
         // Skip lending protocols - they are NOT governance tokens
         // Lending protocol tokens (cTokens, aTokens) have "delegate" for proxy patterns,
         // not governance delegation. Known protocols have separate governance tokens:
@@ -621,7 +620,6 @@ impl Detector for ExternalCallsLoopDetector {
             return Ok(findings);
         }
 
-
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)
             if func.body.is_none() {
@@ -1117,7 +1115,6 @@ impl Detector for EmergencyPauseCentralizationDetector {
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
         }
-
 
         for func in &ctx.contract.functions {
             // Skip interface functions (no body)

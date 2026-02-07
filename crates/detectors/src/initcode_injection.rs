@@ -279,7 +279,6 @@ impl Detector for InitcodeInjectionDetector {
             return Ok(findings);
         }
 
-
         // Skip deployment tooling contracts (factories, upgrade libraries, deployers)
         // These contracts are DESIGNED to deploy other contracts and are not vulnerable
         // to initcode injection - they ARE the deployment infrastructure

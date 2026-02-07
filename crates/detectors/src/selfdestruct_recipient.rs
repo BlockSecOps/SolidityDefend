@@ -245,7 +245,6 @@ impl Detector for SelfdestructRecipientDetector {
             return Ok(findings);
         }
 
-
         let issues = self.check_selfdestruct_patterns(ctx);
 
         for (message, line_offset, remediation) in issues {

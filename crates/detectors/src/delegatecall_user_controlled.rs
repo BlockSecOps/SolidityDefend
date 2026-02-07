@@ -90,7 +90,6 @@ impl Detector for DelegatecallUserControlledDetector {
             return Ok(findings);
         }
 
-
         // FP Reduction: Skip proxy contracts - delegatecall is by design in proxies
         // The dangerous-delegatecall detector handles proxy-specific risks separately.
         if utils::is_proxy_contract(ctx) {

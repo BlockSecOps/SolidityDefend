@@ -751,7 +751,6 @@ impl Detector for StateMachineDetector {
             return Ok(findings);
         }
 
-
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
             findings.extend(self.analyze_function(function, ctx)?);

@@ -703,7 +703,6 @@ impl Detector for FallbackFunctionShadowingDetector {
             return Ok(findings);
         }
 
-
         // Skip if not a proxy contract
         if !self.is_proxy_contract(ctx) {
             return Ok(findings);

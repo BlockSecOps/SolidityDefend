@@ -77,7 +77,6 @@ impl Detector for AANonceManagementDetector {
             return Ok(findings);
         }
 
-
         // Only run on AA accounts
         if !is_aa_account(ctx) {
             return Ok(findings);

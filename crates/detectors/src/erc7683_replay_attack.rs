@@ -107,7 +107,6 @@ impl Detector for ReplayAttackDetector {
             return Ok(findings);
         }
 
-
         if !self.is_erc7683_contract(ctx) {
             return Ok(findings);
         }

@@ -362,7 +362,6 @@ impl Detector for FlashmintTokenInflationDetector {
             return Ok(findings);
         }
 
-
         // Early exit: skip flash loan consumer/borrower contracts entirely.
         // These contracts use flash loans from external providers but do not
         // mint tokens themselves, so flash mint fee checks are irrelevant.

@@ -277,7 +277,6 @@ impl Detector for CrossL2FrontrunningDetector {
             return Ok(findings);
         }
 
-
         // CRITICAL FP FIX: Only analyze L2/cross-chain contracts
         // This detector should NOT flag simple L1 contracts with regular withdraw functions.
         // Cross-L2 frontrunning only applies to contracts with actual cross-chain functionality.

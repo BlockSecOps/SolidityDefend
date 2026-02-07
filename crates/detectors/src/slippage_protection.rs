@@ -67,7 +67,6 @@ impl Detector for SlippageProtectionDetector {
             return Ok(findings);
         }
 
-
         // Skip if this is an AMM pool - AMM pools don't need slippage protection
         // because they ARE the market maker. Only AMM consumers need slippage protection.
         // AMM internal operations don't have amountOutMin because they define the exchange rate.

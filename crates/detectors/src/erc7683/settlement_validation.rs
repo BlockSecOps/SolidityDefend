@@ -509,7 +509,6 @@ impl Detector for IntentSettlementValidationDetector {
             return Ok(findings);
         }
 
-
         // Only run on intent contracts
         if !is_intent_contract(ctx) {
             return Ok(findings);

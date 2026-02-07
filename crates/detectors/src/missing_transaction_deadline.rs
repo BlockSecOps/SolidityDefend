@@ -465,7 +465,6 @@ impl Detector for MissingTransactionDeadlineDetector {
             return Ok(findings);
         }
 
-
         for function in ctx.get_functions() {
             if let Some(issue) = self.has_missing_deadline(function, ctx) {
                 let message = format!(
