@@ -35,7 +35,8 @@ Total: 1,593 tests passed (1,392 detector + 32 FP regression + 17 front-running)
 Ground truth: 117 contracts (43 clean, 74 vulnerable, 78 expected TPs)
 Ground truth coverage: 100% of test corpus
 Clean contract FP rate: 0% (across 43 clean/secure contracts)
-Recall: 100% on parseable contracts (75/78 TPs detected, 3 blocked by parse errors)
+Parse errors: 0 (all 117 contracts parse successfully)
+Recall: 100% (78/78 TPs detected, 0 false negatives)
 ```
 
 ## Real-World Contract Testing
