@@ -111,7 +111,7 @@ impl Eip7702SweeperAttackDetector {
     }
 
     /// Find hardcoded attacker addresses
-    fn find_hardcoded_recipient(&self, source: &str) -> Vec<(u32, String)> {
+    fn _find_hardcoded_recipient(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
@@ -270,7 +270,7 @@ impl Eip7702SweeperAttackDetector {
     }
 
     /// Check if contract appears to be an EIP-7702 delegation target
-    fn is_eip7702_context(&self, source: &str) -> bool {
+    fn _is_eip7702_context(&self, source: &str) -> bool {
         let lower = source.to_lowercase();
 
         // Strong EIP-7702 signals

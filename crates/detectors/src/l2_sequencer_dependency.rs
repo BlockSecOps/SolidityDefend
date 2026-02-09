@@ -161,7 +161,7 @@ impl L2SequencerDependencyDetector {
     /// Check if the function containing the oracle call is a view or pure function.
     /// While view/pure functions can still return stale data, flagging them is
     /// lower priority since they do not modify state.
-    fn is_view_or_pure_function(&self, lines: &[&str], line_num: usize) -> bool {
+    fn _is_view_or_pure_function(&self, lines: &[&str], line_num: usize) -> bool {
         let func_start = self.find_function_start_line(lines, line_num);
         if func_start.is_none() {
             return false;

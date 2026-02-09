@@ -129,7 +129,7 @@ impl Post080OverflowDetector {
 
         // Remove comments from the block for analysis
         let block_no_comments = self.remove_comments(block);
-        let block_trimmed = block_no_comments.trim();
+        let _block_trimmed = block_no_comments.trim();
 
         // Phase 16 FP Reduction: Skip fixed-point arithmetic patterns
         // Pattern: multiply then divide = bounded result (common in DeFi)
@@ -151,10 +151,10 @@ impl Post080OverflowDetector {
 
         // Check if the block ONLY contains safe loop counter operations
         // A block like "unchecked { ++i; }" is safe
-        let mut has_only_safe_patterns = false;
+        let mut _has_only_safe_patterns = false;
         for pattern in &safe_loop_patterns {
             if block_lower.contains(pattern) {
-                has_only_safe_patterns = true;
+                _has_only_safe_patterns = true;
                 break;
             }
         }
@@ -518,10 +518,10 @@ impl Post080OverflowDetector {
             }
 
             // Check for compound assignments that aren't loop counters
-            if (trimmed.contains("+=")
+            if trimmed.contains("+=")
                 || trimmed.contains("-=")
                 || trimmed.contains("*=")
-                || trimmed.contains("/="))
+                || trimmed.contains("/=")
             {
                 // If it's not "i += 1" style, it's dangerous
                 if !trimmed.contains("+= 1") && !trimmed.contains("-= 1") {
@@ -754,7 +754,7 @@ impl Detector for Post080OverflowDetector {
 
         // Phase 6: Properly analyze unchecked blocks instead of simple contains()
         let unchecked_blocks = self.find_unchecked_blocks(source);
-        for (line, block, is_dangerous) in unchecked_blocks {
+        for (line, _block, is_dangerous) in unchecked_blocks {
             // Phase 16 FP Reduction: Skip if there's preceding validation
             if is_dangerous && self.has_preceding_validation(source, line as usize) {
                 continue;

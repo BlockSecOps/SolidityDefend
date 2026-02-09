@@ -70,7 +70,7 @@ impl BeaconSinglePointOfFailureDetector {
     }
 
     /// Check for multiple beacon proxy creations from same beacon
-    fn has_multiple_proxy_creations(&self, source: &str) -> Option<(u32, u32)> {
+    fn _has_multiple_proxy_creations(&self, source: &str) -> Option<(u32, u32)> {
         let lines: Vec<&str> = source.lines().collect();
         let mut creation_lines = Vec::new();
 

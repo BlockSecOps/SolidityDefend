@@ -267,7 +267,7 @@ impl FallbackDelegatecallUnprotectedDetector {
     /// or storage layout - covered by dedicated detectors.
     fn is_standard_proxy_pattern(&self, contract_source: &str, ctx: &AnalysisContext) -> bool {
         let lower = contract_source.to_lowercase();
-        let contract_name = ctx.contract.name.name.to_lowercase();
+        let _contract_name = ctx.contract.name.name.to_lowercase();
 
         // Must have delegatecall in the contract to be a proxy
         if !lower.contains("delegatecall") {

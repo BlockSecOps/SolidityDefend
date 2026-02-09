@@ -85,7 +85,7 @@ impl ProxyContextVisibilityMismatchDetector {
     }
 
     /// Find internal functions that could be overridden as public
-    fn find_overridable_internal_functions(&self, source: &str) -> Vec<(u32, String)> {
+    fn _find_overridable_internal_functions(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 

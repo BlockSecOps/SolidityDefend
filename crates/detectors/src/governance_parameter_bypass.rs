@@ -290,7 +290,7 @@ impl GovernanceParameterBypassDetector {
         "unknown".to_string()
     }
 
-    fn find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
+    fn _find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
         for i in (0..line_num).rev() {
             let trimmed = lines[i].trim();
             if trimmed.contains("function ") {

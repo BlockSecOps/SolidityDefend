@@ -83,9 +83,9 @@ impl EnhancedInputValidationDetector {
         }
 
         // Check for multiple array parameters (high risk for mismatch)
-        let has_multiple_arrays = (source.matches("[]").count() >= 2
+        let has_multiple_arrays = source.matches("[]").count() >= 2
             || source.matches("[] calldata").count() >= 2
-            || source.matches("[] memory").count() >= 2);
+            || source.matches("[] memory").count() >= 2;
 
         if has_multiple_arrays {
             // Check for length matching validation

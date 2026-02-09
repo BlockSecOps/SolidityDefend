@@ -379,7 +379,7 @@ impl DosRevertBombDetector {
     /// Check if this is an ERC20-style transfer with 2 arguments
     /// ERC20: token.transfer(address, uint256) - has comma between args
     /// ETH: address.transfer(uint256) - single argument
-    fn is_two_arg_transfer(&self, line: &str) -> bool {
+    fn _is_two_arg_transfer(&self, line: &str) -> bool {
         if let Some(transfer_start) = line.find(".transfer(") {
             let after_transfer = &line[transfer_start + 10..];
             if let Some(paren_end) = after_transfer.find(')') {

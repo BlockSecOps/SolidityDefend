@@ -387,7 +387,7 @@ impl TransparentProxyAdminIssuesDetector {
     fn check_implementation_conflicts(
         &self,
         source: &str,
-        ctx: &AnalysisContext,
+        _ctx: &AnalysisContext,
     ) -> Vec<(u32, String)> {
         let mut issues = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
