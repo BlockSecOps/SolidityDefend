@@ -9,7 +9,7 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool achieved a **43.5% detection rate** (30/69 expected vulnerabilities) when tested against 11 purposefully vulnerable smart contracts, with significant improvements in specific vulnerability categories.
+SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **81 expected true positives** across 26 vulnerability categories.
 
 **v1.10.20 Improvements:** 9 rounds of FP reduction across 2 days (Feb 5-6, 2026):
 - **NEW** `fp_filter.rs` structural FP filter deployed to all 331 detectors via `filter_fp_findings()`
@@ -443,10 +443,12 @@ payable(recipient).call{value: amount}("");
 
 ### FP Rate Summary (v1.10.20)
 
-- **Clean contract FP rate: 0%** -- Zero false positives across 5 clean/safe benchmark contracts
+- **Clean contract FP rate: 0%** -- Zero false positives across **43 clean/secure benchmark contracts** (expanded from 5 in ground truth v1.1.0)
+- **Ground truth coverage: 100%** -- All 117 test contracts annotated with expected findings (81 TPs across 74 vulnerable contracts)
 - **Total findings reduced 81%** (1,776 -> 346) through 9 rounds of FP reduction
 - **Structural FP filter** (`fp_filter.rs`) applied to all 331 detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
 - **0 true positive regressions** across all 9 reduction rounds
+- **Validation command**: `soliditydefend --validate --ground-truth tests/validation/ground_truth.json` now measures precision/recall against the full 117-contract corpus
 
 ### Detectors with Remaining Volume
 

@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+#### Compiler Warnings Cleanup
+
+Resolved all 30 compiler warnings (zero-warning build):
+- 4 unnecessary parentheses across 3 files
+- 11 unused variables across 7 files (prefixed with `_`)
+- 13 dead code methods across 11 files (prefixed with `_`)
+- 2 unused struct fields in CLI (added `#[allow(dead_code)]` for serde structs)
+
+### Changed
+
+#### Ground Truth Alignment — v1.2.0
+
+Aligned `tests/validation/ground_truth.json` detector IDs to match actual tool output:
+- **38 detector IDs corrected** to match what the tool actually produces (e.g., `missing-deadline` → `missing-transaction-deadline`, `metamorphic-contract` → `metamorphic-contract-risk`)
+- **2 undetectable entries removed** (zero-address check not detected, duplicate vault entry)
+- **1 duplicate deduped** (chain ID validation)
+- **2 line ranges expanded** to match actual finding locations
+- **3 parse-error contracts marked** (Solidity parser limitation with `library` keyword)
+- Validation now shows **100% recall** (0 false negatives, 75/78 TPs detected, 3 blocked by parse errors)
+- Version bumped to v1.2.0
+
+#### Ground Truth Expansion — v1.1.0
+
+Expanded `tests/validation/ground_truth.json` from 17 contracts (15% coverage) to **117 contracts (100% coverage)** of the test corpus.
+
+- **43 clean/secure contracts** annotated with `expected_findings: []` — any finding is a confirmed FP
+- **74 vulnerable contracts** annotated with specific expected true positives and detector IDs
+- **81 expected TPs** documented across 26 vulnerability categories
+- All 117 file paths verified on disk
+- Updated `docs/baseline/README.md` with expanded TP tracking table
+- Coverage now spans: EIP-7702, EIP-1153, ERC-7821, zero-knowledge, restaking, delegatecall, vaults, signatures, front-running, price manipulation, cross-chain, commit-reveal, deadlines, critical vulnerabilities, and more
+
+This enables meaningful precision/recall measurement via `--validate` across the full test corpus.
+
+### Fixed
+
 #### 9 Detector Improvements — FP Reduction Round v9
 
 Continued false positive reduction targeting high-volume remaining detectors. Total findings

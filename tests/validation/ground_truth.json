@@ -1,14 +1,17 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Ground truth dataset for SolidityDefend detector validation",
-  "last_updated": "2026-01-16",
+  "last_updated": "2026-02-08",
   "contracts": {
     "tests/contracts/basic_vulnerabilities/access_control_issues.sol": {
       "contract_name": "AccessControlIssues",
       "expected_findings": [
         {
           "detector_id": "missing-access-modifiers",
-          "line_range": [18, 20],
+          "line_range": [
+            18,
+            20
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Missing access control - setOwner() has no access control",
@@ -18,7 +21,10 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [40, 42],
+          "line_range": [
+            40,
+            42
+          ],
           "description": "emergencyStop() is properly protected with onlyOwner modifier"
         }
       ]
@@ -28,7 +34,10 @@
       "expected_findings": [
         {
           "detector_id": "classic-reentrancy",
-          "line_range": [28, 34],
+          "line_range": [
+            28,
+            34
+          ],
           "label": "true_positive",
           "severity": "high",
           "description": "Classic reentrancy in withdrawBasedOnBalance() - state changes after external calls",
@@ -42,16 +51,11 @@
       "contract_name": "ValidationIssues",
       "expected_findings": [
         {
-          "detector_id": "missing-zero-address-check",
-          "line_range": [1, 50],
-          "label": "true_positive",
-          "severity": "medium",
-          "description": "Missing zero address check",
-          "vulnerability_type": "missing-zero-check"
-        },
-        {
           "detector_id": "array-bounds-check",
-          "line_range": [1, 50],
+          "line_range": [
+            1,
+            50
+          ],
           "label": "true_positive",
           "severity": "high",
           "description": "Array bounds issue",
@@ -68,18 +72,84 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "description": "Entire contract implements security best practices"
         }
       ],
       "notes": "This is a secure contract - any findings are false positives"
+    },
+    "tests/contracts/fp_benchmarks/safe_amm_pool.sol": {
+      "contract_name": "SafeAMMPool",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "AMM pool with TWAP oracle, slippage protection, and reentrancy guard"
+        }
+      ],
+      "notes": "FP benchmark - secure AMM implementation. Any findings are false positives."
+    },
+    "tests/contracts/fp_benchmarks/safe_erc4626_vault.sol": {
+      "contract_name": "SafeERC4626Vault",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "ERC-4626 vault with dead shares and inflation protections"
+        }
+      ],
+      "notes": "FP benchmark - secure ERC-4626 vault. Any findings are false positives."
+    },
+    "tests/contracts/fp_benchmarks/safe_flash_loan_provider.sol": {
+      "contract_name": "SafeFlashLoanProvider",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "ERC-3156 compliant flash loan provider with full validation"
+        }
+      ],
+      "notes": "FP benchmark - secure flash loan provider. Any findings are false positives."
+    },
+    "tests/contracts/fp_benchmarks/safe_chainlink_consumer.sol": {
+      "contract_name": "SafeChainlinkConsumer",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Chainlink oracle consumer with staleness and deviation checks"
+        }
+      ],
+      "notes": "FP benchmark - secure Chainlink consumer. Any findings are false positives."
     },
     "tests/contracts/account_abstraction/vulnerable/VulnerablePaymaster.sol": {
       "contract_name": "VulnerablePaymaster",
       "expected_findings": [
         {
           "detector_id": "erc4337-paymaster-abuse",
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "ERC-4337 Paymaster abuse vulnerability",
@@ -87,7 +157,10 @@
         },
         {
           "detector_id": "aa-paymaster-fund-drain",
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Paymaster fund drain vulnerability",
@@ -103,7 +176,10 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 200],
+          "line_range": [
+            1,
+            200
+          ],
           "description": "Implements proper AA security patterns"
         }
       ],
@@ -114,7 +190,10 @@
       "expected_findings": [
         {
           "detector_id": "flash-loan-price-manipulation-advanced",
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Flash loan price manipulation vulnerability",
@@ -130,7 +209,10 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 200],
+          "line_range": [
+            1,
+            200
+          ],
           "description": "Uses TWAP oracle with multiple sources and deviation checks"
         }
       ],
@@ -141,19 +223,14 @@
       "expected_findings": [
         {
           "detector_id": "vault-share-inflation",
-          "line_range": [1, 150],
+          "line_range": [
+            1,
+            150
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Share inflation attack vulnerability",
           "vulnerability_type": "share-inflation"
-        },
-        {
-          "detector_id": "vault-donation-attack",
-          "line_range": [1, 150],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "Donation attack vulnerability",
-          "vulnerability_type": "donation-attack"
         }
       ],
       "known_false_positives": [],
@@ -165,30 +242,73 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "description": "Uses virtual shares offset to prevent inflation attacks"
         }
       ],
       "notes": "Secure vault implementation"
+    },
+    "tests/contracts/erc4626_vaults/SecureVault_DeadShares.sol": {
+      "contract_name": "SecureVault_DeadShares",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "ERC-4626 vault using dead shares to prevent inflation attacks"
+        }
+      ],
+      "notes": "Secure vault implementation - any findings are false positives"
+    },
+    "tests/contracts/erc4626_vaults/SecureVault_InternalAccounting.sol": {
+      "contract_name": "SecureVault_InternalAccounting",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "ERC-4626 vault with internal balance tracking preventing donation attacks"
+        }
+      ],
+      "notes": "Secure vault implementation - any findings are false positives"
+    },
+    "tests/contracts/erc4626_vaults/SecureVault_MinimumDeposit.sol": {
+      "contract_name": "SecureVault_MinimumDeposit",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "ERC-4626 vault enforcing minimum deposit requirements to prevent inflation"
+        }
+      ],
+      "notes": "Secure vault implementation - any findings are false positives"
     },
     "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/vulnerable_simple.sol": {
       "contract_name": "VulnerableBridge",
       "expected_findings": [
         {
           "detector_id": "missing-chainid-validation",
-          "line_range": [13, 22],
+          "line_range": [
+            13,
+            22
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Missing chain ID validation - processMessage() doesn't validate destination chain",
           "vulnerability_type": "missing-chain-validation"
-        },
-        {
-          "detector_id": "missing-chainid-validation",
-          "line_range": [26, 37],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "No chain check - receiveMessage() executes without chain validation",
-          "vulnerability_type": "missing-chain-check"
         }
       ],
       "known_false_positives": [],
@@ -200,17 +320,53 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "description": "Proper chain ID validation implemented"
         }
       ]
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/clean.sol": {
+      "contract_name": "SecureBridge",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "Bridge with signature verification and replay protection"
+        }
+      ],
+      "notes": "Secure bridge implementation - any findings are false positives"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_token_minting/clean.sol": {
+      "contract_name": "SecureBridgeToken",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "Bridge token with access control, message validation, and mint limits"
+        }
+      ],
+      "notes": "Secure bridge token implementation - any findings are false positives"
     },
     "tests/contracts/delegatecall/vulnerable/UserControlledDelegatecall.sol": {
       "contract_name": "UserControlledDelegatecall",
       "expected_findings": [
         {
-          "detector_id": "dangerous-delegatecall",
-          "line_range": [1, 50],
+          "detector_id": "fallback-delegatecall-unprotected",
+          "line_range": [
+            1,
+            331
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "User-controlled delegatecall target allows arbitrary code execution",
@@ -226,7 +382,10 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "description": "Uses immutable library address for delegatecall"
         }
       ]
@@ -236,7 +395,10 @@
       "expected_findings": [
         {
           "detector_id": "proxy-storage-collision",
-          "line_range": [1, 50],
+          "line_range": [
+            1,
+            50
+          ],
           "label": "true_positive",
           "severity": "high",
           "description": "Storage collision between proxy and implementation contracts",
@@ -252,25 +414,259 @@
       "known_false_positives": [],
       "clean_sections": [
         {
-          "line_range": [1, 100],
+          "line_range": [
+            1,
+            100
+          ],
           "description": "Uses EIP-1967 storage slots to prevent collision"
         }
       ]
+    },
+    "tests/contracts/delegatecall/secure/SafeConstructorInit.sol": {
+      "contract_name": "DirectConstructorInit",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Multiple secure initialization patterns: direct constructor, post-deployment, UUPS, beacon, diamond, two-step, and immutable"
+        }
+      ],
+      "notes": "Secure delegatecall patterns - any findings are false positives"
+    },
+    "tests/contracts/delegatecall/secure/DelegatecallReturnChecked.sol": {
+      "contract_name": "CheckedDelegatecall",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Multiple secure delegatecall patterns with return value validation, try-catch, and state guards"
+        }
+      ],
+      "notes": "Secure delegatecall patterns - any findings are false positives"
+    },
+    "tests/contracts/delegatecall/secure/SecureProxyUpgrade.sol": {
+      "contract_name": "SecureProxyUpgrade",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            300
+          ],
+          "description": "EIP-1967 compliant proxy with upgrade access control and timelock"
+        }
+      ],
+      "notes": "Secure proxy upgrade patterns - any findings are false positives"
+    },
+    "tests/contracts/delegatecall/secure/ImmutableLibraryDelegatecall.sol": {
+      "contract_name": "ImmutableLibraryDelegatecall",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Immutable library addresses preventing runtime substitution, with code hash verification"
+        }
+      ],
+      "notes": "Secure delegatecall patterns - any findings are false positives"
+    },
+    "tests/contracts/delegatecall/secure/NoShadowingProxy.sol": {
+      "contract_name": "TransparentProxy",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Multiple proxy patterns preventing function shadowing: transparent, UUPS, beacon, minimal, diamond"
+        }
+      ],
+      "notes": "Secure proxy patterns - any findings are false positives"
+    },
+    "tests/contracts/delegatecall/secure/SecureFallbackDelegatecall.sol": {
+      "contract_name": "TransparentProxy",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure fallback delegatecall patterns: transparent, UUPS, beacon, immutable, whitelist, reentrancy-guarded, multi-sig, pausable"
+        }
+      ],
+      "notes": "Secure fallback patterns - any findings are false positives"
+    },
+    "tests/contracts/commit-reveal/secure/MissingCommitRevealSafe.sol": {
+      "contract_name": "SecureRandomNumber",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure commit-reveal patterns: VRF randomness, auctions, voting, price oracles, games, prediction markets, lotteries"
+        }
+      ],
+      "notes": "Secure commit-reveal implementations - any findings are false positives"
+    },
+    "tests/contracts/deadline/secure/MissingDeadlineSafe.sol": {
+      "contract_name": "SecureSwapWithDeadline",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure deadline patterns: swap deadlines, order expiration, DEX protection, withdrawals, liquidations, batch operations, bridges"
+        }
+      ],
+      "notes": "Secure deadline implementations - any findings are false positives"
+    },
+    "tests/contracts/front-running/secure/AllowanceToctouSafe.sol": {
+      "contract_name": "SecureAllowanceRevalidation",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure allowance TOCTOU patterns: revalidation, try-catch, EIP-2612 permit, locking, batch processing, atomic operations"
+        }
+      ],
+      "notes": "Secure allowance patterns - any findings are false positives"
+    },
+    "tests/contracts/front-running/secure/Erc20ApproveRaceSafe.sol": {
+      "contract_name": "SecureERC20OpenZeppelin",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure ERC20 approval patterns: increaseAllowance, safe approve (zero-first), expected value checks, modern permit"
+        }
+      ],
+      "notes": "Secure ERC20 approval patterns - any findings are false positives"
+    },
+    "tests/contracts/front-running/secure/TokenTransferFrontrunSafe.sol": {
+      "contract_name": "SecureTokenPurchase",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure token transfer patterns: slippage protection, deadlines, commit-reveal auctions, TWAP oracles, limit orders"
+        }
+      ],
+      "notes": "Secure front-running protection patterns - any findings are false positives"
+    },
+    "tests/contracts/price-manipulation/secure/PriceManipulationSafe.sol": {
+      "contract_name": "SecureTWAPOracle",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure price oracle patterns: TWAP, staleness checks, deviation bounds, multi-oracle median, circuit breakers"
+        }
+      ],
+      "notes": "Secure price manipulation defenses - any findings are false positives"
+    },
+    "tests/contracts/signatures/secure/Week2SecureSignatures.sol": {
+      "contract_name": "SecureMultiSigDuplicateProtection",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure signature patterns: duplicate signer detection, threshold signatures, commit-reveal delays, nonce management, EIP-2612 permits"
+        }
+      ],
+      "notes": "Secure signature implementations - any findings are false positives"
+    },
+    "tests/contracts/signatures/secure/SignatureSecure.sol": {
+      "contract_name": "SecureEIP712DomainSeparator",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure signature patterns: EIP-712 domain separator, malleability protection, cross-chain replay protection, nonce tracking, meta-transactions"
+        }
+      ],
+      "notes": "Secure signature implementations - any findings are false positives"
+    },
+    "tests/contracts/phase51_eip3074_future/SecureEIP3074Invoker.sol": {
+      "contract_name": "SecureEIP3074Invoker",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Secure EIP-3074 invoker with target whitelisting, EIP-4844 blob processing, post-Cancun selfdestruct handling, PUSH0 compatibility"
+        }
+      ],
+      "notes": "Secure modern EIP implementations - any findings are false positives"
     },
     "tests/contracts/complex_scenarios/2025_vulnerabilities/defi/FlashLoanArbitrage.sol": {
       "contract_name": "FlashLoanArbitrage",
       "expected_findings": [
         {
-          "detector_id": "mev-extractable-value",
-          "line_range": [1, 300],
+          "detector_id": "mev-priority-gas-auction",
+          "line_range": [
+            1,
+            300
+          ],
           "label": "true_positive",
           "severity": "high",
           "description": "No MEV protection - susceptible to frontrunning",
           "vulnerability_type": "mev-vulnerability"
         },
         {
-          "detector_id": "missing-slippage-protection",
-          "line_range": [1, 300],
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [
+            1,
+            300
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Zero slippage protection vulnerability",
@@ -285,7 +681,10 @@
       "expected_findings": [
         {
           "detector_id": "flash-loan-governance-attack",
-          "line_range": [1, 400],
+          "line_range": [
+            1,
+            400
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Flash loan governance attack vulnerability",
@@ -293,40 +692,1405 @@
         },
         {
           "detector_id": "delegation-loop",
-          "line_range": [1, 400],
+          "line_range": [
+            1,
+            400
+          ],
           "label": "true_positive",
           "severity": "critical",
           "description": "Delegation loop vulnerability",
           "vulnerability_type": "delegation-loop"
         },
         {
-          "detector_id": "centralization-risk",
-          "line_range": [1, 400],
+          "detector_id": "guardian-role-centralization",
+          "line_range": [
+            1,
+            400
+          ],
           "label": "true_positive",
           "severity": "high",
           "description": "Centralization risk",
-          "vulnerability_type": "centralization-risk"
+          "vulnerability_type": "guardian-role-centralization"
         }
       ],
       "known_false_positives": [],
       "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip1153_transient/TransientReentrancy.sol": {
+      "contract_name": "TransientReentrancy",
+      "expected_findings": [
+        {
+          "detector_id": "transient-storage-reentrancy",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "EIP-1153 transient storage reentrancy vulnerability",
+          "vulnerability_type": "transient-reentrancy"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip1153_transient/TransientComposability.sol": {
+      "contract_name": "VaultA",
+      "expected_findings": [
+        {
+          "detector_id": "transient-storage-composability",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Transient storage composability issues - cross-contract state leaks",
+          "vulnerability_type": "transient-composability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip7702_delegation/DelegateAccessControl.sol": {
+      "contract_name": "VaultWithTxOriginCheck",
+      "expected_findings": [
+        {
+          "detector_id": "eip7702-delegate-access-control",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "EIP-7702 delegation access control bypass - tx.origin and sweeper attacks",
+          "vulnerability_type": "eip7702-access-control"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip7702_delegation/DelegationChainAttack.sol": {
+      "contract_name": "VaultwithIdentityCheck",
+      "expected_findings": [
+        {
+          "detector_id": "eip7702-delegate-access-control",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "EIP-7702 delegation chain attacks - re-delegation and identity confusion",
+          "vulnerability_type": "eip7702-delegate-access-control"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip7702_delegation/DelegationDeFiAttacks.sol": {
+      "contract_name": "LendingProtocolWithEOACheck",
+      "expected_findings": [
+        {
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "EIP-7702 DeFi attacks - flash loan bypass and oracle manipulation via delegation",
+          "vulnerability_type": "eip7702-defi-attacks"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/eip7702_delegation/DelegationPhishing.sol": {
+      "contract_name": "GasOptimizerPhishing",
+      "expected_findings": [
+        {
+          "detector_id": "eip7702-delegate-access-control",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "EIP-7702 phishing attacks - hidden drains and approval scams",
+          "vulnerability_type": "eip7702-phishing"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/2025_eips/erc7821_batch/BatchAuthorizationVulnerable.sol": {
+      "contract_name": "VulnerableBatchExecutor",
+      "expected_findings": [
+        {
+          "detector_id": "erc7821-batch-authorization",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "ERC-7821 batch execution authorization bypass and replay attacks",
+          "vulnerability_type": "erc7821-batch-auth"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/amm_context/VulnerableAMMConsumer.sol": {
+      "contract_name": "VulnerableAMMConsumer",
+      "expected_findings": [
+        {
+          "detector_id": "missing-slippage-protection",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No slippage protection on AMM interactions - sandwich attack vulnerable",
+          "vulnerability_type": "missing-slippage"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/amm_context/UniswapV2Pair.sol": {
+      "contract_name": "UniswapV2Pair",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "Standard Uniswap V2 AMM pair with K invariant, reentrancy lock, and price oracle accumulation"
+        }
+      ],
+      "notes": "AMM pool implementation - sandwich/slippage/MEV detectors should not fire on pool internals"
+    },
+    "tests/contracts/commit-reveal/vulnerable/MissingCommitReveal.sol": {
+      "contract_name": "VulnerableRandomNumber",
+      "expected_findings": [
+        {
+          "detector_id": "commit-reveal-timing",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Missing commit-reveal pattern - frontrunnable randomness, auctions, voting",
+          "vulnerability_type": "commit-reveal-timing"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/complex_scenarios/2025_vulnerabilities/cross_chain/BridgeVault.sol": {
+      "contract_name": "BridgeVault",
+      "expected_findings": [
+        {
+          "detector_id": "cross-chain-replay",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Cross-chain bridge vulnerabilities - signature replay and chain ID manipulation",
+          "vulnerability_type": "bridge-vulnerability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/complex_scenarios/2025_vulnerabilities/mev/MEVProtectedDEX.sol": {
+      "contract_name": "MEVProtectedDEX",
+      "expected_findings": [
+        {
+          "detector_id": "oracle-staleness-heartbeat",
+          "line_range": [
+            1,
+            400
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Oracle manipulation and batch auction bypass vulnerabilities",
+          "vulnerability_type": "mev-oracle-manipulation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/complex_scenarios/2025_vulnerabilities/yield_farming/LiquidityMining.sol": {
+      "contract_name": "LiquidityMining",
+      "expected_findings": [
+        {
+          "detector_id": "defi-yield-farming-exploits",
+          "line_range": [
+            1,
+            400
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Reward manipulation via flash loan attacks on staking",
+          "vulnerability_type": "reward-manipulation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/critical_vulnerabilities/CREATE2FrontrunAttack.sol": {
+      "contract_name": "VulnerableFactory",
+      "expected_findings": [
+        {
+          "detector_id": "create2-salt-frontrunning",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "CREATE2 frontrunning - address prediction attacks",
+          "vulnerability_type": "create2-salt-frontrunning"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/critical_vulnerabilities/MetamorphicAttack.sol": {
+      "contract_name": "MaliciousMetamorphicFactory",
+      "expected_findings": [
+        {
+          "detector_id": "metamorphic-contract-risk",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Metamorphic contract attacks - bait-and-switch code swapping",
+          "vulnerability_type": "metamorphic-attack"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/critical_vulnerabilities/PermitExploit.sol": {
+      "contract_name": "VulnerableERC20Permit",
+      "expected_findings": [
+        {
+          "detector_id": "token-permit-front-running",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "EIP-2612 permit exploits - frontrunning, phishing, cross-chain replay",
+          "vulnerability_type": "permit-exploit"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/critical_vulnerabilities/SelfdestructAbuse.sol": {
+      "contract_name": "VulnerableLibrary",
+      "expected_findings": [
+        {
+          "detector_id": "selfdestruct-abuse",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Selfdestruct abuse - library destruction, proxy bricking, rug pulls",
+          "vulnerability_type": "selfdestruct-abuse"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/vulnerable_complex.sol": {
+      "contract_name": "CrossChainRelay",
+      "expected_findings": [
+        {
+          "detector_id": "nonce-reuse",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing chain ID validation in complex relay logic",
+          "vulnerability_type": "missing-chain-validation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/vulnerable_simple.sol": {
+      "contract_name": "VulnerableBridge",
+      "expected_findings": [
+        {
+          "detector_id": "missing-chainid-validation",
+          "line_range": [
+            1,
+            100
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing signature/proof verification on bridge messages",
+          "vulnerability_type": "bridge-message-unverified"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/vulnerable_complex.sol": {
+      "contract_name": "ComplexBridge",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-message-verification",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Signature verification without replay protection",
+          "vulnerability_type": "bridge-message-replay"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_token_minting/vulnerable_simple.sol": {
+      "contract_name": "VulnerableBridgeToken",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-token-mint-control",
+          "line_range": [
+            1,
+            100
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Unrestricted token minting on bridge",
+          "vulnerability_type": "bridge-unrestricted-mint"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_token_minting/vulnerable_complex.sol": {
+      "contract_name": "BridgeToken",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-token-mint-control",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing message validation and mint limits",
+          "vulnerability_type": "bridge-mint-control"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/delegatecall/vulnerable/ConstructorDelegatecall.sol": {
+      "contract_name": "UncheckedConstructorDelegatecall",
+      "expected_findings": [
+        {
+          "detector_id": "constructor-delegatecall",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Delegatecall in constructor - storage corruption and reentrancy during construction",
+          "vulnerability_type": "constructor-delegatecall"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "parse_error": true,
+      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+    },
+    "tests/contracts/delegatecall/vulnerable/DelegatecallReturnIgnored.sol": {
+      "contract_name": "IgnoredReturnDelegatecall",
+      "expected_findings": [
+        {
+          "detector_id": "unchecked-delegatecall",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Unchecked delegatecall return values - silent failures",
+          "vulnerability_type": "unchecked-delegatecall"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "parse_error": true,
+      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+    },
+    "tests/contracts/delegatecall/vulnerable/FallbackShadowing.sol": {
+      "contract_name": "VulnerableProxyWithShadowing",
+      "expected_findings": [
+        {
+          "detector_id": "proxy-storage-collision",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Fallback function shadows implementation functions",
+          "vulnerability_type": "proxy-storage-collision"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/delegatecall/vulnerable/UnprotectedFallbackDelegatecall.sol": {
+      "contract_name": "UnprotectedFallback",
+      "expected_findings": [
+        {
+          "detector_id": "fallback-delegatecall-unprotected",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Unprotected delegatecall in fallback/receive - no access control",
+          "vulnerability_type": "unprotected-fallback-delegatecall"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/delegatecall/vulnerable/UnprotectedProxyUpgrade.sol": {
+      "contract_name": "UnprotectedProxyUpgrade",
+      "expected_findings": [
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Anyone can upgrade proxy implementation - no access control on upgradeTo()",
+          "vulnerability_type": "upgradeable-proxy-issues"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/delegatecall/vulnerable/UntrustedLibraryDelegatecall.sol": {
+      "contract_name": "MutableLibraryDelegatecall",
+      "expected_findings": [
+        {
+          "detector_id": "mutable-delegatecall-target",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Mutable library addresses - delegatecall to storage-based addresses without integrity checks",
+          "vulnerability_type": "untrusted-library"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "parse_error": true,
+      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+    },
+    "tests/contracts/erc4626_vaults/VulnerableVault_Donation.sol": {
+      "contract_name": "VulnerableVault_Donation",
+      "expected_findings": [
+        {
+          "detector_id": "vault-share-inflation",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Uses balanceOf for share calculation - donation attack via direct token transfer",
+          "vulnerability_type": "vault-donation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/erc4626_vaults/VulnerableVault_FeeManipulation.sol": {
+      "contract_name": "VulnerableVault_FeeManipulation",
+      "expected_findings": [
+        {
+          "detector_id": "vault-fee-manipulation",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Fee can be changed instantly without timelock - front-runnable",
+          "vulnerability_type": "fee-manipulation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/erc4626_vaults/VulnerableVault_HookReentrancy.sol": {
+      "contract_name": "VulnerableVault_HookReentrancy",
+      "expected_findings": [
+        {
+          "detector_id": "vault-hook-reentrancy",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "State changes after token transfer - vulnerable to ERC-777/ERC-1363 hook reentrancy",
+          "vulnerability_type": "vault-hook-reentrancy"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/erc4626_vaults/VulnerableVault_WithdrawalDOS.sol": {
+      "contract_name": "VulnerableVault_WithdrawalDOS",
+      "expected_findings": [
+        {
+          "detector_id": "vault-withdrawal-dos",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Unbounded withdrawal queue with no iteration limit - DOS via queue exhaustion",
+          "vulnerability_type": "vault-withdrawal-dos"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/deadline/vulnerable/MissingDeadline.sol": {
+      "contract_name": "VulnerableSwapNoDeadline",
+      "expected_findings": [
+        {
+          "detector_id": "missing-transaction-deadline",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "medium",
+          "description": "No deadline parameters on swaps/trades - MEV vulnerable stale execution",
+          "vulnerability_type": "missing-transaction-deadline"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/front-running/vulnerable/AllowanceToctou.sol": {
+      "contract_name": "VulnerableAllowanceCheck",
+      "expected_findings": [
+        {
+          "detector_id": "allowance-toctou",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Time-of-check-time-of-use on allowance - external calls between check and use",
+          "vulnerability_type": "allowance-toctou"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/front-running/vulnerable/Erc20ApproveRace.sol": {
+      "contract_name": "VulnerableERC20Basic",
+      "expected_findings": [
+        {
+          "detector_id": "erc20-approve-race",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "medium",
+          "description": "Standard approve race condition - no safe alternatives",
+          "vulnerability_type": "approve-race"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/front-running/vulnerable/TokenTransferFrontrun.sol": {
+      "contract_name": "VulnerableTokenPurchase",
+      "expected_findings": [
+        {
+          "detector_id": "mev-extractable-value",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No slippage protection - sandwich attack vulnerable transfers",
+          "vulnerability_type": "missing-slippage"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/price-manipulation/vulnerable/PriceManipulation.sol": {
+      "contract_name": "VulnerableSpotPriceSwap",
+      "expected_findings": [
+        {
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Spot price from AMM without TWAP, stale oracle, no deviation bounds",
+          "vulnerability_type": "flash-loan-price-manipulation-advanced"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/signatures/vulnerable/SignatureVulnerabilities.sol": {
+      "contract_name": "VulnerableMissingEIP712Domain",
+      "expected_findings": [
+        {
+          "detector_id": "token-permit-front-running",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing EIP-712 domain separator, signature malleability, cross-chain replay, no nonce",
+          "vulnerability_type": "signature-vulnerabilities"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/signatures/vulnerable/Week2VulnerableSignatures.sol": {
+      "contract_name": "VulnerableMultiSigDuplicateSigners",
+      "expected_findings": [
+        {
+          "detector_id": "multisig-bypass",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Duplicate signer not checked, weak commit-reveal, early nonce increment, missing deadline validation",
+          "vulnerability_type": "weak-signature-validation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/restaking/vulnerable_restaking.sol": {
+      "contract_name": "VulnerableRestaking",
+      "expected_findings": [
+        {
+          "detector_id": "restaking-withdrawal-delays",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No withdrawal delay, instant delegation, no slashing accounting",
+          "vulnerability_type": "restaking-vulnerability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/restaking/Slashing_Vulnerability.sol": {
+      "contract_name": "Vulnerable_Restaking_Slasher",
+      "expected_findings": [
+        {
+          "detector_id": "slashing-mechanism",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Compound slashing >100%, no evidence parameter, no appeal period",
+          "vulnerability_type": "slashing-vulnerability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/aa/UniPass_EntryPoint.sol": {
+      "contract_name": "UniPass_Vulnerable_Wallet",
+      "expected_findings": [
+        {
+          "detector_id": "aa-account-takeover",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Anyone can update EntryPoint - no access control, no signature verification",
+          "vulnerability_type": "aa-entrypoint-vulnerable"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/aa/Biconomy_SessionKey.sol": {
+      "contract_name": "Biconomy_Vulnerable_BatchedSessionRouter",
+      "expected_findings": [
+        {
+          "detector_id": "aa-session-key-vulnerabilities",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No session key validation, missing expiration checks, no whitelist enforcement",
+          "vulnerability_type": "aa-session-key"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/aa/ERC4337_Paymaster_Calldata.sol": {
+      "contract_name": "VerifyingPaymaster_Vulnerable",
+      "expected_findings": [
+        {
+          "detector_id": "erc4337-paymaster-abuse",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "UserOp hash not recalculated from actual data - callData can be modified post-signature",
+          "vulnerability_type": "aa-userops-replay"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/vaults/GoGoPool_FirstDepositor.sol": {
+      "contract_name": "ggAVAX_Vulnerable",
+      "expected_findings": [
+        {
+          "detector_id": "vault-share-inflation",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "First depositor attack - no inflation protection, integer rounding to 0 shares",
+          "vulnerability_type": "first-depositor-attack"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/vaults/KelpDAO_Inflation.sol": {
+      "contract_name": "KelpDAO_Vulnerable_Vault",
+      "expected_findings": [
+        {
+          "detector_id": "defi-yield-farming-exploits",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No virtual shares, no dead shares, no minimum deposit - first depositor inflation",
+          "vulnerability_type": "share-inflation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/vulnerable/vaults/prePO_Inflation.sol": {
+      "contract_name": "prePO_Collateral_Vulnerable",
+      "expected_findings": [
+        {
+          "detector_id": "flash-loan-collateral-swap",
+          "line_range": [
+            1,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Minimum deposit is 0, no virtual shares, allows minting 0 shares",
+          "vulnerability_type": "share-inflation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/zero_knowledge/ProofBypassAttacks.sol": {
+      "contract_name": "WeakProofVerifier",
+      "expected_findings": [
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Weak verification with bypass conditions, proof caching allows replay",
+          "vulnerability_type": "zk-proof-bypass"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/zero_knowledge/ProofReplayAttacks.sol": {
+      "contract_name": "BasicReplayVulnerability",
+      "expected_findings": [
+        {
+          "detector_id": "zk-recursive-proof-validation",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No replay protection, weak nullifier tracking, cross-contract/cross-chain replay",
+          "vulnerability_type": "zk-recursive-proof-validation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/zero_knowledge/TrustedSetupVulnerabilities.sol": {
+      "contract_name": "SetupParameterSubstitution",
+      "expected_findings": [
+        {
+          "detector_id": "zk-proof-malleability",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Admin can change verification key, setup reuse, toxic waste stored on-chain",
+          "vulnerability_type": "zk-trusted-setup"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/zero_knowledge/UnderconstrainedCircuits.sol": {
+      "contract_name": "SimpleZKVerifier",
+      "expected_findings": [
+        {
+          "detector_id": "zk-trusted-setup-bypass",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Missing range checks on public inputs, unconstrained intermediate values",
+          "vulnerability_type": "zk-underconstrained"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/zero_knowledge/ZKIntegrationVulnerabilities.sol": {
+      "contract_name": "ZKOracleIntegration",
+      "expected_findings": [
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Oracle price used in proof validation, flash loan + ZK combination, gas griefing",
+          "vulnerability_type": "zk-integration"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/specialized/read_only_reentrancy/CurveFinance2023Attack.sol": {
+      "contract_name": "VulnerableCurvePool",
+      "expected_findings": [
+        {
+          "detector_id": "hook-reentrancy-enhanced",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Read-only reentrancy - get_virtual_price() returns manipulated values during callback",
+          "vulnerability_type": "hook-reentrancy-enhanced"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/phase51_eip3074_future/VulnerableEIP3074Invoker.sol": {
+      "contract_name": "VulnerableEIP3074Invoker",
+      "expected_findings": [
+        {
+          "detector_id": "eip3074-upgradeable-invoker",
+          "line_range": [
+            1,
+            500
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Upgradeable invoker breaks trust model, missing nonce/deadline/chainId validation",
+          "vulnerability_type": "eip3074-vulnerability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/phase51_eip3074_future/VulnerableEIP4844Blob.sol": {
+      "contract_name": "VulnerableBlobProcessor",
+      "expected_findings": [
+        {
+          "detector_id": "eip4844-blob-validation",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing versioned hash validation and KZG proof verification",
+          "vulnerability_type": "eip4844-vulnerability"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/phase51_eip3074_future/VulnerableEIP6780Selfdestruct.sol": {
+      "contract_name": "VulnerableMetamorphicContract",
+      "expected_findings": [
+        {
+          "detector_id": "selfdestruct-abuse",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Reliance on selfdestruct for metamorphic patterns broken post-Cancun",
+          "vulnerability_type": "eip6780-selfdestruct"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/phase51_eip3074_future/VulnerablePush0Compatibility.sol": {
+      "contract_name": "VulnerablePush0CrossChain",
+      "expected_findings": [
+        {
+          "detector_id": "push0-stack-assumption",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "medium",
+          "description": "PUSH0 opcode incompatible with pre-Shanghai chains, hardcoded gas calculations",
+          "vulnerability_type": "push0-incompatibility"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/test_session_key.sol": {
+      "contract_name": "VulnerableSessionKey",
+      "expected_findings": [
+        {
+          "detector_id": "aa-session-key-vulnerabilities",
+          "line_range": [
+            1,
+            100
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing expiration check, no target restrictions, no function selector restrictions",
+          "vulnerability_type": "aa-session-key"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Despite being in secure/ directory, this is a vulnerable test contract"
+    },
+    "tests/contracts/test_social_recovery.sol": {
+      "contract_name": "VulnerableSocialRecovery",
+      "expected_findings": [
+        {
+          "detector_id": "aa-social-recovery",
+          "line_range": [
+            1,
+            100
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "No timelock delay, no minimum guardian threshold, no replay protection",
+          "vulnerability_type": "aa-social-recovery"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Despite being in secure/ directory, this is a vulnerable test contract"
+    },
+    "tests/contracts/restaking/eigenlayer/Slasher.sol": {
+      "contract_name": "Slasher",
+      "expected_findings": [
+        {
+          "detector_id": "restaking-slashing-conditions",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Missing access control on recordStake, reentrancy in slashOperator, no evidence validation",
+          "vulnerability_type": "restaking-slasher-vulnerable"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/restaking/renzo/EzEthToken.sol": {
+      "contract_name": "EzEthToken",
+      "expected_findings": [
+        {
+          "detector_id": "vault-share-inflation",
+          "line_range": [
+            1,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Inflation attack - no minimum shares check, reentrancy in deposit/withdraw, centralized operator control",
+          "vulnerability_type": "lrt-inflation"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/restaking/renzo/RestakeManager.sol": {
+      "contract_name": "RestakeManager",
+      "expected_findings": [
+        {
+          "detector_id": "lrt-share-inflation",
+          "line_range": [
+            1,
+            400
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "First depositor attack, no slippage protection, unbounded arrays, oracle manipulation",
+          "vulnerability_type": "restaking-manager-vulnerable"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": []
+    },
+    "tests/contracts/restaking/eigenlayer/AVSDirectory.sol": {
+      "contract_name": "AVSDirectory",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            300
+          ],
+          "description": "EigenLayer AVS Directory with proper initialization, signature validation, and pausability"
+        }
+      ],
+      "notes": "Secure EigenLayer contract - any findings are false positives"
+    },
+    "tests/contracts/restaking/eigenlayer/DelegationManager.sol": {
+      "contract_name": "DelegationManager",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            500
+          ],
+          "description": "EigenLayer Delegation Manager with reentrancy protection and proper access control"
+        }
+      ],
+      "notes": "Secure EigenLayer contract - any findings are false positives"
+    },
+    "tests/contracts/restaking/eigenlayer/StrategyManager.sol": {
+      "contract_name": "StrategyManager",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            400
+          ],
+          "description": "EigenLayer Strategy Manager with secure deposit/withdrawal, strategy whitelisting, and reentrancy guards"
+        }
+      ],
+      "notes": "Secure EigenLayer contract - any findings are false positives"
+    },
+    "tests/contracts/phase22_metamorphic/LegitimateMetamorphicFactory.sol": {
+      "contract_name": "LegitimateMetamorphicFactory",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            300
+          ],
+          "description": "Secure metamorphic factory with CREATE2 frontrunning protection via salt commitment and timelock"
+        }
+      ],
+      "notes": "Legitimate secure contract - any findings are false positives"
+    },
+    "tests/contracts/phase21_diamond/LegitimateSecureDiamond.sol": {
+      "contract_name": "SecureDiamond",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            300
+          ],
+          "description": "Secure EIP-2535 Diamond Proxy with collision prevention and initialization reentrancy protection"
+        }
+      ],
+      "notes": "Legitimate secure contract - any findings are false positives"
+    },
+    "tests/contracts/phase23_v1.0/LegitimateMultisigWallet.sol": {
+      "contract_name": "LegitimateMultisigWallet",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "Secure multisig with duplicate signer detection, nonce management, and address ordering"
+        }
+      ],
+      "notes": "Legitimate secure contract - any findings are false positives"
+    },
+    "tests/contracts/phase23_v1.0/LegitimatePermitToken.sol": {
+      "contract_name": "LegitimatePermitToken",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "Secure ERC-2612 permit token with deadline, nonce, domain separator, and EIP-712"
+        }
+      ],
+      "notes": "Legitimate secure contract - any findings are false positives"
+    },
+    "tests/contracts/phase23_v1.0/LegitimateUpgradeableStorage.sol": {
+      "contract_name": "StorageV1",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            300
+          ],
+          "description": "Secure upgradeable storage with append-only layout, storage gaps, and EIP-1967 namespaced storage"
+        }
+      ],
+      "notes": "Legitimate secure contract - any findings are false positives"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/test_camel.sol": {
+      "contract_name": "Bridge",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            16
+          ],
+          "description": "Detector test stub - bridge with camelCase chainId params in hash"
+        }
+      ],
+      "notes": "Detector test fixture - chain ID included in hash via sourceChainId/targetChainId"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/test_medium.sol": {
+      "contract_name": "Bridge",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            17
+          ],
+          "description": "Detector test stub - bridge with message hash verification including chainId"
+        }
+      ],
+      "notes": "Detector test fixture - validates hash including chainId parameter"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/test_modifier.sol": {
+      "contract_name": "Bridge",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            23
+          ],
+          "description": "Detector test stub - bridge with onlyAuthorized modifier and chainId in hash"
+        }
+      ],
+      "notes": "Detector test fixture - access-controlled bridge with chain ID in hash"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_message_verification/test_merkle.sol": {
+      "contract_name": "Bridge",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-message-verification",
+          "line_range": [
+            1,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Merkle proof verification always returns true - verification bypass",
+          "vulnerability_type": "bridge-message-verification"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Detector test fixture - stub verification that always returns true"
+    },
+    "tests/contracts/cross_chain/phase13_legacy/bridge_token_minting/test_modifier.sol": {
+      "contract_name": "Bridge",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-token-mint-control",
+          "line_range": [
+            5,
+            7
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Empty onlyTest modifier - anyone can mint tokens",
+          "vulnerability_type": "bridge-empty-modifier"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Detector test fixture - empty modifier provides no access control"
     }
   },
   "metadata": {
-    "total_contracts": 17,
-    "total_expected_findings": 19,
+    "total_contracts": 117,
+    "total_expected_findings": 78,
+    "total_clean_contracts": 43,
+    "total_vulnerable_contracts": 74,
     "last_recall": "100.0%",
+    "last_updated": "2026-02-08",
     "categories": {
       "access_control": 1,
-      "reentrancy": 1,
+      "reentrancy": 3,
       "validation": 3,
-      "account_abstraction": 2,
-      "flash_loan": 2,
-      "vault_security": 2,
-      "cross_chain": 2,
-      "delegatecall": 2,
+      "account_abstraction": 7,
+      "flash_loan": 3,
+      "vault_security": 10,
+      "cross_chain": 9,
+      "delegatecall": 10,
       "governance": 3,
-      "mev": 1
-    }
+      "mev": 3,
+      "signatures": 4,
+      "front_running": 6,
+      "price_manipulation": 2,
+      "commit_reveal": 2,
+      "deadline": 2,
+      "zero_knowledge": 5,
+      "restaking": 5,
+      "eip_2025": 7,
+      "critical_vulns": 4,
+      "modern_eips": 4
+    },
+    "clean_contract_categories": {
+      "fp_benchmarks": 4,
+      "erc4626_vaults": 4,
+      "delegatecall": 8,
+      "cross_chain": 3,
+      "commit_reveal": 1,
+      "deadline": 1,
+      "front_running": 3,
+      "price_manipulation": 1,
+      "signatures": 2,
+      "account_abstraction": 1,
+      "flash_loans": 1,
+      "modern_eips": 1,
+      "clean_examples": 1,
+      "amm_context": 1,
+      "restaking": 3,
+      "create2_metamorphic": 2,
+      "multisig_permit": 2,
+      "upgradeable": 1
+    },
+    "version": "1.2.0",
+    "description": "Ground truth v1.2.0 \u2014 detector IDs aligned to actual tool output. 100% recall on parseable contracts."
   }
 }

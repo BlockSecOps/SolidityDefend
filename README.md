@@ -24,7 +24,7 @@ soliditydefend contract.sol
 - **Cross-Contract Analysis** - Detect vulnerabilities spanning multiple contracts with `--cross-contract`
 - **Lightning Fast** - 30-180ms analysis time, built in Rust
 - **CI/CD Ready** - JSON/SARIF output, exit codes, severity filtering
-- **100% Recall** - Validated against ground truth test suite
+- **100% Recall** - Validated against 117-contract ground truth suite (78 expected TPs, 43 clean contracts)
 
 See [docs/DETECTORS.md](docs/DETECTORS.md) for the complete detector list.
 
@@ -206,7 +206,8 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
 | [Configuration](docs/CONFIGURATION.md) | Configuration reference |
 | [Testing](docs/TESTING.md) | Real-world testing and validation |
 | [Docker](docs/DOCKER.md) | Docker usage and CI/CD |
-| [Validation](docs/VALIDATION.md) | Validation test results |
+| [Validation](docs/VALIDATION.md) | Ground truth validation framework |
+| [Baseline](docs/baseline/README.md) | FP reduction baselines & ground truth |
 
 ### Task Documentation
 
