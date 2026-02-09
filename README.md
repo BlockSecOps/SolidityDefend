@@ -17,16 +17,16 @@ soliditydefend contract.sol
 ## Features
 
 - **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
-- **Context-Aware Analysis** - Structural FP filter (`fp_filter.rs`) across all 331 detectors plus Safe Patterns Library with 56+ FP reduction categories. 0% false positive rate on clean contracts. Recognizes view/pure functions, internal/private visibility, constructors, admin-controlled functions, ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, ERC-4626 vaults, Chainlink oracles, proxy patterns (UUPS, Diamond, EIP-1967, Beacon), inline access control, timelocks, multi-sig, Permit2, transient storage locks, and more
+- **Context-Aware Analysis** - Structural FP filter across all detectors plus Safe Patterns Library with 56+ categories. 0% false positive rate on clean contracts. Recognizes ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, proxy patterns, access control, and more
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
 - **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`
 - **Cross-Contract Analysis** - Detect vulnerabilities spanning multiple contracts with `--cross-contract`
 - **Lightning Fast** - 30-180ms analysis time, built in Rust
 - **CI/CD Ready** - JSON/SARIF output, exit codes, severity filtering
-- **100% Recall** - Validated against 117-contract ground truth suite (78 expected TPs, 43 clean contracts)
+- **100% Recall** - Validated against 117-contract ground truth suite (78/78 TPs, 0 parse errors, 0 false negatives)
 
-See [docs/DETECTORS.md](docs/DETECTORS.md) for the complete detector list.
+See [docs/detectors/](docs/detectors/README.md) for the complete detector list.
 
 ## Installation
 
@@ -116,18 +116,6 @@ See [docs/USAGE.md](docs/USAGE.md) for complete usage guide.
 ## Example Output
 
 ```
-=== SolidityDefend Project Analysis ===
-Framework: Foundry (auto-detected)
-Project Root: /path/to/my-project
-
-Source Directories:
-  [SCAN] src - 5 files
-  [SKIP] test - excluded by default
-  [SKIP] script - excluded by default
-  [DEPS] lib - use --include-deps to scan
-
-Found 12 issues in 5 files:
-
 CRITICAL: Reentrancy vulnerability detected in withdraw()
    Location: contracts/Vault.sol:45:5
    Detector: classic-reentrancy
@@ -139,50 +127,9 @@ HIGH: Missing access control on initialize()
    Detector: missing-access-control
    CWE: CWE-284
    Fix: Add onlyOwner or similar access control modifier
-
-=== Project Security Summary ===
-Contracts Analyzed: 5 (5 source, 0 dependencies)
-
-Findings Overview:
-  Critical: 1 (IMMEDIATE ACTION REQUIRED)
-  High:     3 (should be addressed)
-  Medium:   5
-  Low:      3
-
-Protocol Risk Score: 6.5/10 (Medium Risk)
-
-Analysis completed in 0.45s
 ```
 
-## Real-World Testing
-
-Tested against production contracts from leading protocols:
-
-| Test Case | Source | Framework | Files | Findings | Time |
-|-----------|--------|-----------|-------|----------|------|
-| Proxy Contracts | OpenZeppelin v5.0 | Plain | 6 | 28 (4 Crit, 17 High) | 0.08s |
-| Upgradeable Contracts | OZ + Compound | Plain | 5 | 139 (21 Crit, 31 High) | 1.02s |
-| Foundry Project | Uniswap Permit2 | Foundry | 4 | 54 (2 Crit, 30 High) | 0.05s |
-| Hardhat Project | Aave V3 Core | Hardhat | 5 | 146 (23 Crit, 44 High) | 0.31s |
-
-**Contracts Tested:**
-- OpenZeppelin: Proxy.sol, ERC1967Proxy, TransparentUpgradeableProxy, BeaconProxy
-- Compound: Comptroller (62KB), ComptrollerStorage
-- Uniswap: Permit2, SignatureTransfer, AllowanceTransfer
-- Aave: Pool.sol, PoolStorage, SupplyLogic, BorrowLogic
-
-## Performance
-
-Real-world benchmarks on production contracts:
-
-| Task | Time | Details |
-|------|------|---------|
-| Single contract | 20-50ms | Typical ERC-20/721 contract |
-| Complex contract | 100-180ms | Diamond proxy, vault systems |
-| Full project | 2-8s | 50-100 contracts (Foundry/Hardhat) |
-| CI/CD pipeline | <10s | Average DeFi project |
-
-Built in Rust for maximum performance. Zero runtime dependencies.
+Tested against OpenZeppelin, Compound, Uniswap Permit2, and Aave V3 contracts. Typical analysis: 20-50ms per contract, 2-8s for full projects. See [docs/TESTING.md](docs/TESTING.md) for benchmarks.
 
 ## Configuration
 
@@ -202,20 +149,15 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
 | [Installation](docs/INSTALLATION.md) | Installation methods |
 | [Usage](docs/USAGE.md) | Usage guide and examples |
 | [CLI Reference](docs/CLI.md) | Command-line options |
-| [Detectors](docs/DETECTORS.md) | All 333 detectors |
+| [Detectors](docs/detectors/README.md) | All 333 detectors |
 | [Configuration](docs/CONFIGURATION.md) | Configuration reference |
-| [Testing](docs/TESTING.md) | Real-world testing and validation |
-| [Docker](docs/DOCKER.md) | Docker usage and CI/CD |
+| [Output Formats](docs/OUTPUT.md) | JSON and console output |
+| [Docker](docs/DOCKER.md) | Docker usage, CI/CD, and versioning |
+| [GitHub Actions](docs/GITHUB_ACTIONS.md) | CI/CD pipeline setup |
+| [Testing](docs/TESTING.md) | Testing and benchmarks |
 | [Validation](docs/VALIDATION.md) | Ground truth validation framework |
-| [Baseline](docs/baseline/README.md) | FP reduction baselines & ground truth |
-
-### Task Documentation
-
-Developer documentation in [TaskDocs-SolidityDefend/](TaskDocs-SolidityDefend/):
-- [Release Process](TaskDocs-SolidityDefend/RELEASE.md)
-- [Testing Protocols](TaskDocs-SolidityDefend/TESTING-PROTOCOLS.md)
-- [FP Reduction Guide](TaskDocs-SolidityDefend/FP-REDUCTION.md)
-- [Detector Development](TaskDocs-SolidityDefend/DETECTOR-DEVELOPMENT.md)
+| [Baseline](docs/baseline/README.md) | FP reduction baselines |
+| [Changelog](docs/CHANGELOG.md) | Version history |
 
 ## Contributing
 
