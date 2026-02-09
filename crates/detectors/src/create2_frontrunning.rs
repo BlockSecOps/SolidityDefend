@@ -277,7 +277,7 @@ impl Create2FrontrunningDetector {
 
     /// Phase 54 FP Reduction: Detect salt tracking mechanisms
     /// If contract tracks used salts, it's protected against address reuse
-    fn has_salt_tracking(&self, source: &str, source_lower: &str) -> bool {
+    fn has_salt_tracking(&self, _source: &str, source_lower: &str) -> bool {
         // Check for salt tracking mappings
         let has_salt_mapping = (source_lower.contains("usedsalts")
             || source_lower.contains("used_salts")
@@ -297,7 +297,7 @@ impl Create2FrontrunningDetector {
 
     /// Phase 54 FP Reduction: Check if function is a view/pure computeAddress function
     /// These are standard helper functions and not vulnerabilities
-    fn is_compute_address_view(&self, source: &str) -> bool {
+    fn _is_compute_address_view(&self, source: &str) -> bool {
         // computeAddress is a standard view helper
         source.contains("function computeAddress")
             && (source.contains("view") || source.contains("pure"))

@@ -52,7 +52,7 @@ impl DelegatecallInLoopDetector {
 
         let mut in_loop = false;
         let mut loop_depth = 0;
-        let mut loop_start_line = 0u32;
+        let mut _loop_start_line = 0u32;
         let mut brace_depth = 0;
         let mut loop_brace_depth = 0;
         let mut in_multiline_comment = false;
@@ -105,7 +105,7 @@ impl DelegatecallInLoopDetector {
             {
                 if !in_loop {
                     in_loop = true;
-                    loop_start_line = line_num as u32 + 1;
+                    _loop_start_line = line_num as u32 + 1;
                     loop_brace_depth = brace_depth;
                 }
                 loop_depth += 1;

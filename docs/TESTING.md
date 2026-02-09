@@ -28,12 +28,14 @@ cargo test -p detectors
 cargo test -- --nocapture
 ```
 
-### Test Results (v1.10.13)
+### Test Results (v1.10.20)
 
 ```
-Total: 858 tests passed, 0 failed, 11 ignored
-Detector tests: 609 passed
-Validation recall: 94.4% (17/18 ground truth vulnerabilities)
+Total: 1,593 tests passed (1,392 detector + 32 FP regression + 17 front-running)
+Ground truth: 117 contracts (43 clean, 74 vulnerable, 78 expected TPs)
+Ground truth coverage: 100% of test corpus
+Clean contract FP rate: 0% (across 43 clean/secure contracts)
+Recall: 100% on parseable contracts (75/78 TPs detected, 3 blocked by parse errors)
 ```
 
 ## Real-World Contract Testing

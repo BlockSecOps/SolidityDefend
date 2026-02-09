@@ -53,7 +53,7 @@ impl Eip1153TransientReentrancyDetector {
     }
 
     /// Find transient storage usage patterns
-    fn find_transient_storage(&self, source: &str) -> Vec<(u32, String)> {
+    fn _find_transient_storage(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 

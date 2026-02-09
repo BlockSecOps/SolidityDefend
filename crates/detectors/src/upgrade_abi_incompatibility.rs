@@ -136,7 +136,7 @@ impl UpgradeAbiIncompatibilityDetector {
     }
 
     /// Check for removed standard interface functions
-    fn check_missing_standard_functions(&self, source: &str) -> Vec<(u32, String)> {
+    fn _check_missing_standard_functions(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
 
         // Check for ERC20 partial implementation
@@ -150,7 +150,7 @@ impl UpgradeAbiIncompatibilityDetector {
             ];
             for func in required_funcs {
                 if !source.contains(&format!("function {}", func)) {
-                    let line = self.find_contract_line(source);
+                    let line = self._find_contract_line(source);
                     findings.push((line, format!("Missing ERC20 function: {}", func)));
                 }
             }
@@ -164,7 +164,7 @@ impl UpgradeAbiIncompatibilityDetector {
                 if !source.contains(&format!("function {}", func))
                     && !source.contains(&format!("function {}", func))
                 {
-                    let line = self.find_contract_line(source);
+                    let line = self._find_contract_line(source);
                     findings.push((line, format!("Missing ERC721 function: {}", func)));
                 }
             }
@@ -196,7 +196,7 @@ impl UpgradeAbiIncompatibilityDetector {
     }
 
     /// Find contract declaration line
-    fn find_contract_line(&self, source: &str) -> u32 {
+    fn _find_contract_line(&self, source: &str) -> u32 {
         for (i, line) in source.lines().enumerate() {
             if line.trim().starts_with("contract ") {
                 return i as u32 + 1;

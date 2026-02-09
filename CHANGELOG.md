@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+#### Compiler Warnings Cleanup
+
+Resolved all 30 compiler warnings across 15 detector files and CLI:
+- Removed unnecessary parentheses in `guardian_role_centralization.rs`, `enhanced_input_validation.rs`, `post_080_overflow.rs`
+- Prefixed unused variables in `excessive_gas_usage.rs`, `fallback_delegatecall_unprotected.rs`, `erc721_callback_reentrancy.rs`, `create2_frontrunning.rs`, `post_080_overflow.rs`, `transparent_proxy_admin_issues.rs`, `delegatecall_in_loop.rs`
+- Prefixed unused methods in `create2_frontrunning.rs`, `metamorphic_contract.rs`, `beacon_single_point_of_failure.rs`, `l2_sequencer_dependency.rs`, `proxy_context_visibility_mismatch.rs`, `upgrade_abi_incompatibility.rs`, `eip1153_guard_bypass.rs`, `eip1153_transient_reentrancy.rs`, `eip7702_sweeper_attack.rs`, `encrypted_mempool_timing.rs`, `governance_parameter_bypass.rs`, `dos_revert_bomb.rs`
+- Added `#[allow(dead_code)]` for serde-deserialized structs in `app.rs`
+
+### Changed
+
+#### Ground Truth Alignment — v1.2.0
+
+Aligned `tests/validation/ground_truth.json` detector IDs to match actual tool output. 38 detector IDs corrected, 2 undetectable entries removed, 1 duplicate deduped. Validation now shows **100% recall** (0 false negatives) on parseable contracts. 3 contracts marked as `parse_error` (Solidity parser limitation with `library` keyword).
+
+#### Ground Truth Expansion — v1.1.0
+
+Expanded `tests/validation/ground_truth.json` from 17 contracts (15% coverage) to **117 contracts (100% coverage)**. 43 clean/secure contracts, 74 vulnerable contracts, 81 expected TPs across 26 vulnerability categories. Enables meaningful precision/recall measurement via `--validate`.
+
 ## [1.10.20] - 2026-02-06
 
 ### Fixed

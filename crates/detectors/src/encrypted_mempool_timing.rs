@@ -69,7 +69,7 @@ impl EncryptedMempoolTimingDetector {
     }
 
     /// Find gas-based timing leaks
-    fn find_gas_timing_leaks(&self, source: &str) -> Vec<(u32, String)> {
+    fn _find_gas_timing_leaks(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 

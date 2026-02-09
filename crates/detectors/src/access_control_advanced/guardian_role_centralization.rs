@@ -249,7 +249,7 @@ impl Detector for GuardianRoleCentralizationDetector {
         }
 
         // Pattern 6: Guardian without revocation mechanism
-        if (has_actual_guardian_role || has_actual_keeper_role) {
+        if has_actual_guardian_role || has_actual_keeper_role {
             let has_revoke = lower.contains("revokeguardian")
                 || lower.contains("removeguardian")
                 || lower.contains("revokerole");
@@ -271,7 +271,7 @@ impl Detector for GuardianRoleCentralizationDetector {
         }
 
         // Pattern 7: Guardian without time-bound powers
-        if (has_actual_guardian_role || has_actual_keeper_role) {
+        if has_actual_guardian_role || has_actual_keeper_role {
             let has_time_limit = lower.contains("guardianexpiry")
                 || lower.contains("validuntil")
                 || lower.contains("expirationtime");

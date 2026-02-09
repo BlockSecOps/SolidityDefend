@@ -210,7 +210,7 @@ impl ExcessiveGasUsageDetector {
     fn check_excessive_gas(
         &self,
         function: &ast::Function<'_>,
-        ctx: &AnalysisContext,
+        _ctx: &AnalysisContext,
         func_source: &str,
     ) -> Option<Vec<String>> {
         function.body.as_ref()?;

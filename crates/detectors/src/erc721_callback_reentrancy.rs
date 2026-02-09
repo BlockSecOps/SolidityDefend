@@ -211,8 +211,8 @@ impl Erc721CallbackReentrancyDetector {
     }
 
     /// Phase 54 FP Reduction: Check if callback only returns the magic value
-    fn only_returns_magic_value(&self, func_source: &str, func_name: &str) -> bool {
-        let func_lower = func_source.to_lowercase();
+    fn only_returns_magic_value(&self, func_source: &str, _func_name: &str) -> bool {
+        let _func_lower = func_source.to_lowercase();
 
         // Check for standard magic value returns
         let has_magic_return = func_source.contains("this.onERC721Received.selector")

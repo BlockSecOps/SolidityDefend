@@ -337,7 +337,7 @@ impl MetamorphicContractDetector {
     }
 
     /// Phase 54 FP Reduction: Check if CREATE2 and selfdestruct are in different contracts
-    fn are_create2_and_selfdestruct_separate(&self, source_lower: &str) -> bool {
+    fn _are_create2_and_selfdestruct_separate(&self, source_lower: &str) -> bool {
         // Count contract definitions
         let contract_count = source_lower.matches("contract ").count();
 

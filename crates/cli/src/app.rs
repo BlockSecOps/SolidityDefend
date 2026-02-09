@@ -2048,6 +2048,7 @@ impl CliApp {
         }
 
         #[derive(Debug, Deserialize)]
+        #[allow(dead_code)]
         struct ContractGroundTruth {
             contract_name: String,
             expected_findings: Vec<ExpectedFinding>,
@@ -2056,6 +2057,7 @@ impl CliApp {
         }
 
         #[derive(Debug, Clone, Deserialize)]
+        #[allow(dead_code)]
         struct ExpectedFinding {
             detector_id: String,
             line_range: [u32; 2],

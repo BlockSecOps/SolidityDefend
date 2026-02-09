@@ -171,9 +171,10 @@ The improved deduplication system removes findings that:
 ## Ground Truth Validation Details
 
 ### Test Contract Coverage
-- 18 contracts with ground truth annotations
-- 19 expected vulnerabilities documented
-- 1 parse error (SecureDelegatecall.sol - syntax issue in test file)
+- 117 contracts with ground truth annotations (as of v1.1.0, expanded 2026-02-08)
+- 81 expected vulnerabilities documented across 74 vulnerable contracts
+- 43 clean/secure contracts annotated (any finding is a confirmed FP)
+- Note: Phase 7 report was generated against v1.0.0 ground truth (18 contracts, 19 expected findings)
 
 ### Validation Metrics
 | Metric | Value |

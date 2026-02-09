@@ -139,7 +139,7 @@ impl Eip1153GuardBypassDetector {
     }
 
     /// Find guards using same slot for different purposes
-    fn find_slot_confusion(&self, source: &str) -> Vec<(u32, String)> {
+    fn _find_slot_confusion(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
@@ -147,7 +147,7 @@ impl Eip1153GuardBypassDetector {
         let mut slots_used: Vec<String> = Vec::new();
 
         for line in &lines {
-            if let Some(slot) = self.extract_slot(line) {
+            if let Some(slot) = self._extract_slot(line) {
                 if !slots_used.contains(&slot) {
                     slots_used.push(slot);
                 }
@@ -165,7 +165,7 @@ impl Eip1153GuardBypassDetector {
                     store_count += 1;
 
                     // Extract value being stored
-                    if let Some(value) = self.extract_tstore_value(line) {
+                    if let Some(value) = self._extract_tstore_value(line) {
                         if !last_value.is_empty() && value != last_value {
                             different_values = true;
                         }
@@ -173,7 +173,7 @@ impl Eip1153GuardBypassDetector {
                     }
 
                     if store_count > 2 && different_values {
-                        let func_name = self.find_containing_function(&lines, line_num);
+                        let func_name = self._find_containing_function(&lines, line_num);
                         findings.push((line_num as u32 + 1, func_name));
                     }
                 }
@@ -221,7 +221,7 @@ impl Eip1153GuardBypassDetector {
     }
 
     /// Extract slot from tstore/tload
-    fn extract_slot(&self, line: &str) -> Option<String> {
+    fn _extract_slot(&self, line: &str) -> Option<String> {
         let patterns = ["tstore(", "tload("];
 
         for pattern in patterns {
@@ -236,7 +236,7 @@ impl Eip1153GuardBypassDetector {
     }
 
     /// Extract value from tstore
-    fn extract_tstore_value(&self, line: &str) -> Option<String> {
+    fn _extract_tstore_value(&self, line: &str) -> Option<String> {
         if let Some(pos) = line.find("tstore(") {
             let after = &line[pos + 7..];
             if let Some(comma) = after.find(',') {
@@ -272,7 +272,7 @@ impl Eip1153GuardBypassDetector {
     }
 
     /// Find containing function name
-    fn find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
+    fn _find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
         for i in (0..line_num).rev() {
             let trimmed = lines[i].trim();
             if trimmed.contains("function ") {

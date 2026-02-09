@@ -30,27 +30,43 @@ When tightening detectors to reduce false positives, we need to verify:
 
 ### 1. Ground Truth Dataset
 
-**Location**: `tests/validation/ground_truth.json`
+**Location**: `tests/validation/ground_truth.json` (v1.2.0)
+
+**Coverage**: 117 contracts (100% of test corpus)
+
+| Metric | Count |
+|--------|-------|
+| Total contracts | 117 |
+| Clean/secure contracts | 43 |
+| Vulnerable contracts | 74 |
+| Expected true positives | 78 |
+| Parse error contracts | 3 |
+| Vulnerability categories | 26 |
 
 Contains labeled vulnerability data:
-- **Expected findings**: Known vulnerabilities that detectors should report
+- **Expected findings**: Known vulnerabilities that detectors should report (78 TPs, aligned to actual detector IDs)
 - **Known false positives**: Findings that detectors incorrectly report
-- **Clean sections**: Code that is intentionally secure
+- **Clean sections**: Code that is intentionally secure (43 contracts where all findings are FPs)
+- **Parse errors**: 3 contracts marked with `parse_error: true` (Solidity parser limitation)
 
 ```json
 {
   "contracts": {
-    "tests/contracts/reentrancy/vulnerable.sol": {
+    "tests/contracts/basic_vulnerabilities/reentrancy_issues.sol": {
       "expected_findings": [
         {
-          "detector_id": "reentrancy",
-          "line_range": [15, 20],
-          "severity": "critical",
-          "description": "ETH transfer before state update"
+          "detector_id": "classic-reentrancy",
+          "line_range": [28, 34],
+          "severity": "high",
+          "description": "Classic reentrancy in withdrawBasedOnBalance()"
         }
       ],
       "known_false_positives": [],
       "clean_sections": []
+    },
+    "tests/contracts/fp_benchmarks/safe_amm_pool.sol": {
+      "expected_findings": [],
+      "clean_sections": [{"description": "Secure AMM - any findings are FPs"}]
     }
   }
 }
