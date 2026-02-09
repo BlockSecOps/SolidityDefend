@@ -69,8 +69,8 @@ contract WhitelistBased {
     mapping(address => bool) public whitelistedLibraries;
     address[] public libraryList;
 
-    event LibraryWhitelisted(address indexed library, bool status);
-    event Executed(address indexed library, bytes data);
+    event LibraryWhitelisted(address indexed libraryAddr, bool status);
+    event Executed(address indexed libraryAddr, bytes data);
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");

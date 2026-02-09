@@ -1,6 +1,8 @@
 # Detector Types
 
-Complete list of all 209 security detectors organized by category.
+> **Note**: This file documents an older snapshot (209 detectors). For the current complete list of all **333 detectors**, see [detectors/README.md](detectors/README.md) and [detectors/all_detectors.json](detectors/all_detectors.json).
+
+Legacy list of 209 security detectors organized by category.
 
 ## Table of Contents
 

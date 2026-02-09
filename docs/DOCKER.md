@@ -13,6 +13,7 @@ This guide covers running SolidityDefend in Docker containers for development, C
 - [CI/CD Integration](#cicd-integration)
 - [Advanced Usage](#advanced-usage)
 - [Troubleshooting](#troubleshooting)
+- [Image Versioning](#image-versioning)
 
 ---
 
@@ -613,12 +614,59 @@ docker push blocksecops/soliditydefend:1.10.15
 
 ---
 
+## Image Versioning
+
+SolidityDefend follows [Semantic Versioning 2.0.0](https://semver.org/) for Docker image tags (`MAJOR.MINOR.PATCH`).
+
+### Tag Strategy
+
+| Tag | Use Case | Updates |
+|-----|----------|---------|
+| `1.0.0` | Production deployments requiring stability | Never |
+| `1.0` | Pin to minor version, get patches | Patch releases (1.0.1, 1.0.2) |
+| `1` | Stay on major version, get features | Minor and patch releases |
+| `latest` | Development/testing | All stable releases |
+| `dev` | Continuous development | Every commit to main |
+
+### Pre-releases
+
+```bash
+docker build -t soliditydefend:1.1.0-beta.1 .   # Beta
+docker build -t soliditydefend:1.2.0-alpha.1 .   # Alpha
+docker build -t soliditydefend:1.1.0-rc.1 .      # Release candidate
+```
+
+### Development Builds
+
+```bash
+docker build -t soliditydefend:dev .              # Development branch
+docker build -t soliditydefend:sha-abc1234 .      # Git commit SHA
+```
+
+### Reading Version from Cargo.toml
+
+```bash
+VERSION=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+docker build -t soliditydefend:${VERSION} .
+```
+
+### Best Practices
+
+1. **Never overwrite tags**: Once a version tag is pushed, never overwrite it
+2. **Use immutable tags in production**: Reference specific versions (e.g., `1.0.0`) not `latest`
+3. **Update floating tags**: Keep `latest`, major, and minor tags updated
+4. **Pre-release versioning**: Use `-beta`, `-alpha`, `-rc` suffixes for pre-releases
+5. **Git tag correlation**: Ensure Docker tags match Git tags (e.g., `v1.0.0`)
+
+---
+
 ## Additional Resources
 
 - [Dockerfile Reference](https://docs.docker.com/engine/reference/builder/)
 - [Docker Compose Documentation](https://docs.docker.com/compose/)
 - [Multi-stage Builds](https://docs.docker.com/build/building/multi-stage/)
 - [BuildKit](https://docs.docker.com/build/buildkit/)
+- [Semantic Versioning](https://semver.org/)
 
 ---
 

@@ -204,6 +204,46 @@ impl Detector for OrderFlowAuctionAbuseDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // FP Reduction v10: Skip simple/standard tokens — no auction patterns
+        if crate::utils::is_simple_token(ctx) || crate::utils::is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip non-DeFi contract types that don't run auctions
+        if crate::utils::is_bridge_contract(ctx)
+            || crate::utils::is_oracle_implementation(ctx)
+            || crate::utils::is_proxy_contract(ctx)
+            || crate::utils::is_factory_contract(ctx)
+            || crate::utils::is_zk_contract(ctx)
+            || crate::utils::is_view_only_lens_contract(ctx)
+            || crate::utils::is_deployment_tooling(ctx)
+            || crate::utils::is_lending_protocol(ctx)
+            || crate::utils::is_flash_loan_provider(ctx)
+            || crate::utils::is_flash_loan_context(ctx)
+            || crate::utils::is_governance_protocol(ctx)
+            || crate::utils::is_test_contract(ctx)
+        {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Only flag auction abuse if the contract has actual
+        // auction context indicators — without these, "bid"/"settle"/"finalize"
+        // functions are generic patterns that don't indicate auction abuse
+        let lower = source.to_lowercase();
+        let has_auction_context = lower.contains("auction")
+            || lower.contains("bidding")
+            || lower.contains("bidder")
+            || lower.contains("highestbid")
+            || lower.contains("winningbid")
+            || lower.contains("sealedbi")
+            || lower.contains("orderflow")
+            || lower.contains("order flow")
+            || lower.contains("mev");
+
+        if !has_auction_context {
+            return Ok(findings);
+        }
+
         for (line, func_name) in self.find_auction_bids(source) {
             let message = format!(
                 "Function '{}' in contract '{}' accepts bids without manipulation protection. \

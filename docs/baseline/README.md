@@ -9,10 +9,12 @@ This directory contains baseline measurements for the SolidityDefend false posit
 | Total contracts in ground truth | 117 |
 | Clean/secure contracts | 43 |
 | Vulnerable contracts | 74 |
-| Expected true positives | 81 |
+| Expected true positives | 78 |
+| Parse error contracts | 0 |
+| Validated recall | 100% (78/78) |
 | Coverage | **100%** of test corpus |
 
-See `tests/validation/ground_truth.json` (v1.1.0, updated 2026-02-08) for the complete dataset.
+See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the complete dataset.
 
 ## Test Targets (18 directories)
 
@@ -124,11 +126,15 @@ See individual baseline files:
 
 ## FP Reduction History
 
-| Version | Round | Detectors | FPs Eliminated | Total Findings | Clean FPs |
-|---------|-------|-----------|----------------|----------------|-----------|
-| v1.10.14 | v1 | 10 | — | — | — |
-| v1.10.16 | v2 | 10 | 37 | — | — |
-| v1.10.17 | v3 | 10 | 88 | — | — |
-| v1.10.18 | v4 | 10 | 52 (net -22) | 1,776 | 45 |
-| v1.10.19 | v5 | 20 | 191 | 1,585 | 42 |
-| v1.10.20 | v6 | 30 | 585 | 1,000 | 26 |
+| Version | Round | Detectors | FPs Eliminated | Total Findings | Clean FPs | Recall |
+|---------|-------|-----------|----------------|----------------|-----------|--------|
+| v1.10.14 | v1 | 10 | — | — | — | — |
+| v1.10.16 | v2 | 10 | 37 | — | — | — |
+| v1.10.17 | v3 | 10 | 88 | — | — | — |
+| v1.10.18 | v4 | 10 | 52 (net -22) | 1,776 | 45 | — |
+| v1.10.19 | v5 | 20 | 191 | 1,585 | 42 | — |
+| v1.10.20 | v6 | 30 | 585 | 1,000 | 26 | — |
+| v1.10.20 | v7 | 331+14 | 254 | 746 | 0 | — |
+| v1.10.20 | v8 | 7 | 319 | 427 | 0 | — |
+| v1.10.20 | v9 | 9 | 81 | 346 | 0 | 75/78 |
+| v1.10.20 | v10 | 4 | — | ~346 | 0 | 78/78 |
