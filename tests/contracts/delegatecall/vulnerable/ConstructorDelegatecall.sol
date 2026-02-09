@@ -173,15 +173,15 @@ contract VulnerableCloneFactory {
      * @notice VULNERABLE: Clones initialize via delegatecall
      */
     function clone(bytes memory initData) external returns (address) {
-        address instance = createClone(implementation);
+        address implInstance = createClone(implementation);
 
         // VULNERABLE: Delegatecall to user-influenced implementation
-        (bool success, ) = instance.call(
+        (bool success, ) = implInstance.call(
             abi.encodeWithSignature("initialize(bytes)", initData)
         );
         require(success, "Init failed");
 
-        return instance;
+        return implInstance;
     }
 
     function createClone(address target) internal returns (address result) {

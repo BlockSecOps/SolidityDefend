@@ -75,10 +75,10 @@ contract DynamicLibraryMapping {
     /**
      * @notice VULNERABLE: Anyone with owner access can add/change libraries
      */
-    function registerLibrary(string memory name, address library) external {
+    function registerLibrary(string memory name, address libraryAddr) external {
         require(msg.sender == owner, "Only owner");
         // VULNERABLE: Libraries can be added/changed anytime
-        libraries[name] = library;
+        libraries[name] = libraryAddr;
     }
 
     /**
@@ -327,7 +327,7 @@ contract HotSwappableLibrary {
  * @notice VULNERABLE: Multi-signature library update
  */
 contract MultiSigLibraryUpdate {
-    address public library;
+    address public libraryAddr;
     address[] public signers;
     mapping(address => bool) public hasApproved;
     address public pendingLibrary;
@@ -335,7 +335,7 @@ contract MultiSigLibraryUpdate {
     uint256 public requiredApprovals = 2;
 
     constructor(address _library, address[] memory _signers) {
-        library = _library;
+        libraryAddr = _library;
         signers = _signers;
     }
 
@@ -357,13 +357,13 @@ contract MultiSigLibraryUpdate {
 
         if (approvalCount >= requiredApprovals) {
             // VULNERABLE: Library still gets replaced
-            library = pendingLibrary;
+            libraryAddr = pendingLibrary;
         }
     }
 
     function execute(bytes memory data) external {
         // VULNERABLE: Uses potentially changed library
-        (bool success, ) = library.delegatecall(data);
+        (bool success, ) = libraryAddr.delegatecall(data);
         require(success, "Execution failed");
     }
 }

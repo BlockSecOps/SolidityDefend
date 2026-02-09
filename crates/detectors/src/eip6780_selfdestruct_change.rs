@@ -52,6 +52,22 @@ impl Eip6780SelfdestructChangeDetector {
         }
     }
 
+    /// Check if the source contains an actual selfdestruct call (not just in comments/strings).
+    fn has_actual_selfdestruct_call(source: &str) -> bool {
+        for line in source.lines() {
+            let trimmed = line.trim();
+            // Skip comment lines
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                continue;
+            }
+            // Check for actual selfdestruct call or SELFDESTRUCT opcode
+            if trimmed.contains("selfdestruct(") || trimmed.contains("SELFDESTRUCT") {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Find selfdestruct usage patterns
     fn find_selfdestruct_patterns(&self, source: &str) -> Vec<(u32, String, String)> {
         let mut findings = Vec::new();
@@ -274,6 +290,32 @@ impl Detector for Eip6780SelfdestructChangeDetector {
 
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // FP Reduction v10: Early exit if source has no selfdestruct keyword at all
+        // (outside of comments). Many contracts mention selfdestruct in NatSpec or
+        // string literals but don't actually call it.
+        if !Self::has_actual_selfdestruct_call(source) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip simple/standard tokens — they don't use selfdestruct
+        if crate::utils::is_simple_token(ctx) || crate::utils::is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip non-relevant contract types
+        if crate::utils::is_bridge_contract(ctx)
+            || crate::utils::is_oracle_implementation(ctx)
+            || crate::utils::is_lending_protocol(ctx)
+            || crate::utils::is_governance_protocol(ctx)
+            || crate::utils::is_zk_contract(ctx)
+            || crate::utils::is_view_only_lens_contract(ctx)
+            || crate::utils::is_flash_loan_provider(ctx)
+            || crate::utils::is_flash_loan_context(ctx)
+            || crate::utils::is_test_contract(ctx)
+        {
+            return Ok(findings);
+        }
 
         // Check for selfdestruct patterns
         let selfdestruct_patterns = self.find_selfdestruct_patterns(source);

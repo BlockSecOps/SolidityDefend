@@ -93,10 +93,10 @@ contract VulnerableProxyUpgrade {
  * @notice VULNERABLE: Batch operations without return checking
  */
 contract BatchDelegatecallIgnored {
-    address public library;
+    address public libraryAddr;
 
     constructor(address _library) {
-        library = _library;
+        libraryAddr = _library;
     }
 
     /**
@@ -105,7 +105,7 @@ contract BatchDelegatecallIgnored {
     function batchExecute(bytes[] calldata data) external {
         for (uint256 i = 0; i < data.length; i++) {
             // VULNERABLE: Each call's return value ignored
-            library.delegatecall(data[i]);
+            libraryAddr.delegatecall(data[i]);
             // If one fails, we continue to the next
         }
         // No way to know if any calls failed

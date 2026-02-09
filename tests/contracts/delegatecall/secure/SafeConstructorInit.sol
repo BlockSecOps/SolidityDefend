@@ -196,17 +196,17 @@ contract SecureCloneFactory {
     /**
      * @notice SECURE: Clone then call initialize (not delegatecall)
      */
-    function clone(bytes memory initData) external returns (address instance) {
-        instance = createClone(implementation);
+    function clone(bytes memory initData) external returns (address implInstance) {
+        implInstance = createClone(implementation);
 
         // SECURE: Regular call to initialize, not delegatecall
-        (bool success, ) = instance.call(
+        (bool success, ) = implInstance.call(
             abi.encodeWithSignature("initialize(bytes)", initData)
         );
         require(success, "Initialization failed");
 
-        emit CloneCreated(instance);
-        return instance;
+        emit CloneCreated(implInstance);
+        return implInstance;
     }
 
     function createClone(address target) internal returns (address result) {

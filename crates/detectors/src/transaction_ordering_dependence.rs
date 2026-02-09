@@ -526,6 +526,36 @@ impl Detector for TransactionOrderingDependenceDetector {
             return Ok(findings);
         }
 
+        // FP Reduction v10: Skip simple/standard tokens — ERC20, ERC721, ERC1155
+        // Token contracts don't have swap/auction/FCFS ordering dependencies
+        if utils::is_simple_token(ctx) || utils::is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip bridge, oracle, proxy, factory, ZK, and
+        // view-only contracts — these are not DeFi trading contracts
+        if utils::is_bridge_contract(ctx)
+            || utils::is_oracle_implementation(ctx)
+            || utils::is_proxy_contract(ctx)
+            || utils::is_factory_contract(ctx)
+            || utils::is_zk_contract(ctx)
+            || utils::is_view_only_lens_contract(ctx)
+            || utils::is_deployment_tooling(ctx)
+        {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip lending protocols — their deadline patterns
+        // are loan expiration mechanics, not TOD vulnerabilities
+        if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip flash loan context entirely (arbitrage bots)
+        if utils::is_flash_loan_context(ctx) {
+            return Ok(findings);
+        }
+
         // Check for first-come-first-served patterns
         let fcfs = self.find_fcfs_patterns(source);
         for (line, func_name) in fcfs {

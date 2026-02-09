@@ -211,6 +211,26 @@ impl Detector for MEVToxicFlowDetector {
             return Ok(findings);
         }
 
+        // FP Reduction v10: Skip simple/standard tokens — no AMM logic
+        if utils::is_simple_token(ctx) || utils::is_standard_token(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction v10: Skip non-AMM contract types
+        if utils::is_bridge_contract(ctx)
+            || utils::is_oracle_implementation(ctx)
+            || utils::is_proxy_contract(ctx)
+            || utils::is_factory_contract(ctx)
+            || utils::is_zk_contract(ctx)
+            || utils::is_view_only_lens_contract(ctx)
+            || utils::is_deployment_tooling(ctx)
+            || utils::is_lending_protocol(ctx)
+            || utils::is_governance_protocol(ctx)
+            || utils::is_flash_loan_provider(ctx)
+        {
+            return Ok(findings);
+        }
+
         let source = ctx.source_code.as_str();
         let lower = source.to_lowercase();
 

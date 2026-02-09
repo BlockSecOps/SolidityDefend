@@ -134,13 +134,13 @@ contract SecureProxyUpgrade {
  * @notice SECURE: Batch operations with return checking
  */
 contract BatchDelegatecallChecked {
-    address public library;
+    address public libraryAddr;
 
     event BatchExecutionComplete(uint256 successCount, uint256 failureCount);
     event CallFailed(uint256 indexed index, bytes data, bytes reason);
 
     constructor(address _library) {
-        library = _library;
+        libraryAddr = _library;
     }
 
     /**
@@ -148,7 +148,7 @@ contract BatchDelegatecallChecked {
      */
     function batchExecute(bytes[] calldata data) external {
         for (uint256 i = 0; i < data.length; i++) {
-            (bool success, bytes memory returnData) = library.delegatecall(data[i]);
+            (bool success, bytes memory returnData) = libraryAddr.delegatecall(data[i]);
 
             // SECURE: Revert entire batch if one fails
             if (!success) {
@@ -167,7 +167,7 @@ contract BatchDelegatecallChecked {
         uint256 failureCount = 0;
 
         for (uint256 i = 0; i < data.length; i++) {
-            (bool success, bytes memory returnData) = library.delegatecall(data[i]);
+            (bool success, bytes memory returnData) = libraryAddr.delegatecall(data[i]);
 
             // SECURE: Track each result
             results[i] = success;

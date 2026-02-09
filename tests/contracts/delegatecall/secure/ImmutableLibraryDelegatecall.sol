@@ -107,7 +107,7 @@ contract ConstantLibraryDelegatecall {
  * @notice SECURE: Immutable library with version tracking
  */
 contract VersionedImmutableLibrary {
-    address public immutable library;
+    address public immutable libraryAddr;
     string public constant LIBRARY_VERSION = "1.0.0";
     bytes32 public constant LIBRARY_CODE_HASH = 0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890;
 
@@ -121,11 +121,11 @@ contract VersionedImmutableLibrary {
         }
         require(codeHash == LIBRARY_CODE_HASH, "Library code mismatch");
 
-        library = _library;
+        libraryAddr = _library;
     }
 
     function execute(bytes memory data) external returns (bytes memory) {
-        (bool success, bytes memory result) = library.delegatecall(data);
+        (bool success, bytes memory result) = libraryAddr.delegatecall(data);
         require(success, "Execution failed");
         return result;
     }
@@ -284,10 +284,10 @@ contract ImmutableDiamondProxy {
  * @notice SECURE: Library with integrity check
  */
 contract IntegrityCheckedLibrary {
-    address public immutable library;
+    address public immutable libraryAddr;
     bytes32 public immutable expectedCodeHash;
 
-    event IntegrityVerified(address library, bytes32 codeHash);
+    event IntegrityVerified(address libraryAddr, bytes32 codeHash);
 
     constructor(address _library, bytes32 _expectedCodeHash) {
         require(_library != address(0), "Invalid library");
@@ -299,7 +299,7 @@ contract IntegrityCheckedLibrary {
         }
         require(actualCodeHash == _expectedCodeHash, "Code hash mismatch");
 
-        library = _library;
+        libraryAddr = _library;
         expectedCodeHash = _expectedCodeHash;
 
         emit IntegrityVerified(_library, actualCodeHash);
@@ -307,7 +307,7 @@ contract IntegrityCheckedLibrary {
 
     function execute(bytes memory data) external returns (bytes memory) {
         // SECURE: Library is immutable and verified
-        (bool success, bytes memory result) = library.delegatecall(data);
+        (bool success, bytes memory result) = libraryAddr.delegatecall(data);
         require(success, "Execution failed");
         return result;
     }
@@ -318,7 +318,7 @@ contract IntegrityCheckedLibrary {
     function verifyIntegrity() external view returns (bool) {
         bytes32 currentCodeHash;
         assembly {
-            currentCodeHash := extcodehash(sload(library.slot))
+            currentCodeHash := extcodehash(sload(libraryAddr.slot))
         }
         return currentCodeHash == expectedCodeHash;
     }

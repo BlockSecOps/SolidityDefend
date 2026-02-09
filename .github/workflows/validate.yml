@@ -27,7 +27,7 @@ on:
       min_recall:
         description: 'Minimum recall threshold (0.0-1.0)'
         required: false
-        default: '0.70'
+        default: '0.95'
         type: string
 
 env:
@@ -38,7 +38,6 @@ jobs:
   validate:
     name: Validate Detectors
     runs-on: ubuntu-latest
-    continue-on-error: true
 
     steps:
       - name: Checkout code
@@ -72,7 +71,7 @@ jobs:
           # Set default values for manual dispatch or automatic triggers
           FAIL_ON_REGRESSION="${{ github.event.inputs.fail_on_regression || 'true' }}"
           MIN_PRECISION="${{ github.event.inputs.min_precision || '0.80' }}"
-          MIN_RECALL="${{ github.event.inputs.min_recall || '0.70' }}"
+          MIN_RECALL="${{ github.event.inputs.min_recall || '0.95' }}"
 
           echo "Configuration:"
           echo "  Fail on regression: $FAIL_ON_REGRESSION"

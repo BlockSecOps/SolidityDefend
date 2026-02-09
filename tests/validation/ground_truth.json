@@ -1113,7 +1113,7 @@
       "contract_name": "UncheckedConstructorDelegatecall",
       "expected_findings": [
         {
-          "detector_id": "constructor-delegatecall",
+          "detector_id": "constructor-reentrancy",
           "line_range": [
             1,
             500
@@ -1125,15 +1125,13 @@
         }
       ],
       "known_false_positives": [],
-      "clean_sections": [],
-      "parse_error": true,
-      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+      "clean_sections": []
     },
     "tests/contracts/delegatecall/vulnerable/DelegatecallReturnIgnored.sol": {
       "contract_name": "IgnoredReturnDelegatecall",
       "expected_findings": [
         {
-          "detector_id": "unchecked-delegatecall",
+          "detector_id": "delegatecall-return-ignored",
           "line_range": [
             1,
             500
@@ -1145,9 +1143,7 @@
         }
       ],
       "known_false_positives": [],
-      "clean_sections": [],
-      "parse_error": true,
-      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+      "clean_sections": []
     },
     "tests/contracts/delegatecall/vulnerable/FallbackShadowing.sol": {
       "contract_name": "VulnerableProxyWithShadowing",
@@ -1207,7 +1203,7 @@
       "contract_name": "MutableLibraryDelegatecall",
       "expected_findings": [
         {
-          "detector_id": "mutable-delegatecall-target",
+          "detector_id": "delegatecall-untrusted-library",
           "line_range": [
             1,
             300
@@ -1219,9 +1215,7 @@
         }
       ],
       "known_false_positives": [],
-      "clean_sections": [],
-      "parse_error": true,
-      "parse_error_reason": "Solidity parser cannot handle library keyword in contract context"
+      "clean_sections": []
     },
     "tests/contracts/erc4626_vaults/VulnerableVault_Donation.sol": {
       "contract_name": "VulnerableVault_Donation",
