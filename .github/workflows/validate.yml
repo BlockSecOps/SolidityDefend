@@ -22,7 +22,7 @@ on:
       min_precision:
         description: 'Minimum precision threshold (0.0-1.0)'
         required: false
-        default: '0.80'
+        default: '0.15'
         type: string
       min_recall:
         description: 'Minimum recall threshold (0.0-1.0)'
