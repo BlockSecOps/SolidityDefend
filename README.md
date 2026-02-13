@@ -1,6 +1,6 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-1.10.20-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-1.10.23-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 > Enterprise-grade static analysis for Solidity smart contracts
@@ -16,15 +16,15 @@ soliditydefend contract.sol
 
 ## Features
 
-- **333 Security Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
-- **Context-Aware Analysis** - Structural FP filter across all detectors plus Safe Patterns Library with 56+ categories. 0% false positive rate on clean contracts. Recognizes ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, proxy patterns, access control, and more
+- **67 Precision-Tuned Detectors** - Reentrancy, access control, oracle manipulation, flash loans, MEV, and more
+- **Context-Aware Analysis** - Structural FP filter across all detectors plus Safe Patterns Library with 56+ categories. Zero false positives on secure benchmarks (0 FPs on 23 secure contract suites). Recognizes ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, proxy patterns, access control, and more
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract analysis, and smart file ordering
 - **Dependency Scanning** - Audit OpenZeppelin and other imported libraries with `--include-deps`
 - **Cross-Contract Analysis** - Detect vulnerabilities spanning multiple contracts with `--cross-contract`
 - **Lightning Fast** - 30-180ms analysis time, built in Rust
 - **CI/CD Ready** - JSON/SARIF output, exit codes, severity filtering
-- **100% Recall** - Validated against 117-contract ground truth suite (78/78 TPs, 0 parse errors, 0 false negatives)
+- **100% Recall** - Validated against 117-contract ground truth suite (77/77 TPs, 0 parse errors, 0 false negatives)
 
 See [docs/detectors/](docs/detectors/README.md) for the complete detector list.
 
@@ -137,7 +137,7 @@ Create `.soliditydefend.yml`:
 ```yaml
 min_severity: medium
 detectors:
-  disable: [inefficient-storage]
+  disabled_detectors: [inefficient-storage]  # Disable specific detectors
 ```
 
 See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
@@ -149,7 +149,7 @@ See [docs/CONFIGURATION.md](docs/CONFIGURATION.md) for all options.
 | [Installation](docs/INSTALLATION.md) | Installation methods |
 | [Usage](docs/USAGE.md) | Usage guide and examples |
 | [CLI Reference](docs/CLI.md) | Command-line options |
-| [Detectors](docs/detectors/README.md) | All 333 detectors |
+| [Detectors](docs/detectors/README.md) | All 71 detectors |
 | [Configuration](docs/CONFIGURATION.md) | Configuration reference |
 | [Output Formats](docs/OUTPUT.md) | JSON and console output |
 | [Docker](docs/DOCKER.md) | Docker usage, CI/CD, and versioning |

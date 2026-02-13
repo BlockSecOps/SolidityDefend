@@ -1,10 +1,10 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all **333 security detectors** in SolidityDefend v1.10.11+.
+Complete reference for all security detectors in SolidityDefend v1.10.23+.
 
-**Last Updated:** 2026-01-26
-**Version:** v1.10.11+
-**Total Detectors:** 333 (in tool)
+**Last Updated:** 2026-02-13
+**Version:** v1.10.23+
+**Total Detectors:** 67
 **Categories:** 28
 
 ---
@@ -16,11 +16,11 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 **File:** [`all_detectors.json`](all_detectors.json)
 
 **Contents:**
-- 321 detector entries with structured metadata
+- 67 detector entries with structured metadata
 - Detector ID, name, description, severity
-- Category mappings (25 categories)
-- CWE IDs (80+ detectors mapped)
-- SWC IDs (20 detectors mapped)
+- Category mappings (28 categories)
+- CWE IDs (40+ detectors mapped)
+- SWC IDs (10+ detectors mapped)
 
 **Example entry:**
 ```json
@@ -82,10 +82,10 @@ Each category contains comprehensive documentation for all detectors:
 
 ## Severity Distribution
 
-- **Critical Severity:** 57 detectors (26%)
-- **High Severity:** 93 detectors (42%)
-- **Medium Severity:** 61 detectors (28%)
-- **Low/Info Severity:** 8 detectors (4%)
+- **Critical Severity:** ~18 detectors
+- **High Severity:** ~23 detectors
+- **Medium Severity:** ~17 detectors
+- **Low/Info Severity:** ~9 detectors
 
 ---
 
@@ -191,6 +191,6 @@ soliditydefend --list-detectors
 ---
 
 **Maintained by:** Advanced Blockchain Security
-**Generated:** 2026-01-11
-**Documentation Coverage:** 221 detectors (100% of tool)
+**Generated:** 2026-02-13
+**Total Detectors:** 67
 **Metadata File:** [all_detectors.json](all_detectors.json) - Machine-readable detector catalog

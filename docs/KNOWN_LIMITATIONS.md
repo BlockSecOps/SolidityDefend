@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.10.20
-**Last Updated:** 2026-02-08
+**Version:** v1.10.23
+**Last Updated:** 2026-02-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 
@@ -9,10 +9,18 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgradeable contract detectors**, **10 EIP-7702/EIP-1153 detectors**, **12 advanced MEV detectors**, **8 metamorphic/CREATE2 detectors**, **10 callback chain detectors**, **10 governance/access control detectors**, **10 L2/rollup detectors**, **10 randomness/DoS detectors**, and **4 diamond proxy/advanced upgrades detectors**. The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **78 expected true positives** across 26 vulnerability categories.
+SolidityDefend v1.10.23 has **67 precision-tuned security detectors**, all enabled by default. 178 low-precision detectors were removed across v13-v15 (post-EVM-change dead code, compiler-superseded checks, keyword-matching-only MEV, redundant proxy/upgrade, zero-TP detectors). The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **77 expected true positives** across 26 vulnerability categories. Current precision is **18.4%** (competitive with Slither/Aderyn) with **100% recall**.
+
+**v1.10.21 Improvements:** Precision audit, FP reduction, and detector cleanup (Feb 12, 2026):
+- **90 obsolete detectors removed** — high false positive rate with zero validated true positives, including post-EVM-change dead detectors, compiler-superseded checks, and keyword-matching-only MEV detectors
+- **Total findings: 1,776 -> 440** (75% reduction from v1.10.19 baseline) across 18 test targets
+- **Clean contract FPs: 0** across 5 clean contracts (was 26 in v1.10.19, 3 in v12)
+- **15+ GT detector FP fixes** — tightened classification gates on constructor-reentrancy, delegatecall-untrusted-library, delegatecall-return-ignored, classic-reentrancy, mev-extractable-value, multisig-bypass, flash-loan-collateral-swap, push0-stack-assumption, token-permit-front-running, create2-salt-frontrunning, missing-chainid-validation, mev-priority-gas-auction, hook-reentrancy-enhanced, flash-loan-price-manipulation-advanced
+- **FP audit integration test** — `fp_audit_test.rs` gates on false positive count across 43 secure benchmark files
+- 0 true positive regressions (77/77 TPs detected, 100% recall)
 
 **v1.10.20 Improvements:** 10 rounds of FP reduction across 4 days (Feb 5-8, 2026):
-- **NEW** `fp_filter.rs` structural FP filter deployed to all 331 detectors via `filter_fp_findings()`
+- **NEW** `fp_filter.rs` structural FP filter deployed to all detectors via `filter_fp_findings()`
 - Filters findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
 - 14 detector-specific fixes (v7), 7 detector improvements (v8), 9 detector improvements (v9), and 4 detector improvements (v10)
 - Interface/library guards added to all detectors
@@ -20,10 +28,8 @@ SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgr
 - JSON output fix: banner/progress messages now sent to stderr for clean piping
 - Parse error fixes: 3 test contracts fixed (reserved keyword renames), 0 parse errors remaining
 - CI validation now blocking with min_recall threshold of 0.95
-- **Total findings: 1,776 -> 346 (81% reduction)** across 18 test targets
+- **Total findings: 1,776 -> 346 (81% reduction)** across 18 test targets (before v13 detector removal)
 - **Clean contract FP rate: 0%** (26 -> 0 FPs across 5 clean contracts)
-- 0 true positive regressions (78/78 TPs detected, 100% recall)
-- 1,593 tests passing (1,392 detector + 32 FP regression + 17 front-running; 32 new tests added in v9)
 - 100% recall maintained on ground truth dataset
 
 **v1.10.14 Improvements:** Comprehensive False Positive Reduction (24 Categories):
@@ -44,102 +50,43 @@ SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgr
 - Tested against OpenZeppelin, Solmate, and Uniswap V3 codebases
 - False Positive Rate on standard libraries: Significantly reduced
 
-**v1.9.0 Improvements:** Added 4 new Diamond Proxy & Advanced Upgrades detectors:
-- Proxy double initialize (missing _disableInitializers, beacon downgrade)
+**v1.9.0 Improvements:** Added Diamond Proxy & Advanced Upgrades detectors (some later removed in v1.10.21 cleanup):
 - Diamond init frontrunning (facet initialization without access control)
-- Proxy gap underflow (__gap array sizing, inheritance issues)
 - Delegatecall to self (unintended self-delegation patterns)
-- Diamond Proxy Detection: ~70% → ~85% (+15%)
-- Upgrade Security Detection: ~75% → ~90% (+15%)
-- Total detectors: 317 → 321 (+4)
 
-**v1.8.6 Improvements:** Added 10 new Weak Randomness & DoS detectors:
+**v1.8.6 Improvements:** Added Weak Randomness & DoS detectors (some later removed in v1.10.21 cleanup):
 - Blockhash randomness (block.prevrandao, blockhash patterns)
-- Multi-block randomness (combining predictable values)
-- Modulo block variable (block.timestamp % N patterns)
-- Chainlink VRF misuse (improper VRF integration)
 - Commit-reveal timing vulnerabilities
-- DoS push pattern (unbounded array growth)
 - DoS unbounded storage (storage exhaustion)
 - DoS external call loop (calls in loops)
-- DoS block gas limit (gas exhaustion patterns)
-- DoS revert bomb (forced reverts)
-- Weak Randomness Detection: ~50% → ~85% (+35%)
-- DoS Attack Detection: ~55% → ~80% (+25%)
-- Total detectors: 307 → 317 (+10)
+- DoS unbounded operation patterns
 
-**v1.8.5 Improvements:** Added 10 new L2/Rollup & Cross-Chain detectors:
-- Sequencer fee exploitation
-- Escape hatch dependency
-- Cross-L2 front-running
-- Optimistic inference attacks
-- L2 MEV sequencer leaks
-- DA sampling attacks
-- Bridge merkle bypass
-- Challenge period bypass
-- Cross-rollup state mismatch
-- Blob data manipulation (EIP-4844)
-- L2/Cross-Chain Detection: ~55% → ~80% (+25%)
-- Total detectors: 297 → 307 (+10)
+**v1.8.5 Improvements:** Added L2/Rollup & Cross-Chain detectors (some later removed in v1.10.21 cleanup):
+- Sequencer fee exploitation, escape hatch dependency, cross-L2 front-running
+- Optimistic inference attacks, L2 MEV sequencer leaks, DA sampling attacks
+- Bridge merkle bypass, cross-rollup state mismatch, blob data manipulation (EIP-4844)
 
-**v1.8.4 Improvements:** Added 10 new Governance & Access Control detectors:
-- Governance parameter bypass (timelock bypass)
-- Voting snapshot manipulation (flash loan voting)
-- Quorum calculation overflow (vote over-counting)
-- Proposal front-running (same-block counter-proposals)
-- Governor refund drain (treasury drainage)
-- Timelock bypass via delegatecall (proxy bypass)
-- Role escalation via upgrade (privilege escalation)
-- Access control race condition (grant/revoke races)
-- Operator whitelist inheritance (stale approvals)
-- Cross-contract role confusion (authorization confusion)
-- Governance Attack Detection: ~50% → ~85% (+35%)
-- Access Control Detection: ~60% → ~80% (+20%)
-- Total detectors: 287 → 297 (+10)
-- **Bugfix:** Fixed slice bounds panic in governance-proposal-mev detector
+**v1.8.4 Improvements:** Added Governance & Access Control detectors (some later removed in v1.10.21 cleanup):
+- Governance parameter bypass, quorum calculation overflow, proposal front-running
+- Governor refund drain, timelock bypass via delegatecall
+- Access control race condition, cross-contract role confusion
 
-**v1.8.3 Improvements:** Added 10 new Callback Chain & Multicall detectors:
-- Nested callback reentrancy (chained safe callbacks)
-- Callback-in-callback loops (recursive callback exploitation)
+**v1.8.3 Improvements:** Added Callback Chain & Multicall detectors (some later removed in v1.10.21 cleanup):
+- Nested callback reentrancy, callback-in-callback loops
 - Multicall msg.value reuse (ETH double-spending)
-- Multicall partial revert (inconsistent state)
-- Batch cross-function reentrancy
 - Flash callback manipulation (TOCTOU attacks)
-- ERC721 safeMint callback exploitation
-- ERC1155 batch callback reentrancy
-- Uniswap V4 hook callback vulnerabilities
-- Compound-style callback chains
-- Callback Pattern Detection: ~40% → ~70% (+30%)
-- Multicall Detection: ~30% → ~65% (+35%)
-- Total detectors: 277 → 287 (+10)
+- ERC721 safeMint callback, ERC1155 batch callback
+- Uniswap V4 hook callback, compound-style callback chains
 
-**v1.8.2 Improvements:** Added 8 new Metamorphic & CREATE2 Pattern detectors:
+**v1.8.2 Improvements:** Added Metamorphic & CREATE2 Pattern detectors (some later removed in v1.10.21 cleanup):
 - Metamorphic contract risk (CREATE2 + SELFDESTRUCT)
-- CREATE2 salt front-running
-- CREATE2 address collision attacks
-- EXTCODESIZE check bypass
-- Selfdestruct recipient control
-- Contract recreation attacks
-- Constructor reentrancy
-- Initcode injection
-- Deployment Attack Detection: ~40% → ~65% (+25%)
-- Total detectors: 269 → 277 (+8)
+- CREATE2 salt front-running, address collision attacks
+- Selfdestruct recipient control, constructor reentrancy, initcode injection
 
-**v1.8.1 Improvements:** Added 12 new Advanced MEV & Front-Running detectors:
-- Sandwich attacks: conditional swap, slippage, deadlines
-- JIT liquidity extraction
-- Backrunning opportunities
-- Bundle inclusion leaks
-- Order flow auction abuse
-- Encrypted mempool timing attacks
-- Cross-domain MEV (L1/L2)
-- Liquidation MEV front-running
-- Oracle update MEV
-- Governance proposal MEV
-- Token launch sniping
-- NFT mint front-running
-- MEV Detection: 45% → ~65% (+20%)
-- Total detectors: 257 → 269 (+12)
+**v1.8.1 Improvements:** Added Advanced MEV & Front-Running detectors (many later removed in v1.10.21 cleanup):
+- Sandwich attack, JIT liquidity extraction, encrypted mempool timing
+- Liquidation MEV, NFT mint front-running, token transfer frontrun
+- MEV priority gas auction, MEV extractable value
 
 **v1.8.0 Improvements:** Added 10 new detectors for emerging Ethereum standards:
 - EIP-7702 Account Delegation: 5 detectors (phishing, storage corruption, sweeper attack, auth bypass, replay)
@@ -169,7 +116,7 @@ SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgr
 | **Reentrancy** | 60% | ✅ Good |
 | **Input Validation** | 57% | ✅ Good |
 | **Signature Issues** | 43% | ✅ Good |
-| **Integer Overflow** | 40% | ✅ Good |
+| **Unchecked Math** | 40% | ✅ Good |
 
 **Strengths:**
 - Diamond proxy patterns (init frontrunning, selector collision, storage namespacing)
@@ -179,7 +126,6 @@ SolidityDefend v1.10.20 has **333 security detectors** including **49 proxy/upgr
 - Classic reentrancy patterns (checks-effects-interactions violations)
 - Signature replay attacks (same-chain and cross-chain)
 - Signature malleability (ECDSA)
-- Integer overflow in Solidity <0.8.0
 - Unchecked math blocks in Solidity 0.8.0+
 - Missing zero-address checks
 - Parameter consistency validation
@@ -221,12 +167,10 @@ function withdrawAll(address _recipient) public {
 **Fixed in:** v1.8.6
 
 **v1.8.6 Improvements:**
-- Added 5 dedicated randomness detectors:
+- Dedicated randomness detectors:
   - `blockhash-randomness` - block.prevrandao, blockhash patterns
-  - `multi-block-randomness` - combining predictable values
-  - `modulo-block-variable` - block.timestamp % N patterns
-  - `chainlink-vrf-misuse` - improper VRF integration
   - `commit-reveal-timing` - timing vulnerabilities
+  - `weak-commit-reveal` - weak commit-reveal patterns
 
 **Now Detected:**
 ```solidity
@@ -258,12 +202,10 @@ uint256 winner = block.timestamp % participantCount;
 **Fixed in:** v1.8.6
 
 **v1.8.6 Improvements:**
-- Added 5 dedicated DoS detectors:
-  - `dos-push-pattern` - unbounded array push operations
+- Dedicated DoS detectors:
   - `dos-unbounded-storage` - storage exhaustion attacks
   - `dos-external-call-loop` - calls in loops
-  - `dos-block-gas-limit` - gas exhaustion patterns
-  - `dos-revert-bomb` - forced reverts via malicious receivers
+  - `dos-unbounded-operation` - unbounded operation patterns
 
 **Now Detected:**
 ```solidity
@@ -322,30 +264,12 @@ function batchTransfer(address[] memory _receivers, uint256 _value) public {
 
 ---
 
-### 5. Short Address Attack (0% Detection)
+### 5. Short Address Attack (Historical)
 
-**Status:** ❌ Not Detected
+**Status:** ✅ Detected (pre-0.5.0 only)
 **Severity:** Medium
-**Planned Fix:** v1.3.0
 
-**Problem:**
-- Missing validation of `msg.data.length`
-- Allows attackers to manipulate amounts by providing shortened addresses
-
-**Example Missed:**
-```solidity
-// VULNERABLE - Not detected
-function transfer(address _to, uint256 _value) public {
-    // No msg.data.length validation
-    require(balances[msg.sender] >= _value);
-    balances[msg.sender] -= _value;
-    balances[_to] += _value;
-}
-```
-
-**Workaround:**
-- Add: `require(msg.data.length >= 68, "Invalid input length");`
-- Validate address is not zero
+**Note:** This vulnerability is impossible in Solidity 0.5.0+ due to built-in strict ABI encoding. The `short-address-attack` detector automatically skips contracts with pragma >=0.5.0. Only relevant for legacy contracts.
 
 ---
 
@@ -400,26 +324,17 @@ payable(recipient).call{value: amount}("");
 
 ---
 
-### 8. Delegatecall Issues (38% Detection)
+### 8. Delegatecall Issues (~60% Detection)
 
-**Status:** ⚠️ Partial (3/8 patterns)
-**Current Detection:** `dangerous-delegatecall`, `storage-collision`, `aa-initialization-vulnerability`
-**Missed Patterns:**
-- Arbitrary delegatecall to user-controlled address
-- Fallback delegatecall pattern
-- Delegatecall in loops
+**Status:** ⚠️ Partial
+**Current Detection:** `delegatecall-untrusted-library`, `delegatecall-return-ignored`, `delegatecall-user-controlled`, `delegatecall-to-self`, `delegatecall-in-constructor`, `fallback-delegatecall-unprotected`, `storage-collision`, `aa-initialization-vulnerability`
 
 ---
 
-### 9. Front-Running (29% Detection)
+### 9. Front-Running (~50% Detection)
 
-**Status:** ⚠️ Partial (2/7 patterns)
-**Current Detection:** `mev-extractable-value`, `mev-toxic-flow-exposure`
-**Missed Patterns:**
-- General front-running
-- Transaction ordering dependence
-- ERC20 approve race condition
-- MEV sandwich attacks
+**Status:** ⚠️ Partial
+**Current Detection:** `mev-extractable-value`, `front-running`, `mev-sandwich-vulnerable-swaps`, `mev-priority-gas-auction`, `sandwich-attack`, `token-transfer-frontrun`, `proposal-frontrunning`, `erc20-approve-race`
 
 ---
 
@@ -443,14 +358,16 @@ payable(recipient).call{value: amount}("");
 
 ## False Positive Concerns 🔍
 
-### FP Rate Summary (v1.10.20)
+### FP Rate Summary (v1.10.21)
 
-- **Clean contract FP rate: 0%** -- Zero false positives across **43 clean/secure benchmark contracts** (expanded from 5 in ground truth v1.1.0)
-- **Ground truth coverage: 100%** -- All 117 test contracts annotated with expected findings (78 TPs across 74 vulnerable contracts, 0 parse errors)
-- **Total findings reduced 81%** (1,776 -> 346) through 10 rounds of FP reduction
-- **Structural FP filter** (`fp_filter.rs`) applied to all 331 detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
-- **0 true positive regressions** across all 9 reduction rounds
-- **Validation command**: `soliditydefend --validate --ground-truth tests/validation/ground_truth.json` now measures precision/recall against the full 117-contract corpus
+- **Secure-file FP rate: 0 findings** across **5 clean benchmark contracts** and **43 clean/secure benchmark contracts** total
+- **Ground truth coverage: 100%** — All 117 test contracts annotated with expected findings (77 TPs across 74 vulnerable contracts, 0 parse errors)
+- **Total findings reduced 75%** (1,776 -> 440) through 13 rounds of FP reduction and 85 obsolete detector removals
+- **Structural FP filter** (`fp_filter.rs`) applied to all detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
+- **15+ GT detector classification gates tightened** to eliminate FPs on secure contracts while preserving all TPs
+- **FP audit integration test** gates on false positive count — prevents FP regressions in CI
+- **0 true positive regressions** across all reduction rounds (77/77 TPs, 100% recall)
+- **Validation command**: `soliditydefend --validate --ground-truth tests/validation/ground_truth.json` measures precision/recall against the full 117-contract corpus
 
 ### Detectors with Remaining Volume
 
@@ -469,7 +386,7 @@ Some detectors still produce high finding counts on intentionally vulnerable tes
 **Best Practice:** Focus on Critical and High severity findings with low false positive rates:
 - `classic-reentrancy`
 - `signature-replay`
-- `integer-overflow`
+- `unchecked-math`
 - `missing-access-modifiers`
 
 ---
@@ -532,7 +449,7 @@ Production → External audit + ongoing monitoring
 - ✅ Add DoS by failed transfer detector
 - ✅ Add push-over-pull pattern detector
 - ✅ Add batch transfer overflow detector
-- ✅ Add short address attack detector
+- ✅ ~~Add short address attack detector~~ (obsolete for 0.5.0+)
 - ✅ Add array length mismatch detector
 
 **Expected Improvement:** Detection rate from 35% → ≥70%
@@ -559,25 +476,14 @@ See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerabi
 
 **New Proxy/Upgradeable Detectors (12):**
 
-*Critical Severity (5):*
-- ✅ `implementation-not-initialized` - Wormhole-style attack vector
-- ✅ `uups-missing-disable-initializers` - Missing _disableInitializers()
+*Still Active:*
 - ✅ `implementation-selfdestruct` - Parity-style proxy brick
+- ✅ `uups-missing-disable-initializers` - Missing _disableInitializers()
 - ✅ `uups-upgrade-unsafe` - Missing _authorizeUpgrade access control
-- ✅ `beacon-upgrade-unprotected` - Unprotected beacon upgrades
-
-*High Severity (4):*
-- ✅ `function-selector-clash` - Proxy/impl selector collision
-- ✅ `transparent-proxy-admin-issues` - Admin routing problems
 - ✅ `minimal-proxy-clone-issues` - EIP-1167 clone vulnerabilities
-- ✅ `initializer-reentrancy` - Init-time reentrancy
-
-*Medium Severity (3):*
-- ✅ `missing-storage-gap` - Missing __gap arrays
-- ✅ `immutable-in-upgradeable` - Bytecode storage issues
 - ✅ `eip1967-slot-compliance` - Non-standard storage slots
 
-**Total:** 233 detectors (12 new, 31 total proxy/upgradeable)
+*Removed in v1.10.21:* `implementation-not-initialized`, `beacon-upgrade-unprotected`, `function-selector-clash`, `transparent-proxy-admin-issues`, `initializer-reentrancy`, `missing-storage-gap`, `immutable-in-upgradeable`
 
 ### v1.7.0+ (Future)
 

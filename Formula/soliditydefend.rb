@@ -2,26 +2,29 @@
 class Soliditydefend < Formula
   desc "High-performance static analysis security tool for Solidity smart contracts"
   homepage "https://github.com/BlockSecOps/SolidityDefend"
-  version "1.10.13"
+  version "1.10.23"
   license "MIT OR Apache-2.0"
 
   on_macos do
     on_arm do
-      # ARM64 binary not yet available for v1.10.13
-      # ARM Mac users can use Rosetta 2 with x86_64 binary or build from source
-      # TODO: Add darwin-arm64 binary when available
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.13/soliditydefend-v1.10.13-darwin-x86_64.tar.gz"
-      sha256 "2c1b9c9c483a094de9321cba0372325ce56e10cd6c0b7805309dae8f7800af9f"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-macos-aarch64.tar.gz"
+      sha256 "MACOS_ARM64_SHA256_PLACEHOLDER"
     end
     on_intel do
-      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.13/soliditydefend-v1.10.13-darwin-x86_64.tar.gz"
-      sha256 "2c1b9c9c483a094de9321cba0372325ce56e10cd6c0b7805309dae8f7800af9f"
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-macos-x86_64.tar.gz"
+      sha256 "MACOS_X86_64_SHA256_PLACEHOLDER"
     end
   end
 
   on_linux do
-    url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.13/soliditydefend-v1.10.13-linux-x86_64.tar.gz"
-    sha256 "LINUX_SHA256_PLACEHOLDER"
+    on_intel do
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-linux-x86_64.tar.gz"
+      sha256 "LINUX_X86_64_SHA256_PLACEHOLDER"
+    end
+    on_arm do
+      url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-linux-aarch64.tar.gz"
+      sha256 "LINUX_AARCH64_SHA256_PLACEHOLDER"
+    end
   end
 
   def install
@@ -35,7 +38,7 @@ class Soliditydefend < Formula
       zsh_completion.install "completions/soliditydefend.zsh"
     end
     if File.exist?("completions/soliditydefend.fish")
-      fish_completion.install "completions/soliditydefend.fish"
+      fish_completion.install "completions/solidifydefend.fish"
     end
 
     # Install man page if available
@@ -45,13 +48,8 @@ class Soliditydefend < Formula
   end
 
   test do
-    # Test that the binary runs and shows version (outputs to stderr with exit 1)
-    assert_match "soliditydefend 1.10.13", shell_output("#{bin}/soliditydefend --version 2>&1", 1)
-
-    # Test help command (outputs to stderr with exit 1)
+    assert_match "soliditydefend 1.10.23", shell_output("#{bin}/soliditydefend --version 2>&1", 1)
     assert_match "Usage:", shell_output("#{bin}/soliditydefend --help 2>&1", 1)
-
-    # Test list-detectors command (exit 0)
     output = shell_output("#{bin}/soliditydefend --list-detectors 2>&1")
     assert_match "detector", output.downcase
   end
