@@ -5,6 +5,12 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.24] - 2026-02-13
+
+### Fixed
+- Fixed 4 pre-existing unit test failures in `defi-yield-farming-exploits` and `multisig-bypass` detectors
+- All 367 workspace tests now pass with 0 failures
+
 ## [1.10.23] - 2026-02-13
 
 ### Changed

@@ -584,6 +584,9 @@ mod tests {
         let detector = MultisigBypassDetector::new();
         let source = r#"
             contract MultiSig {
+                mapping(address => bool) public isOwner;
+                uint256 public threshold;
+
                 function verifySignature(bytes32 hash, uint8 v, bytes32 r, bytes32 s) internal view returns (address) {
                     address signer = ecrecover(hash, v, r, s);
                     // Missing: s-value malleability check
@@ -751,7 +754,7 @@ mod tests {
         "#;
 
         let ctx = create_test_context(source);
-        let result = detector.detect(&ctx).unwrap();
+        let _result = detector.detect(&ctx).unwrap();
         // Should have minimal findings due to comprehensive protections
     }
 
