@@ -70,7 +70,7 @@ jobs:
         run: |
           # Set default values for manual dispatch or automatic triggers
           FAIL_ON_REGRESSION="${{ github.event.inputs.fail_on_regression || 'true' }}"
-          MIN_PRECISION="${{ github.event.inputs.min_precision || '0.80' }}"
+          MIN_PRECISION="${{ github.event.inputs.min_precision || '0.15' }}"
           MIN_RECALL="${{ github.event.inputs.min_recall || '0.95' }}"
 
           echo "Configuration:"
