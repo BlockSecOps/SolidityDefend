@@ -8,22 +8,22 @@ class Soliditydefend < Formula
   on_macos do
     on_arm do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-macos-aarch64.tar.gz"
-      sha256 "MACOS_ARM64_SHA256_PLACEHOLDER"
+      sha256 "d4c442b1f34c2977a9dea9156c407a391ca0b4ab1815ed63ba8930cd2fe5b8d6"
     end
     on_intel do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-macos-x86_64.tar.gz"
-      sha256 "MACOS_X86_64_SHA256_PLACEHOLDER"
+      sha256 "bd991aaa6561c77f1e43c9c6b8f2677d3a64917da0a4a66f61672a2a742ab7d2"
     end
   end
 
   on_linux do
     on_intel do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-linux-x86_64.tar.gz"
-      sha256 "LINUX_X86_64_SHA256_PLACEHOLDER"
+      sha256 "31e1dbf9942a6eba7418473d876335244c8c22ff639d011ad80e863147adff32"
     end
     on_arm do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v1.10.23/soliditydefend-v1.10.23-linux-aarch64.tar.gz"
-      sha256 "LINUX_AARCH64_SHA256_PLACEHOLDER"
+      sha256 "5c1d6c086c4efa88fa29082066c438e106864d8e48d5697733567bc52235bfa2"
     end
   end
 
