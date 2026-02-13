@@ -153,17 +153,32 @@ impl YieldFarmingDetector {
             .iter()
             .map(|f| f.name.name.to_lowercase())
             .collect();
-        let has_yield_fn = contract_func_names.iter().any(|n| {
-            n.contains("deposit")
-                || n.contains("withdraw")
-                || n.contains("stake")
-                || n.contains("unstake")
-                || n.contains("redeem")
-                || n.contains("harvest")
-                || n.contains("claim")
-                || n.contains("compound")
-                || n.contains("reward")
-        });
+        let has_yield_fn = if contract_func_names.is_empty() {
+            // Fallback to source-based detection when no parsed functions
+            // (e.g., unit test contexts where the parser is not invoked)
+            let src = ctx.source_code.to_lowercase();
+            src.contains("function deposit")
+                || src.contains("function withdraw")
+                || src.contains("function stake")
+                || src.contains("function unstake")
+                || src.contains("function redeem")
+                || src.contains("function harvest")
+                || src.contains("function claim")
+                || src.contains("function compound")
+                || src.contains("function reward")
+        } else {
+            contract_func_names.iter().any(|n| {
+                n.contains("deposit")
+                    || n.contains("withdraw")
+                    || n.contains("stake")
+                    || n.contains("unstake")
+                    || n.contains("redeem")
+                    || n.contains("harvest")
+                    || n.contains("claim")
+                    || n.contains("compound")
+                    || n.contains("reward")
+            })
+        };
         if !has_yield_fn {
             return false;
         }
