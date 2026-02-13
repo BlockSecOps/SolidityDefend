@@ -369,9 +369,9 @@ impl DelegatecallUntrustedLibraryDetector {
         if has_delegatecall {
             // Check if there's a StorageLoad feeding the delegatecall target
             // (mutable storage => vulnerable)
-            let has_storage_load_target = instructions.iter().any(|instr| {
-                matches!(instr, Instruction::StorageLoad(_, _))
-            });
+            let has_storage_load_target = instructions
+                .iter()
+                .any(|instr| matches!(instr, Instruction::StorageLoad(_, _)));
 
             if has_storage_load_target {
                 return Some(

@@ -156,11 +156,8 @@ impl SolidityDefendLanguageServer {
             // Collect function analyses for this contract
             let function_analyses = match &engine_result {
                 Ok(result) => {
-                    let contract_fn_names: Vec<&str> = contract
-                        .functions
-                        .iter()
-                        .map(|f| f.name.name)
-                        .collect();
+                    let contract_fn_names: Vec<&str> =
+                        contract.functions.iter().map(|f| f.name.name).collect();
                     result
                         .function_analyses
                         .iter()
@@ -384,10 +381,8 @@ impl LanguageServer for SolidityDefendLanguageServer {
             for change in params.content_changes {
                 if let Some(range) = change.range {
                     // Apply incremental change properly
-                    let start_offset =
-                        Self::position_to_offset(&doc.content, range.start);
-                    let end_offset =
-                        Self::position_to_offset(&doc.content, range.end);
+                    let start_offset = Self::position_to_offset(&doc.content, range.start);
+                    let end_offset = Self::position_to_offset(&doc.content, range.end);
                     if let (Some(start), Some(end)) = (start_offset, end_offset) {
                         let mut new_content = String::with_capacity(
                             doc.content.len() - (end - start) + change.text.len(),

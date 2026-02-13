@@ -395,11 +395,31 @@ impl MagicNumberDetector {
 
     /// Common numeric values that should NOT be flagged.
     const ALLOWED_VALUES: &'static [&'static str] = &[
-        "0", "1", "2", "10", "18", "100", "1000", "256", "255",
-        "1e18", "1e6", "1e8", "1e9", "1e27",
-        "0x0", "0x00", "0xff", "0xFF",
-        "32", "64", "128", "160", "224",
-        "type(uint256).max", "type(uint128).max",
+        "0",
+        "1",
+        "2",
+        "10",
+        "18",
+        "100",
+        "1000",
+        "256",
+        "255",
+        "1e18",
+        "1e6",
+        "1e8",
+        "1e9",
+        "1e27",
+        "0x0",
+        "0x00",
+        "0xff",
+        "0xFF",
+        "32",
+        "64",
+        "128",
+        "160",
+        "224",
+        "type(uint256).max",
+        "type(uint128).max",
     ];
 
     /// Return true if the line is inside a constant/immutable declaration,
@@ -495,7 +515,9 @@ impl MagicNumberDetector {
 
             // Match numeric literal (decimal or hex)
             if chars[i].is_ascii_digit()
-                || (chars[i] == '0' && i + 1 < chars.len() && (chars[i + 1] == 'x' || chars[i + 1] == 'X'))
+                || (chars[i] == '0'
+                    && i + 1 < chars.len()
+                    && (chars[i + 1] == 'x' || chars[i + 1] == 'X'))
             {
                 // Make sure it's not part of an identifier (e.g., var1)
                 if i > 0 && (chars[i - 1].is_alphanumeric() || chars[i - 1] == '_') {
@@ -504,7 +526,10 @@ impl MagicNumberDetector {
                 }
                 let start = i;
                 // Hex literal
-                if chars[i] == '0' && i + 1 < chars.len() && (chars[i + 1] == 'x' || chars[i + 1] == 'X') {
+                if chars[i] == '0'
+                    && i + 1 < chars.len()
+                    && (chars[i + 1] == 'x' || chars[i + 1] == 'X')
+                {
                     i += 2;
                     while i < chars.len() && (chars[i].is_ascii_hexdigit() || chars[i] == '_') {
                         i += 1;
@@ -512,7 +537,10 @@ impl MagicNumberDetector {
                 } else {
                     // Decimal literal (possibly with underscores or scientific notation)
                     while i < chars.len()
-                        && (chars[i].is_ascii_digit() || chars[i] == '_' || chars[i] == 'e' || chars[i] == 'E')
+                        && (chars[i].is_ascii_digit()
+                            || chars[i] == '_'
+                            || chars[i] == 'e'
+                            || chars[i] == 'E')
                     {
                         i += 1;
                     }
@@ -596,7 +624,13 @@ impl Detector for MagicNumberDetector {
                 );
                 let finding = self
                     .base
-                    .create_finding(ctx, message, line_number, (*col + 1) as u32, value.len() as u32)
+                    .create_finding(
+                        ctx,
+                        message,
+                        line_number,
+                        (*col + 1) as u32,
+                        value.len() as u32,
+                    )
                     .with_confidence(Confidence::High)
                     .with_fix_suggestion(format!(
                         "Define a named constant at the contract level:\n\n\
@@ -872,13 +906,7 @@ impl Detector for ExcessiveInheritanceDetector {
 
             let finding = self
                 .base
-                .create_finding(
-                    ctx,
-                    message,
-                    line,
-                    col,
-                    contract_name.len() as u32,
-                )
+                .create_finding(ctx, message, line, col, contract_name.len() as u32)
                 .with_confidence(Confidence::High)
                 .with_fix_suggestion(
                     "Reduce the number of base contracts:\n\n\
@@ -922,19 +950,13 @@ mod tests {
 
     #[test]
     fn test_missing_natspec_has_natspec() {
-        let lines = vec![
-            "/// @notice Does something",
-            "function foo() public {",
-        ];
+        let lines = vec!["/// @notice Does something", "function foo() public {"];
         assert!(MissingNatspecDetector::has_natspec_before(&lines, 1));
     }
 
     #[test]
     fn test_missing_natspec_no_natspec() {
-        let lines = vec![
-            "uint256 x = 1;",
-            "function foo() public {",
-        ];
+        let lines = vec!["uint256 x = 1;", "function foo() public {"];
         assert!(!MissingNatspecDetector::has_natspec_before(&lines, 1));
     }
 
@@ -963,19 +985,23 @@ mod tests {
 
     #[test]
     fn test_extract_named_import() {
-        let names = UnusedImportDetector::extract_imported_names("import {Ownable} from \"@openzeppelin/contracts/access/Ownable.sol\";");
+        let names = UnusedImportDetector::extract_imported_names(
+            "import {Ownable} from \"@openzeppelin/contracts/access/Ownable.sol\";",
+        );
         assert_eq!(names, vec!["Ownable"]);
     }
 
     #[test]
     fn test_extract_aliased_import() {
-        let names = UnusedImportDetector::extract_imported_names("import {Foo as Bar} from \"./Foo.sol\";");
+        let names =
+            UnusedImportDetector::extract_imported_names("import {Foo as Bar} from \"./Foo.sol\";");
         assert_eq!(names, vec!["Bar"]);
     }
 
     #[test]
     fn test_extract_wildcard_import() {
-        let names = UnusedImportDetector::extract_imported_names("import * as Utils from \"./Utils.sol\";");
+        let names =
+            UnusedImportDetector::extract_imported_names("import * as Utils from \"./Utils.sol\";");
         assert_eq!(names, vec!["Utils"]);
     }
 

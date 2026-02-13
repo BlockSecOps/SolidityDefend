@@ -217,14 +217,14 @@ impl VaultShareInflationDetector {
         let instructions = analysis.ir_function.get_instructions();
 
         // Look for division operations that could cause rounding to zero
-        let has_division = instructions.iter().any(|instr| {
-            matches!(instr, Instruction::Div(_, _, _))
-        });
+        let has_division = instructions
+            .iter()
+            .any(|instr| matches!(instr, Instruction::Div(_, _, _)));
 
         // Look for totalSupply reads (indicating share calculation)
-        let has_supply_read = instructions.iter().any(|instr| {
-            matches!(instr, Instruction::StorageLoad(_, _))
-        });
+        let has_supply_read = instructions
+            .iter()
+            .any(|instr| matches!(instr, Instruction::StorageLoad(_, _)));
 
         // Look for minimum deposit checks
         let has_minimum_check = instructions.iter().any(|instr| {
