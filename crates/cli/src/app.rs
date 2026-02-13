@@ -16,7 +16,7 @@ use db::Database;
 // Cross-contract analysis infrastructure (available for future full integration)
 // use detectors::cross_contract::{CrossContractAnalyzer, CrossContractContext};
 use detectors::registry::{DetectorRegistry, RegistryConfig};
-use detectors::types::{AnalysisContext, Finding, Severity};
+use detectors::types::{AnalysisContext, DetectorId, Finding, Severity};
 use output::{OutputFormat, OutputManager};
 use parser::Parser;
 use semantic::symbols::SymbolTable;
@@ -176,7 +176,17 @@ impl CliApp {
 
         // Create detector registry from config
         let registry_config = config.to_registry_config();
-        let registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
+        let mut registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
+
+        // Apply disabled detectors from config
+        for detector_id in &config.detectors.disabled_detectors {
+            registry.disable_detector(&DetectorId::new(detector_id));
+        }
+
+        // Apply enabled detectors from config (re-enable overrides)
+        for detector_id in &config.detectors.enabled_detectors {
+            let _ = registry.enable_detector(&DetectorId::new(detector_id));
+        }
 
         Ok(Self {
             registry,
@@ -2101,7 +2111,18 @@ impl CliApp {
         // Create analyzer
         let config = SolidityDefendConfig::load_from_defaults_and_file(None)?;
         let registry_config = config.to_registry_config();
-        let registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
+        let mut registry = DetectorRegistry::with_all_detectors_and_config(registry_config);
+
+        // Apply disabled detectors from config (same as production)
+        for detector_id in &config.detectors.disabled_detectors {
+            registry.disable_detector(&DetectorId::new(detector_id));
+        }
+
+        // Apply enabled detectors from config (re-enable overrides)
+        for detector_id in &config.detectors.enabled_detectors {
+            let _ = registry.enable_detector(&DetectorId::new(detector_id));
+        }
+
         let parser = Parser::new();
 
         let mut total_expected = 0;

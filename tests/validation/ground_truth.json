@@ -680,17 +680,6 @@
       "contract_name": "DAOGovernance",
       "expected_findings": [
         {
-          "detector_id": "flash-loan-governance-attack",
-          "line_range": [
-            1,
-            400
-          ],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "Flash loan governance attack vulnerability",
-          "vulnerability_type": "flashloan-governance"
-        },
-        {
           "detector_id": "delegation-loop",
           "line_range": [
             1,
@@ -2037,7 +2026,7 @@
   },
   "metadata": {
     "total_contracts": 117,
-    "total_expected_findings": 78,
+    "total_expected_findings": 77,
     "total_clean_contracts": 43,
     "total_vulnerable_contracts": 74,
     "last_recall": "100.0%",

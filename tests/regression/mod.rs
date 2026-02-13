@@ -350,7 +350,7 @@ contract ComplexExample {
             name: "overflow".to_string(),
             description: "Integer overflow/underflow test".to_string(),
             source_file: test_cases_dir.join("overflow.sol"),
-            expected_detectors: vec!["integer-overflow".to_string(), "integer-underflow".to_string()],
+            expected_detectors: vec!["unchecked-math".to_string(), "integer-underflow".to_string()],
             config_overrides: HashMap::new(),
             expected_exit_code: 1,
             tags: vec!["arithmetic".to_string(), "medium-severity".to_string()],
@@ -534,7 +534,7 @@ contract ComplexExample {
 
             if source_content.contains("balances[to] += amount") {
                 findings.push(serde_json::json!({
-                    "detector": "integer-overflow",
+                    "detector": "unchecked-math",
                     "severity": "medium",
                     "confidence": "medium",
                     "message": "Potential integer overflow in arithmetic operation",

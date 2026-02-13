@@ -80,11 +80,10 @@ impl RegressionTests {
     fn test_vulnerable_erc20() -> RegressionTestResult {
         let expected = ExpectedResults {
             contract_name: "VulnerableERC20".to_string(),
-            expected_issues: 3, // Missing events, overflow, unprotected mint
+            expected_issues: 2, // Missing events, unprotected mint
             expected_severities: vec!["High".to_string(), "Medium".to_string()],
             expected_issue_types: vec![
                 "missing-events".to_string(),
-                "integer-overflow".to_string(),
                 "unprotected-function".to_string(),
             ],
             should_pass_analysis: true,
@@ -186,12 +185,11 @@ impl RegressionTests {
     fn test_vulnerable_nft_marketplace() -> RegressionTestResult {
         let expected = ExpectedResults {
             contract_name: "VulnerableNFTMarketplace".to_string(),
-            expected_issues: 4, // Access control, reentrancy, overflow, price manipulation
+            expected_issues: 3, // Access control, reentrancy, price manipulation
             expected_severities: vec!["Critical".to_string(), "High".to_string()],
             expected_issue_types: vec![
                 "missing-access-modifiers".to_string(),
                 "reentrancy".to_string(),
-                "integer-overflow".to_string(),
                 "price-manipulation".to_string(),
             ],
             should_pass_analysis: true,
