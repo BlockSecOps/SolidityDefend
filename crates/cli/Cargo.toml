@@ -19,6 +19,7 @@ semantic = { path = "../semantic" }
 lsp = { path = "../lsp" }
 project = { path = "../project" }
 resolver = { path = "../resolver" }
+analysis = { path = "../analysis" }
 clap.workspace = true
 serde.workspace = true
 serde_norway.workspace = true

@@ -10,10 +10,10 @@ description = "Security vulnerability detectors for Solidity smart contracts"
 [dependencies]
 ast = { path = "../ast" }
 semantic = { path = "../semantic" }
-# Temporarily disabled due to compilation errors
-# cfg = { path = "../cfg" }
-# dataflow = { path = "../dataflow" }
-# ir = { path = "../ir" }
+cfg = { path = "../cfg" }
+dataflow = { path = "../dataflow" }
+ir = { path = "../ir" }
+analysis = { path = "../analysis" }
 anyhow.workspace = true
 serde.workspace = true
 indexmap.workspace = true

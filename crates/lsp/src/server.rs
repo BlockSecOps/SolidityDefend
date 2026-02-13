@@ -62,7 +62,7 @@ struct AnalysisSettings {
     /// Whether to run analysis on document save
     analyze_on_save: bool,
     /// Analysis debounce delay in milliseconds
-    _debounce_ms: u64,
+    debounce_ms: u64,
     /// Maximum number of findings to report per document
     _max_findings: usize,
 }
@@ -72,7 +72,7 @@ impl Default for AnalysisSettings {
         Self {
             analyze_on_change: true,
             analyze_on_save: true,
-            _debounce_ms: 500,
+            debounce_ms: 500,
             _max_findings: 100,
         }
     }
@@ -120,8 +120,10 @@ impl SolidityDefendLanguageServer {
         findings_result
     }
 
-    /// Synchronous document analysis to avoid Send issues with arena-allocated AST
+    /// Synchronous document analysis to avoid Send issues with arena-allocated AST.
+    /// Now wires AnalysisEngine for dataflow-enriched findings (same path as CLI).
     fn analyze_document_sync(&self, uri: &Url, content: &str) -> Result<Vec<Finding>> {
+        use analysis::AnalysisEngine;
         use ast::AstArena;
         use detectors::types::AnalysisContext;
         use parser::Parser;
@@ -142,16 +144,49 @@ impl SolidityDefendLanguageServer {
             return Ok(Vec::new());
         }
 
+        // Run AnalysisEngine for IR/CFG/dataflow (graceful fallback)
+        let mut engine = AnalysisEngine::new();
+        let engine_result = engine.analyze_source_file(&source_file);
+
         // Analyze each contract
         let mut all_findings = Vec::new();
         for contract in &source_file.contracts {
             let symbols = SymbolTable::new();
-            let ctx = AnalysisContext::new(
-                contract,
-                symbols,
-                content.to_string(),
-                file_path.to_string(),
-            );
+
+            // Collect function analyses for this contract
+            let function_analyses = match &engine_result {
+                Ok(result) => {
+                    let contract_fn_names: Vec<&str> = contract
+                        .functions
+                        .iter()
+                        .map(|f| f.name.name)
+                        .collect();
+                    result
+                        .function_analyses
+                        .iter()
+                        .filter(|fa| contract_fn_names.contains(&fa.function_name.as_str()))
+                        .cloned()
+                        .collect::<Vec<_>>()
+                }
+                Err(_) => Vec::new(),
+            };
+
+            let ctx = if function_analyses.is_empty() {
+                AnalysisContext::new(
+                    contract,
+                    symbols,
+                    content.to_string(),
+                    file_path.to_string(),
+                )
+            } else {
+                AnalysisContext::with_analysis(
+                    contract,
+                    symbols,
+                    content.to_string(),
+                    file_path.to_string(),
+                    function_analyses,
+                )
+            };
 
             // Run detectors
             let result = self.detector_registry.run_analysis(&ctx)?;
@@ -226,6 +261,22 @@ impl SolidityDefendLanguageServer {
             .await;
     }
 
+    /// Convert an LSP Position (line, character) to a byte offset in the content string
+    fn position_to_offset(content: &str, position: Position) -> Option<usize> {
+        let mut offset = 0;
+        for (line_idx, line) in content.lines().enumerate() {
+            if line_idx == position.line as usize {
+                let char_offset = position.character as usize;
+                // Clamp to line length to handle positions past end of line
+                let clamped = char_offset.min(line.len());
+                return Some(offset + clamped);
+            }
+            offset += line.len() + 1; // +1 for newline
+        }
+        // Position is past the end of content
+        Some(content.len())
+    }
+
     /// Handle document change with debouncing
     async fn handle_document_change(&self, uri: Url, content: String, version: i32) {
         // Update document state
@@ -293,7 +344,7 @@ impl LanguageServer for SolidityDefendLanguageServer {
                     DiagnosticOptions {
                         identifier: Some("soliditydefend".to_string()),
                         inter_file_dependencies: false,
-                        workspace_diagnostics: false,
+                        workspace_diagnostics: true,
                         work_done_progress_options: WorkDoneProgressOptions::default(),
                     },
                 )),
@@ -301,7 +352,7 @@ impl LanguageServer for SolidityDefendLanguageServer {
             },
             server_info: Some(ServerInfo {
                 name: "SolidityDefend LSP".to_string(),
-                version: Some("0.1.0".to_string()),
+                version: Some(env!("CARGO_PKG_VERSION").to_string()),
             }),
         })
     }
@@ -331,10 +382,24 @@ impl LanguageServer for SolidityDefendLanguageServer {
         // Get current document content and apply changes
         if let Some(mut doc) = self.documents.get_mut(&uri) {
             for change in params.content_changes {
-                if let Some(_range) = change.range {
-                    // Apply incremental change (simplified implementation)
-                    // In a real implementation, you'd properly handle incremental changes
-                    doc.content = change.text;
+                if let Some(range) = change.range {
+                    // Apply incremental change properly
+                    let start_offset =
+                        Self::position_to_offset(&doc.content, range.start);
+                    let end_offset =
+                        Self::position_to_offset(&doc.content, range.end);
+                    if let (Some(start), Some(end)) = (start_offset, end_offset) {
+                        let mut new_content = String::with_capacity(
+                            doc.content.len() - (end - start) + change.text.len(),
+                        );
+                        new_content.push_str(&doc.content[..start]);
+                        new_content.push_str(&change.text);
+                        new_content.push_str(&doc.content[end..]);
+                        doc.content = new_content;
+                    } else {
+                        // Fallback to full replacement if offset calculation fails
+                        doc.content = change.text;
+                    }
                 } else {
                     // Full document change
                     doc.content = change.text;
@@ -343,6 +408,13 @@ impl LanguageServer for SolidityDefendLanguageServer {
 
             let content = doc.content.clone();
             drop(doc); // Release the lock
+
+            // Debounce: wait before analyzing to avoid re-analyzing on every keystroke
+            let debounce_ms = {
+                let state = self.state.read().await;
+                state.analysis_settings.debounce_ms
+            };
+            tokio::time::sleep(tokio::time::Duration::from_millis(debounce_ms)).await;
 
             self.handle_document_change(uri, content, version).await;
         }

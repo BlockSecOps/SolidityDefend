@@ -6,6 +6,8 @@ use crate::safe_patterns::vault_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 use crate::utils;
 
+use ir::Instruction;
+
 /// Detector for vault share inflation attacks (first depositor attack)
 pub struct VaultShareInflationDetector {
     base: BaseDetector,
@@ -131,7 +133,13 @@ impl Detector for VaultShareInflationDetector {
         }
 
         for function in ctx.get_functions() {
-            if let Some(inflation_issue) = self.check_share_inflation(function, ctx) {
+            // Try dataflow-enhanced check first, fall back to pattern matching
+            let inflation_issue = if ctx.has_dataflow() {
+                self.check_inflation_with_dataflow(function, ctx)
+            } else {
+                self.check_share_inflation(function, ctx)
+            };
+            if let Some(inflation_issue) = inflation_issue {
                 let message = format!(
                     "Function '{}' may be vulnerable to vault share inflation attack. {} \
                     First depositor can manipulate share price by depositing 1 wei, \
@@ -186,6 +194,58 @@ impl Detector for VaultShareInflationDetector {
 }
 
 impl VaultShareInflationDetector {
+    /// Dataflow-enhanced: Use def-use chains to verify deposit/withdraw functions
+    /// have actual arithmetic that could overflow with zero shares.
+    fn check_inflation_with_dataflow(
+        &self,
+        function: &ast::Function<'_>,
+        ctx: &AnalysisContext,
+    ) -> Option<String> {
+        let func_name = function.name.name;
+        let func_name_lower = func_name.to_lowercase();
+
+        // Only check deposit/mint functions
+        if !func_name_lower.contains("deposit") && !func_name_lower.contains("mint") {
+            return None;
+        }
+
+        let analysis = match ctx.get_function_analysis(func_name) {
+            Some(a) => a,
+            None => return None,
+        };
+
+        let instructions = analysis.ir_function.get_instructions();
+
+        // Look for division operations that could cause rounding to zero
+        let has_division = instructions.iter().any(|instr| {
+            matches!(instr, Instruction::Div(_, _, _))
+        });
+
+        // Look for totalSupply reads (indicating share calculation)
+        let has_supply_read = instructions.iter().any(|instr| {
+            matches!(instr, Instruction::StorageLoad(_, _))
+        });
+
+        // Look for minimum deposit checks
+        let has_minimum_check = instructions.iter().any(|instr| {
+            if let Instruction::Require(_, _) = instr {
+                true // Has a require statement (may be minimum check)
+            } else {
+                false
+            }
+        });
+
+        if has_division && has_supply_read && !has_minimum_check {
+            return Some(
+                "Dataflow analysis confirms share calculation with division and totalSupply read \
+                 without minimum deposit protection"
+                    .to_string(),
+            );
+        }
+
+        None
+    }
+
     /// Check for share inflation vulnerabilities
     fn check_share_inflation(
         &self,

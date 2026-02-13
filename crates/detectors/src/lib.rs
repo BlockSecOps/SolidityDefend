@@ -101,6 +101,15 @@ pub mod taint;
 // Advanced security engine integrating all advanced features
 pub mod advanced_security_engine;
 
+// Oracle-specific detectors (Chainlink, Pyth, TWAP)
+pub mod oracle_security;
+
+// L2-specific detectors (Arbitrum, Optimism, zkSync)
+pub mod l2_security;
+
+// Lint / code-quality detectors
+pub mod lint;
+
 // Re-export core types and traits
 pub use detector::{
     AstAnalyzer, BaseDetector, ConfigurableDetector, DataFlowAnalyzer, Detector, DetectorCategory,

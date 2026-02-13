@@ -31,6 +31,8 @@ pub struct RegistryConfig {
     pub min_confidence: crate::types::Confidence,
     /// Categories to include (empty means all)
     pub enabled_categories: Vec<DetectorCategory>,
+    /// Whether to include lint-mode detectors
+    pub include_lint: bool,
 }
 
 impl Default for RegistryConfig {
@@ -42,6 +44,7 @@ impl Default for RegistryConfig {
             min_severity: crate::types::Severity::Info,
             min_confidence: crate::types::Confidence::Low,
             enabled_categories: Vec::new(), // Empty means all categories
+            include_lint: false,
         }
     }
 }
@@ -171,12 +174,13 @@ impl DetectorRegistry {
         let start_time = Instant::now();
         let mut result = AnalysisResult::new();
 
-        // Filter detectors based on configuration
+        // Filter detectors based on configuration and available analysis data
         let detectors_to_run: Vec<_> = self
             .enabled_detectors
             .iter()
             .filter_map(|id| self.detectors.get(id))
             .filter(|detector| self.should_run_detector(detector))
+            .filter(|detector| self.can_run_with_context(detector, ctx))
             .collect();
 
         result.stats.detectors_run = detectors_to_run.len();
@@ -303,7 +307,7 @@ impl DetectorRegistry {
         result
     }
 
-    /// Check if a detector should be run based on configuration
+    /// Check if a detector should be run based on configuration and available analysis data
     fn should_run_detector(&self, detector: &Arc<dyn Detector>) -> bool {
         // Check if categories are restricted and detector matches
         if !self.config.enabled_categories.is_empty() {
@@ -317,6 +321,42 @@ impl DetectorRegistry {
             }
         }
 
+        // Exclude lint detectors from normal runs unless lint mode is enabled
+        if detector.is_lint() && !self.config.include_lint {
+            return false;
+        }
+
+        true
+    }
+
+    /// Check if a detector can run with the available analysis data in the context.
+    /// Returns false if the detector requires dataflow/cfg/taint but it's not available.
+    fn can_run_with_context(
+        &self,
+        detector: &Arc<dyn Detector>,
+        ctx: &AnalysisContext<'_>,
+    ) -> bool {
+        if detector.requires_dataflow() && !ctx.has_dataflow() {
+            log::debug!(
+                "Skipping detector '{}': requires dataflow but unavailable",
+                detector.id()
+            );
+            return false;
+        }
+        if detector.requires_cfg() && !ctx.has_cfg() {
+            log::debug!(
+                "Skipping detector '{}': requires CFG but unavailable",
+                detector.id()
+            );
+            return false;
+        }
+        if detector.requires_taint_analysis() && !ctx.has_taint() {
+            log::debug!(
+                "Skipping detector '{}': requires taint analysis but unavailable",
+                detector.id()
+            );
+            return false;
+        }
         true
     }
 
@@ -595,6 +635,54 @@ impl DetectorRegistry {
         // L2/Rollup Security
         self.register(Arc::new(
             crate::zk_proof_bypass::ZkProofBypassDetector::new(),
+        ));
+
+        // Oracle-Specific Detectors
+        self.register(Arc::new(
+            crate::oracle_security::ChainlinkStalePriceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_security::ChainlinkSequencerCheckDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_security::OracleSingleSourceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_security::TwapManipulationWindowDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::oracle_security::OracleDecimalMismatchDetector::new(),
+        ));
+
+        // L2-Specific Detectors
+        self.register(Arc::new(
+            crate::l2_security::L2MsgValueInLoopDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_security::L2BlockNumberAssumptionDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_security::L2GasPriceDependencyDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::l2_security::L2Push0CrossDeployDetector::new(),
+        ));
+
+        // Lint / Code Quality Detectors
+        self.register(Arc::new(
+            crate::lint::MissingNatspecDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lint::UnusedImportDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lint::MagicNumberDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lint::FunctionTooLongDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::lint::ExcessiveInheritanceDetector::new(),
         ));
     }
 }

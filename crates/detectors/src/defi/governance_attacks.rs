@@ -630,9 +630,13 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: semantic::SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "function vote() { uint power = token.balanceOf(msg.sender); }"
                 .to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         assert!(detector.vulnerable_to_flash_loan_voting(&ctx, &ctx.contract.functions[0]));
