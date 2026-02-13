@@ -124,8 +124,10 @@ impl Detector for ProxyStorageCollisionDetector {
 impl ProxyStorageCollisionDetector {
     /// Check if contract has storage collision risks
     fn has_storage_collision_risk(&self, ctx: &AnalysisContext) -> Option<String> {
-        // Get contract source for analysis
-        let contract_source = &ctx.source_code;
+        // FP Reduction: Use contract source instead of file source to prevent
+        // cross-contract FPs in multi-contract files
+        let contract_source_owned = crate::utils::get_contract_source(ctx);
+        let contract_source = &contract_source_owned;
 
         // Check if this looks like a proxy contract
         let is_proxy = self.is_proxy_contract(ctx, contract_source);

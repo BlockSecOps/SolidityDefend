@@ -70,34 +70,110 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // File-wide source for flash loan prerequisite (TPs may have keywords in sibling contracts)
+        let file_lower = ctx.source_code.to_lowercase();
+        // Contract-specific source for pattern detection (reduces cross-contract FPs)
+        let contract_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
-        // Check for flash loan callback
-        let is_flash_loan = lower.contains("flashloan")
-            || lower.contains("flash")
-            || lower.contains("onflashloan")
-            || lower.contains("erc3156");
+        // FP Reduction: Skip known lending protocols (Aave, Compound, MakerDAO)
+        // They have audited flash loan handling
+        if crate::utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts that have flash-loan or price-related
+        // functions in their own AST. This prevents cross-contract false positives
+        // in multi-contract files where flash loan keywords appear in sibling contracts.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+
+        let contract_has_flash_fn = contract_func_names.iter().any(|n| {
+            n.contains("flashloan")
+                || n.contains("flash")
+                || n.contains("onflashloan")
+                || n.contains("executeoperation")
+                || n.contains("receivetokens")
+        });
+        let contract_has_price_fn = contract_func_names.iter().any(|n| {
+            n.contains("price")
+                || n.contains("oracle")
+                || n.contains("liquidat")
+                || n.contains("collateral")
+                || n.contains("swap")
+                || n.contains("borrow")
+                || n.contains("reserve")
+                || n.contains("getamount")
+        });
+        let contract_name_relevant = contract_name_lower.contains("flash")
+            || contract_name_lower.contains("oracle")
+            || contract_name_lower.contains("price")
+            || contract_name_lower.contains("liquidat")
+            || contract_name_lower.contains("lending")
+            || contract_name_lower.contains("swap")
+            || contract_name_lower.contains("arbitrage");
+
+        // Skip contracts that have no relevant functions AND no relevant name
+        if !contract_has_flash_fn && !contract_has_price_fn && !contract_name_relevant {
+            return Ok(findings);
+        }
+
+        // Require flash loan implementation patterns OR price manipulation context
+        // Use FILE source for prerequisite (flash loan keywords may be in sibling contracts)
+        let has_flash_loan_impl = file_lower.contains("onflashloan")
+            || file_lower.contains("erc3156")
+            || file_lower.contains("flashmint")
+            || file_lower.contains("executeoperation")
+            || file_lower.contains("function flashloan")
+            || file_lower.contains("receivetokens")
+            || file_lower.contains("flashloansimple");
+
+        // Flash loan USAGE (calling flash loan on external contract)
+        let has_flash_loan_usage =
+            file_lower.contains(".flashloan(") || file_lower.contains(".flashloansimple(");
+
+        // Price manipulation context: contract has flash-related function AND price operations
+        let has_flash_price_context = (file_lower.contains("function flashswap")
+            || file_lower.contains("function flashborrow"))
+            && (file_lower.contains("getamountout")
+                || file_lower.contains("getreserves(")
+                || file_lower.contains("getprice(")
+                || file_lower.contains("latestrounddata("));
+
+        let is_flash_loan = has_flash_loan_impl || has_flash_loan_usage || has_flash_price_context;
 
         if !is_flash_loan {
             return Ok(findings);
         }
 
         // Pattern 1: Price fetched from single DEX during flash loan
-        let has_flash_callback = lower.contains("onflashloan")
-            || lower.contains("receivetokens")
-            || lower.contains("flashloan")
-            || lower.contains("executeOperation");
+        // Use FILE source for flash callback detection (may be in sibling contracts)
+        let has_flash_callback = file_lower.contains("onflashloan")
+            || file_lower.contains("receivetokens")
+            || file_lower.contains("function flashloan")
+            || file_lower.contains("executeoperation");
 
-        let has_price_fetch = lower.contains("getamountout")
-            || lower.contains("getreserves")
-            || lower.contains("price")
-            || lower.contains("quote");
+        // FP Reduction: Use CONTRACT source for price fetch detection (must be in THIS contract)
+        let has_price_fetch = contract_lower.contains("getamountout")
+            || contract_lower.contains("getreserves(")
+            || contract_lower.contains(".price(")
+            || contract_lower.contains("getprice(")
+            || contract_lower.contains("quote(")
+            || contract_lower.contains("latestrounddata(");
 
         if has_flash_callback {
-            let has_multi_oracle = lower.contains("chainlink")
-                || lower.contains("twap")
-                || lower.contains("getlatestprice")
-                || lower.contains("median");
+            // Check for actual multi-oracle usage — use CONTRACT source
+            let has_multi_oracle = contract_lower.contains("chainlinkfeed")
+                || contract_lower.contains("aggregatorv3interface(")
+                || contract_lower.contains("twaporacle")
+                || contract_lower.contains("twap(")
+                || contract_lower.contains("= getlatestprice")
+                || contract_lower.contains(".latestround")
+                || contract_lower.contains("median(");
 
             if has_price_fetch && !has_multi_oracle {
                 let finding = self.base.create_finding(
@@ -115,10 +191,11 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
             }
         }
 
-        // Pattern 2: Multiple swaps in flash loan callback
-        let swap_count = lower.matches("swap(").count()
-            + lower.matches("swapexacttokensfortokens").count()
-            + lower.matches("swaptokensforexacttokens").count();
+        // Pattern 2: Multiple swaps in flash loan callback — use FILE source for swap count
+        // (interface declarations containing swap signatures are part of the deployment context)
+        let swap_count = file_lower.matches("swap(").count()
+            + file_lower.matches("swapexacttokensfortokens").count()
+            + file_lower.matches("swaptokensforexacttokens").count();
 
         if has_flash_callback && swap_count > 2 {
             let finding = self.base.create_finding(
@@ -138,17 +215,34 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
             findings.push(finding);
         }
 
-        // Pattern 3: Liquidation triggered based on manipulated price
+        // Pattern 3: Liquidation triggered based on manipulated price — use CONTRACT source
         if is_flash_loan {
-            let has_liquidation = lower.contains("liquidate")
-                || lower.contains("liquidationthreshold")
-                || lower.contains("healthfactor");
+            let has_liquidation = contract_lower.contains("liquidate")
+                || contract_lower.contains("liquidationthreshold")
+                || contract_lower.contains("healthfactor");
 
-            let uses_spot_price = lower.contains("getreserves")
-                || lower.contains("balanceof")
-                    && (lower.contains("price") || lower.contains("ratio"));
+            let uses_spot_price = contract_lower.contains("getreserves(")
+                || (contract_lower.contains("balanceof")
+                    && (contract_lower.contains("price") || contract_lower.contains("ratio")));
 
-            if has_liquidation && uses_spot_price {
+            // FP Reduction: Skip if contract uses TWAP, Chainlink, or multi-oracle
+            let has_oracle_protection = contract_lower.contains("twaporacle")
+                || contract_lower.contains("twap(")
+                || contract_lower.contains("twap_period")
+                || contract_lower.contains("chainlinkfeed")
+                || contract_lower.contains("aggregatorv3interface(")
+                || contract_lower.contains("= getlatestprice")
+                || contract_lower.contains(".latestround")
+                || contract_lower.contains("pricefeed(")
+                || contract_lower.contains("timeweighted(")
+                || contract_lower.contains("median(")
+                || contract_lower.contains("maxdeviation")
+                || contract_lower.contains("deviationthreshold")
+                || contract_lower.contains("pricedeviation")
+                || contract_lower.contains("maxheartbeat")
+                || contract_lower.contains("heartbeatperiod");
+
+            if has_liquidation && uses_spot_price && !has_oracle_protection {
                 let finding = self.base.create_finding(
                     ctx,
                     "Liquidation based on spot price - vulnerable to flash loan price manipulation".to_string(),
@@ -164,13 +258,29 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
             }
         }
 
-        // Pattern 4: Cross-protocol price dependency
+        // Pattern 4: Cross-protocol price dependency — use CONTRACT source
         if is_flash_loan {
-            let protocol_count = (if lower.contains("uniswap") { 1 } else { 0 })
-                + (if lower.contains("sushiswap") { 1 } else { 0 })
-                + (if lower.contains("curve") { 1 } else { 0 })
-                + (if lower.contains("balancer") { 1 } else { 0 })
-                + (if lower.contains("pancakeswap") { 1 } else { 0 });
+            let protocol_count = (if contract_lower.contains("uniswap") {
+                1
+            } else {
+                0
+            }) + (if contract_lower.contains("sushiswap") {
+                1
+            } else {
+                0
+            }) + (if contract_lower.contains("curve") {
+                1
+            } else {
+                0
+            }) + (if contract_lower.contains("balancer") {
+                1
+            } else {
+                0
+            }) + (if contract_lower.contains("pancakeswap") {
+                1
+            } else {
+                0
+            });
 
             if protocol_count > 1 && has_price_fetch {
                 let finding = self.base.create_finding(

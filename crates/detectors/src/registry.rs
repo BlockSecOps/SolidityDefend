@@ -372,14 +372,6 @@ impl DetectorRegistry {
             crate::reentrancy::ReadOnlyReentrancyDetector::new(),
         ));
 
-        // Logic Detectors
-        self.register(Arc::new(
-            crate::logic::division_order::DivisionOrderDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::logic::state_machine::StateMachineDetector::new(),
-        ));
-
         // Validation Detectors
         self.register(Arc::new(
             crate::validation::zero_address::ZeroAddressDetector::new(),
@@ -387,51 +379,23 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::validation::array_bounds::ArrayBoundsDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::validation::parameter_check::ParameterConsistencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::array_length_mismatch::ArrayLengthMismatchDetector::new(),
-        ));
-        self.register(Arc::new(crate::short_address::ShortAddressDetector::new()));
-
-        // Oracle Detectors
-        self.register(Arc::new(crate::oracle::SingleSourceDetector::new()));
-        self.register(Arc::new(crate::oracle::PriceValidationDetector::new()));
 
         // External Call Detectors
         self.register(Arc::new(crate::external::UncheckedCallDetector::new()));
-
-        // MEV Detectors
-        self.register(Arc::new(crate::mev::SandwichAttackDetector::new()));
-        self.register(Arc::new(crate::mev::FrontRunningDetector::new()));
-
-        // Timestamp Detectors
-        self.register(Arc::new(crate::timestamp::BlockDependencyDetector::new()));
 
         // Auth Detectors
         self.register(Arc::new(crate::auth::TxOriginDetector::new()));
 
         // Governance Detectors
         self.register(Arc::new(crate::governance::GovernanceDetector::new()));
-        self.register(Arc::new(crate::governance::ExternalCallsLoopDetector::new()));
         self.register(Arc::new(crate::governance::SignatureReplayDetector::new()));
-        self.register(Arc::new(
-            crate::governance::EmergencyPauseCentralizationDetector::new(),
-        ));
 
-        // Critical Priority Detectors (2025 Vulnerabilities - Phase 1)
+        // Cross-Chain Security
         self.register(Arc::new(
             crate::cross_chain_replay::CrossChainReplayDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::flash_loan_staking::FlashLoanStakingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::oracle_manipulation::OracleManipulationDetector::new(),
-        ));
 
-        // High Priority Detectors (2025 Vulnerabilities - Phase 2)
+        // Slippage & MEV
         self.register(Arc::new(
             crate::slippage_protection::SlippageProtectionDetector::new(),
         ));
@@ -439,60 +403,39 @@ impl DetectorRegistry {
             crate::delegation_loop::DelegationLoopDetector::new(),
         ));
         self.register(Arc::new(
-            crate::weak_signature_validation::WeakSignatureValidationDetector::new(),
+            crate::mev_extractable_value::MevExtractableValueDetector::new(),
         ));
-        self.register(Arc::new(crate::auction_timing::AuctionTimingDetector::new()));
+        self.register(Arc::new(crate::nonce_reuse::NonceReuseDetector::new()));
 
-        // Medium Priority Detectors (2025 Vulnerabilities - Phase 3)
+        // Proxy & Delegatecall Security
         self.register(Arc::new(
-            crate::weak_commit_reveal::WeakCommitRevealDetector::new(),
+            crate::proxy_storage_collision::ProxyStorageCollisionDetector::new(),
         ));
         self.register(Arc::new(
-            crate::reward_calculation::RewardCalculationDetector::new(),
+            crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(
+            ),
         ));
         self.register(Arc::new(
-            crate::emergency_function_abuse::EmergencyFunctionAbuseDetector::new(),
+            crate::delegatecall_return_ignored::DelegatecallReturnIgnoredDetector::new(),
         ));
         self.register(Arc::new(
-            crate::gas_price_manipulation::GasPriceManipulationDetector::new(),
+            crate::delegatecall_untrusted_library::DelegatecallUntrustedLibraryDetector::new(),
         ));
         self.register(Arc::new(
-            crate::emergency_withdrawal_abuse::EmergencyWithdrawalAbuseDetector::new(),
+            crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new(),
         ));
 
-        // Critical Infrastructure Detectors (Phase 4)
-        self.register(Arc::new(
-            crate::storage_collision::StorageCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::dangerous_delegatecall::DangerousDelegatecallDetector::new(),
-        ));
+        // Selfdestruct
         self.register(Arc::new(
             crate::selfdestruct_abuse::SelfdestructAbuseDetector::new(),
         ));
+
+        // Staking & Validator Security
         self.register(Arc::new(
-            crate::integer_overflow::IntegerOverflowDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::batch_transfer_overflow::BatchTransferOverflowDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::uninitialized_storage::UninitializedStorageDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::signature_malleability::SignatureMalleabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::missing_eip712_domain::MissingEIP712DomainDetector::new(),
+            crate::slashing_mechanism::SlashingMechanismDetector::new(),
         ));
 
-        // DeFi Advanced Protocols (Phase 5)
-        self.register(Arc::new(
-            crate::amm_liquidity_manipulation::AmmLiquidityManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::lending_liquidation_abuse::LendingLiquidationAbuseDetector::new(),
-        ));
+        // DeFi Vault Security
         self.register(Arc::new(
             crate::vault_share_inflation::VaultShareInflationDetector::new(),
         ));
@@ -508,148 +451,40 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::vault_hook_reentrancy::VaultHookReentrancyDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::price_impact_manipulation::PriceImpactManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::sandwich_resistant_swap::SandwichResistantSwapDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::liquidity_bootstrapping_abuse::LiquidityBootstrappingAbuseDetector::new(),
-        ));
 
-        // MEV & Timing Attacks (Phase 6)
+        // Bridge Security
         self.register(Arc::new(
-            crate::timestamp_manipulation::TimestampManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::block_stuffing_vulnerable::BlockStuffingVulnerableDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::mev_extractable_value::MevExtractableValueDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::deadline_manipulation::DeadlineManipulationDetector::new(),
-        ));
-        self.register(Arc::new(crate::nonce_reuse::NonceReuseDetector::new()));
-
-        // Staking & Validator Security (Phase 7)
-        self.register(Arc::new(
-            crate::slashing_mechanism::SlashingMechanismDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::validator_griefing::ValidatorGriefingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::withdrawal_delay::WithdrawalDelayDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::validator_front_running::ValidatorFrontRunningDetector::new(),
-        ));
-
-        // Upgradeable Contracts & Dependencies (Phase 8)
-        self.register(Arc::new(
-            crate::upgradeable_proxy_issues::UpgradeableProxyIssuesDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_supply_manipulation::TokenSupplyManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::circular_dependency::CircularDependencyDetector::new(),
-        ));
-
-        // Gas & Optimization Issues (Phase 9)
-        self.register(Arc::new(crate::gas_griefing::GasGriefingDetector::new()));
-        self.register(Arc::new(
-            crate::dos_unbounded_operation::DosUnboundedOperationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::dos_failed_transfer::DosFailedTransferDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::excessive_gas_usage::ExcessiveGasUsageDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::inefficient_storage::InefficientStorageDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::redundant_checks::RedundantChecksDetector::new(),
-        ));
-
-        // Advanced Security (Phase 10)
-        self.register(Arc::new(
-            crate::front_running_mitigation::FrontRunningMitigationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::price_oracle_stale::PriceOracleStaleDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::centralization_risk::CentralizationRiskDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::insufficient_randomness::InsufficientRandomnessDetector::new(),
-        ));
-
-        // Code Quality & Best Practices (Phase 11)
-        self.register(Arc::new(
-            crate::shadowing_variables::ShadowingVariablesDetector::new(),
-        ));
-        self.register(Arc::new(crate::unchecked_math::UncheckedMathDetector::new()));
-        self.register(Arc::new(
-            crate::missing_input_validation::MissingInputValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::deprecated_functions::DeprecatedFunctionsDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::unsafe_type_casting::UnsafeTypeCastingDetector::new(),
-        ));
-
-        // Account Abstraction & ERC-4337 (Phase 12 - 2025)
-        self.register(Arc::new(
-            crate::erc4337_entrypoint_trust::Erc4337EntrypointTrustDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_initialization_vulnerability::AaInitializationVulnerabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_account_takeover::AaAccountTakeoverDetector::new(),
-        ));
-        self.register(Arc::new(crate::aa_bundler_dos::AaBundlerDosDetector::new()));
-        self.register(Arc::new(
-            crate::hardware_wallet_delegation::HardwareWalletDelegationDetector::new(),
-        ));
-
-        // Cross-Chain Intent & Bridge Security (Phase 13 - 2025)
-        self.register(Arc::new(
-            crate::erc7683_settlement_validation::SettlementValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_replay_attack::ReplayAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_filler_frontrunning::FillerFrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_oracle_dependency::OracleDependencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683_permit2_integration::Permit2IntegrationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::bridge_token_minting::TokenMintingDetector::new(),
+            crate::bridge_chain_id_validation::ChainIdValidationDetector::new(),
         ));
         self.register(Arc::new(
             crate::bridge_message_verification::MessageVerificationDetector::new(),
         ));
         self.register(Arc::new(
-            crate::bridge_chain_id_validation::ChainIdValidationDetector::new(),
+            crate::bridge_token_minting::TokenMintingDetector::new(),
         ));
 
-        // Phase 31: Restaking & LRT Security (v0.17.0 - 2025)
+        // Account Abstraction & ERC-4337
+        self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
+
         self.register(Arc::new(
-            crate::restaking::RestakingDelegationManipulationDetector::new(),
+            crate::aa_account_takeover::AaAccountTakeoverDetector::new(),
         ));
+        self.register(Arc::new(
+            crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_social_recovery::SocialRecoveryDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::aa_advanced::AAPaymasterFundDrainDetector::new(),
+        ));
+
+        // Access Control Advanced
+        self.register(Arc::new(
+            crate::access_control_advanced::GuardianRoleCentralizationDetector::new(),
+        ));
+
+        // Restaking & LRT Security
         self.register(Arc::new(
             crate::restaking::RestakingSlashingConditionsDetector::new(),
         ));
@@ -657,94 +492,26 @@ impl DetectorRegistry {
         self.register(Arc::new(
             crate::restaking::RestakingWithdrawalDelaysDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::restaking::AVSValidationBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::restaking::RestakingRewardsManipulationDetector::new(),
-        ));
 
-        // Phase 32: Advanced Access Control (v0.18.0 - 2025)
-        self.register(Arc::new(
-            crate::access_control_advanced::RoleHierarchyBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::access_control_advanced::TimeLockedAdminBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::access_control_advanced::MultiRoleConfusionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::access_control_advanced::PrivilegeEscalationPathsDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::access_control_advanced::GuardianRoleCentralizationDetector::new(),
-        ));
-
-        // Phase 33: ERC-4337 AA Advanced (v0.19.0 - 2025)
-        self.register(Arc::new(
-            crate::aa_advanced::AACalldataEncodingExploitDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_advanced::AAPaymasterFundDrainDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_advanced::AASignatureAggregationBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_advanced::AAUserOperationReplayDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_advanced::AAEntryPointReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::aa_advanced::AABundlerDosEnhancedDetector::new(),
-        ));
-
-        // Phase 34: Flash Loan Enhanced (v0.20.0 - 2025)
+        // Flash Loan Enhanced
         self.register(Arc::new(
             crate::flashloan_enhanced::FlashLoanPriceManipulationAdvancedDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flashloan_enhanced::FlashLoanGovernanceAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flashloan_enhanced::FlashLoanReentrancyComboDetector::new(),
         ));
         self.register(Arc::new(
             crate::flashloan_enhanced::FlashLoanCollateralSwapDetector::new(),
         ));
 
-        // Phase 35: Token Standards Extended (v0.21.0 - 2025)
-        self.register(Arc::new(
-            crate::token_standards_extended::ERC20TransferReturnBombDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_standards_extended::ERC721EnumerationDosDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_standards_extended::ERC1155BatchValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_standards_extended::TokenDecimalConfusionDetector::new(),
-        ));
+        // Token Standards Extended
         self.register(Arc::new(
             crate::token_standards_extended::TokenPermitFrontRunningDetector::new(),
         ));
 
-        // Phase 36: MEV Protection Enhanced (v0.22.0 - 2025)
-        self.register(Arc::new(
-            crate::mev_enhanced::MEVSandwichVulnerableDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::mev_enhanced::MEVBackrunOpportunitiesDetector::new(),
-        ));
+        // MEV Enhanced
         self.register(Arc::new(
             crate::mev_enhanced::MEVPriorityGasAuctionDetector::new(),
         ));
-        self.register(Arc::new(crate::mev_enhanced::MEVToxicFlowDetector::new()));
 
-        // Phase 37: Zero-Knowledge Proofs (v1.0.0 - 2025)
+        // Zero-Knowledge Proofs
         self.register(Arc::new(
             crate::zk_proofs::ZKProofMalleabilityDetector::new(),
         ));
@@ -752,670 +519,82 @@ impl DetectorRegistry {
             crate::zk_proofs::ZKTrustedSetupBypassDetector::new(),
         ));
         self.register(Arc::new(
-            crate::zk_proofs::ZKCircuitUnderConstrainedDetector::new(),
-        ));
-        self.register(Arc::new(
             crate::zk_proofs::ZKRecursiveProofValidationDetector::new(),
         ));
 
-        // Phase 38: Modular Blockchain (v1.0.0 - 2025)
-        self.register(Arc::new(
-            crate::modular_blockchain::CelestiaDataAvailabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::modular_blockchain::CrossRollupAtomicityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::modular_blockchain::OptimisticFraudProofTimingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::modular_blockchain::CrossChainMessageOrderingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::modular_blockchain::SovereignRollupValidationDetector::new(),
-        ));
-
-        // Phase 39: AI Agent Security (v1.0.0 - 2025)
-        self.register(Arc::new(
-            crate::ai_agent::AIAgentPromptInjectionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::ai_agent::AIAgentDecisionManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::ai_agent::AutonomousContractOracleDependencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::ai_agent::AIAgentResourceExhaustionDetector::new(),
-        ));
-
-        // Account Abstraction Advanced & Enhanced Flash Loans (v0.11.0 - 2025)
-        self.register(Arc::new(crate::aa::ERC4337PaymasterAbuseDetector::new()));
-        self.register(Arc::new(crate::aa::AANonceManagementDetector::new()));
-        self.register(Arc::new(
-            crate::aa_session_key_vulnerabilities::SessionKeyVulnerabilitiesDetector::new(),
-        )); // Phase 2+ enhanced
-        self.register(Arc::new(crate::aa::AASignatureAggregationDetector::new()));
-        self.register(Arc::new(
-            crate::aa_social_recovery::SocialRecoveryDetector::new(),
-        )); // Phase 2+ enhanced
-        self.register(Arc::new(crate::aa::ERC4337GasGriefingDetector::new()));
-        self.register(Arc::new(
-            crate::flashloan::FlashloanPriceOracleManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flashloan::FlashloanGovernanceAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flashloan::FlashmintTokenInflationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flashloan::FlashloanCallbackReentrancyDetector::new(),
-        ));
-
-        // DeFi Protocol Security (Phase 15 - 2025)
-        self.register(Arc::new(
-            crate::defi_liquidity_pool_manipulation::LiquidityPoolManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::defi_jit_liquidity::JitLiquidityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::defi_yield_farming::YieldFarmingDetector::new(),
-        ));
-
-        // Token Standard Edge Cases (Phase 17 - 2025)
-        self.register(Arc::new(
-            crate::erc20_approve_race::Erc20ApproveRaceDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_transfer_frontrun::TokenTransferFrontrunDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::allowance_toctou::AllowanceToctouDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::price_manipulation_frontrun::PriceManipulationFrontrunDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::missing_transaction_deadline::MissingTransactionDeadlineDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc20_infinite_approval::Erc20InfiniteApprovalDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc777_reentrancy_hooks::Erc777ReentrancyHooksDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc721_callback_reentrancy::Erc721CallbackReentrancyDetector::new(),
-        ));
-
-        // DeFi Protocol-Specific (Phase 18 - 2025)
-        self.register(Arc::new(
-            crate::uniswapv4_hook_issues::UniswapV4HookIssuesDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::amm_k_invariant_violation::AmmKInvariantViolationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::lending_borrow_bypass::LendingBorrowBypassDetector::new(),
-        ));
-
-        // Code Quality & Best Practices (Phase 19 - 2025)
-        self.register(Arc::new(
-            crate::floating_pragma::FloatingPragmaDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::unused_state_variables::UnusedStateVariablesDetector::new(),
-        ));
-
-        // L2/Rollup Security (Phase 20 - 2025)
-        self.register(Arc::new(
-            crate::l2_bridge_message_validation::L2BridgeMessageValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::optimistic_challenge_bypass::OptimisticChallengeBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::zk_proof_bypass::ZkProofBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::l2_data_availability::L2DataAvailabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::l2_fee_manipulation::L2FeeManipulationDetector::new(),
-        ));
-
-        // Phase 21: Diamond Proxy & Advanced Upgrades (2025)
-        self.register(Arc::new(
-            crate::diamond_storage_collision::DiamondStorageCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::diamond_selector_collision::DiamondSelectorCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::diamond_init_reentrancy::DiamondInitReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::diamond_loupe_violation::DiamondLoupeViolationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::diamond_delegatecall_zero::DiamondDelegatecallZeroDetector::new(),
-        ));
-
-        // Proxy Security - Delegatecall Pattern Detectors (Phase 1 - 2025)
-        self.register(Arc::new(
-            crate::proxy_upgrade_unprotected::ProxyUpgradeUnprotectedDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::proxy_storage_collision::ProxyStorageCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_user_controlled::DelegatecallUserControlledDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::fallback_delegatecall_unprotected::FallbackDelegatecallUnprotectedDetector::new(
-            ),
-        ));
-        self.register(Arc::new(
-            crate::fallback_function_shadowing::FallbackFunctionShadowingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_return_ignored::DelegatecallReturnIgnoredDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_untrusted_library::DelegatecallUntrustedLibraryDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_in_constructor::DelegatecallInConstructorDetector::new(),
-        ));
-
-        // Phase 22: Metamorphic Contracts & CREATE2 (2025)
-        self.register(Arc::new(
-            crate::metamorphic_contract::MetamorphicContractDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::create2_frontrunning::Create2FrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::selfdestruct_recipient::SelfdestructRecipientDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::extcodesize_bypass::ExtcodesizeBypassDetector::new(),
-        ));
-
-        // Phase 23: v1.0 Milestone - Final Detectors (2025)
-        self.register(Arc::new(
-            crate::multisig_bypass::MultisigBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::permit_signature_exploit::PermitSignatureExploitDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::storage_layout_upgrade::StorageLayoutUpgradeDetector::new(),
-        ));
-
-        // Phase 24: EIP-1153 Transient Storage Security (2025)
+        // Transient Storage (EIP-1153)
         self.register(Arc::new(
             crate::transient::TransientStorageReentrancyDetector::new(),
         ));
         self.register(Arc::new(
             crate::transient::TransientStorageComposabilityDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::transient::TransientStorageStateLeakDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::transient::TransientStorageMisuseDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::transient::TransientReentrancyGuardDetector::new(),
-        ));
 
-        // Phase 25: EIP-7702 Account Delegation Security (2025)
-        self.register(Arc::new(crate::eip7702::EIP7702InitFrontrunDetector::new()));
+        // EIP-7702 Account Delegation
         self.register(Arc::new(
             crate::eip7702::EIP7702DelegateAccessControlDetector::new(),
         ));
-        self.register(Arc::new(
-            crate::eip7702::EIP7702StorageCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702::EIP7702TxOriginBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702::EIP7702SweeperDetectionDetector::new(),
-        ));
-        self.register(Arc::new(crate::eip7702::EIP7702BatchPhishingDetector::new()));
 
-        // Phase 26: ERC-7821 Batch Executor Security (2025)
+        // ERC-7821 Batch Executor
         self.register(Arc::new(
             crate::erc7821::ERC7821BatchAuthorizationDetector::new(),
         ));
-        self.register(Arc::new(crate::erc7821::ERC7821TokenApprovalDetector::new()));
+
+        // DeFi Protocol Security
         self.register(Arc::new(
-            crate::erc7821::ERC7821ReplayProtectionDetector::new(),
+            crate::defi_yield_farming::YieldFarmingDetector::new(),
         ));
         self.register(Arc::new(
-            crate::erc7821::ERC7821MsgSenderValidationDetector::new(),
+            crate::erc20_approve_race::Erc20ApproveRaceDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::allowance_toctou::AllowanceToctouDetector::new(),
+        ));
+        self.register(Arc::new(
+            crate::missing_transaction_deadline::MissingTransactionDeadlineDetector::new(),
         ));
 
-        // Phase 27: ERC-7683 Intent-Based Security (2025)
-        self.register(Arc::new(
-            crate::erc7683::IntentCrossChainValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentSignatureReplayDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentSolverManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentNonceManagementDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc7683::IntentSettlementValidationDetector::new(),
-        ));
-
-        // Phase 28: Privacy & Storage Security (2025)
-        self.register(Arc::new(
-            crate::privacy::PrivateVariableExposureDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::privacy::PlaintextSecretStorageDetector::new(),
-        ));
-        self.register(Arc::new(crate::privacy::MissingCommitRevealDetector::new()));
-        self.register(Arc::new(
-            crate::privacy::StorageSlotPredictabilityDetector::new(),
-        ));
-
-        // Phase 29: OWASP 2025 Top 10 Gap Detectors (2025)
-        self.register(Arc::new(crate::owasp2025::LogicErrorPatternsDetector::new()));
-        self.register(Arc::new(
-            crate::owasp2025::OracleTimeWindowAttackDetector::new(),
-        ));
+        // OWASP 2025
         self.register(Arc::new(crate::owasp2025::OracleStalenesDetector::new()));
-        self.register(Arc::new(
-            crate::owasp2025::EnhancedInputValidationDetector::new(),
-        ));
-        self.register(Arc::new(crate::owasp2025::Post080OverflowDetector::new()));
-        self.register(Arc::new(
-            crate::owasp2025::EnhancedAccessControlDetector::new(),
-        ));
 
-        // Phase 30: Advanced DeFi Patterns (v1.0 Milestone - 2025)
-        self.register(Arc::new(
-            crate::defi_advanced::JitLiquiditySandwichDetector::new(),
-        ));
+        // Advanced DeFi
         self.register(Arc::new(
             crate::defi_advanced::HookReentrancyEnhancedDetector::new(),
         ));
+
+        // Multisig
         self.register(Arc::new(
-            crate::defi_advanced::YieldFarmingManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::defi_advanced::PoolDonationEnhancedDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::defi_advanced::AmmInvariantManipulationDetector::new(),
+            crate::multisig_bypass::MultisigBypassDetector::new(),
         ));
 
-        // Phase 40: SWC Coverage Expansion (v1.5.0 - 2026)
+        // Metamorphic & CREATE2
         self.register(Arc::new(
-            crate::swc105_unprotected_ether_withdrawal::UnprotectedEtherWithdrawalDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::swc106_unprotected_selfdestruct::UnprotectedSelfdestructDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::swc132_unexpected_ether_balance::UnexpectedEtherBalanceDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::swc133_hash_collision_varlen::HashCollisionVarlenDetector::new(),
-        ));
-
-        // Phase 41: Proxy & Upgradeable Contract Security (v1.6.0 - 2026)
-        self.register(Arc::new(
-            crate::implementation_not_initialized::ImplementationNotInitializedDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::uups_missing_disable_initializers::UupsMissingDisableInitializersDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::implementation_selfdestruct::ImplementationSelfdestructDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::uups_upgrade_unsafe::UupsUpgradeUnsafeDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::beacon_upgrade_unprotected::BeaconUpgradeUnprotectedDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::function_selector_clash::FunctionSelectorClashDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::transparent_proxy_admin_issues::TransparentProxyAdminIssuesDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::minimal_proxy_clone_issues::MinimalProxyCloneIssuesDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::initializer_reentrancy::InitializerReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::missing_storage_gap::MissingStorageGapDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::immutable_in_upgradeable::ImmutableInUpgradeableDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1967_slot_compliance::Eip1967SlotComplianceDetector::new(),
-        ));
-
-        // Phase 42: Advanced Proxy Security & Vulnerability Patterns (v1.7.0 - 2026)
-        self.register(Arc::new(
-            crate::reinitializer_vulnerability::ReinitializerVulnerabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::storage_layout_inheritance_shift::StorageLayoutInheritanceShiftDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::beacon_single_point_of_failure::BeaconSinglePointOfFailureDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::clones_immutable_args_bypass::ClonesImmutableArgsBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::upgrade_abi_incompatibility::UpgradeAbiIncompatibilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::diamond_facet_code_existence::DiamondFacetCodeExistenceDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::proxy_context_visibility_mismatch::ProxyContextVisibilityMismatchDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::upgrade_event_missing::UpgradeEventMissingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_in_loop::DelegatecallInLoopDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::fallback_delegatecall_pattern::FallbackDelegatecallPatternDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::unchecked_send_return::UncheckedSendReturnDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::transaction_ordering_dependence::TransactionOrderingDependenceDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::l2_sequencer_dependency::L2SequencerDependencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::cross_chain_replay_protection::CrossChainReplayProtectionDetector::new(),
-        ));
-
-        // Phase 43: EIP-7702 & EIP-1153 New Standards (v1.8.0 - 2026)
-        self.register(Arc::new(
-            crate::eip7702_delegation_phishing::Eip7702DelegationPhishingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702_storage_corruption::Eip7702StorageCorruptionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702_sweeper_attack::Eip7702SweeperAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702_authorization_bypass::Eip7702AuthorizationBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip7702_replay_vulnerability::Eip7702ReplayVulnerabilityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1153_transient_reentrancy::Eip1153TransientReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1153_cross_tx_assumption::Eip1153CrossTxAssumptionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1153_callback_manipulation::Eip1153CallbackManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1153_composability_risk::Eip1153ComposabilityRiskDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip1153_guard_bypass::Eip1153GuardBypassDetector::new(),
-        ));
-
-        // Phase 51: EIP-3074 & Future Standards (v1.9.1 - 2026)
-        self.register(Arc::new(
-            crate::eip3074_upgradeable_invoker::Eip3074UpgradeableInvokerDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip3074_commit_validation::Eip3074CommitValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip3074_replay_attack::Eip3074ReplayAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip3074_call_depth_griefing::Eip3074CallDepthGriefingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip3074_invoker_authorization::Eip3074InvokerAuthorizationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip4844_blob_validation::Eip4844BlobValidationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::eip6780_selfdestruct_change::Eip6780SelfdestructChangeDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::push0_stack_assumption::Push0StackAssumptionDetector::new(),
-        ));
-
-        // Phase 44: Advanced MEV & Front-Running (v1.8.1 - 2026)
-        self.register(Arc::new(
-            crate::sandwich_conditional_swap::SandwichConditionalSwapDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::jit_liquidity_extraction::JitLiquidityExtractionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::backrunning_opportunity::BackrunningOpportunityDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::bundle_inclusion_leak::BundleInclusionLeakDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::order_flow_auction_abuse::OrderFlowAuctionAbuseDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::encrypted_mempool_timing::EncryptedMempoolTimingDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::cross_domain_mev::CrossDomainMevDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::liquidation_mev::LiquidationMevDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::oracle_update_mev::OracleUpdateMevDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::governance_proposal_mev::GovernanceProposalMevDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::token_launch_mev::TokenLaunchMevDetector::new(),
-        ));
-        self.register(Arc::new(crate::nft_mint_mev::NftMintMevDetector::new()));
-
-        // Phase 45: Metamorphic & CREATE2 Patterns (v1.8.2 - 2026)
-        self.register(Arc::new(
-            crate::metamorphic_contract_risk::MetamorphicContractRiskDetector::new(),
+            crate::constructor_reentrancy::ConstructorReentrancyDetector::new(),
         ));
         self.register(Arc::new(
             crate::create2_salt_frontrunning::Create2SaltFrontrunningDetector::new(),
         ));
         self.register(Arc::new(
-            crate::create2_address_collision::Create2AddressCollisionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::extcodesize_check_bypass::ExtcodesizeCheckBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::selfdestruct_recipient_control::SelfdestructRecipientControlDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::contract_recreation_attack::ContractRecreationAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::constructor_reentrancy::ConstructorReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::initcode_injection::InitcodeInjectionDetector::new(),
+            crate::metamorphic_contract_risk::MetamorphicContractRiskDetector::new(),
         ));
 
-        // Phase 46: Callback Chains & Multicall (v1.8.3 - 2026)
-        self.register(Arc::new(
-            crate::nested_callback_reentrancy::NestedCallbackReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::callback_in_callback_loop::CallbackInCallbackLoopDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::multicall_msgvalue_reuse::MulticallMsgvalueReuseDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::multicall_partial_revert::MulticallPartialRevertDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::batch_cross_function_reentrancy::BatchCrossFunctionReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::flash_callback_manipulation::FlashCallbackManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc721_safemint_callback::Erc721SafemintCallbackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::erc1155_callback_reentrancy::Erc1155CallbackReentrancyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::uniswap_v4_hook_callback::UniswapV4HookCallbackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::compound_callback_chain::CompoundCallbackChainDetector::new(),
-        ));
-
-        // Phase 47: Governance & Access Control (v1.8.4)
-        self.register(Arc::new(
-            crate::governance_parameter_bypass::GovernanceParameterBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::voting_snapshot_manipulation::VotingSnapshotManipulationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::quorum_calculation_overflow::QuorumCalculationOverflowDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::proposal_frontrunning::ProposalFrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::governor_refund_drain::GovernorRefundDrainDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::timelock_bypass_delegatecall::TimelockBypassDelegatecallDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::role_escalation_upgrade::RoleEscalationUpgradeDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::accesscontrol_race_condition::AccessControlRaceConditionDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::operator_whitelist_inheritance::OperatorWhitelistInheritanceDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::cross_contract_role_confusion::CrossContractRoleConfusionDetector::new(),
-        ));
-
-        // Phase 48: L2/Rollup & Cross-Chain Advanced (v1.8.5)
-        self.register(Arc::new(
-            crate::sequencer_fee_exploitation::SequencerFeeExploitationDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::escape_hatch_dependency::EscapeHatchDependencyDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::cross_l2_frontrunning::CrossL2FrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::optimistic_inference_attack::OptimisticInferenceAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::l2_mev_sequencer_leak::L2MevSequencerLeakDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::da_sampling_attack::DaSamplingAttackDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::bridge_merkle_bypass::BridgeMerkleBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::challenge_period_bypass::ChallengePeriodBypassDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::cross_rollup_state_mismatch::CrossRollupStateMismatchDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::blob_data_manipulation::BlobDataManipulationDetector::new(),
-        ));
-
-        // Phase 49: Weak Randomness & DoS Expansion (v1.8.6)
-        self.register(Arc::new(
-            crate::blockhash_randomness::BlockhashRandomnessDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::multi_block_randomness::MultiBlockRandomnessDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::modulo_block_variable::ModuloBlockVariableDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::chainlink_vrf_misuse::ChainlinkVrfMisuseDetector::new(),
-        ));
+        // Future Standards
         self.register(Arc::new(
             crate::commit_reveal_timing::CommitRevealTimingDetector::new(),
         ));
         self.register(Arc::new(
-            crate::dos_push_pattern::DosPushPatternDetector::new(),
+            crate::eip3074_upgradeable_invoker::Eip3074UpgradeableInvokerDetector::new(),
         ));
         self.register(Arc::new(
-            crate::dos_unbounded_storage::DosUnboundedStorageDetector::new(),
+            crate::eip4844_blob_validation::Eip4844BlobValidationDetector::new(),
         ));
         self.register(Arc::new(
-            crate::dos_external_call_loop::DosExternalCallLoopDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::dos_block_gas_limit::DosBlockGasLimitDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::dos_revert_bomb::DosRevertBombDetector::new(),
+            crate::push0_stack_assumption::Push0StackAssumptionDetector::new(),
         ));
 
-        // Phase 50: Diamond Proxy & Advanced Upgrades (v1.9.0)
+        // L2/Rollup Security
         self.register(Arc::new(
-            crate::diamond_init_frontrunning::DiamondInitFrontrunningDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::proxy_gap_underflow::ProxyGapUnderflowDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::proxy_double_initialize::ProxyDoubleInitializeDetector::new(),
-        ));
-        self.register(Arc::new(
-            crate::delegatecall_to_self::DelegatecallToSelfDetector::new(),
+            crate::zk_proof_bypass::ZkProofBypassDetector::new(),
         ));
     }
 }

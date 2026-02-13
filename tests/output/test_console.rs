@@ -473,7 +473,7 @@ contract WideTerminalTest {
         };
         let console_formatter = ConsoleFormatter::new(config).unwrap();
 
-        let detector = registry.get_detector("missing-zero-address-check").unwrap();
+        let detector = registry.get_detector("classic-reentrancy").unwrap();
         let findings = detector.detect(&ctx).unwrap();
 
         if !findings.is_empty() {

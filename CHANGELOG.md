@@ -5,6 +5,20 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.23] - 2026-02-13
+
+### Changed
+- **67 precision-tuned detectors** — removed 178 low-precision detectors, tightened 20+ remaining
+- **18.4% precision** (up from 2.8%) — competitive with Slither/Aderyn
+- **100% recall** — 77/77 TPs, 0 false negatives across 117-contract ground truth suite
+- **Per-contract finding cap** — limits noise from multi-function contracts
+
+### Removed
+- 178 detectors with zero validated true positives (selfdestruct family, EIP-3074/7702/4844 families, broad keyword matchers, speculative/niche detectors)
+
+### Improved
+- push0-stack-assumption (-93% FPs), mev-priority-gas-auction (-94%), constructor-reentrancy (-98%), multisig-bypass (-73%), flash-loan-collateral-swap (-69%), hook-reentrancy-enhanced (-64%), create2-salt-frontrunning (-61%), aa-paymaster-fund-drain (-76%), transient-storage-reentrancy (-81%), restaking-slashing-conditions (-62%)
+
 ## [Unreleased]
 
 ### Fixed

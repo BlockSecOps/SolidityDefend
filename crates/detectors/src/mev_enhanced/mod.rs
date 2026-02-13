@@ -21,13 +21,9 @@
 //!    - AMM toxic flow risks
 //!    - Real-world: Informed order flow exploitation
 
-pub mod backrun_opportunities;
 pub mod priority_gas_auction;
 pub mod sandwich_vulnerable;
-pub mod toxic_flow;
 
 // Re-export detectors
-pub use backrun_opportunities::MEVBackrunOpportunitiesDetector;
 pub use priority_gas_auction::MEVPriorityGasAuctionDetector;
 pub use sandwich_vulnerable::MEVSandwichVulnerableDetector;
-pub use toxic_flow::MEVToxicFlowDetector;

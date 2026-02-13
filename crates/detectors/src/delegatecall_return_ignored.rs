@@ -144,7 +144,11 @@ impl DelegatecallReturnIgnoredDetector {
         // Look for pattern: (bool success, ...) = delegatecall(...)
         // but no subsequent require(success) or if (!success)
 
-        if !source.contains("(bool success") && !source.contains("(bool result") {
+        if !source.contains("(bool success")
+            && !source.contains("(bool result")
+            && !source.contains("(bool ok")
+            && !source.contains("(bool _success")
+        {
             return false;
         }
 
@@ -153,21 +157,41 @@ impl DelegatecallReturnIgnoredDetector {
             return false;
         }
 
-        // Check if success is validated
-        let has_require_success =
-            source.contains("require(success") || source.contains("require(result");
+        // Check if success is validated (support multiple variable names)
+        let has_require_success = source.contains("require(success")
+            || source.contains("require(result")
+            || source.contains("require(ok")
+            || source.contains("require(_success");
         let has_if_check = source.contains("if (!success)")
             || source.contains("if(!success)")
             || source.contains("if (!result)")
-            || source.contains("if(!result)");
-        let has_assert = source.contains("assert(success)") || source.contains("assert(result)");
+            || source.contains("if(!result)")
+            || source.contains("if (!ok)")
+            || source.contains("if(!ok)")
+            // FP Reduction: Positive check also validates the result (handles both paths)
+            || source.contains("if (success)")
+            || source.contains("if(success)")
+            || source.contains("if (ok)")
+            || source.contains("if(ok)");
+        let has_assert = source.contains("assert(success)")
+            || source.contains("assert(result)")
+            || source.contains("assert(ok)");
 
         // If delegatecall result captured but not validated
         if !has_require_success && !has_if_check && !has_assert {
-            // Check if it's just returned (also problematic)
+            // FP Reduction: If there's a revert anywhere after delegatecall, it may be handling errors
+            let has_revert = source.contains("revert(") || source.contains("revert ");
+
+            // FP Reduction: If the function returns the success value, the caller handles it
             if source.contains("return success") || source.contains("return result") {
-                return true;
+                return false; // Caller is responsible for checking
             }
+
+            // FP Reduction: Skip if there's error handling via revert
+            if has_revert {
+                return false;
+            }
+
             return true;
         }
 
@@ -198,23 +222,41 @@ impl DelegatecallReturnIgnoredDetector {
             return false;
         }
 
-        // Look for assembly block with delegatecall
-        let in_assembly = source.contains("assembly {") && source.contains("delegatecall(");
+        // FP Reduction: Only flag if delegatecall is actually inside the assembly block.
+        // Assembly-level delegatecall uses Yul assignment: result := delegatecall(...)
+        // Solidity-level delegatecall uses: target.delegatecall(data)
+        // Functions that have assembly blocks for other purposes (e.g., revert bubbling)
+        // with Solidity-level delegatecall should not be flagged here.
+        let has_assembly_delegatecall = source.contains(":= delegatecall(")
+            || source.contains("let result := delegatecall(")
+            || source.contains("success := delegatecall(");
 
-        if !in_assembly {
+        if !has_assembly_delegatecall {
             return false;
         }
 
-        // Check if result is checked
+        // Check if result is checked inside assembly
         let has_switch_check =
             source.contains("switch result") || source.contains("switch success");
         let has_case_zero = source.contains("case 0");
         let has_if_check =
             source.contains("if iszero(result)") || source.contains("if iszero(success)");
 
-        // If no proper checking
-        if !has_switch_check && !has_if_check {
-            return true;
+        // FP Reduction: Also check for Solidity-level validation after assembly block.
+        // Pattern: assembly { success := delegatecall(...) } require(success, ...)
+        let has_post_assembly_check = source.contains("require(success")
+            || source.contains("require(result")
+            || source.contains("if (!success)")
+            || source.contains("if(!success)")
+            || source.contains("if (!result)")
+            || source.contains("if(!result)");
+
+        // If proper checking exists (assembly-level or Solidity-level)
+        if has_switch_check && has_case_zero {
+            return false;
+        }
+        if has_if_check || has_post_assembly_check {
+            return false;
         }
 
         // If switch exists but no case 0 (failure case)
@@ -222,7 +264,7 @@ impl DelegatecallReturnIgnoredDetector {
             return true;
         }
 
-        false
+        true
     }
 
     /// Get function source code
@@ -288,6 +330,31 @@ impl Detector for DelegatecallReturnIgnoredDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts that use delegatecall
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let contract_lower = contract_source.to_lowercase();
+        if !contract_lower.contains("delegatecall") {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt proxy contracts where delegatecall return is
+        // handled by assembly (switch/case pattern with returndatacopy).
+        // These are standard proxy forwarding patterns.
+        let source_lower = ctx.source_code.to_lowercase();
+        let has_assembly_return_handling = source_lower.contains("returndatacopy")
+            && source_lower.contains("switch result")
+            && source_lower.contains("case 0");
+        let is_proxy = crate::utils::is_proxy_contract(ctx)
+            || source_lower
+                .contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || source_lower
+                .contains("0xb53127684a568b3173ae13b9f8a6016e243e63b6e8ee1178d6a717850b5d6103")
+            || contract_lower.contains("proxy")
+            || contract_lower.contains("diamond");
+        if is_proxy && has_assembly_return_handling {
             return Ok(findings);
         }
 

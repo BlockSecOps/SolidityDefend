@@ -78,7 +78,7 @@ impl Detector for MEVSandwichVulnerableDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Check for DEX swap operations
         let has_swap = lower.contains("swap")

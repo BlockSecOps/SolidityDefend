@@ -733,9 +733,21 @@ impl Detector for ZeroAddressDetector {
             return Ok(findings);
         }
 
-        // Analyze all functions in the contract
+        // FP Reduction: Only flag missing zero-address checks in constructors,
+        // initializers, and admin-setter functions. Other functions rarely have
+        // critical zero-address vulnerabilities.
         for function in ctx.get_functions() {
-            findings.extend(self.analyze_function(function, ctx)?);
+            let func_name_lower = function.name.name.to_lowercase();
+            let is_critical_function =
+                matches!(function.function_type, ast::FunctionType::Constructor)
+                    || func_name_lower.contains("initialize")
+                    || func_name_lower.starts_with("set")
+                    || func_name_lower.contains("admin")
+                    || func_name_lower.contains("owner")
+                    || func_name_lower.contains("upgrade");
+            if is_critical_function {
+                findings.extend(self.analyze_function(function, ctx)?);
+            }
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

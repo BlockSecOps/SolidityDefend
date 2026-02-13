@@ -49,8 +49,6 @@
 //! - **Alchemy Audit (2025)**: Compromised signer API can withdraw full approval
 
 pub mod classification;
-pub mod gas_griefing;
-pub mod nonce_management;
 pub mod paymaster_abuse;
 pub mod session_key_vulnerabilities;
 pub mod signature_aggregation;
@@ -60,8 +58,6 @@ pub mod social_recovery;
 pub use classification::*;
 
 // Re-export detectors
-pub use gas_griefing::ERC4337GasGriefingDetector;
-pub use nonce_management::AANonceManagementDetector;
 pub use paymaster_abuse::ERC4337PaymasterAbuseDetector;
 pub use session_key_vulnerabilities::AASessionKeyVulnerabilitiesDetector;
 pub use signature_aggregation::AASignatureAggregationDetector;

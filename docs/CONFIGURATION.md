@@ -371,12 +371,22 @@ export SOLIDITYDEFEND_THREADS=1
 
 ### Enabling/Disabling Detectors
 
-```bash
-# Future feature: Enable specific detectors only
-export SOLIDITYDEFEND_DETECTORS="reentrancy,access-control,zero-address"
+As of v1.10.23, all **67 detectors are enabled by default** and precision-tuned (18.4% precision, 100% recall). Use the YAML config to control which detectors run:
 
-# Future feature: Disable specific detectors
-export SOLIDITYDEFEND_EXCLUDE_DETECTORS="parameter-consistency,gas-optimization"
+```yaml
+# .soliditydefend.yml
+detectors:
+  disabled_detectors:
+    - parameter-consistency     # Disable an additional detector
+  enabled_detectors:
+    - timestamp-manipulation    # Re-enable a default-disabled detector
+```
+
+The `enabled_detectors` list takes precedence over `disabled_detectors` and the built-in `DEFAULT_DISABLED` list. This allows re-enabling specific detectors that are disabled by default.
+
+```bash
+# List all available detectors (including disabled)
+soliditydefend --list-detectors
 ```
 
 ### Detector Sensitivity

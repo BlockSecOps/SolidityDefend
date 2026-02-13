@@ -341,7 +341,7 @@ impl LRTShareInflationDetector {
     fn check_minimum_deposit(&self, ctx: &AnalysisContext) -> Vec<Finding> {
         let mut findings = Vec::new();
 
-        let source_lower = ctx.source_code.to_lowercase();
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Only check LRT contracts
         if !is_lrt_contract(ctx) {

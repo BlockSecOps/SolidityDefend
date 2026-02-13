@@ -70,7 +70,8 @@ impl Detector for ZKProofMalleabilityDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // FP Reduction: Use contract source instead of file source
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Check for ZK proof verification
         let is_zk_system = lower.contains("verifyproof")

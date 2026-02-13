@@ -70,73 +70,93 @@ impl Detector for MEVPriorityGasAuctionDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
-        // Pattern 1: First-come-first-served minting
-        let has_mint = lower.contains("function mint") || lower.contains("function claim");
+        // FP Reduction: Only analyze contracts whose own functions are PGA-susceptible.
+        // This prevents cross-contract FPs in multi-contract files.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_has_pga_fn = contract_func_names.iter().any(|n| {
+            n.contains("liquidat")
+                || n.contains("arbitrage")
+                || n.contains("rebalance")
+                || n.contains("mint")
+                || n.contains("flash")
+        });
+        if !contract_has_pga_fn {
+            return Ok(findings);
+        }
 
-        if has_mint {
-            let is_fcfs = lower.contains("while (supply")
-                || lower.contains("if (available")
-                || lower.contains("totalsupply");
+        // FP Reduction: Only check contracts with explicit PGA-susceptible functions.
+        // Require at least one strong indicator (explicit function names).
+        let has_pga_function = lower.contains("function liquidate")
+            || lower.contains("function executeliquidation")
+            || lower.contains("function arbitrage")
+            || lower.contains("function executearbitrage")
+            || lower.contains("function rebalance")
+            || lower.contains("function flasharbitrage")
+            || (lower.contains("function mint")
+                && (lower.contains("maxsupply") || lower.contains("max_supply")));
+        if !has_pga_function {
+            return Ok(findings);
+        }
 
-            let has_queue = lower.contains("queue")
-                || lower.contains("whitelist")
-                || lower.contains("allowlist");
+        // Pattern 1: First-come-first-served minting — ONLY flag for NFT-style mints
+        // with explicit supply caps, not for ERC20/vault/AMM mints.
+        // Require maxSupply/maxMint cap pattern to indicate FCFS competition.
+        let has_fcfs_mint = lower.contains("function mint")
+            && (lower.contains("maxsupply")
+                || lower.contains("max_supply")
+                || lower.contains("maxmint")
+                || lower.contains("mintlimit")
+                || lower.contains("require(totalsupply() + amount <= "))
+            && !lower.contains("onlyminter")
+            && !lower.contains("onlyowner")
+            && !lower.contains("onlyadmin")
+            && !lower.contains("hasrole")
+            && !lower.contains("whitelist")
+            && !lower.contains("allowlist")
+            && !lower.contains("reserve0")
+            && !lower.contains("getreserves")
+            && !lower.contains("function swap");
 
-            // P1 FP FIX: Check for access control on mint functions
-            // If mint is restricted to specific addresses, there's no PGA
-            // because random users can't compete for the mint
-            let has_access_control = lower.contains("onlyminter")
-                || lower.contains("onlyowner")
-                || lower.contains("onlyadmin")
-                || lower.contains("hasrole")
-                || lower.contains("onlyrole")
-                || lower.contains("require(msg.sender == owner")
-                || lower.contains("require(msg.sender == minter")
-                || lower.contains("require(isminter[msg.sender]")
-                || lower.contains("require(minters[msg.sender]");
-
-            // FP Reduction: Skip AMM pool mint/liquidity functions.
-            // AMM pools always have totalSupply and mint(), but these are liquidity
-            // operations, not FCFS token minting that creates PGA.
-            let is_amm_pool = lower.contains("reserve0")
-                || lower.contains("reserve1")
-                || lower.contains("getreserves")
-                || lower.contains("swap(")
-                || lower.contains("function swap")
-                || lower.contains("addliquidity")
-                || lower.contains("removeliquidity")
-                || lower.contains("twap")
-                || lower.contains("pricecumulative");
-
-            // Only flag if FCFS, no queue system, AND no access control
-            // Access-controlled mint = only authorized addresses can call = no PGA
-            if is_fcfs && !has_queue && !has_access_control && !is_amm_pool {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "First-come-first-served mint - creates PGA where users bid up gas to mint first".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Use commit-reveal, whitelist, or fair launch mechanism instead of FCFS".to_string()
-                );
-
-                findings.push(finding);
-            }
+        if has_fcfs_mint {
+            let finding = self.base.create_finding(
+                ctx,
+                "First-come-first-served mint with supply cap - creates PGA where users bid up gas to mint first".to_string(),
+                1,
+                1,
+                ctx.source_code.len() as u32,
+            )
+            .with_fix_suggestion(
+                "Use commit-reveal, whitelist, or fair launch mechanism instead of FCFS".to_string()
+            );
+            findings.push(finding);
         }
 
         // Pattern 2: Liquidation rewards to caller
-        let has_liquidation = lower.contains("liquidate");
+        // FP Reduction: Require explicit reward/bonus payout to msg.sender in liquidation
+        let has_liquidation = lower.contains("function liquidate")
+            || lower.contains("function liquidateposition")
+            || lower.contains("function executeliquidation");
         if has_liquidation {
+            // Require EXPLICIT reward/bonus transfer to caller (not just keyword presence)
             let rewards_caller = lower.contains("msg.sender")
-                && (lower.contains("reward")
-                    || lower.contains("bonus")
-                    || lower.contains("incentive"));
+                && (lower.contains("liquidationbonus")
+                    || lower.contains("liquidationreward")
+                    || lower.contains("liquidationincentive")
+                    || (lower.contains("bonus") && lower.contains("transfer(msg.sender")));
 
-            if rewards_caller {
+            let has_liquidation_access_control = lower.contains("onlykeeper")
+                || lower.contains("onlyliquidator")
+                || lower.contains("whitelistedliquidator")
+                || lower.contains("onlyowner");
+
+            if rewards_caller && !has_liquidation_access_control {
                 let finding = self.base.create_finding(
                     ctx,
                     "Liquidation rewards go to caller - creates PGA where bots compete with gas price".to_string(),
@@ -153,14 +173,25 @@ impl Detector for MEVPriorityGasAuctionDetector {
         }
 
         // Pattern 3: Arbitrage opportunities for anyone
-        let has_arbitrage = lower.contains("arbitrage")
-            || lower.contains("rebalance")
-            || (lower.contains("buy") && lower.contains("sell"));
+        // FP Reduction: Require explicit arbitrage function names, not just buy+sell keywords
+        let has_arbitrage = lower.contains("function arbitrage")
+            || lower.contains("function executearbitrage")
+            || lower.contains("function rebalance")
+            || lower.contains("function flasharbitrage");
 
         if has_arbitrage {
             let is_public = lower.contains("external") || lower.contains("public");
+            // FP Reduction: Skip only if dedicated keeper/bot access control
+            // (onlyOwner is not sufficient — owner-operated arbitrage is still PGA-susceptible)
+            let has_keeper_access_control = lower.contains("onlykeeper")
+                || lower.contains("onlybot")
+                || lower.contains("onlyoperator");
+            // Also check if non-arbitrage token transfers exist (likely not a PGA target)
+            let has_safe_transfer_pattern = lower.contains("safetransfer(")
+                && !lower.contains("swap(")
+                && !lower.contains("getamountout");
 
-            if is_public {
+            if is_public && !has_keeper_access_control && !has_safe_transfer_pattern {
                 let finding = self.base.create_finding(
                     ctx,
                     "Public arbitrage function - creates PGA as bots compete for profit".to_string(),

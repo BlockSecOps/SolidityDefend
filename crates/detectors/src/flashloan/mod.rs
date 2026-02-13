@@ -38,11 +38,9 @@
 
 pub mod callback_reentrancy;
 pub mod flashmint_token_inflation;
-pub mod governance_attack;
 pub mod price_oracle_manipulation;
 
 // Re-export detectors
 pub use callback_reentrancy::FlashloanCallbackReentrancyDetector;
 pub use flashmint_token_inflation::FlashmintTokenInflationDetector;
-pub use governance_attack::FlashloanGovernanceAttackDetector;
 pub use price_oracle_manipulation::FlashloanPriceOracleManipulationDetector;

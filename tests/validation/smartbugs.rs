@@ -325,7 +325,7 @@ contract IntegerOverflow {
                         category: SmartBugsCategory::Arithmetic,
                         source_file: entry.path(),
                         expected_vulnerabilities: vec![ExpectedVulnerability {
-                            detector_name: "integer-overflow".to_string(),
+                            detector_name: "unchecked-math".to_string(),
                             line_range: Some((7, 11)),
                             function_name: Some("transfer".to_string()),
                             confidence: "medium".to_string(),
@@ -593,7 +593,7 @@ contract IntegerOverflow {
         if source_content.contains("balances[msg.sender] - amount") &&
            source_content.contains("pragma solidity ^0.4") {
             detected.push(DetectedVulnerability {
-                detector_name: "integer-overflow".to_string(),
+                detector_name: "unchecked-math".to_string(),
                 message: "Potential integer overflow in arithmetic operation".to_string(),
                 severity: "medium".to_string(),
                 confidence: "medium".to_string(),

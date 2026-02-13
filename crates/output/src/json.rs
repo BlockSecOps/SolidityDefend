@@ -83,6 +83,7 @@ impl JsonFormatter {
                 column: finding.primary_location.column as usize,
                 length: finding.primary_location.length as usize,
             },
+            contract_name: finding.contract_name.clone(),
             cwe: finding.cwe_ids.first().map(|c| format!("CWE-{}", c)),
             swc: finding.swc_ids.first().cloned(),
             fix_suggestion: finding
@@ -170,6 +171,8 @@ pub struct JsonFinding {
     pub message: String,
     pub severity: JsonSeverity,
     pub location: JsonLocation,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contract_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cwe: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -406,6 +409,7 @@ mod tests {
             swc_ids: vec!["SWC-107".to_string()],
             metadata: HashMap::new(),
             fix_suggestion: Some("Add access control".to_string()),
+            contract_name: Some("TestContract".to_string()),
         }
     }
 
@@ -449,6 +453,7 @@ mod tests {
                 swc_ids: Vec::new(),
                 metadata: HashMap::new(),
                 fix_suggestion: None,
+                contract_name: Some("TestContract".to_string()),
             },
         ];
 

@@ -866,6 +866,45 @@ impl MissingModifiersDetector {
 
         false
     }
+
+    /// FP Reduction: Check if function is a forwarder/proxy that delegates calls.
+    ///
+    /// Forwarder functions take an `address target` parameter and call
+    /// `target.call(abi.encodeWithSignature(...))`. Access control is enforced
+    /// by the target contract, not the forwarder. Flagging forwarders for missing
+    /// access control is noise because the call will succeed/revert based on the
+    /// target's own authorization checks.
+    fn is_forwarder_function(&self, func_source: &str, function: &ast::Function<'_>) -> bool {
+        let lower = func_source.to_lowercase();
+
+        // Must have .call( pattern with abi encoding (forwarding to another contract)
+        if !lower.contains(".call(") {
+            return false;
+        }
+        if !lower.contains("abi.encodewithsignature") && !lower.contains("abi.encodewithselector") {
+            return false;
+        }
+
+        // Must take an address parameter that serves as the call target
+        // Check via AST parameter list (source may not include signature line)
+        let has_target_param = function.parameters.iter().any(|p| {
+            if let Some(ref name) = p.name {
+                let name_lower = name.name.to_lowercase();
+                name_lower == "target"
+                    || name_lower == "proxy"
+                    || name_lower == "implementation"
+                    || name_lower == "_target"
+                    || name_lower == "_proxy"
+                    || name_lower == "_implementation"
+                    || name_lower == "contract"
+                    || name_lower == "_contract"
+            } else {
+                false
+            }
+        });
+
+        has_target_param
+    }
 }
 
 impl Detector for MissingModifiersDetector {
@@ -911,6 +950,12 @@ impl Detector for MissingModifiersDetector {
         // from the calling contract's context. Access control is enforced by the caller,
         // not the library itself. Flagging library functions produces false positives.
         if ctx.contract.contract_type == ast::ContractType::Library {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip contracts with fewer than 2 functions
+        // Contracts with 0-1 functions rarely have missing access modifiers
+        if ctx.contract.functions.len() < 2 {
             return Ok(findings);
         }
 
@@ -1004,6 +1049,14 @@ impl Detector for MissingModifiersDetector {
                 // cryptographic proofs, payment requirements, or other non-modifier
                 // access control patterns (e.g., ZK proof verification, transferFrom).
                 if self.is_defi_user_function(&func_source, function.name.name) {
+                    continue;
+                }
+
+                // FP Reduction: Skip forwarder/proxy functions that delegate calls
+                // to an external target address. Access control is on the target,
+                // not the forwarder. Example: transferOwnership(address target, ...)
+                // that just calls target.call(abi.encodeWithSignature("transferOwnership(address)", ...))
+                if self.is_forwarder_function(&func_source, function) {
                     continue;
                 }
 

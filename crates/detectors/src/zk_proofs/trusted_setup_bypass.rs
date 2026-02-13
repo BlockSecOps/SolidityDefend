@@ -69,7 +69,9 @@ impl Detector for ZKTrustedSetupBypassDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // Use contract-level source to avoid cross-contract FPs in multi-contract files
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let lower = contract_source.to_lowercase();
 
         let is_zk_system = lower.contains("verifyproof")
             || lower.contains("groth16")

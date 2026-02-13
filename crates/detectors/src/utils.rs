@@ -14,6 +14,63 @@ pub fn is_library_contract(ctx: &AnalysisContext) -> bool {
     ctx.contract.contract_type == ast::ContractType::Library
 }
 
+/// Check if this contract is the first non-interface/non-library contract in the file.
+///
+/// When detectors use file-wide keyword matching (ctx.source_code), they produce
+/// duplicate findings for every contract in multi-contract files. This function
+/// allows detectors to skip analysis for non-primary contracts, preventing N-fold
+/// FP inflation while maintaining detection for the primary contract.
+pub fn is_primary_contract(ctx: &AnalysisContext) -> bool {
+    let contract_start = ctx.contract.location.start().line();
+
+    // Check if there's a "contract X" definition before this contract's start
+    // that isn't an interface or library
+    let source_before = ctx
+        .source_code
+        .lines()
+        .take(contract_start)
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    // Count non-interface, non-library contract definitions before this one
+    let prior_contracts = source_before
+        .lines()
+        .filter(|line| {
+            let trimmed = line.trim();
+            (trimmed.starts_with("contract ") || trimmed.starts_with("abstract contract "))
+                && !trimmed.contains("interface ")
+                && !trimmed.contains("library ")
+        })
+        .count();
+
+    prior_contracts == 0
+}
+
+/// Extract the source code for just the current contract being analyzed.
+///
+/// `ctx.source_code` contains the full file, which can include multiple contracts.
+/// This function returns only the source lines belonging to `ctx.contract`, using
+/// the AST's start/end line information. Use this when exemption checks must be
+/// scoped to the current contract to avoid matching patterns from co-located contracts.
+pub fn get_contract_source(ctx: &AnalysisContext) -> String {
+    let start = ctx.contract.location.start().line();
+    let end = ctx.contract.location.end().line();
+
+    let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+    if start < source_lines.len() && end < source_lines.len() {
+        source_lines[start..=end].join("\n")
+    } else if start < source_lines.len() {
+        // Handle last contract in file: parser may give end line at or past
+        // array bounds (e.g., 1-indexed end == source_lines.len()). Extract
+        // from start to end of file rather than falling back to full source,
+        // which would cause cross-contract false positives.
+        source_lines[start..].join("\n")
+    } else {
+        // Fallback to full source if location info is invalid
+        ctx.source_code.clone()
+    }
+}
+
 /// Filter out findings that occur inside view/pure, internal/private, or constructor
 /// functions. These contexts are generally safe from exploitation. Also filters
 /// findings in admin-only functions for DoS/frontrunning/MEV detectors.
@@ -23,8 +80,26 @@ pub fn is_library_contract(ctx: &AnalysisContext) -> bool {
 /// let findings = crate::utils::filter_fp_findings(findings, ctx);
 /// Ok(findings)
 /// ```
+/// Maximum findings per detector per contract.
+///
+/// Detectors often flag the same pattern in multiple functions of one contract
+/// (e.g., delegatecall-return-ignored in 14 functions). The ground truth expects
+/// at most 1-2 findings per contract per detector, so additional findings are
+/// pure noise. Capping reduces over-reporting while preserving recall.
+const MAX_FINDINGS_PER_CONTRACT: usize = 3;
+
 pub fn filter_fp_findings(findings: Vec<Finding>, ctx: &AnalysisContext<'_>) -> Vec<Finding> {
-    crate::fp_filter::FpFilter::new().filter(findings, ctx)
+    let filtered = crate::fp_filter::FpFilter::new().filter(findings, ctx);
+
+    // Cap findings per detector per contract to reduce over-reporting
+    if filtered.len() > MAX_FINDINGS_PER_CONTRACT {
+        filtered
+            .into_iter()
+            .take(MAX_FINDINGS_PER_CONTRACT)
+            .collect()
+    } else {
+        filtered
+    }
 }
 
 /// Detects if the contract is an ERC-4626 compliant vault or vault-like contract

@@ -735,6 +735,31 @@ impl Detector for RestakingWithdrawalDelaysDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Only analyze contracts with withdrawal/staking functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_has_withdrawal_fn = contract_func_names.iter().any(|n| {
+            n.contains("withdraw")
+                || n.contains("unstake")
+                || n.contains("redeem")
+                || n.contains("stake")
+                || n.contains("deposit")
+                || n.contains("claim")
+                || n.contains("delegate")
+                || n.contains("undelegate")
+        }) || contract_name_lower.contains("staking")
+            || contract_name_lower.contains("vault")
+            || contract_name_lower.contains("restaking")
+            || contract_name_lower.contains("lrt");
+        if !contract_has_withdrawal_fn {
+            return Ok(findings);
+        }
+
         // Only run on restaking/LRT contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
             return Ok(findings);

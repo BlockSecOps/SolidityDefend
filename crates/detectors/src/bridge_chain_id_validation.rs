@@ -292,6 +292,18 @@ impl Detector for ChainIdValidationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip contracts that have explicit chain-id storage/immutable
+        // If the contract stores and validates chain ID, it's already protected
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
+        let has_chainid_storage = (source_lower.contains("uint256 public immutable chainid")
+            || source_lower.contains("uint256 public chainid")
+            || source_lower.contains("immutable sourcechainid")
+            || source_lower.contains("immutable destchainid"))
+            && (source_lower.contains("block.chainid") || source_lower.contains("chain_id"));
+        if has_chainid_storage {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some((severity, remediation)) = self.check_function(function, ctx) {
                 let finding = self

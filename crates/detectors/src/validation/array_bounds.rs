@@ -40,6 +40,13 @@ impl ArrayBoundsDetector {
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
 
+        // FP Reduction: Skip view/pure functions — they cannot modify state,
+        // so out-of-bounds access will revert harmlessly (no fund loss risk).
+        let func_source = self.get_function_source(function, ctx).to_lowercase();
+        if func_source.contains(" view ") || func_source.contains(" pure ") {
+            return findings;
+        }
+
         if let Some(body) = &function.body {
             // Identify array parameters and variables
             let arrays = self.identify_arrays(function, ctx);
@@ -449,10 +456,21 @@ impl ArrayBoundsDetector {
                         return true;
                     }
                 }
-                // Phase 6: Common safe variable names (i, j, k, idx, index) used in loops
+                // Phase 6: Common safe variable names used in loops / iteration
                 let id_lower = id.name.to_lowercase();
-                if id_lower == "i" || id_lower == "j" || id_lower == "k" || id_lower == "idx" {
-                    return true; // Likely a loop variable
+                if id_lower == "i"
+                    || id_lower == "j"
+                    || id_lower == "k"
+                    || id_lower == "idx"
+                    || id_lower == "index"
+                    || id_lower == "offset"
+                    || id_lower == "pos"
+                    || id_lower == "n"
+                    || id_lower == "count"
+                    || id_lower == "tokenid"
+                    || id_lower == "id"
+                {
+                    return true; // Likely a loop/index variable
                 }
                 false
             }
@@ -494,7 +512,14 @@ impl ArrayBoundsDetector {
                         }
                         // Phase 6: Common loop variable names are likely safe
                         let id_lower = id.name.to_lowercase();
-                        if id_lower == "i" || id_lower == "j" || id_lower == "k" {
+                        if id_lower == "i"
+                            || id_lower == "j"
+                            || id_lower == "k"
+                            || id_lower == "idx"
+                            || id_lower == "index"
+                            || id_lower == "n"
+                            || id_lower == "offset"
+                        {
                             return true;
                         }
                     }
@@ -570,29 +595,35 @@ impl ArrayBoundsDetector {
                 self.check_statement_for_loop_bounds(body, arrays, findings, ctx);
             }
             ast::Statement::While {
-                condition: _, body, ..
+                condition, body, ..
             } => {
-                // While loops with array access are generally more dangerous
+                // FP Reduction: Only flag while loops that access arrays without any
+                // length-based guard in the condition.  While loops with `.length`
+                // in the condition are bounded.
                 let array_accesses = self.find_array_accesses_in_body(body, arrays);
 
                 if !array_accesses.is_empty() {
-                    let message =
-                        "While loop contains array access - ensure proper bounds checking"
-                            .to_string();
-                    let finding = self
-                        .base
-                        .create_finding(
-                            ctx,
-                            message,
-                            stmt.location().start().line() as u32,
-                            stmt.location().start().column() as u32,
-                            stmt.location().byte_length() as u32,
-                        )
-                        .with_cwe(835) // CWE-835: Loop with Unreachable Exit Condition
-                        .with_fix_suggestion(
-                            "Add explicit bounds checking in while loop condition".to_string(),
-                        );
-                    findings.push(finding);
+                    // Check if the while condition references .length
+                    let cond_has_length = self.expression_contains_length(condition);
+                    if !cond_has_length {
+                        let message =
+                            "While loop contains array access without length-based guard in condition"
+                                .to_string();
+                        let finding = self
+                            .base
+                            .create_finding(
+                                ctx,
+                                message,
+                                stmt.location().start().line() as u32,
+                                stmt.location().start().column() as u32,
+                                stmt.location().byte_length() as u32,
+                            )
+                            .with_cwe(835) // CWE-835: Loop with Unreachable Exit Condition
+                            .with_fix_suggestion(
+                                "Add explicit bounds checking in while loop condition".to_string(),
+                            );
+                        findings.push(finding);
+                    }
                 }
 
                 self.check_statement_for_loop_bounds(body, arrays, findings, ctx);
@@ -657,6 +688,28 @@ impl ArrayBoundsDetector {
                 self.collect_array_accesses_from_expr(right, arrays, accesses);
             }
             _ => {}
+        }
+    }
+
+    /// Check if an expression references .length (for while-loop guard detection)
+    fn expression_contains_length(&self, expr: &ast::Expression<'_>) -> bool {
+        match expr {
+            ast::Expression::MemberAccess { member, .. } => member.name == "length",
+            ast::Expression::BinaryOperation { left, right, .. } => {
+                self.expression_contains_length(left) || self.expression_contains_length(right)
+            }
+            ast::Expression::UnaryOperation { operand, .. } => {
+                self.expression_contains_length(operand)
+            }
+            ast::Expression::FunctionCall {
+                function,
+                arguments,
+                ..
+            } => {
+                self.expression_contains_length(function)
+                    || arguments.iter().any(|a| self.expression_contains_length(a))
+            }
+            _ => false,
         }
     }
 

@@ -54,7 +54,6 @@ pub mod avs_validation;
 pub mod classification;
 pub mod delegation_manipulation;
 pub mod lrt_share_inflation;
-pub mod rewards_manipulation;
 pub mod slashing_conditions;
 pub mod withdrawal_delays;
 
@@ -65,6 +64,5 @@ pub use classification::*;
 pub use avs_validation::AVSValidationBypassDetector;
 pub use delegation_manipulation::RestakingDelegationManipulationDetector;
 pub use lrt_share_inflation::LRTShareInflationDetector;
-pub use rewards_manipulation::RestakingRewardsManipulationDetector;
 pub use slashing_conditions::RestakingSlashingConditionsDetector;
 pub use withdrawal_delays::RestakingWithdrawalDelaysDetector;

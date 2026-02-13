@@ -66,7 +66,7 @@ impl Detector for Erc4337EntrypointTrustDetector {
             return Ok(findings);
         }
 
-        let contract_source = ctx.source_code.as_str();
+        let contract_source = crate::utils::get_contract_source(ctx);
 
         // Check for ERC-4337 account abstraction patterns
         if !self.is_erc4337_wallet(contract_source) {
@@ -189,12 +189,22 @@ impl Detector for Erc4337EntrypointTrustDetector {
 
 impl Erc4337EntrypointTrustDetector {
     fn is_erc4337_wallet(&self, source: &str) -> bool {
-        // Check for ERC-4337 patterns
-        source.contains("validateUserOp")
-            || source.contains("EntryPoint")
-            || source.contains("UserOperation")
-            || source.contains("IAccount")
-            || source.contains("BaseAccount")
+        // Explicit AA wallet interfaces — strong signal
+        let explicit_wallet = source.contains("IAccount")
+            || source.contains("BaseAccount");
+        if explicit_wallet {
+            return true;
+        }
+
+        // validateUserOp alone is not enough (EntryPoints also have it).
+        // Require a wallet-like structure: state (owner/nonce) or EntryPoint storage.
+        let has_validate = source.contains("validateUserOp");
+        let has_wallet_structure = source.contains("owner")
+            || source.contains("nonce")
+            || source.contains("trustedEntryPoint")
+            || source.contains("ENTRY_POINT");
+
+        has_validate && has_wallet_structure
     }
 
     fn check_hardcoded_entrypoint(&self, source: &str) -> Option<Vec<(u32, String)>> {
@@ -254,6 +264,11 @@ impl Erc4337EntrypointTrustDetector {
                     && (trimmed.contains("entryPoint") || trimmed.contains("EntryPoint"))
                     && (trimmed.contains("require") || trimmed.contains("if"))
                 {
+                    has_entrypoint_check = true;
+                }
+
+                // Recognize onlyEntryPoint modifier as valid EntryPoint check
+                if trimmed.contains("onlyEntryPoint") {
                     has_entrypoint_check = true;
                 }
 
@@ -320,9 +335,10 @@ impl Erc4337EntrypointTrustDetector {
             if (trimmed.contains("entryPoint =") || trimmed.contains("EntryPoint ="))
                 && !trimmed.contains("//")
             {
-                // Check if it's in a protected context
-                let context = lines[idx.saturating_sub(3)..=idx].join(" ");
+                // Check if it's in a protected context (wider window to capture function modifiers)
+                let context = lines[idx.saturating_sub(10)..=idx].join(" ");
                 if !context.contains("onlyOwner")
+                    && !context.contains("onlyAdmin")
                     && !context.contains("require(msg.sender")
                     && !context.contains("constructor")
                 {

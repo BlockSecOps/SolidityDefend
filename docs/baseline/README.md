@@ -9,9 +9,9 @@ This directory contains baseline measurements for the SolidityDefend false posit
 | Total contracts in ground truth | 117 |
 | Clean/secure contracts | 43 |
 | Vulnerable contracts | 74 |
-| Expected true positives | 78 |
+| Expected true positives | 77 |
 | Parse error contracts | 0 |
-| Validated recall | 100% (78/78) |
+| Validated recall | 100% (77/77) |
 | Coverage | **100%** of test corpus |
 
 See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the complete dataset.
@@ -58,17 +58,17 @@ See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the co
 |-------------|----------|-------------------|
 | Reentrancy | `reentrancy_issues.sol` | `classic-reentrancy` |
 | Read-Only Reentrancy | `CurveFinance2023Attack.sol` | `readonly-reentrancy` |
-| Access Control | `validation_issues.sol` | `array-bounds-check`, `logic-error-patterns` |
+| Access Control | `validation_issues.sol` | `array-bounds-check` |
 | Vault Inflation | `erc4626_vaults/` | `vault-share-inflation`, `vault-donation-attack` |
 | Vault DOS | `VulnerableVault_WithdrawalDOS.sol` | `vault-withdrawal-dos` |
 | Chain-ID Missing | `cross_chain/` | `missing-chainid-validation`, `cross-chain-replay` |
-| Delegatecall | `UserControlledDelegatecall.sol` | `dangerous-delegatecall` |
+| Delegatecall | `UserControlledDelegatecall.sol` | `delegatecall-untrusted-library` |
 | Proxy Storage | `ProxyStorageCollision.sol` | `proxy-storage-collision` |
 | Flash Loan | `VulnerableFlashLoan.sol` | `flash-loan-price-manipulation-advanced` |
 | Price Manipulation | `PriceManipulation.sol` | `price-manipulation` |
 | Signatures | `SignatureVulnerabilities.sol` | `missing-eip712-domain` |
 | MEV | `FlashLoanArbitrage.sol` | `mev-extractable-value`, `missing-slippage-protection` |
-| Governance | `DAOGovernance.sol` | `flash-loan-governance-attack`, `delegation-loop` |
+| Governance | `DAOGovernance.sol` | `delegation-loop` |
 | ZK Proofs | `ProofBypassAttacks.sol` | `zk-proof-bypass` |
 | Restaking | `vulnerable_restaking.sol` | `restaking-withdrawal-delays` |
 | AA Paymaster | `VulnerablePaymaster.sol` | `erc4337-paymaster-abuse` |
@@ -121,8 +121,12 @@ done
 ## Baselines
 
 See individual baseline files:
-- [v1.10.20-baseline.md](v1.10.20-baseline.md) — Current baseline (after FP reduction v6)
-- [v1.10.19-baseline.md](v1.10.19-baseline.md) — Previous baseline (after FP reduction v5)
+- [v1.10.23-v15-baseline.md](v1.10.23-v15-baseline.md) — **Current baseline** (v15, 67 detectors, 18.4% precision)
+- [v1.10.22-v14-baseline.md](v1.10.22-v14-baseline.md) — Phase 1 baseline (v14, 174 zero-TP detectors removed)
+- [v1.10.21-v13-baseline.md](v1.10.21-v13-baseline.md) — v13 baseline (90 obsolete detectors removed)
+- [v1.10.20-v12-baseline.md](v1.10.20-v12-baseline.md) — v12 baseline (after precision audit)
+- [v1.10.20-baseline.md](v1.10.20-baseline.md) — FP reduction v6 baseline
+- [v1.10.19-baseline.md](v1.10.19-baseline.md) — FP reduction v5 baseline
 
 ## FP Reduction History
 
@@ -138,3 +142,8 @@ See individual baseline files:
 | v1.10.20 | v8 | 7 | 319 | 427 | 0 | — |
 | v1.10.20 | v9 | 9 | 81 | 346 | 0 | 75/78 |
 | v1.10.20 | v10 | 4 | — | ~346 | 0 | 78/78 |
+| v1.10.21 | v11 | 73 disabled + 15 fixed | 365 secure-file FPs | — | 4 | 78/78 |
+| v1.10.21 | v12 | baseline | — | 1,089 | 3 | 78/78 |
+| v1.10.21 | v13 | 90 removed | 649 | 440 | 0 | 77/77 |
+| v1.10.22 | v14 | 174 removed | 1,568 | 1,142 | 0 | 77/77 |
+| v1.10.23 | v15 | 20+ tightened | 724 | 418 | 0 | 77/77 |

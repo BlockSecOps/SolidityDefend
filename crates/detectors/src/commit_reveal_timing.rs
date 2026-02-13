@@ -53,16 +53,24 @@ impl CommitRevealTimingDetector {
                 continue;
             }
 
-            // Detect commit function
+            // Detect commit function (skip view/pure getters like getCommitment)
             if trimmed.contains("function ")
                 && (trimmed.contains("commit") || trimmed.contains("Commit"))
+                && !trimmed.contains("view")
+                && !trimmed.contains("pure")
             {
                 let func_name = self.extract_function_name(trimmed);
                 let func_end = self.find_function_end(&lines, line_num);
                 let func_body: String = lines[line_num..func_end].join("\n");
 
-                // Check for timestamp storage
-                if !func_body.contains("block.timestamp") && !func_body.contains("block.number") {
+                // Check for timestamp storage — also recognize deadline-based patterns
+                // where the contract enforces global commit/reveal deadlines
+                let has_timing = func_body.contains("block.timestamp")
+                    || func_body.contains("block.number")
+                    || func_body.contains("commitDeadline")
+                    || func_body.contains("commitdeadline")
+                    || func_body.contains("commit_deadline");
+                if !has_timing {
                     let issue = "Commit without timestamp recording".to_string();
                     findings.push((line_num as u32 + 1, func_name, issue));
                 }
@@ -291,10 +299,11 @@ impl Detector for CommitRevealTimingDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
+        // Use per-contract source to avoid cross-contract matching in multi-contract files
+        let source = crate::utils::get_contract_source(ctx);
         let contract_name = self.get_contract_name(ctx);
 
-        for (line, func_name, issue) in self.find_timing_issues(source) {
+        for (line, func_name, issue) in self.find_timing_issues(&source) {
             let message = format!(
                 "Function '{}' in contract '{}' has commit-reveal timing issue: {}. \
                  Without proper timing, attackers can observe commits and act before reveals.",
@@ -318,7 +327,7 @@ impl Detector for CommitRevealTimingDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_same_block_vulnerability(source) {
+        for (line, func_name) in self.find_same_block_vulnerability(&source) {
             let message = format!(
                 "Function '{}' in contract '{}' may allow same-block commit and reveal. \
                  Attackers can see commits in mempool and reveal in same block.",
@@ -342,7 +351,7 @@ impl Detector for CommitRevealTimingDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_predictable_deadlines(source) {
+        for (line, func_name) in self.find_predictable_deadlines(&source) {
             let message = format!(
                 "Function '{}' in contract '{}' uses short commit-reveal deadline. \
                  Short deadlines may not provide sufficient protection.",
@@ -365,7 +374,7 @@ impl Detector for CommitRevealTimingDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_hash_validation_issues(source) {
+        for (line, func_name) in self.find_hash_validation_issues(&source) {
             let message = format!(
                 "Function '{}' in contract '{}' reveals without hash verification. \
                  Revealed values must be checked against committed hash.",

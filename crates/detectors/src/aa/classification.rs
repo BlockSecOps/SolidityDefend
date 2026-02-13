@@ -30,10 +30,23 @@ fn get_function_source<'a>(function: &ast::Function, ctx: &'a AnalysisContext) -
 pub fn is_aa_account(ctx: &AnalysisContext) -> bool {
     let source_lower = ctx.source_code.to_lowercase();
 
-    // Check for IAccount interface implementation
-    source_lower.contains("iaccount") ||
-    // Check for validateUserOp function (required by IAccount)
-    ctx.get_functions().iter().any(|f| f.name.name == "validateUserOp")
+    // Explicit IAccount interface — strong signal
+    if source_lower.contains("iaccount") {
+        return true;
+    }
+
+    // validateUserOp alone is not enough (EntryPoints also have it).
+    // Require wallet-like structure: state (owner/nonce) or EntryPoint storage.
+    let has_validate = ctx
+        .get_functions()
+        .iter()
+        .any(|f| f.name.name == "validateUserOp");
+    let has_wallet_structure = source_lower.contains("owner")
+        || source_lower.contains("nonce")
+        || source_lower.contains("entrypoint")
+            && (source_lower.contains("trusted") || source_lower.contains("immutable"));
+
+    has_validate && has_wallet_structure
 }
 
 /// Checks if contract is an ERC-4337 Paymaster (implements IPaymaster)

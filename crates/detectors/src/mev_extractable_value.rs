@@ -86,6 +86,56 @@ impl Detector for MevExtractableValueDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Only analyze contracts whose own functions are DeFi-related
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_has_defi_fn = contract_func_names.iter().any(|n| {
+            n.contains("swap")
+                || n.contains("trade")
+                || n.contains("liquidat")
+                || n.contains("deposit")
+                || n.contains("withdraw")
+                || n.contains("borrow")
+                || n.contains("redeem")
+                || n.contains("arbitrage")
+                || n.contains("flash")
+                || n.contains("addliquidity")
+                || n.contains("removeliquidity")
+                || n.contains("buy")
+                || n.contains("sell")
+                || n.contains("mint")
+        });
+        if !contract_has_defi_fn {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only flag contracts in a DeFi context (AMM/DEX, lending,
+        // vault, or flash loan patterns). Generic contracts without price-sensitive
+        // operations don't have meaningful MEV extraction vectors.
+        {
+            let contract_src = crate::utils::get_contract_source(ctx);
+            let source_lower = contract_src.to_lowercase();
+            let has_defi_context = utils::is_erc4626_vault(ctx)
+                || utils::is_lending_protocol(ctx)
+                || utils::is_flash_loan_provider(ctx)
+                || utils::is_liquidity_pool(ctx)
+                || source_lower.contains("swap")
+                || source_lower.contains("amountout")
+                || source_lower.contains("getreserves")
+                || source_lower.contains("pricefeed")
+                || source_lower.contains("oracle")
+                || source_lower.contains("liquidat")
+                || source_lower.contains("slippage")
+                || source_lower.contains("router");
+            if !has_defi_context {
+                return Ok(findings);
+            }
+        }
+
         for function in ctx.get_functions() {
             if let Some(mev_issue) = self.check_mev_extractable(function, ctx) {
                 let func_source = self.get_function_source(function, ctx);
@@ -615,11 +665,15 @@ impl MevExtractableValueDetector {
     /// Check if function is in a DEX/trading context (where MEV is a real concern)
     fn is_trading_context(&self, func_source: &str, func_name: &str) -> bool {
         // Function name indicates trading operation
+        // FP Reduction: Require specific trading function names, not broad substrings
+        // "buy" and "sell" are too broad (match "buyback", "selloff", etc.)
         let name_indicates_trading = func_name.contains("swap")
             || func_name.contains("trade")
             || func_name.contains("exchange")
-            || func_name.contains("buy")
-            || func_name.contains("sell")
+            || func_name == "buy"
+            || func_name == "sell"
+            || func_name.contains("buytokens")
+            || func_name.contains("selltokens")
             || func_name.contains("addliquidity")
             || func_name.contains("removeliquidity");
 

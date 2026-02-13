@@ -70,7 +70,8 @@ impl Detector for VaultFeeManipulationDetector {
         // FP Reduction: Skip ERC-3156 flash loan providers.
         // Flash loan fee mechanisms follow a standardized pattern (ERC-3156)
         // and are not vault fee manipulation vulnerabilities.
-        let source = &ctx.source_code;
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let source = &contract_source;
         let is_flash_loan_provider = source.contains("CALLBACK_SUCCESS")
             || source.contains("ERC3156")
             || source.contains("IERC3156FlashLender")
@@ -187,16 +188,28 @@ impl VaultFeeManipulationDetector {
         let func_source = self.get_function_source(function, ctx);
 
         // Identify fee-related functions
-        let is_fee_function = function.name.name.to_lowercase().contains("fee")
-            || function.name.name.to_lowercase().contains("setfee")
-            || function.name.name.to_lowercase().contains("updatefee")
+        let func_name_lower = function.name.name.to_lowercase();
+
+        // FP Reduction: Distinguish fee SETTERS (modify state) from fee CONSUMERS
+        // (calculate with fees). Functions like "processWithFee" or "calculateFee"
+        // use fees but don't update them — not vulnerable to fee manipulation.
+        let is_fee_setter = (func_name_lower.contains("set") && func_name_lower.contains("fee"))
+            || (func_name_lower.contains("update") && func_name_lower.contains("fee"))
+            || (func_name_lower.contains("change") && func_name_lower.contains("fee"));
+
+        // Check for state variable fee assignments (not local declarations like `uint256 fee = x * rate`)
+        let has_state_fee_update = func_source.contains("feeRate =")
             || func_source.contains("Fee =")
-            || func_source.contains("fee =");
+            || func_source.contains("performanceFee =")
+            || func_source.contains("managementFee =")
+            || func_source.contains("feePercentage =")
+            || func_source.contains("depositFee =")
+            || func_source.contains("withdrawFee =");
 
-        let is_fee_setter = function.name.name.to_lowercase().contains("set")
-            && function.name.name.to_lowercase().contains("fee");
+        // A function is fee-related if it's an explicit setter OR updates fee state variables
+        let is_fee_function = is_fee_setter || has_state_fee_update;
 
-        if !is_fee_function && !is_fee_setter {
+        if !is_fee_function {
             return None;
         }
 

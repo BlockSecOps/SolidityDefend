@@ -177,7 +177,10 @@ impl Detector for Eip3074UpgradeableInvokerDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
+        // FP Reduction: Use contract source instead of file source to prevent
+        // cross-contract FPs in multi-contract files
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let source = &contract_source;
         let contract_name = self.get_contract_name(ctx);
 
         // Check if contract is both upgradeable AND uses EIP-3074

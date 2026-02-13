@@ -71,8 +71,16 @@ impl Detector for ZKRecursiveProofValidationDetector {
 
         let lower = ctx.source_code.to_lowercase();
 
+        // FP Reduction: Require ZK/proof context — "aggregate" alone is too generic
+        // (matches DeFi batch operations). Only trigger when aggregate is near proof keywords.
+        let has_zk_context = lower.contains("proof")
+            || lower.contains("verify")
+            || lower.contains("snark")
+            || lower.contains("groth16")
+            || lower.contains("plonk")
+            || lower.contains("circuit");
         let is_recursive = lower.contains("recursiveproof")
-            || lower.contains("aggregate")
+            || (lower.contains("aggregate") && has_zk_context)
             || lower.contains("batchverify");
 
         if !is_recursive {
@@ -80,7 +88,7 @@ impl Detector for ZKRecursiveProofValidationDetector {
         }
 
         // Pattern 1: Batch proof verification without individual validation
-        if lower.contains("batchverify") || lower.contains("aggregate") {
+        if lower.contains("batchverify") || (lower.contains("aggregate") && has_zk_context) {
             let validates_each = lower.contains("for (") || lower.contains("while");
 
             if !validates_each {

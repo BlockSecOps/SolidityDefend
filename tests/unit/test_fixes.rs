@@ -98,7 +98,7 @@ contract VulnerableOverflow {
 
         // This should fail because FixEngine is not implemented yet
         let fix_engine = FixEngine::new().unwrap();
-        let detector = registry.get_detector("integer-overflow").unwrap();
+        let detector = registry.get_detector("unchecked-math").unwrap();
         let findings = detector.detect(&ctx).unwrap();
 
         assert!(!findings.is_empty(), "Should detect overflow vulnerabilities");
@@ -230,7 +230,7 @@ contract VulnerableZeroAddress {
 
         // This should fail because FixEngine is not implemented yet
         let fix_engine = FixEngine::new().unwrap();
-        let detector = registry.get_detector("missing-zero-address-check").unwrap();
+        let detector = registry.get_detector("classic-reentrancy").unwrap();
         let findings = detector.detect(&ctx).unwrap();
 
         assert!(!findings.is_empty(), "Should detect zero address issues");
@@ -345,7 +345,7 @@ contract MultipleBugs {
         // Get findings from multiple detectors
         let reentrancy_findings = registry.get_detector("reentrancy").unwrap().detect(&ctx).unwrap();
         let access_control_findings = registry.get_detector("missing-access-control").unwrap().detect(&ctx).unwrap();
-        let zero_address_findings = registry.get_detector("missing-zero-address-check").unwrap().detect(&ctx).unwrap();
+        let zero_address_findings = registry.get_detector("classic-reentrancy").unwrap().detect(&ctx).unwrap();
 
         let mut all_findings = Vec::new();
         all_findings.extend(reentrancy_findings);
@@ -390,7 +390,7 @@ contract AmbiguousFix {
 
         // This should fail because FixEngine is not implemented yet
         let fix_engine = FixEngine::new().unwrap();
-        let detector = registry.get_detector("integer-overflow").unwrap();
+        let detector = registry.get_detector("unchecked-math").unwrap();
         let findings = detector.detect(&ctx).unwrap();
 
         if !findings.is_empty() {

@@ -132,6 +132,11 @@ impl TransientStorageReentrancyDetector {
 
         let func_lower = func_text.to_lowercase();
 
+        // FP Reduction: Skip functions with reentrancy guards
+        if func_lower.contains("nonreentrant") || func_lower.contains("reentrancyguard") {
+            return issues;
+        }
+
         // Check for vulnerable patterns: transfer/send after transient storage modifications
         let has_transfer_or_send =
             func_lower.contains(".transfer(") || func_lower.contains(".send(");
@@ -142,70 +147,55 @@ impl TransientStorageReentrancyDetector {
             return issues;
         }
 
-        // Check if state changes occur after external calls (checks-effects-interactions violation)
-        let has_state_change_after = func_lower.contains("= 0") || func_lower.contains("delete");
+        // FP Reduction: Use position-based check — only flag when state changes occur
+        // AFTER the external call (checks-effects-interactions violation), not just
+        // co-existence of both patterns anywhere in the function.
+        let transfer_idx = func_lower
+            .find(".transfer(")
+            .or_else(|| func_lower.find(".send("))
+            .or_else(|| func_lower.find(".call{gas:"))
+            .or_else(|| func_lower.find(".call{value:"));
 
-        if has_state_change_after {
-            issues.push((
-                format!("Vulnerable to transient storage reentrancy in '{}' - transfer()/send() no longer safe with EIP-1153", function.name.name),
-                Severity::Critical,
-                "EIP-1153 breaks transfer()/send() safety assumption:\n\
-                 \n\
-                 CRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\n\
-                 the 2300 gas stipend of transfer() and send().\n\
-                 \n\
-                 Fix 1: Use checks-effects-interactions pattern\n\
-                 function withdraw() public {\n\
-                     uint256 amount = balances[msg.sender];\n\
-                     require(amount > 0);\n\
-                     \n\
-                     // ✅ Update state BEFORE external call\n\
-                     balances[msg.sender] = 0;\n\
-                     \n\
-                     payable(msg.sender).transfer(amount);\n\
-                 }\n\
-                 \n\
-                 Fix 2: Use ReentrancyGuard\n\
-                 import \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\
-                 \n\
-                 function withdraw() public nonReentrant {\n\
-                     uint256 amount = balances[msg.sender];\n\
-                     require(amount > 0);\n\
-                     \n\
-                     balances[msg.sender] = 0;\n\
-                     payable(msg.sender).transfer(amount);\n\
-                 }\n\
-                 \n\
-                 Reference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)".to_string()
-            ));
-        }
+        if let Some(call_pos) = transfer_idx {
+            let after_call = &func_lower[call_pos..];
+            let has_state_change_after = after_call.contains("= 0")
+                || after_call.contains("= 0;")
+                || after_call.contains("delete ")
+                || after_call.contains("-= ")
+                || after_call.contains("+= ");
 
-        // Check for explicit reentrancy vulnerability patterns
-        if func_lower.contains("transfer(") && func_lower.contains("balance") {
-            let transfer_idx = func_lower.find(".transfer(").unwrap_or(0);
-            let balance_idx = func_lower.rfind("= 0").unwrap_or(usize::MAX);
-
-            if balance_idx > transfer_idx {
+            if has_state_change_after {
                 issues.push((
-                    format!(
-                        "Classic reentrancy pattern with transient storage risk in '{}'",
-                        function.name.name
-                    ),
+                    format!("Vulnerable to transient storage reentrancy in '{}' - transfer()/send() no longer safe with EIP-1153", function.name.name),
                     Severity::Critical,
-                    "State update after external call is vulnerable to reentrancy:\n\
+                    "EIP-1153 breaks transfer()/send() safety assumption:\n\
                      \n\
-                     Current pattern (VULNERABLE):\n\
-                     1. Read balance\n\
-                     2. Call transfer() ← attacker can reenter here with transient storage!\n\
-                     3. Update balance to 0\n\
+                     CRITICAL: Transient storage (100 gas per TSTORE) allows reentrancy within\n\
+                     the 2300 gas stipend of transfer() and send().\n\
                      \n\
-                     Secure pattern:\n\
-                     1. Read balance\n\
-                     2. Update balance to 0 ← do this FIRST\n\
-                     3. Call transfer()\n\
+                     Fix 1: Use checks-effects-interactions pattern\n\
+                     function withdraw() public {\n\
+                         uint256 amount = balances[msg.sender];\n\
+                         require(amount > 0);\n\
+                         \n\
+                         // Update state BEFORE external call\n\
+                         balances[msg.sender] = 0;\n\
+                         \n\
+                         payable(msg.sender).transfer(amount);\n\
+                     }\n\
                      \n\
-                     With EIP-1153, even 2300 gas is enough to modify transient state and re-enter."
-                        .to_string(),
+                     Fix 2: Use ReentrancyGuard\n\
+                     import \"@openzeppelin/contracts/security/ReentrancyGuard.sol\";\n\
+                     \n\
+                     function withdraw() public nonReentrant {\n\
+                         uint256 amount = balances[msg.sender];\n\
+                         require(amount > 0);\n\
+                         \n\
+                         balances[msg.sender] = 0;\n\
+                         payable(msg.sender).transfer(amount);\n\
+                     }\n\
+                     \n\
+                     Reference: ChainSecurity TSTORE Low Gas Reentrancy research (2024)".to_string()
                 ));
             }
         }
@@ -257,17 +247,14 @@ impl Detector for TransientStorageReentrancyDetector {
             return Ok(findings);
         }
 
-        // Check if contract might be affected by transient storage
-        // (either using it directly or callable by contracts that do)
+        // Check if contract uses transient storage or has a pragma that enables it.
+        // EIP-1153 (0.8.24+) breaks the 2300-gas reentrancy assumption: even
+        // transfer()/send() can now execute TSTORE (100 gas), so any contract
+        // compiled with 0.8.24+ that does external-call-before-state-update is at risk.
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
         let uses_transient = uses_transient_storage(ctx);
 
-        // Only check contracts with Solidity 0.8.24+ which supports transient storage
-        // Note: ^0.8 and >=0.8 are too broad - they include versions without transient storage
-        let source_lower = ctx.source_code.to_lowercase();
-        let has_transient_pragma = self.has_transient_storage_pragma(&source_lower);
-
-        // Only check contracts explicitly using transient storage or compiled with 0.8.24+
-        if !uses_transient && !has_transient_pragma {
+        if !uses_transient && !self.has_transient_storage_pragma(&source_lower) {
             return Ok(findings);
         }
 

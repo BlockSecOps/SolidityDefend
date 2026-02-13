@@ -145,7 +145,33 @@ impl YieldFarmingDetector {
             return false;
         }
 
-        let source = &ctx.source_code.to_lowercase();
+        // FP Reduction: Require the contract to have yield-relevant functions.
+        // This prevents cross-contract FPs in multi-contract files.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let has_yield_fn = contract_func_names.iter().any(|n| {
+            n.contains("deposit")
+                || n.contains("withdraw")
+                || n.contains("stake")
+                || n.contains("unstake")
+                || n.contains("redeem")
+                || n.contains("harvest")
+                || n.contains("claim")
+                || n.contains("compound")
+                || n.contains("reward")
+        });
+        if !has_yield_fn {
+            return false;
+        }
+
+        // FP Reduction: Use contract source instead of file source to prevent
+        // cross-contract FPs in multi-contract files where sibling contracts
+        // have "vault"/"shares"/"deposit" keywords.
+        let source = &crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Strong signals - any of these is definitive
         // Fix: parenthesize the OR properly so "vault && shares" is grouped
@@ -299,7 +325,7 @@ impl YieldFarmingDetector {
         let source_lower = func_source.to_lowercase();
 
         // Also get contract-level source for things like state variable checks
-        let contract_source_lower = ctx.source_code.to_lowercase();
+        let contract_source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Skip if function delegates to super (parent handles share math)
         let uses_super = self.delegates_to_super(&func_source);
@@ -459,7 +485,14 @@ impl YieldFarmingDetector {
 
         // Check reward calculation functions
         // Only flag if the function actually performs reward math, not simple claims
-        if name.contains("reward") || name.contains("earn") || name.contains("claim") {
+        // FP Reduction: Require the function name to START with these keywords, not just
+        // contain them. This avoids flagging functions like "getRewardDebt" or "earnedRewards"
+        // that are view helpers, not actual reward calculation entry points.
+        if name.starts_with("reward")
+            || name.starts_with("earn")
+            || name.starts_with("claim")
+            || name == "harvest"
+        {
             // Skip simple claim-from-mapping patterns
             if !self.is_simple_reward_claim(&func_source) {
                 // FP Reduction: Check contract-level source for reward infrastructure.
@@ -540,7 +573,8 @@ impl YieldFarmingDetector {
         }
 
         // Check harvest/compound functions
-        if name.contains("harvest") || name.contains("compound") {
+        // FP Reduction: Only match exact function names, not substrings
+        if name == "harvest" || name == "compound" || name == "compoundrewards" {
             // Check for reentrancy protection
             let has_reentrancy_guard =
                 source_lower.contains("nonreentrant") || source_lower.contains("locked");

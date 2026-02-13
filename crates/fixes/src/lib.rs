@@ -162,7 +162,7 @@ impl FixEngine {
         self.register_generator(ReentrancyFixGenerator::new());
         self.register_generator(AccessControlFixGenerator::new());
         self.register_generator(ZeroAddressFixGenerator::new());
-        self.register_generator(IntegerOverflowFixGenerator::new());
+        self.register_generator(UncheckedMathFixGenerator::new());
         self.register_generator(DivisionOrderFixGenerator::new());
 
         Ok(())
@@ -446,53 +446,37 @@ impl FixGenerator for ZeroAddressFixGenerator {
     }
 }
 
-/// Fix generator for integer overflow vulnerabilities
-struct IntegerOverflowFixGenerator;
+/// Fix generator for unchecked math vulnerabilities
+struct UncheckedMathFixGenerator;
 
-impl IntegerOverflowFixGenerator {
+impl UncheckedMathFixGenerator {
     fn new() -> Self {
         Self
     }
 }
 
-impl FixGenerator for IntegerOverflowFixGenerator {
+impl FixGenerator for UncheckedMathFixGenerator {
     fn generate_fixes(
         &self,
         _finding: &Finding,
         _ctx: &AnalysisContext<'_>,
     ) -> Result<Vec<FixSuggestion>> {
-        let solidity_08_fix = FixSuggestion {
-            id: "overflow-solidity-08".to_string(),
-            description: "Upgrade to Solidity ^0.8.0".to_string(),
-            explanation: "Solidity 0.8.0 and later versions include built-in overflow protection. This is the recommended solution for new contracts.".to_string(),
-            confidence: 0.9,
-            replacements: vec![], // Would be populated with pragma update
-            metadata: HashMap::from([
-                ("solution".to_string(), "pragma-upgrade".to_string()),
-                ("version".to_string(), "^0.8.0".to_string()),
-            ]),
-        };
-
-        let safemath_fix = FixSuggestion {
-            id: "overflow-safemath".to_string(),
-            description: "Use SafeMath library".to_string(),
-            explanation: "Import and use OpenZeppelin's SafeMath library for arithmetic operations. This provides runtime overflow protection for older Solidity versions.".to_string(),
+        let remove_unchecked = FixSuggestion {
+            id: "unchecked-math-remove".to_string(),
+            description: "Remove unchecked block or add bounds validation".to_string(),
+            explanation: "Solidity 0.8.0+ has built-in overflow protection, but unchecked blocks bypass it. Remove the unchecked block unless the overflow is intentionally safe, or add explicit bounds checks.".to_string(),
             confidence: 0.7,
-            replacements: vec![], // Would be populated with SafeMath usage
+            replacements: vec![],
             metadata: HashMap::from([
-                ("solution".to_string(), "safemath".to_string()),
-                ("library".to_string(), "OpenZeppelin".to_string()),
+                ("solution".to_string(), "remove-unchecked".to_string()),
             ]),
         };
 
-        Ok(vec![solidity_08_fix, safemath_fix])
+        Ok(vec![remove_unchecked])
     }
 
     fn supported_detectors(&self) -> Vec<String> {
-        vec![
-            "integer-overflow".to_string(),
-            "integer-underflow".to_string(),
-        ]
+        vec!["unchecked-math".to_string()]
     }
 
     fn priority(&self) -> i32 {

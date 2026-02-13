@@ -74,13 +74,40 @@ impl Detector for FlashLoanCollateralSwapDetector {
         let lower = ctx.source_code.to_lowercase();
 
         // Skip known lending protocols - they have audited collateral management
-        // Compound, Aave, MakerDAO manage risk through:
-        // - Compound: Collateral factors via Comptroller
-        // - Aave: Isolation mode, LTV ratios, health factor monitoring
-        // - MakerDAO: Ilk-based collateral types with separate debt ceilings
-        // These protocols don't use "isolation mode" keyword but have equivalent safeguards.
-        // This detector should focus on CUSTOM lending implementations without proper risk management.
         if utils::is_lending_protocol(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts that have lending/collateral-related
+        // functions. This prevents cross-contract FPs in multi-contract files.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+
+        let contract_has_lending_fn = contract_func_names.iter().any(|n| {
+            n.contains("collateral")
+                || n.contains("borrow")
+                || n.contains("liquidat")
+                || n.contains("deposit")
+                || n.contains("withdraw")
+                || n.contains("health")
+                || n.contains("ltv")
+                || n.contains("mint")
+                || n.contains("redeem")
+        });
+        let contract_name_relevant = contract_name_lower.contains("lending")
+            || contract_name_lower.contains("collateral")
+            || contract_name_lower.contains("vault")
+            || contract_name_lower.contains("borrow")
+            || contract_name_lower.contains("liquidat")
+            || contract_name_lower.contains("pool")
+            || contract_name_lower.contains("token");
+
+        if !contract_has_lending_fn && !contract_name_relevant {
             return Ok(findings);
         }
 
@@ -92,6 +119,21 @@ impl Detector for FlashLoanCollateralSwapDetector {
             || lower.contains("liquidate");
 
         if !is_lending {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip contracts that already validate collateral ratios
+        // Contracts with proper collateral ratio validation (e.g., health factor > 1,
+        // LTV bounds, minimum collateralization) are protected against flash loan collateral swaps
+        let has_collateral_ratio_validation = (lower.contains("healthfactor")
+            && (lower.contains(">= 1")
+                || lower.contains("> 1")
+                || lower.contains("minhealthfactor")))
+            || (lower.contains("collateralratio")
+                && (lower.contains("require") || lower.contains("assert"))
+                && (lower.contains("min") || lower.contains(">=")))
+            || (lower.contains("ltv") && lower.contains("maxltv") && lower.contains("require"));
+        if has_collateral_ratio_validation {
             return Ok(findings);
         }
 
@@ -161,7 +203,16 @@ impl Detector for FlashLoanCollateralSwapDetector {
 
             let has_multi_block_check = lower.contains("blocknumber")
                 || lower.contains("lastupdate")
-                || lower.contains("checkpoint");
+                || lower.contains("checkpoint")
+                || lower.contains("twap")
+                || lower.contains("timeweighted")
+                || lower.contains("chainlink")
+                || lower.contains("oracle")
+                || lower.contains("pricefeed")
+                || lower.contains("heartbeat")
+                || lower.contains("staleness")
+                || lower.contains("deviation")
+                || lower.contains("latestround");
 
             if checks_health && !has_multi_block_check {
                 let finding = self.base.create_finding(
@@ -180,12 +231,26 @@ impl Detector for FlashLoanCollateralSwapDetector {
         }
 
         // Pattern 4: Multiple collateral types without isolation
+        // FP Reduction: Require explicit multi-collateral data structures or vault patterns
         if is_lending {
-            let collateral_count = lower.matches("collateral").count();
-            if collateral_count > 3 {
+            let has_multi_collateral = lower.contains("collateraltypes")
+                || lower.contains("supportedcollateral")
+                || lower.contains("collateraltokens")
+                || lower.contains("collaterallist")
+                || lower.contains("address[] collateral")
+                || (lower.contains("mapping(address =>") && lower.contains("collateralfactor"))
+                || (lower.matches("collateral").count() > 3
+                    && lower.contains("function deposit")
+                    && lower.contains("function withdraw"));
+            if has_multi_collateral {
                 let has_isolation_mode = lower.contains("isolationmode")
                     || lower.contains("isolatedcollateral")
-                    || lower.contains("borrowcap");
+                    || lower.contains("borrowcap")
+                    || lower.contains("collateralcap")
+                    || lower.contains("twap")
+                    || lower.contains("chainlinkoracle")
+                    || lower.contains("oracle")
+                    || (lower.contains("deadline") && lower.contains("require(block.timestamp"));
 
                 if !has_isolation_mode {
                     let finding = self.base.create_finding(
@@ -230,30 +295,6 @@ impl Detector for FlashLoanCollateralSwapDetector {
 
                     findings.push(finding);
                 }
-            }
-        }
-
-        // Pattern 6: Liquidation bonus too high
-        if has_liquidation {
-            // Check for liquidation bonus/incentive
-            let mentions_bonus = lower.contains("liquidationbonus")
-                || lower.contains("liquidationincentive")
-                || lower.contains("discount");
-
-            if mentions_bonus {
-                // This is a good sign, but we warn if it seems excessive
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Liquidation bonus present - verify it's not excessive (typically 5-10%) to prevent flash loan liquidation attacks".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Cap liquidation bonus at reasonable level (5-10%) to reduce incentive for flash loan manipulation".to_string()
-                );
-
-                findings.push(finding);
             }
         }
 

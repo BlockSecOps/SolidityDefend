@@ -427,7 +427,7 @@ contract IntegerOverflow {
                     cvss_score: Some(5.3),
                 },
                 GroundTruthVulnerability {
-                    vulnerability_type: "integer-overflow".to_string(),
+                    vulnerability_type: "unchecked-math".to_string(),
                     severity: "medium".to_string(),
                     line_start: 13,
                     line_end: 16,
@@ -906,7 +906,7 @@ contract CleanVault is ReentrancyGuard, Ownable {
                 let lines_before = source_content[..pos].matches('\n').count() + 1;
 
                 detected.push(DetectedVulnerability {
-                    vulnerability_type: "integer-overflow".to_string(),
+                    vulnerability_type: "unchecked-math".to_string(),
                     severity: "medium".to_string(),
                     confidence: "medium".to_string(),
                     line: lines_before as u32,

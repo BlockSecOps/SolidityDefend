@@ -110,17 +110,9 @@ impl MultisigBypassDetector {
             return true;
         }
 
-        // Require at least 2 of the 3 structural indicators for implicit detection
-        let indicator_count = [
-            has_owners_state,
-            has_threshold_state,
-            has_signature_collection,
-        ]
-        .iter()
-        .filter(|&&x| x)
-        .count();
-
-        indicator_count >= 2
+        // Require ALL THREE structural indicators for implicit detection
+        // (2/3 was too loose — caught single-sig contracts with threshold + signatures)
+        has_owners_state && has_threshold_state && has_signature_collection
     }
 
     fn check_multisig_patterns(&self, ctx: &AnalysisContext) -> Vec<(String, u32, String)> {
@@ -143,6 +135,23 @@ impl MultisigBypassDetector {
 
         // Require actual multisig structural indicators
         if !Self::has_multisig_structure(&source_lower) {
+            return findings;
+        }
+
+        // FP Reduction: Skip contracts with proper signer ordering enforcement
+        // Gnosis Safe-style multisigs enforce currentOwner > lastOwner to prevent
+        // duplicate signers, making many of the typical vulnerabilities impossible.
+        let has_signer_ordering = source_lower.contains("currentowner > lastowner")
+            || source_lower.contains("signer > lastowner")
+            || source_lower.contains("currentowner > previousowner")
+            || (source_lower.contains("require(")
+                && source_lower.contains("> last")
+                && source_lower.contains("owner"));
+        let has_threshold_enforcement = source_lower.contains("require(")
+            && source_lower.contains("threshold")
+            && (source_lower.contains("> 0") || source_lower.contains("!= 0"))
+            && (source_lower.contains("<= owner") || source_lower.contains("<= numowner"));
+        if has_signer_ordering && has_threshold_enforcement {
             return findings;
         }
 
@@ -223,17 +232,16 @@ impl MultisigBypassDetector {
         }
 
         // Pattern 4: Signature malleability (missing s-value check)
-        if source_lower.contains("ecrecover") {
+        // Only flag in multisig execution context (threshold + signatures + ecrecover)
+        if source_lower.contains("ecrecover") && source_lower.contains("threshold") {
             let has_malleability_check = source_lower.contains("secp256k1")
                 || (source_lower.contains("require") && source_lower.contains("s <="))
                 || source_lower
                     .contains("0x7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a0");
 
-            // Skip for ERC-2612 permit tokens (nonce provides replay protection)
-            let is_permit_token = source_lower.contains("permit")
-                && source_lower.contains("nonces")
-                && (source_lower.contains("domainseparator")
-                    || source_lower.contains("domain_separator"));
+            // Skip for ERC-2612 permit tokens
+            let is_permit_token =
+                source_lower.contains("permit") && source_lower.contains("nonces");
 
             if !has_malleability_check && !is_permit_token {
                 findings.push((
@@ -354,7 +362,13 @@ impl MultisigBypassDetector {
         }
 
         // Pattern 10: Threshold zero or exceeds owner count
-        if source_lower.contains("threshold") {
+        // FP Reduction: Require actual threshold setter function, not just constructor init
+        let has_threshold_setter = source_lower.contains("function changethreshold")
+            || source_lower.contains("function setthreshold")
+            || source_lower.contains("function updatethreshold")
+            || source_lower.contains("function addowner")
+            || source_lower.contains("function removeowner");
+        if has_threshold_setter {
             let has_threshold_validation = (source_lower.contains("require")
                 || source_lower.contains("if"))
                 && source_lower.contains("threshold")
@@ -414,6 +428,35 @@ impl Detector for MultisigBypassDetector {
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
             return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts with multisig-related functions
+        if !ctx.contract.functions.is_empty() {
+            let contract_func_names: Vec<String> = ctx
+                .contract
+                .functions
+                .iter()
+                .map(|f| f.name.name.to_lowercase())
+                .collect();
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            let contract_has_relevant_fn = contract_func_names.iter().any(|n| {
+                n.contains("execute")
+                    || n.contains("submit")
+                    || n.contains("confirm")
+                    || n.contains("approve")
+                    || n.contains("sign")
+                    || n.contains("multisig")
+                    || n.contains("vote")
+                    || n.contains("quorum")
+                    || n.contains("threshold")
+            }) || contract_name_lower.contains("multisig")
+                || contract_name_lower.contains("wallet")
+                || contract_name_lower.contains("safe")
+                || contract_name_lower.contains("gnosis")
+                || contract_name_lower.contains("governance");
+            if !contract_has_relevant_fn {
+                return Ok(findings);
+            }
         }
 
         let issues = self.check_multisig_patterns(ctx);

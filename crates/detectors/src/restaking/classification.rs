@@ -12,7 +12,7 @@ use ast;
 
 /// Checks if contract is a restaking protocol (EigenLayer integration)
 pub fn is_restaking_contract(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check for restaking-specific keywords
     source_lower.contains("restaking") ||
@@ -34,7 +34,7 @@ pub fn is_restaking_contract(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract is a Liquid Restaking Token (LRT)
 pub fn is_lrt_contract(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // LRT-specific patterns
     (source_lower.contains("liquid") && source_lower.contains("restaking")) ||
@@ -52,7 +52,7 @@ pub fn is_lrt_contract(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract implements ERC-4626 vault interface
 pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // ERC-4626 interface functions
     (source_lower.contains("totalassets") || source_lower.contains("total_assets"))
@@ -62,7 +62,7 @@ pub fn is_erc4626_vault(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract integrates with EigenLayer
 pub fn is_eigenlayer_integration(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("eigenlayer")
         || source_lower.contains("idelegationmanager")

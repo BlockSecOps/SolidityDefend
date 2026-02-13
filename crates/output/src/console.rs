@@ -662,6 +662,7 @@ mod tests {
             swc_ids: Vec::new(),
             metadata: HashMap::new(),
             fix_suggestion: Some("Fix this issue".to_string()),
+            contract_name: Some("TestContract".to_string()),
         }
     }
 
