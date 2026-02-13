@@ -206,13 +206,13 @@ impl Default for AnalysisEngine {
 }
 
 /// Result of analyzing a complete source file
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SourceFileAnalysisResult {
     pub function_analyses: Vec<FunctionAnalysisResult>,
 }
 
 /// Complete analysis result for a single function
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FunctionAnalysisResult {
     /// Function name
     pub function_name: String,

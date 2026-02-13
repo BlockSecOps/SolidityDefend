@@ -449,8 +449,12 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: semantic::SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "function getPrice() { return oracle.latestAnswer(); }".to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         assert!(detector.uses_single_oracle(&ctx, &ctx.contract.functions[0]));
@@ -474,10 +478,14 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: semantic::SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code:
                 "function swap() { (uint112 reserve0, uint112 reserve1,) = pair.getReserves(); }"
                     .to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         assert!(detector.uses_spot_price(&ctx, &ctx.contract.functions[0]));
@@ -509,8 +517,12 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: semantic::SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "function trade() { uint price = oracle.getPrice(); }".to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         assert!(detector.uses_price_data(&ctx, &ctx.contract.functions[0]));

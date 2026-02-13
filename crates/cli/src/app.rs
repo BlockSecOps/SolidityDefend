@@ -7,14 +7,15 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use crate::config::SolidityDefendConfig;
+use analysis::AnalysisEngine;
 use ast::arena::AstArena;
 use cache::analysis_cache::{
     AnalysisMetadata, AnalysisStats, CachedAnalysisResult, CachedFinding, CachedLocation,
 };
 use cache::{CacheKey, CacheManager};
 use db::Database;
-// Cross-contract analysis infrastructure (available for future full integration)
-// use detectors::cross_contract::{CrossContractAnalyzer, CrossContractContext};
+// Cross-contract analysis infrastructure
+use detectors::cross_contract::{CrossContractAnalyzer, CrossContractContext};
 use detectors::registry::{DetectorRegistry, RegistryConfig};
 use detectors::types::{AnalysisContext, DetectorId, Finding, Severity};
 use output::{OutputFormat, OutputManager};
@@ -195,6 +196,34 @@ impl CliApp {
             _exit_config: ExitCodeConfig::default(),
             _config: config,
         })
+    }
+
+    /// Enable lint mode to include code-quality detectors
+    pub fn enable_lint_mode(&mut self) {
+        let mut config = self.registry.get_config().clone();
+        config.include_lint = true;
+        self.registry.set_config(config);
+    }
+
+    /// Check if a file path is a test file (Foundry/Hardhat conventions)
+    fn is_test_file(path: &str) -> bool {
+        let path_lower = path.to_lowercase();
+        // Foundry conventions
+        path_lower.ends_with(".t.sol")
+            || path_lower.contains("/test/")
+            || path_lower.contains("/tests/")
+            || path_lower.contains("\\test\\")
+            || path_lower.contains("\\tests\\")
+            // Hardhat conventions
+            || path_lower.contains("/test/")
+            // File name patterns
+            || {
+                let file_name = Path::new(path)
+                    .file_name()
+                    .and_then(|n| n.to_str())
+                    .unwrap_or("");
+                file_name.starts_with("Test") || file_name.starts_with("test_")
+            }
     }
 
     pub fn run() -> Result<()> {
@@ -398,6 +427,18 @@ impl CliApp {
                     .help("Only analyze dependency libraries")
                     .action(ArgAction::SetTrue)
                     .conflicts_with("files"),
+            )
+            .arg(
+                Arg::new("lint")
+                    .long("lint")
+                    .help("Enable lint/code-quality detectors (disabled by default)")
+                    .action(ArgAction::SetTrue),
+            )
+            .arg(
+                Arg::new("include-tests")
+                    .long("include-tests")
+                    .help("Include test files in analysis (excluded by default)")
+                    .action(ArgAction::SetTrue),
             )
             .arg(
                 Arg::new("verbose")
@@ -730,6 +771,23 @@ impl CliApp {
         } else if matches.get_flag("no-exit-on-analysis-error") {
             exit_config.error_on_analysis_failure = false;
         }
+
+        // Enable lint mode if requested
+        let mut app = app;
+        if matches.get_flag("lint") {
+            app.enable_lint_mode();
+        }
+        let include_tests = matches.get_flag("include-tests");
+
+        // Filter test files unless --include-tests is specified
+        let files: Vec<&str> = if include_tests {
+            files
+        } else {
+            files
+                .into_iter()
+                .filter(|f| !Self::is_test_file(f))
+                .collect()
+        };
 
         app.analyze_files(
             &files,
@@ -1075,24 +1133,111 @@ impl CliApp {
             println!();
             println!("Running cross-contract analysis...");
 
-            // Note: Full cross-contract analysis requires collecting AnalysisContext during parsing
-            // The infrastructure is in place via CrossContractAnalyzer and CrossContractContext
-            // For complete integration, the analyze_file loop would need to return contexts
-            //
-            // What cross-contract analysis detects:
-            // - Circular dependencies between contracts
-            // - Trust boundary violations (calls to untrusted contracts)
-            // - State inconsistencies across contracts
-            // - Atomicity violations in multi-contract operations
-            // - Cross-contract reentrancy vulnerabilities
-
-            // For now, we can detect circular dependencies from the dependency graph
+            // Check for circular dependencies from the dependency graph
             if dep_graph.has_cycles() {
                 println!(
                     "  [WARN] Circular dependencies detected - this can cause deployment issues"
                 );
             } else {
                 println!("  [OK] No circular dependencies detected");
+            }
+
+            // Re-parse source files to build cross-contract context
+            // (arenas from analyze_file are dropped, so we re-parse here)
+            let cc_arena = ast::AstArena::new();
+            let cc_parser = Parser::new();
+
+            // Collect parsed source files so they outlive the context references
+            let cc_sources: Vec<(String, String)> = analysis_order
+                .iter()
+                .filter_map(|fp| {
+                    let file_str = fp.to_string_lossy().to_string();
+                    std::fs::read_to_string(fp)
+                        .ok()
+                        .map(|src| (file_str, src))
+                })
+                .collect();
+
+            let cc_source_files: Vec<_> = cc_sources
+                .iter()
+                .filter_map(|(file_str, source)| {
+                    cc_parser
+                        .parse(&cc_arena, source, file_str)
+                        .ok()
+                        .map(|sf| (file_str.clone(), source.clone(), sf))
+                })
+                .collect();
+
+            let mut cc_contracts: std::collections::HashMap<String, AnalysisContext<'_>> =
+                std::collections::HashMap::new();
+
+            for (file_str, source, source_file) in &cc_source_files {
+                for contract in &source_file.contracts {
+                    let name = contract.name.name.to_string();
+                    let ctx = AnalysisContext::new(
+                        contract,
+                        SymbolTable::new(),
+                        source.clone(),
+                        file_str.clone(),
+                    );
+                    cc_contracts.insert(name, ctx);
+                }
+            }
+
+            if cc_contracts.len() >= 2 {
+                // Build cross-contract context with references to the parsed contexts
+                let cc_refs: std::collections::HashMap<String, &AnalysisContext<'_>> =
+                    cc_contracts.iter().map(|(k, v)| (k.clone(), v)).collect();
+                let mut cc_context = CrossContractContext::new(cc_refs);
+                cc_context.build_interaction_graph();
+
+                // Run the cross-contract analyzer
+                let analyzer = CrossContractAnalyzer::new();
+                let cc_findings = analyzer.analyze(&cc_context);
+
+                if !cc_findings.is_empty() {
+                    println!(
+                        "  Found {} cross-contract vulnerabilities:",
+                        cc_findings.len()
+                    );
+                    for finding in &cc_findings {
+                        println!(
+                            "    [{:?}] {} -> {} ({})",
+                            finding.severity,
+                            finding.primary_contract,
+                            finding.affected_contracts.join(", "),
+                            finding.description
+                        );
+                    }
+
+                    // Convert cross-contract findings to standard Finding format
+                    for cc_finding in cc_findings {
+                        let finding = Finding {
+                            detector_id: DetectorId::new("cross-contract-analysis"),
+                            severity: cc_finding.severity,
+                            confidence: detectors::types::Confidence::Medium,
+                            message: format!(
+                                "Cross-Contract {:?}: {}",
+                                cc_finding.vulnerability_type, cc_finding.description
+                            ),
+                            primary_location: detectors::types::SourceLocation {
+                                file: cc_finding.primary_contract.clone(),
+                                line: 1,
+                                column: 1,
+                                length: 0,
+                            },
+                            secondary_locations: Vec::new(),
+                            cwe_ids: Vec::new(),
+                            swc_ids: Vec::new(),
+                            metadata: std::collections::HashMap::new(),
+                            fix_suggestion: Some(cc_finding.mitigation),
+                            contract_name: Some(cc_finding.primary_contract),
+                        };
+                        all_findings.push(finding);
+                    }
+                } else {
+                    println!("  [OK] No cross-contract vulnerabilities detected");
+                }
             }
 
             // Report on multi-file interaction patterns
@@ -1603,17 +1748,61 @@ impl CliApp {
             .unwrap()
             .as_secs();
 
+        // Run AnalysisEngine to get IR/CFG/dataflow results (graceful fallback)
+        let mut engine = AnalysisEngine::new();
+        let engine_result = engine.analyze_source_file(&source_file);
+
         // Analyze all contracts in the file
         let mut all_findings = Vec::new();
         for contract in &source_file.contracts {
             // Create a fresh symbol table for each contract
             let dummy_symbols = SymbolTable::new();
-            let ctx = AnalysisContext::new(
-                contract,
-                dummy_symbols,
-                content.clone(),
-                file_path.to_string(),
-            );
+
+            // Collect function analyses for this contract from the engine result
+            let function_analyses = match &engine_result {
+                Ok(result) => {
+                    let contract_fn_names: Vec<&str> = contract
+                        .functions
+                        .iter()
+                        .map(|f| f.name.name)
+                        .collect();
+                    result
+                        .function_analyses
+                        .iter()
+                        .filter(|fa| contract_fn_names.contains(&fa.function_name.as_str()))
+                        .cloned()
+                        .collect::<Vec<_>>()
+                }
+                Err(e) => {
+                    tracing::debug!(
+                        "IR/CFG/dataflow analysis unavailable for '{}': {}. Falling back to pattern matching.",
+                        contract.name.as_str(),
+                        e
+                    );
+                    Vec::new()
+                }
+            };
+
+            // Create enriched context if analysis succeeded, basic context otherwise
+            let mut ctx = if function_analyses.is_empty() {
+                AnalysisContext::new(
+                    contract,
+                    dummy_symbols,
+                    content.clone(),
+                    file_path.to_string(),
+                )
+            } else {
+                AnalysisContext::with_analysis(
+                    contract,
+                    dummy_symbols,
+                    content.clone(),
+                    file_path.to_string(),
+                    function_analyses,
+                )
+            };
+
+            // Mark test files so detectors can adjust behavior
+            ctx.is_test = Self::is_test_file(file_path);
 
             // Try to run analysis, fall back to empty result if detector system fails
             let analysis_result = match self.registry.run_analysis(&ctx) {

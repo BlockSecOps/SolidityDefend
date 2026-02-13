@@ -569,8 +569,12 @@ mod tests {
         let context = AnalysisContext {
             contract: &contract,
             symbols: SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "contract MyToken is ERC20 { }".to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         let node = ContractNode::from_context("Token".to_string(), &context);

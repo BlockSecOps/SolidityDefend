@@ -543,9 +543,13 @@ mod tests {
         let context = AnalysisContext {
             contract: &contract,
             symbols: SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "function test() { address sender = msg.sender; target.call(); }"
                 .to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         analyzer.identify_taint_locations(&context);

@@ -464,8 +464,12 @@ mod tests {
         let ctx = AnalysisContext {
             contract: &contract,
             symbols: SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "function admin() onlyOwner { target.call(); }".to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         };
 
         assert!(analyzer.makes_privileged_calls(&ctx, "target"));
@@ -496,15 +500,23 @@ mod tests {
         let ctx1 = AnalysisContext {
             contract: &contract1,
             symbols: SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "".to_string(),
             file_path: "test1.sol".to_string(),
+            is_test: false,
         };
 
         let ctx2 = AnalysisContext {
             contract: &contract2,
             symbols: SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: "".to_string(),
             file_path: "test2.sol".to_string(),
+            is_test: false,
         };
 
         // This would need more sophisticated state variable comparison

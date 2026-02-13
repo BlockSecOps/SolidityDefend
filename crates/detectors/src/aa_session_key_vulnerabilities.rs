@@ -377,8 +377,12 @@ mod tests {
         AnalysisContext {
             contract: contract_ref,
             symbols: semantic::SymbolTable::new(),
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code: source.to_string(),
             file_path: "test.sol".to_string(),
+            is_test: false,
         }
     }
 

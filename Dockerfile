@@ -51,7 +51,7 @@ ENTRYPOINT ["soliditydefend"]
 CMD ["--help"]
 
 # Build arguments for OCI labels
-ARG SERVICE_VERSION=1.10.14
+ARG SERVICE_VERSION=2.0.0
 ARG BUILD_DATE
 ARG VCS_REF
 
@@ -60,7 +60,7 @@ LABEL org.opencontainers.image.title="SolidityDefend" \
       org.opencontainers.image.version="${SERVICE_VERSION}" \
       org.opencontainers.image.created="${BUILD_DATE}" \
       org.opencontainers.image.revision="${VCS_REF}" \
-      org.opencontainers.image.description="High-performance static analysis security tool for Solidity smart contracts with 333 detectors" \
+      org.opencontainers.image.description="High-performance static analysis security tool for Solidity smart contracts with 81 detectors and intra-procedural dataflow analysis" \
       org.opencontainers.image.authors="BlockSecOps" \
       org.opencontainers.image.vendor="BlockSecOps" \
       org.opencontainers.image.url="https://github.com/BlockSecOps/SolidityDefend" \

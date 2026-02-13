@@ -53,6 +53,11 @@ pub trait Detector: Send + Sync {
         false
     }
 
+    /// Whether this is a lint/code-quality detector (excluded from default runs)
+    fn is_lint(&self) -> bool {
+        false
+    }
+
     /// Get the detector as Any for downcasting
     fn as_any(&self) -> &dyn Any;
 }
@@ -104,6 +109,8 @@ pub enum DetectorCategory {
     Metamorphic,
     /// Contract deployment vulnerabilities
     Deployment,
+    /// Code quality and lint checks (non-security)
+    Lint,
 }
 
 impl DetectorCategory {
@@ -132,6 +139,7 @@ impl DetectorCategory {
             Self::Upgradeable,
             Self::Metamorphic,
             Self::Deployment,
+            Self::Lint,
         ]
     }
 
@@ -160,6 +168,7 @@ impl DetectorCategory {
             Self::Upgradeable => "Upgradeable Contracts",
             Self::Metamorphic => "Metamorphic Contracts",
             Self::Deployment => "Contract Deployment",
+            Self::Lint => "Code Quality",
         }
     }
 }

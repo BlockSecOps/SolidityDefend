@@ -5,6 +5,56 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.0 (2026-02-13)
+
+### Added
+
+#### Intra-Procedural Dataflow Analysis
+- **IR/CFG/Dataflow pipeline wired into detector framework** — Existing analysis engine (IR lowering, CFG builder, reaching definitions, live variables, def-use chains, taint analysis) is now connected to the detector pipeline via enriched `AnalysisContext`
+- Detectors declaring `requires_dataflow()`, `requires_cfg()`, or `requires_taint_analysis()` automatically receive analysis results when available
+- Graceful fallback: if IR lowering fails for a function, detectors continue with pattern-matching only
+
+#### Oracle Security Suite (5 new detectors)
+- **`chainlink-stale-price`** (High) — Chainlink `latestRoundData()` without `updatedAt` staleness check
+- **`chainlink-sequencer-check`** (Medium) — L2 Chainlink usage without Sequencer Uptime Feed validation
+- **`oracle-single-source`** (Medium) — Price reliance on single oracle without fallback
+- **`twap-manipulation-window`** (High) — TWAP oracles with short observation windows (<30 min)
+- **`oracle-decimal-mismatch`** (High) — Price feed usage without `decimals()` normalization
+
+#### L2/Rollup Security Suite (4 new detectors)
+- **`l2-msg-value-in-loop`** (High) — `msg.value` inside loops on L2 (common Arbitrum issue)
+- **`l2-block-number-assumption`** (Medium) — `block.number` used for timing (unreliable on L2s)
+- **`l2-gas-price-dependency`** (Medium) — `tx.gasprice`/`block.basefee` in logic (L2 gas models differ)
+- **`l2-push0-cross-deploy`** (Medium) — PUSH0 opcode targeting unsupported chains
+
+#### Lint / Code Quality Mode (5 new detectors)
+- **`--lint` flag** — Enables code quality detectors (excluded from security scans by default)
+- **`missing-natspec`** (Info) — Functions without NatSpec documentation
+- **`unused-import`** (Info) — Imported but unused contracts/libraries
+- **`magic-number`** (Low) — Hardcoded numeric constants without named constants
+- **`function-too-long`** (Info) — Functions exceeding 50 lines
+- **`excessive-inheritance`** (Info) — Contracts inheriting >5 contracts
+
+#### Test-Aware Analysis
+- **`--include-tests` flag** — Foundry/Hardhat test files now excluded by default
+- Automatic detection of test files (`.t.sol`, `test/` directories, `Test` prefixed contracts)
+- `is_test` context flag available to detectors for test-specific behavior
+
+#### Cross-Contract Taint Tracking
+- `CrossContractAnalyzer` wired into scan pipeline — inter-contract interaction graph and taint propagation now active with `--cross-contract`
+- Detects vulnerabilities spanning multiple contract boundaries
+
+#### LSP Enhancements
+- Workspace diagnostics enabled — analyzes all `.sol` files in workspace on open
+- Server version now matches crate version dynamically
+
+### Changed
+- **Detector count** — 67 → 81 (14 new detectors)
+- **3 core detectors upgraded to dataflow-aware** — `classic-reentrancy`, `delegatecall-untrusted-library`, and `vault-share-inflation` now use CFG/def-use chains for higher precision
+- **Registry dispatch** — Dataflow-aware detector dispatch with graceful skip when analysis data unavailable
+
+---
+
 ## v1.10.24 (2026-02-13)
 
 ### Fixed

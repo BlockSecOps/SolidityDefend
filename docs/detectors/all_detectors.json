@@ -1,7 +1,7 @@
 {
-  "version": "1.10.24+",
+  "version": "2.0.0",
   "generated": "2026-02-13",
-  "total_detectors": 67,
+  "total_detectors": 81,
   "detectors": [
     {
       "id": "aa-account-takeover",
@@ -715,6 +715,174 @@
       "severity": "high",
       "categories": [
         "ZKRollup"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "chainlink-stale-price",
+      "name": "Chainlink Stale Price Feed",
+      "description": "Detects Chainlink latestRoundData() calls without staleness checks on updatedAt timestamp",
+      "severity": "high",
+      "categories": [
+        "Oracle",
+        "DeFi"
+      ],
+      "cwe": ["CWE-754"],
+      "swc": []
+    },
+    {
+      "id": "chainlink-sequencer-check",
+      "name": "Chainlink L2 Sequencer Check",
+      "description": "Detects L2 Chainlink usage without Sequencer Uptime Feed validation",
+      "severity": "medium",
+      "categories": [
+        "Oracle",
+        "L2"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "oracle-single-source",
+      "name": "Oracle Single Source Reliance",
+      "description": "Detects price reliance on a single oracle without fallback mechanism",
+      "severity": "medium",
+      "categories": [
+        "Oracle",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "twap-manipulation-window",
+      "name": "TWAP Manipulation Window",
+      "description": "Detects TWAP oracles with short observation windows vulnerable to price manipulation",
+      "severity": "high",
+      "categories": [
+        "Oracle",
+        "DeFi"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "oracle-decimal-mismatch",
+      "name": "Oracle Decimal Mismatch",
+      "description": "Detects price feed usage without decimals() normalization causing arithmetic errors",
+      "severity": "high",
+      "categories": [
+        "Oracle",
+        "DeFi"
+      ],
+      "cwe": ["CWE-682"],
+      "swc": []
+    },
+    {
+      "id": "l2-msg-value-in-loop",
+      "name": "L2 msg.value in Loop",
+      "description": "Detects msg.value used inside loops on L2 chains where it can lead to double-counting",
+      "severity": "high",
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": ["CWE-670"],
+      "swc": []
+    },
+    {
+      "id": "l2-block-number-assumption",
+      "name": "L2 Block Number Assumption",
+      "description": "Detects block.number used for timing assumptions that are unreliable on L2 rollups",
+      "severity": "medium",
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "l2-gas-price-dependency",
+      "name": "L2 Gas Price Dependency",
+      "description": "Detects tx.gasprice or block.basefee used in contract logic where L2 gas models differ from L1",
+      "severity": "medium",
+      "categories": [
+        "L2",
+        "Logic"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "l2-push0-cross-deploy",
+      "name": "L2 PUSH0 Cross-Deploy Risk",
+      "description": "Detects contracts using PUSH0 opcode targeting chains that may not support it",
+      "severity": "medium",
+      "categories": [
+        "L2",
+        "Deployment"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "missing-natspec",
+      "name": "Missing NatSpec Documentation",
+      "description": "Detects public and external functions without NatSpec documentation comments",
+      "severity": "info",
+      "categories": [
+        "Lint",
+        "CodeQuality"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "unused-import",
+      "name": "Unused Import",
+      "description": "Detects imported contracts or libraries that are not referenced in the source file",
+      "severity": "info",
+      "categories": [
+        "Lint",
+        "CodeQuality"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "magic-number",
+      "name": "Magic Number",
+      "description": "Detects hardcoded numeric constants that should be replaced with named constants for readability",
+      "severity": "low",
+      "categories": [
+        "Lint",
+        "CodeQuality"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "function-too-long",
+      "name": "Function Too Long",
+      "description": "Detects functions exceeding 50 lines which may indicate excessive complexity",
+      "severity": "info",
+      "categories": [
+        "Lint",
+        "CodeQuality"
+      ],
+      "cwe": [],
+      "swc": []
+    },
+    {
+      "id": "excessive-inheritance",
+      "name": "Excessive Inheritance",
+      "description": "Detects contracts inheriting from more than 5 contracts, indicating potential complexity issues",
+      "severity": "info",
+      "categories": [
+        "Lint",
+        "CodeQuality"
       ],
       "cwe": [],
       "swc": []

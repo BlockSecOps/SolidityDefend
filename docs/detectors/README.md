@@ -1,11 +1,11 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all security detectors in SolidityDefend v1.10.24+.
+Complete reference for all security detectors in SolidityDefend v2.0.0.
 
 **Last Updated:** 2026-02-13
-**Version:** v1.10.24+
-**Total Detectors:** 67
-**Categories:** 28
+**Version:** v2.0.0
+**Total Detectors:** 81
+**Categories:** 30
 
 ---
 
@@ -16,9 +16,9 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 **File:** [`all_detectors.json`](all_detectors.json)
 
 **Contents:**
-- 67 detector entries with structured metadata
+- 81 detector entries with structured metadata
 - Detector ID, name, description, severity
-- Category mappings (28 categories)
+- Category mappings (30 categories)
 - CWE IDs (40+ detectors mapped)
 - SWC IDs (10+ detectors mapped)
 
@@ -49,15 +49,16 @@ For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector
 - **[Deployment](deployment/)** - 12 detectors
 - **[Callback Chain](callback-chain/)** - 10 detectors
 - **[Governance & Access Control](governance-access-control/)** - 10 detectors
-- **[L2/Rollup & Cross-Chain](l2-rollup/)** - 10 detectors
+- **[L2/Rollup & Cross-Chain](l2-rollup/)** - 14 detectors (includes Arbitrum, Optimism, zkSync)
 - **[Randomness & DoS](randomness-dos/)** - 10 detectors 🆕
 - **[Input Validation](input-validation/)** - 12 detectors
 - **[Access Control](access-control/)** - 10 detectors
 - **[Tokens](tokens/)** - 10 detectors
 - **[Cross-Chain](cross-chain/)** - 10 detectors
 - **[Flash Loans](flash-loans/)** - 9 detectors
-- **[Oracle](oracle/)** - 8 detectors
+- **[Oracle](oracle/)** - 13 detectors (includes Chainlink, Pyth, TWAP)
 - **[Upgrades](upgrades/)** - 8 detectors
+- **[Lint / Code Quality](lint/)** - 5 detectors 🆕
 - **[Restaking](restaking/)** - 6 detectors
 - **[Reentrancy](reentrancy/)** - 5 detectors
 - **[Zero-Knowledge](zero-knowledge/)** - 5 detectors
@@ -83,9 +84,9 @@ Each category contains comprehensive documentation for all detectors:
 ## Severity Distribution
 
 - **Critical Severity:** ~18 detectors
-- **High Severity:** ~23 detectors
-- **Medium Severity:** ~17 detectors
-- **Low/Info Severity:** ~9 detectors
+- **High Severity:** ~26 detectors
+- **Medium Severity:** ~21 detectors
+- **Low/Info Severity:** ~16 detectors
 
 ---
 
@@ -192,5 +193,5 @@ soliditydefend --list-detectors
 
 **Maintained by:** Advanced Blockchain Security
 **Generated:** 2026-02-13
-**Total Detectors:** 67
+**Total Detectors:** 81
 **Metadata File:** [all_detectors.json](all_detectors.json) - Machine-readable detector catalog

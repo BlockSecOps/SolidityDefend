@@ -1,10 +1,13 @@
 use ast::{StateMutability, Visibility};
+use cfg::ControlFlowGraph;
 use semantic::SymbolTable;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Re-export AST types for detector use
 pub use ast::{Contract as AstContract, Function as AstFunction, Modifier as AstModifier};
+// Re-export analysis types for detector use
+pub use analysis::{FunctionAnalysisResult, SourceFileAnalysisResult};
 
 // Test-friendly types that don't require arena allocation
 #[derive(Debug, Clone)]
@@ -249,12 +252,16 @@ pub mod test_utils {
             ),
         }));
 
-        super::AnalysisContext::new(
+        super::AnalysisContext {
             contract,
             symbols,
-            source.to_string(),
-            "test.sol".to_string(),
-        )
+            cfgs: std::collections::HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
+            source_code: source.to_string(),
+            file_path: "test.sol".to_string(),
+            is_test: false,
+        }
     }
 }
 
@@ -282,9 +289,6 @@ pub struct Parameter {
     pub name: String,
     pub type_name: String,
 }
-// Temporarily disabled due to CFG compilation errors
-// use cfg::ControlFlowGraph;
-// use dataflow::{DataFlowAnalysis, TaintAnalysis};
 
 /// Unique identifier for a detector
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -549,19 +553,22 @@ pub struct AnalysisContext<'arena> {
     pub contract: &'arena ast::Contract<'arena>,
     /// Symbol table with semantic information
     pub symbols: SymbolTable,
-    /// Control flow graph for each function (temporarily disabled)
-    // pub cfgs: HashMap<String, ControlFlowGraph>,
-    /// Data flow analysis results (temporarily disabled)
-    // pub dataflow: Option<Box<dyn DataFlowAnalysis>>,
-    /// Taint analysis results (temporarily disabled)
-    // pub taint: Option<TaintAnalysis>,
+    /// Control flow graphs for each function (keyed by function name)
+    pub cfgs: HashMap<String, ControlFlowGraph>,
+    /// Per-function analysis results (IR + CFG + dataflow)
+    pub function_analyses: Vec<FunctionAnalysisResult>,
+    /// Taint analysis results
+    pub taint: Option<dataflow::TaintAnalysisResult>,
     /// Source file content for location mapping
     pub source_code: String,
     /// File path being analyzed
     pub file_path: String,
+    /// Whether this file is a test file
+    pub is_test: bool,
 }
 
 impl<'arena> AnalysisContext<'arena> {
+    /// Create a basic context with only AST + source (backward compatible)
     pub fn new(
         contract: &'arena ast::Contract<'arena>,
         symbols: SymbolTable,
@@ -571,33 +578,65 @@ impl<'arena> AnalysisContext<'arena> {
         Self {
             contract,
             symbols,
-            // cfgs: HashMap::new(),
-            // dataflow: None,
-            // taint: None,
+            cfgs: HashMap::new(),
+            function_analyses: Vec::new(),
+            taint: None,
             source_code,
             file_path,
+            is_test: false,
         }
     }
 
-    // Add CFG for a function (temporarily disabled)
-    // pub fn add_cfg(&mut self, function_name: String, cfg: ControlFlowGraph) {
-    //     self.cfgs.insert(function_name, cfg);
-    // }
-    //
-    // Set data flow analysis results (temporarily disabled)
-    // pub fn set_dataflow(&mut self, dataflow: Box<dyn DataFlowAnalysis>) {
-    //     self.dataflow = Some(dataflow);
-    // }
-    //
-    // Set taint analysis results (temporarily disabled)
-    // pub fn set_taint(&mut self, taint: TaintAnalysis) {
-    //     self.taint = Some(taint);
-    // }
-    //
-    // Get the CFG for a specific function (temporarily disabled)
-    // pub fn get_cfg(&self, function_name: &str) -> Option<&ControlFlowGraph> {
-    //     self.cfgs.get(function_name)
-    // }
+    /// Create an enriched context with analysis results from AnalysisEngine
+    pub fn with_analysis(
+        contract: &'arena ast::Contract<'arena>,
+        symbols: SymbolTable,
+        source_code: String,
+        file_path: String,
+        function_analyses: Vec<FunctionAnalysisResult>,
+    ) -> Self {
+        let mut cfgs = HashMap::new();
+        for fa in &function_analyses {
+            cfgs.insert(fa.function_name.clone(), fa.cfg.clone());
+        }
+        Self {
+            contract,
+            symbols,
+            cfgs,
+            function_analyses,
+            taint: None,
+            source_code,
+            file_path,
+            is_test: false,
+        }
+    }
+
+    /// Check if dataflow analysis results are available
+    pub fn has_dataflow(&self) -> bool {
+        !self.function_analyses.is_empty()
+    }
+
+    /// Check if CFG data is available
+    pub fn has_cfg(&self) -> bool {
+        !self.cfgs.is_empty()
+    }
+
+    /// Check if taint analysis results are available
+    pub fn has_taint(&self) -> bool {
+        self.taint.is_some()
+    }
+
+    /// Get the CFG for a specific function
+    pub fn get_cfg(&self, fn_name: &str) -> Option<&ControlFlowGraph> {
+        self.cfgs.get(fn_name)
+    }
+
+    /// Get the analysis result for a specific function
+    pub fn get_function_analysis(&self, fn_name: &str) -> Option<&FunctionAnalysisResult> {
+        self.function_analyses
+            .iter()
+            .find(|fa| fa.function_name == fn_name)
+    }
 
     /// Get all functions in the contract
     pub fn get_functions(&self) -> Vec<&ast::Function<'arena>> {

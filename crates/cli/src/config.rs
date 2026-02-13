@@ -267,6 +267,7 @@ impl From<&DetectorConfig> for RegistryConfig {
             min_severity: config.min_severity,
             min_confidence: config.min_confidence,
             enabled_categories: config.enabled_categories.clone(),
+            include_lint: false, // Controlled by --lint CLI flag
         }
     }
 }
