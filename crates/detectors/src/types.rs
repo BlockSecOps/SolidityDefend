@@ -473,6 +473,9 @@ pub struct Finding {
     pub metadata: HashMap<String, String>,
     /// Suggested fix or mitigation
     pub fix_suggestion: Option<String>,
+    /// Name of the contract this finding belongs to
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub contract_name: Option<String>,
 }
 
 impl Finding {
@@ -494,6 +497,7 @@ impl Finding {
             swc_ids: Vec::new(),
             metadata: HashMap::new(),
             fix_suggestion: None,
+            contract_name: None,
         }
     }
 

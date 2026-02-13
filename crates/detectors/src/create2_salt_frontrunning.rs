@@ -41,8 +41,20 @@ impl Create2SaltFrontrunningDetector {
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
 
+            // FP Reduction: Skip comment lines
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                continue;
+            }
+
             // Look for salt assignments or CREATE2 calls
-            if (trimmed.contains("salt") || trimmed.contains("create2"))
+            // FP Reduction: Require "salt" in an assignment/declaration context, not just any mention
+            let has_salt_context = (trimmed.contains("salt =")
+                || trimmed.contains("salt,")
+                || trimmed.contains("salt)")
+                || trimmed.contains("bytes32 salt"))
+                || trimmed.contains("create2");
+
+            if has_salt_context
                 && (trimmed.contains("msg.sender")
                     || trimmed.contains("block.number")
                     || trimmed.contains("block.timestamp")
@@ -75,7 +87,17 @@ impl Create2SaltFrontrunningDetector {
                 let has_secret = context.contains("secret")
                     || context.contains("random")
                     || context.contains("private")
-                    || context.contains("commit");
+                    || context.contains("commit")
+                    || context.contains("keccak256(abi.encode")
+                    || context.contains("keccak256(abi.encodePacked")
+                    || context.contains("onlyOwner")
+                    || context.contains("onlyAdmin")
+                    || context.contains("onlyAuthorized")
+                    || context.contains("onlyRole")
+                    || context.contains("require(msg.sender")
+                    || context.contains("immutable")
+                    || context.contains("timelock")
+                    || context.contains("delay");
 
                 if !has_secret {
                     let func_name = self.find_containing_function(&lines, line_num);
@@ -104,10 +126,14 @@ impl Create2SaltFrontrunningDetector {
                 let func_name = self.extract_function_name(trimmed);
 
                 if func_body.contains("create2") || func_body.contains("CREATE2") {
-                    // Check for access control
+                    // Check for access control (modifiers or inline checks)
                     let has_access_control = func_body.contains("onlyOwner")
                         || func_body.contains("onlyAdmin")
-                        || func_body.contains("require(msg.sender");
+                        || func_body.contains("onlyAuthorized")
+                        || func_body.contains("onlyRole")
+                        || func_body.contains("require(msg.sender")
+                        || func_body.contains("msg.sender == owner")
+                        || func_body.contains("msg.sender == admin");
 
                     if !has_access_control {
                         findings.push((line_num as u32 + 1, func_name));
@@ -205,10 +231,66 @@ impl Detector for Create2SaltFrontrunningDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
+        // FP Reduction: Only analyze contracts with deploy/create functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_has_deploy_fn = contract_func_names.iter().any(|n| {
+            n.contains("deploy")
+                || n.contains("create")
+                || n.contains("clone")
+                || n.contains("factory")
+                || n.contains("salt")
+        }) || contract_name_lower.contains("factory")
+            || contract_name_lower.contains("deploy")
+            || contract_name_lower.contains("create");
+        if !contract_has_deploy_fn {
+            return Ok(findings);
+        }
+
+        // Use per-contract source to avoid cross-contract false positives in multi-contract files.
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let contract_source_lower = contract_source.to_lowercase();
         let contract_name = self.get_contract_name(ctx);
 
-        for (line, func_name) in self.find_predictable_salt(source) {
+        // Early exit: contract must actually reference CREATE2 to be relevant
+        if !contract_source_lower.contains("create2") && !contract_source_lower.contains("salt") {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt if THIS contract implements commit-reveal for salt.
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let has_own_commit_reveal = contract_name_lower.contains("commitreveal")
+            || (contract_source_lower.contains("function commit")
+                && (contract_source_lower.contains("function reveal")
+                    || contract_source_lower.contains("function deploy"))
+                && (contract_source_lower.contains("commitment")
+                    || contract_source_lower.contains("commitsalt")
+                    || contract_source_lower.contains("committedsalt")));
+        if has_own_commit_reveal {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt contracts with timelock + access control.
+        // Timelock prevents instant frontrunning even if salt is deterministic.
+        let has_timelock = contract_source_lower.contains("timelock")
+            || contract_source_lower.contains("timelocked")
+            || (contract_source_lower.contains("delay")
+                && contract_source_lower.contains("block.timestamp"));
+        let has_access_control = contract_source_lower.contains("onlyowner")
+            || contract_source_lower.contains("onlyadmin")
+            || contract_source_lower.contains("msg.sender == owner")
+            || contract_source_lower.contains("immutable")
+                && contract_source_lower.contains("owner");
+        if has_timelock && has_access_control {
+            return Ok(findings);
+        }
+
+        for (line, func_name) in self.find_predictable_salt(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' uses predictable values for CREATE2 salt. \
                  Attackers can front-run to deploy at the expected address first.",
@@ -232,7 +314,7 @@ impl Detector for Create2SaltFrontrunningDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_deterministic_salt(source) {
+        for (line, func_name) in self.find_deterministic_salt(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' uses CREATE2 without secret/random salt component. \
                  The deployment address is fully predictable.",
@@ -255,7 +337,7 @@ impl Detector for Create2SaltFrontrunningDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_public_create2(source) {
+        for (line, func_name) in self.find_public_create2(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' exposes public CREATE2 deployment without \
                  access control. Anyone can deploy at predictable addresses.",

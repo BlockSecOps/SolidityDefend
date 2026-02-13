@@ -158,28 +158,40 @@ impl MissingTransactionDeadlineDetector {
             && self.has_price_calculation(source)
             && !self.is_fixed_price_purchase(source, func_name);
 
-        // Source contains DEX/trading operations
-        let source_indicates_trading = source.contains(".swap(")
-            || source.contains("IUniswap")
-            || source.contains("IPancake")
-            || source.contains("ICurve")
-            || source.contains("IBalancer")
-            || source.contains("getAmountOut")
-            || source.contains("getAmountsOut")
-            || source.contains("getAmountIn")
-            || source.contains("amountOutMin")
-            || source.contains("amountInMax")
-            || source.contains("sqrtPriceLimit");
+        // Source contains DEX/trading operations (comment-aware to avoid FPs
+        // from vulnerability documentation that mentions these patterns)
+        let source_indicates_trading = self.has_keyword_in_code(source, ".swap(")
+            || self.has_keyword_in_code(source, "IUniswap")
+            || self.has_keyword_in_code(source, "IPancake")
+            || self.has_keyword_in_code(source, "ICurve")
+            || self.has_keyword_in_code(source, "IBalancer")
+            || self.has_keyword_in_code(source, "getAmountOut")
+            || self.has_keyword_in_code(source, "getAmountsOut")
+            || self.has_keyword_in_code(source, "getAmountIn")
+            || self.has_keyword_in_code(source, "amountOutMin")
+            || self.has_keyword_in_code(source, "amountInMax")
+            || self.has_keyword_in_code(source, "sqrtPriceLimit");
 
         // Liquidation functions need deadlines (price-dependent)
         let is_liquidation = func_name.contains("liquidat")
             && (source.contains("price") || source.contains("collateral"));
 
         // Execute/redeem only if they're order/swap execution in a DEX context,
-        // not general multisig execute or allowance-based order systems
+        // not general multisig execute, allowance-based order systems, or vault redemptions.
+        // ERC4626 redeem() and standard vault withdrawals do NOT need deadlines.
+        let is_vault_redemption = func_name.contains("redeem")
+            && (source.contains("shares")
+                || source.contains("previewRedeem")
+                || source.contains("_burn"))
+            && !source.contains(".swap(")
+            && !source.contains("IUniswap");
+
         let is_order_execution = (func_name.contains("execute") || func_name.contains("redeem"))
-            && (source.contains("order") || source.contains("swap") || source.contains("price"))
-            && !self.is_non_trading_execution(source, func_name);
+            && (source.contains("order")
+                || source.contains(".swap(")
+                || source.contains("getAmountOut"))
+            && !self.is_non_trading_execution(source, func_name)
+            && !is_vault_redemption;
 
         // EXPLICITLY NOT time-sensitive (no deadline needed):
         // - Simple withdraw() - just pulls user's balance, no price exposure
@@ -462,6 +474,36 @@ impl Detector for MissingTransactionDeadlineDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts with trading/swap functions.
+        // deposit/withdraw/redeem are NOT time-sensitive by default (no deadline needed),
+        // so exclude them from the gate to reduce FPs on vault/staking contracts.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_has_trading_fn = contract_func_names.iter().any(|n| {
+            n.contains("swap")
+                || n.contains("trade")
+                || n.contains("exchange")
+                || n.contains("fill")
+                || n.contains("liquidat")
+                || n.contains("buy")
+                || n.contains("sell")
+                || n.contains("addliquidity")
+                || n.contains("removeliquidity")
+        });
+        let contract_name_relevant = contract_name_lower.contains("swap")
+            || contract_name_lower.contains("router")
+            || contract_name_lower.contains("exchange")
+            || contract_name_lower.contains("dex")
+            || contract_name_lower.contains("trading");
+        if !contract_has_trading_fn && !contract_name_relevant {
             return Ok(findings);
         }
 

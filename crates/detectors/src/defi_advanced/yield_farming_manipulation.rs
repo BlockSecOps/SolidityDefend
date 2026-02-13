@@ -76,7 +76,7 @@ impl Detector for YieldFarmingManipulationDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Check for reward calculation based on TVL without time-weighting
         let has_reward_calculation = lower.contains("reward")

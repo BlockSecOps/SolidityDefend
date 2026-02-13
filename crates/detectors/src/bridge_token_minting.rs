@@ -27,7 +27,7 @@ impl TokenMintingDetector {
     }
 
     fn is_bridge_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code.to_lowercase();
+        let source = ctx.source_code.to_lowercase();
         source.contains("bridge") || source.contains("relay") || source.contains("crosschain")
     }
 

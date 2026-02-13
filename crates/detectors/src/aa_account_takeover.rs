@@ -67,7 +67,8 @@ impl Detector for AaAccountTakeoverDetector {
             return Ok(findings);
         }
 
-        let contract_source = ctx.source_code.as_str();
+        let contract_source_owned = crate::utils::get_contract_source(ctx);
+        let contract_source = contract_source_owned.as_str();
 
         // Check for ERC-4337 patterns
         if !self.is_erc4337_contract(contract_source) {
@@ -257,10 +258,21 @@ impl Detector for AaAccountTakeoverDetector {
 
 impl AaAccountTakeoverDetector {
     fn is_erc4337_contract(&self, source: &str) -> bool {
-        source.contains("validateUserOp")
-            || source.contains("IAccount")
-            || source.contains("BaseAccount")
-            || source.contains("EntryPoint")
+        // Explicit AA wallet interfaces — strong signal
+        let explicit_wallet = source.contains("IAccount") || source.contains("BaseAccount");
+        if explicit_wallet {
+            return true;
+        }
+
+        // validateUserOp alone is not enough (EntryPoints also have it).
+        // Require a wallet-like structure: state (owner/nonce) or EntryPoint storage.
+        let has_validate = source.contains("validateUserOp");
+        let has_wallet_structure = source.contains("owner")
+            || source.contains("nonce")
+            || source.contains("trustedEntryPoint")
+            || source.contains("ENTRY_POINT");
+
+        has_validate && has_wallet_structure
     }
 
     fn check_entrypoint_replacement(&self, source: &str) -> Option<Vec<(u32, String)>> {

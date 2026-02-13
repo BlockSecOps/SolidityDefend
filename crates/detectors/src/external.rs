@@ -66,7 +66,7 @@ impl Detector for UncheckedCallDetector {
 
         // Phase 15 FP Reduction: Skip contracts using SafeERC20 or Address library
         // These libraries handle return value checking
-        let source_lower = ctx.source_code.to_lowercase();
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
         if source_lower.contains("safeerc20") || source_lower.contains("using address for") {
             return Ok(findings);
         }
@@ -284,11 +284,8 @@ impl UncheckedCallDetector {
             // - array.push() - internal array operation
             // - mapping[key] - storage access
             // - contract.function() - handled by Solidity (reverts on failure)
-            if method == "call"
-                || method == "delegatecall"
-                || method == "staticcall"
-                || method == "send"
-            {
+            // Skip delegatecall — handled by dedicated delegatecall-return-ignored detector
+            if method == "call" || method == "staticcall" || method == "send" {
                 // Verify the expression is an address-like type, not an array or mapping
                 // Skip if it looks like array/internal operations
                 if !self.is_array_or_internal_operation(expression) {

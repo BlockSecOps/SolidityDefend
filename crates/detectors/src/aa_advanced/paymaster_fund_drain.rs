@@ -73,6 +73,25 @@ impl Detector for AAPaymasterFundDrainDetector {
 
         let lower = ctx.source_code.to_lowercase();
 
+        // FP Reduction: Only analyze contracts that implement paymaster functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_is_paymaster = contract_func_names.iter().any(|n| {
+            n.contains("validatepaymasteruserop")
+                || n.contains("postop")
+                || n.contains("sponsor")
+                || n.contains("payfor")
+        }) || contract_name_lower.contains("paymaster");
+
+        if !contract_is_paymaster {
+            return Ok(findings);
+        }
+
         // Check for paymaster implementation
         let is_paymaster = lower.contains("ipaymaster")
             || lower.contains("validatepaymasteruserop")

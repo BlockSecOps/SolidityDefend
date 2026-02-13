@@ -33,6 +33,30 @@ impl MetamorphicContractRiskDetector {
         }
     }
 
+    /// Check if source has protective patterns that mitigate metamorphic risk
+    fn has_protective_patterns(source: &str) -> bool {
+        let lower = source.to_lowercase();
+        // Timelock/delay patterns prevent immediate redeployment
+        let has_delay = lower.contains("timelock")
+            || lower.contains("delay")
+            || lower.contains("cooldown")
+            || (lower.contains("block.timestamp") && lower.contains(">="));
+        // Commitment patterns prevent frontrunning of deploy
+        let has_commitment = lower.contains("commit") && lower.contains("reveal");
+        // Access control on both deploy and destroy
+        let has_access_control = lower.contains("onlyowner")
+            || lower.contains("onlyadmin")
+            || lower.contains("accesscontrol")
+            || lower.contains("onlyauthorized")
+            || lower.contains("require(msg.sender == owner");
+
+        // Need at least TWO protective patterns to suppress
+        // (access control alone is not enough — owner can still bait-and-switch)
+        (has_delay && has_access_control)
+            || (has_commitment && has_access_control)
+            || (has_delay && has_commitment)
+    }
+
     /// Find CREATE2 with SELFDESTRUCT combination
     fn find_metamorphic_pattern(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
@@ -42,8 +66,19 @@ impl MetamorphicContractRiskDetector {
         let has_selfdestruct = source.contains("selfdestruct") || source.contains("SELFDESTRUCT");
 
         if has_create2 && has_selfdestruct {
+            // FP Reduction: Skip if contract has protective patterns
+            // (timelock + access control, commit-reveal + access control, etc.)
+            if Self::has_protective_patterns(source) {
+                return findings;
+            }
+
             for (line_num, line) in lines.iter().enumerate() {
                 let trimmed = line.trim();
+
+                // Skip comments
+                if trimmed.starts_with("//") || trimmed.starts_with("*") {
+                    continue;
+                }
 
                 if trimmed.contains("create2") || trimmed.contains("CREATE2") {
                     let func_name = self.find_containing_function(&lines, line_num);
@@ -60,8 +95,18 @@ impl MetamorphicContractRiskDetector {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
+        // FP Reduction: Skip if contract has protective patterns
+        if Self::has_protective_patterns(source) {
+            return findings;
+        }
+
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+
+            // Skip comments
+            if trimmed.starts_with("//") || trimmed.starts_with("*") {
+                continue;
+            }
 
             // Look for factory with deploy and destroy capabilities
             if trimmed.contains("function ")
@@ -73,10 +118,10 @@ impl MetamorphicContractRiskDetector {
 
                 // Check if same contract can destroy and redeploy
                 if func_body.contains("create2") {
-                    // Look for destroy function in the contract
-                    let has_destroy = source.contains("destroy")
-                        || source.contains("kill")
-                        || source.contains("selfdestruct");
+                    // Look for destroy function in the contract (not in comments)
+                    let has_destroy = source.contains("selfdestruct")
+                        || source.contains("function destroy")
+                        || source.contains("function kill");
 
                     if has_destroy {
                         findings.push((line_num as u32 + 1, func_name));
@@ -93,8 +138,25 @@ impl MetamorphicContractRiskDetector {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
+        // FP Reduction: Skip if contract has protective patterns
+        if Self::has_protective_patterns(source) {
+            return findings;
+        }
+
+        // FP Reduction: CREATE2 + variable bytecode is only a metamorphic risk
+        // if the contract also has selfdestruct (enabling the destroy-redeploy cycle)
+        let has_selfdestruct = source.contains("selfdestruct") || source.contains("SELFDESTRUCT");
+        if !has_selfdestruct {
+            return findings;
+        }
+
         for (line_num, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
+
+            // Skip comments
+            if trimmed.starts_with("//") || trimmed.starts_with("*") {
+                continue;
+            }
 
             // Look for create2 with variable bytecode
             if (trimmed.contains("create2") || trimmed.contains("CREATE2"))
@@ -194,34 +256,83 @@ impl Detector for MetamorphicContractRiskDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
-        let contract_name = self.get_contract_name(ctx);
+        // FP Reduction: Only analyze contracts that have deployment or destruction functions.
+        // Multi-contract files cause FPs when CREATE2 is in one contract and SELFDESTRUCT
+        // in another unrelated contract. Require this contract to be involved.
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
 
-        for (line, func_name) in self.find_metamorphic_pattern(source) {
-            let message = format!(
-                "Function '{}' in contract '{}' uses CREATE2 in a contract with SELFDESTRUCT. \
-                 This enables metamorphic contracts where bytecode can be changed at the same address.",
-                func_name, contract_name
-            );
+        let contract_has_relevant_fn = contract_func_names.iter().any(|n| {
+            n.contains("deploy")
+                || n.contains("create")
+                || n.contains("clone")
+                || n.contains("destroy")
+                || n.contains("kill")
+                || n.contains("selfdestruct")
+        });
+        let contract_name_relevant = contract_name_lower.contains("factory")
+            || contract_name_lower.contains("deployer")
+            || contract_name_lower.contains("metamorphic")
+            || contract_name_lower.contains("proxy")
+            || contract_name_lower.contains("create2");
 
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(913)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Prevent metamorphic contract attacks:\n\n\
-                     1. Remove SELFDESTRUCT from CREATE2-deployed contracts\n\
-                     2. Use immutable deployment patterns\n\
-                     3. Verify bytecode hash before trusting contract\n\
-                     4. Use CREATE instead of CREATE2 for mutable contracts"
-                        .to_string(),
-                );
-
-            findings.push(finding);
+        if !contract_has_relevant_fn && !contract_name_relevant {
+            return Ok(findings);
         }
 
-        for (line, func_name) in self.find_factory_metamorphic(source) {
+        // Use file source for prerequisite checks (cross-contract patterns),
+        // but contract source for finding actual lines (prevents per-contract inflation)
+        let file_source = &ctx.source_code;
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let contract_name = self.get_contract_name(ctx);
+
+        // find_metamorphic_pattern needs file-wide check for both create2+selfdestruct,
+        // but should only report create2 lines in THIS contract
+        let file_has_create2 = file_source.contains("create2") || file_source.contains("CREATE2");
+        let file_has_selfdestruct =
+            file_source.contains("selfdestruct") || file_source.contains("SELFDESTRUCT");
+
+        if file_has_create2 && file_has_selfdestruct {
+            // Only iterate contract source for actual create2 lines
+            if !Self::has_protective_patterns(file_source) {
+                let lines: Vec<&str> = contract_source.lines().collect();
+                for (line_num, line) in lines.iter().enumerate() {
+                    let trimmed = line.trim();
+                    if trimmed.starts_with("//") || trimmed.starts_with("*") {
+                        continue;
+                    }
+                    if trimmed.contains("create2") || trimmed.contains("CREATE2") {
+                        let func_name = self.find_containing_function(&lines, line_num);
+                        let message = format!(
+                            "Function '{}' in contract '{}' uses CREATE2 in a contract with SELFDESTRUCT. \
+                             This enables metamorphic contracts where bytecode can be changed at the same address.",
+                            func_name, contract_name
+                        );
+                        let finding = self
+                            .base
+                            .create_finding(ctx, message, line_num as u32 + 1, 1, 50)
+                            .with_cwe(913)
+                            .with_confidence(Confidence::High)
+                            .with_fix_suggestion(
+                                "Prevent metamorphic contract attacks:\n\n\
+                                 1. Remove SELFDESTRUCT from CREATE2-deployed contracts\n\
+                                 2. Use immutable deployment patterns\n\
+                                 3. Verify bytecode hash before trusting contract\n\
+                                 4. Use CREATE instead of CREATE2 for mutable contracts"
+                                    .to_string(),
+                            );
+                        findings.push(finding);
+                    }
+                }
+            }
+        }
+
+        for (line, func_name) in self.find_factory_metamorphic(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' is a factory that can deploy and potentially \
                  redeploy contracts at the same address with different code.",
@@ -245,7 +356,7 @@ impl Detector for MetamorphicContractRiskDetector {
             findings.push(finding);
         }
 
-        for (line, func_name) in self.find_initcode_variation(source) {
+        for (line, func_name) in self.find_initcode_variation(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' uses CREATE2 with variable bytecode. \
                  Different contracts can be deployed at predictable addresses.",

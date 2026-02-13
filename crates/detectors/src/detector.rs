@@ -285,13 +285,15 @@ impl BaseDetector {
         column: u32,
         length: u32,
     ) -> Finding {
-        Finding::new(
+        let mut finding = Finding::new(
             self.id.clone(),
             self.default_severity,
             crate::types::Confidence::Medium,
             message,
             ctx.create_location(line, column, length),
-        )
+        );
+        finding.contract_name = Some(ctx.contract.name.as_str().to_string());
+        finding
     }
 
     /// Helper method to create a finding with custom severity
@@ -304,13 +306,15 @@ impl BaseDetector {
         length: u32,
         severity: crate::types::Severity,
     ) -> Finding {
-        Finding::new(
+        let mut finding = Finding::new(
             self.id.clone(),
             severity,
             crate::types::Confidence::Medium,
             message,
             ctx.create_location(line, column, length),
-        )
+        );
+        finding.contract_name = Some(ctx.contract.name.as_str().to_string());
+        finding
     }
 }
 

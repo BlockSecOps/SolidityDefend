@@ -70,7 +70,7 @@ impl Detector for FlashLoanGovernanceAttackDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Check for governance functionality
         let is_governance = lower.contains("proposal")
@@ -79,6 +79,24 @@ impl Detector for FlashLoanGovernanceAttackDetector {
             || lower.contains("propose");
 
         if !is_governance {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip flash loan provider contracts
+        // Flash loan providers aren't governance contracts
+        if crate::utils::is_flash_loan_provider(ctx) || crate::utils::is_erc3156_flash_loan(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip contracts that actually USE snapshot-based voting in their logic
+        // (not just defining the interface). Require the snapshot function to be called
+        // within the voting/propose logic, not just declared in an interface.
+        let uses_snapshot_in_voting = (lower.contains(".getpastvotes(")
+            || lower.contains("erc20votes"))
+            && !lower.contains("interface ")  // Don't skip if it's just an interface definition
+            && (lower.contains("votes = ") || lower.contains("votingpower =")
+                || lower.contains("= getpastvotes") || lower.contains("= token.getpastvotes"));
+        if uses_snapshot_in_voting {
             return Ok(findings);
         }
 

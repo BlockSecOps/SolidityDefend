@@ -55,21 +55,17 @@ impl Push0StackAssumptionDetector {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
 
-        // Check for multi-chain indicators - must be specific
-        // Avoid matching generic L1/L2 references (e.g., "level1", "level2")
-        let is_multi_chain = source.contains("block.chainid")
-            || source.contains("CrossChain")
-            || source.contains("multichain")
-            || source.contains("Multichain")
-            || source.contains("LayerZero")
-            || source.contains("Axelar")
-            || source.contains("Wormhole")
-            || source.contains("chainSelector")
-            || source.contains("destChain")
-            || source.contains("srcChain")
-            || (source.contains("L1") && source.contains("L2") && source.contains("bridge"));
-
-        if !is_multi_chain {
+        // Callers already pre-filter for multi-chain, but double-check
+        let has_chainid_logic = source.contains("block.chainid")
+            && (source.contains("supportedChains")
+                || source.contains("chainId ==")
+                || source.contains("chainId !=")
+                || source.contains("destinationChain"));
+        if !has_chainid_logic
+            && !source.contains("LayerZero")
+            && !source.contains("Axelar")
+            && !source.contains("Wormhole")
+        {
             return findings;
         }
 
@@ -137,13 +133,12 @@ impl Push0StackAssumptionDetector {
                     }
                 }
 
-                // Check for stack depth assumptions
+                // Check for stack depth assumptions — only flag if explicit PUSH0/PUSH1 context
                 if trimmed.contains("mload(0x40)") || trimmed.contains("mstore(0x40") {
-                    // These are common patterns, but flag if there are complex stack ops
-                    if source.contains("swap") && source.contains("dup") {
+                    if source.contains("PUSH0") || source.contains("PUSH1") {
                         findings.push((
                             line_num as u32 + 1,
-                            "complex stack operations may have different behavior with PUSH0"
+                            "stack operations may have different behavior with PUSH0 vs PUSH1"
                                 .to_string(),
                         ));
                     }
@@ -236,8 +231,39 @@ impl Detector for Push0StackAssumptionDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // FP Reduction: Only report PUSH0 issues when ACTUAL cross-chain deployment
+        // is indicated by both: (a) multi-chain indicators AND (b) block.chainid
+        // usage in executable code (not just function names or comments).
+        // Single-chain contracts on Shanghai+ don't need PUSH0 warnings.
+        let source_lower = source.to_lowercase();
+        let has_chainid_logic = source.contains("block.chainid")
+            && (source.contains("supportedChains")
+                || source.contains("chainId ==")
+                || source.contains("chainId !=")
+                || source.contains("destinationChain"));
+        let has_cross_chain_framework = source.contains("LayerZero")
+            || source.contains("Axelar")
+            || source.contains("Wormhole")
+            || source_lower.contains("lzreceive");
+        let has_explicit_multichain = source.contains("multichain")
+            || source.contains("Multichain")
+            || (source.contains("L1")
+                && source.contains("L2")
+                && source.contains("bridge")
+                && source.contains("block.chainid"));
+
+        if !has_chainid_logic && !has_cross_chain_framework && !has_explicit_multichain {
+            let findings = crate::utils::filter_fp_findings(findings, ctx);
+            return Ok(findings);
+        }
+
+        // FP Reduction: Use contract source for finding actual pragma/assembly/EVM issues.
+        // The file-wide cross-chain prerequisite check above stays file-wide, but
+        // findings should only be in THIS contract.
+        let contract_source = crate::utils::get_contract_source(ctx);
+
         // Check for cross-chain deployment issues
-        let cross_chain_issues = self.find_cross_chain_issues(source);
+        let cross_chain_issues = self.find_cross_chain_issues(&contract_source);
         for (line, issue) in cross_chain_issues {
             let message = format!(
                 "PUSH0 compatibility issue in contract '{}': {}. \
@@ -266,7 +292,7 @@ impl Detector for Push0StackAssumptionDetector {
         }
 
         // Check for assembly issues
-        let assembly_issues = self.find_assembly_issues(source);
+        let assembly_issues = self.find_assembly_issues(&contract_source);
         for (line, issue) in assembly_issues {
             let message = format!(
                 "Potential PUSH0 assembly issue in contract '{}': {}.",
@@ -288,7 +314,7 @@ impl Detector for Push0StackAssumptionDetector {
         }
 
         // Check for EVM version issues
-        let evm_issues = self.find_evm_version_issues(source);
+        let evm_issues = self.find_evm_version_issues(&contract_source);
         for (line, issue) in evm_issues {
             let message = format!(
                 "EVM version consideration in contract '{}': {}.",
@@ -336,9 +362,11 @@ mod tests {
 
         let multi_chain = r#"
             pragma solidity ^0.8.20;
-            contract MultiChain {
-                function getChainId() external view returns (uint256) {
-                    return block.chainid;
+            contract CrossChainBridge {
+                mapping(uint256 => bool) public supportedChains;
+                function sendCrossChain(uint256 destChain) external {
+                    require(destChain != block.chainid);
+                    require(supportedChains[destChain]);
                 }
             }
         "#;

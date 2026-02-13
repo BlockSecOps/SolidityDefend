@@ -26,14 +26,12 @@
 //!    - Real-world: Single point of failure, rug pull risk
 
 pub mod guardian_role_centralization;
-pub mod multi_role_confusion;
 pub mod privilege_escalation_paths;
 pub mod role_hierarchy_bypass;
 pub mod time_locked_admin_bypass;
 
 // Re-export detectors
 pub use guardian_role_centralization::GuardianRoleCentralizationDetector;
-pub use multi_role_confusion::MultiRoleConfusionDetector;
 pub use privilege_escalation_paths::PrivilegeEscalationPathsDetector;
 pub use role_hierarchy_bypass::RoleHierarchyBypassDetector;
 pub use time_locked_admin_bypass::TimeLockedAdminBypassDetector;

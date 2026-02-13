@@ -85,11 +85,94 @@ impl DelegatecallUntrustedLibraryDetector {
         }
     }
 
-    /// Gets all state variable declarations from the contract
+    /// Gets contract source for state variable analysis (per-contract scoped)
     fn get_state_variables(&self, ctx: &AnalysisContext) -> String {
-        // Get the first ~100 lines which typically contain state variables
-        let lines: Vec<&str> = ctx.source_code.lines().take(100).collect();
-        lines.join("\n")
+        // Use per-contract source to avoid cross-contract false positives
+        // in multi-contract files. Previously used first 100 lines of full file
+        // which caused FPs when later contracts' variables were analyzed against
+        // the first contract's declarations.
+        crate::utils::get_contract_source(ctx).to_string()
+    }
+
+    /// Checks if a state variable is effectively immutable within the contract.
+    /// Returns true if the variable is only assigned in the constructor/declaration
+    /// and no function body reassigns it (i.e., no setter exists).
+    fn is_effectively_immutable_in_contract(&self, var_name: &str, contract_source: &str) -> bool {
+        let assignment = format!("{} =", var_name);
+        let mut in_function = false;
+
+        for line in contract_source.lines() {
+            let trimmed = line.trim();
+
+            // Skip comments
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                continue;
+            }
+
+            // Track whether we're in a function (not constructor)
+            if trimmed.starts_with("function ") {
+                in_function = true;
+            } else if trimmed.starts_with("constructor") {
+                in_function = false;
+            }
+
+            // If we find an assignment inside a function body, it's mutable
+            if in_function && trimmed.contains(&assignment) {
+                return false;
+            }
+        }
+
+        true
+    }
+
+    /// Checks if all setter functions for a variable have access control.
+    /// Returns true if every function that assigns to the variable has
+    /// onlyOwner/onlyAdmin/onlyRole modifiers or require(msg.sender ==) checks.
+    fn has_access_controlled_setter(&self, var_name: &str, contract_source: &str) -> bool {
+        let assignment = format!("{} =", var_name);
+        let mut current_func_header = String::new();
+        let mut func_body = String::new();
+        let mut in_function = false;
+
+        for line in contract_source.lines() {
+            let trimmed = line.trim();
+
+            if trimmed.starts_with("function ") {
+                // Check previous function before starting new one
+                if in_function && func_body.contains(&assignment) {
+                    let has_acl = current_func_header.contains("onlyOwner")
+                        || current_func_header.contains("onlyAdmin")
+                        || current_func_header.contains("onlyRole")
+                        || func_body.contains("require(msg.sender ==")
+                        || func_body.contains("require(msg.sender==");
+                    if !has_acl {
+                        return false;
+                    }
+                }
+                current_func_header = trimmed.to_string();
+                func_body = String::new();
+                in_function = true;
+            }
+
+            if in_function {
+                func_body.push_str(trimmed);
+                func_body.push('\n');
+            }
+        }
+
+        // Check last function
+        if in_function && func_body.contains(&assignment) {
+            let has_acl = current_func_header.contains("onlyOwner")
+                || current_func_header.contains("onlyAdmin")
+                || current_func_header.contains("onlyRole")
+                || func_body.contains("require(msg.sender ==")
+                || func_body.contains("require(msg.sender==");
+            if !has_acl {
+                return false;
+            }
+        }
+
+        true // All setters have access control (or no setters exist)
     }
 
     /// Checks if a variable is declared as immutable or constant
@@ -131,6 +214,16 @@ impl DelegatecallUntrustedLibraryDetector {
                 if !self.is_variable_immutable_or_constant(&var_name, contract_source) {
                     // Check if it's a state variable (appears in contract body outside functions)
                     if self.is_state_variable(&var_name, contract_source) {
+                        // FP Reduction: Skip if the variable is effectively immutable
+                        // (only set in constructor, no function-level setter)
+                        if self.is_effectively_immutable_in_contract(&var_name, contract_source) {
+                            return None;
+                        }
+                        // FP Reduction: Skip if all setter functions have access control
+                        // (onlyOwner, require(msg.sender ==), etc.)
+                        if self.has_access_controlled_setter(&var_name, contract_source) {
+                            return None;
+                        }
                         return Some(format!(
                             "Delegatecall to mutable library '{}' - library address can be changed after deployment",
                             var_name
@@ -354,6 +447,23 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt contracts that are EXCLUSIVELY well-known proxy implementations
+        // Note: We don't use is_proxy_contract() because it's too broad for multi-contract files.
+        // Only skip if the contract name indicates a proxy AND uses standard proxy patterns.
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let is_named_proxy =
+            contract_name_lower.contains("proxy") || contract_name_lower.contains("beacon");
+        let has_standard_proxy_pattern = source_lower
+            .contains("0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc")
+            || (source_lower.contains("diamondcut") && source_lower.contains("facet"))
+            || source_lower.contains("transparentupgradeableproxy")
+            || source_lower.contains("uupsupgradeable")
+            || source_lower.contains("erc1967upgrade");
+        if is_named_proxy && has_standard_proxy_pattern {
             return Ok(findings);
         }
 

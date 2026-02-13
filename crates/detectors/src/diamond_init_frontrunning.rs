@@ -76,6 +76,20 @@ impl DiamondInitFrontrunningDetector {
                     let func_name = self.find_containing_function(&lines, line_num);
                     let func_start = self.find_function_start(&lines, line_num);
                     let func_body = self.get_function_body(&lines, func_start);
+                    // Get the full function declaration (may span multiple lines)
+                    let func_decl_end = (line_num + 3).min(lines.len());
+                    let func_decl: String = lines[line_num..func_decl_end].join(" ");
+
+                    // FP Reduction: Skip functions with initializer/reinitializer modifiers
+                    // or that check initialized state — these already prevent re-initialization
+                    let has_initializer_protection = func_decl.contains("initializer")
+                        || func_body.contains("initializer")
+                        || func_body.contains("initialized")
+                        || func_body.contains("initializing");
+
+                    if has_initializer_protection {
+                        continue;
+                    }
 
                     // Check for single-step initialization
                     let has_pending_init = func_body.contains("pendingInit")
@@ -96,9 +110,9 @@ impl DiamondInitFrontrunningDetector {
             }
 
             // Detect unprotected facet addition
-            if (trimmed.contains("FacetCutAction.Add") || trimmed.contains("Add"))
-                && trimmed.contains("facet")
-            {
+            // FP Reduction: Require explicit FacetCutAction.Add — bare "Add" matches
+            // function names like addFunctions(), facetAddresses(), etc.
+            if trimmed.contains("FacetCutAction.Add") && trimmed.contains("facet") {
                 let func_name = self.find_containing_function(&lines, line_num);
                 let func_start = self.find_function_start(&lines, line_num);
                 let func_body = self.get_function_body(&lines, func_start);
@@ -221,14 +235,16 @@ impl Detector for DiamondInitFrontrunningDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
+        // Use per-contract source to avoid cross-contract false positives
+        // in multi-contract files (e.g., libraries/interfaces alongside the diamond)
+        let contract_source = crate::utils::get_contract_source(ctx);
         let contract_name = self.get_contract_name(ctx);
 
-        if !self.is_diamond_contract(source) {
+        if !self.is_diamond_contract(&contract_source) {
             return Ok(findings);
         }
 
-        for (line, func_name, issue) in self.find_frontrunning_risks(source) {
+        for (line, func_name, issue) in self.find_frontrunning_risks(&contract_source) {
             let message = format!(
                 "Function '{}' in contract '{}' has Diamond init frontrunning risk: {}. \
                  Attackers can frontrun initialization to gain control.",

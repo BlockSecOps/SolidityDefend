@@ -286,6 +286,26 @@ impl Detector for AllowanceToctouDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Only analyze contracts with ERC20-related functions
+        // Allowance TOCTOU requires approve/transferFrom/allowance in the contract
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_has_allowance_fn = contract_func_names.iter().any(|n| {
+            n.contains("approve")
+                || n.contains("transferfrom")
+                || n.contains("allowance")
+                || n.contains("swap")
+                || n.contains("batch")
+                || n.contains("claim")
+        });
+        if !contract_has_allowance_fn {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(issue) = self.has_allowance_toctou(function, ctx) {
                 let message = format!(

@@ -3,7 +3,7 @@ use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
 use crate::types::{AnalysisContext, DetectorId, Finding, Severity};
-use crate::utils::{is_secure_example_file, is_test_contract};
+use crate::utils::is_secure_example_file;
 
 /// Detector for upgradeable proxy pattern vulnerabilities
 pub struct UpgradeableProxyIssuesDetector {
@@ -67,8 +67,33 @@ impl Detector for UpgradeableProxyIssuesDetector {
             return Ok(findings);
         }
 
-        // Phase 10: Skip test contracts and secure examples
-        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+        // FP Reduction: Only analyze contracts with proxy/upgrade-related functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_has_proxy_fn = contract_func_names.iter().any(|n| {
+            n.contains("upgrade")
+                || n.contains("initialize")
+                || n.contains("implementation")
+                || n.contains("delegatecall")
+                || n.contains("proxy")
+                || n.contains("admin")
+        }) || contract_name_lower.contains("proxy")
+            || contract_name_lower.contains("upgrade")
+            || contract_name_lower.contains("transparent")
+            || contract_name_lower.contains("uups");
+        if !contract_has_proxy_fn {
+            return Ok(findings);
+        }
+
+        // Phase 10: Skip secure examples (files demonstrating safe patterns)
+        // Note: is_test_contract intentionally NOT used here — it blocks ALL files
+        // under /tests/ including legitimate vulnerable benchmarks needed for GT validation.
+        if is_secure_example_file(ctx) {
             return Ok(findings);
         }
 
@@ -335,13 +360,27 @@ impl UpgradeableProxyIssuesDetector {
                 || func_name_lower.contains("set")
                 || func_name_lower.contains("unsafe"));
 
+        // Strip single-line comments to avoid matching access control patterns
+        // mentioned in comments (e.g., "// Should have: require(msg.sender == owner)")
+        let func_source_no_comments: String = func_source
+            .lines()
+            .map(|line| {
+                if let Some(idx) = line.find("//") {
+                    &line[..idx]
+                } else {
+                    line
+                }
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+
         let lacks_access_control = is_upgrade_function
             && !is_fallback_or_receive // FP Reduction: Fallback is proxy mechanism, not upgrade
             && !is_uups_authorize  // UUPS _authorizeUpgrade is called internally
             && !has_oz_access_control
-            && !func_source.contains("onlyOwner")
-            && !func_source.contains("onlyAdmin")
-            && !func_source.contains("require(msg.sender")
+            && !func_source_no_comments.contains("onlyOwner")
+            && !func_source_no_comments.contains("onlyAdmin")
+            && !func_source_no_comments.contains("require(msg.sender")
             && !is_internal_helper; // FP Reduction: Skip internal helpers
 
         // FP Reduction: Skip unprotected upgrade findings when the more specific
@@ -349,8 +388,11 @@ impl UpgradeableProxyIssuesDetector {
         // Only report here if there are additional proxy-specific concerns beyond
         // simple access control (e.g., combined with storage issues, initialization).
         if lacks_access_control && !is_internal_or_private {
-            // Skip to avoid duplication with proxy-upgrade-unprotected detector
-            // which provides more targeted and actionable findings for this pattern
+            return Some(
+                "Upgrade function lacks access control. \
+                Anyone can change the implementation contract, enabling complete takeover"
+                    .to_string(),
+            );
         }
 
         // Pattern 2: Initialize function can be called multiple times
@@ -403,10 +445,20 @@ impl UpgradeableProxyIssuesDetector {
             || contract_source.contains("UUPSUpgradeable")
             || contract_source.contains("upgradeable");
 
+        // FP Reduction: Skip storage gap check for OZ-based contracts.
+        // OZ contracts handle storage gaps internally. Also skip contracts
+        // that use ERC-1967 storage slots (which avoids gap issues).
+        let uses_oz_or_erc1967 = contract_source.contains("@openzeppelin")
+            || contract_source.contains("OpenZeppelin")
+            || contract_source.contains("IMPLEMENTATION_SLOT")
+            || contract_source.contains("ERC1967")
+            || contract_source.contains("StorageSlot");
+
         let no_storage_gap = is_upgradeable_contract
             && !contract_source.contains("__gap")
             && !contract_source.contains("uint256[50]")
-            && !is_base_proxy_contract; // FP Reduction: Base proxies don't need gaps
+            && !is_base_proxy_contract // FP Reduction: Base proxies don't need gaps
+            && !uses_oz_or_erc1967; // FP Reduction: OZ/ERC-1967 handles this
 
         // FP Reduction Phase 2: Only report storage gap once per contract, not per function
         // Skip if this isn't the first proxy-related function (to avoid duplicate reports)

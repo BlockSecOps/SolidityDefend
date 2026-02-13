@@ -54,8 +54,31 @@ impl RestakingSlashingConditionsDetector {
 
         let func_name_lower = function.name.name.to_lowercase();
 
-        // Only check slashing functions
+        // Only check slashing execution functions (not configuration)
         if !func_name_lower.contains("slash") && !func_name_lower.contains("penalize") {
+            return findings;
+        }
+
+        // FP Reduction: Skip configuration functions — these set policies, not execute slashing.
+        // Evidence validation is only relevant for actual slashing execution.
+        if func_name_lower.contains("setslash")
+            || func_name_lower.contains("slashingpolicy")
+            || func_name_lower.contains("slashingconfig")
+            || func_name_lower.contains("slashpercentage")
+            || func_name_lower.starts_with("get")
+            || func_name_lower.starts_with("is")
+        {
+            return findings;
+        }
+
+        // FP Reduction: Skip view/pure and internal/private functions
+        if matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) || matches!(
+            function.visibility,
+            ast::Visibility::Internal | ast::Visibility::Private
+        ) {
             return findings;
         }
 
@@ -246,8 +269,29 @@ impl RestakingSlashingConditionsDetector {
 
         let func_name_lower = function.name.name.to_lowercase();
 
-        // Only check slashing functions
+        // Only check slashing execution functions
         if !func_name_lower.contains("slash") {
+            return findings;
+        }
+
+        // FP Reduction: Skip configuration/query functions
+        if func_name_lower.contains("setslash")
+            || func_name_lower.contains("slashingpolicy")
+            || func_name_lower.contains("slashingconfig")
+            || func_name_lower.starts_with("get")
+            || func_name_lower.starts_with("is")
+        {
+            return findings;
+        }
+
+        // FP Reduction: Skip view/pure and internal/private functions
+        if matches!(
+            function.mutability,
+            ast::StateMutability::View | ast::StateMutability::Pure
+        ) || matches!(
+            function.visibility,
+            ast::Visibility::Internal | ast::Visibility::Private
+        ) {
             return findings;
         }
 
@@ -448,6 +492,29 @@ impl Detector for RestakingSlashingConditionsDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Only analyze contracts with slashing/staking functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let contract_has_slashing_fn = contract_func_names.iter().any(|n| {
+            n.contains("slash")
+                || n.contains("penalize")
+                || n.contains("stake")
+                || n.contains("register")
+                || n.contains("delegate")
+                || n.contains("operator")
+        }) || contract_name_lower.contains("slash")
+            || contract_name_lower.contains("staking")
+            || contract_name_lower.contains("restaking")
+            || contract_name_lower.contains("avs");
+        if !contract_has_slashing_fn {
             return Ok(findings);
         }
 

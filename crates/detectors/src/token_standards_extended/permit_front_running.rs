@@ -70,21 +70,83 @@ impl Detector for TokenPermitFrontRunningDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // FP Reduction: Only analyze contracts with permit-related functions
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_has_permit_fn = contract_func_names.iter().any(|n| {
+            n.contains("permit")
+                || n.contains("transferfrom")
+                || n.contains("approve")
+                || n.contains("deposit")
+                || n.contains("swap")
+                || n.contains("spend")
+        });
+        if !contract_has_permit_fn {
+            return Ok(findings);
+        }
 
-        // Check for ERC-2612 permit usage
-        let uses_permit = lower.contains("permit(")
-            || lower.contains("ierc20permit")
-            || lower.contains("erc2612");
+        // Use per-contract source to avoid cross-contract false positives in multi-contract files.
+        // ctx.source_code is the full file; contract_lower scopes to just this contract.
+        let contract_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
-        if !uses_permit {
+        // Check for actual ERC-2612 permit implementation or consumption IN THIS CONTRACT
+        let has_permit_function = contract_lower.contains("function permit(")
+            || contract_lower.contains("ierc20permit")
+            || contract_lower.contains("erc2612")
+            || contract_lower.contains("erc20permit");
+        let has_permit_call = contract_lower.contains(".permit(")
+            && (contract_lower.contains("token.permit(")
+                || contract_lower.contains(").permit(")
+                || contract_lower.contains("ierc20permit("));
+
+        if !has_permit_function && !has_permit_call {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt permit implementers that have proper EIP-712 domain WITH chainId
+        // in DOMAIN_SEPARATOR construction AND proper deadline/replay protection.
+        let is_secure_permit_impl = contract_lower.contains("function permit(")
+            && contract_lower.contains("ecrecover")
+            && contract_lower.contains("eip712domain(")
+            && contract_lower.contains("block.chainid");
+        let has_deadline_or_replay_protection = contract_lower.contains("require(deadline")
+            || contract_lower.contains("deadline <=")
+            || contract_lower.contains("deadline >=")
+            || contract_lower.contains("usedsignatures")
+            || contract_lower.contains("safepermit");
+        if is_secure_permit_impl && has_deadline_or_replay_protection {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Exempt OZ ERC20Permit consumers — contracts that simply
+        // call permit() on an external token. If they use try-catch or allowance checks they're safe.
+        // Fixed: "ierc20permit" without requiring "()" catches `IERC20Permit public token` patterns
+        let is_permit_consumer = contract_lower.contains("ierc20permit")
+            || (contract_lower.contains("erc20permit") && !contract_lower.contains("ecrecover"))
+            || (contract_lower.contains(".permit(")
+                && !contract_lower.contains("function permit("));
+        let has_try_catch_or_allowance = contract_lower.contains("try ")
+            || (contract_lower.contains("allowance(") && contract_lower.contains("if "))
+            || contract_lower.contains("safepermit");
+        // FP Reduction: Permit consumers that call .permit() + .transferFrom() atomically
+        // in the same contract are using the standard safe pattern. The permit sets the
+        // allowance and transferFrom uses it in the same transaction.
+        let has_atomic_permit_transfer = contract_lower.contains(".permit(")
+            && contract_lower.contains("transferfrom")
+            && !contract_lower.contains("function permit(");
+        if is_permit_consumer && (has_try_catch_or_allowance || has_atomic_permit_transfer) {
             return Ok(findings);
         }
 
         // Pattern 1: permit() followed by transferFrom without try-catch
-        if lower.contains("permit(") {
-            let has_transferfrom = lower.contains("transferfrom");
-            let has_error_handling = lower.contains("try") || lower.contains("catch");
+        if contract_lower.contains("permit(") {
+            let has_transferfrom = contract_lower.contains("transferfrom");
+            let has_error_handling =
+                contract_lower.contains("try") || contract_lower.contains("catch");
 
             if has_transferfrom && !has_error_handling {
                 let finding = self.base.create_finding(
@@ -103,9 +165,9 @@ impl Detector for TokenPermitFrontRunningDetector {
         }
 
         // Pattern 2: No allowance check before permit
-        if uses_permit {
-            let checks_allowance =
-                lower.contains("allowance(") || lower.contains("currentallowance");
+        if has_permit_function || has_permit_call {
+            let checks_allowance = contract_lower.contains("allowance(")
+                || contract_lower.contains("currentallowance");
 
             if !checks_allowance {
                 let finding = self.base.create_finding(
@@ -124,12 +186,13 @@ impl Detector for TokenPermitFrontRunningDetector {
         }
 
         // Pattern 3: Deadline too far in future
-        if lower.contains("permit(") {
-            let has_deadline_check = lower.contains("deadline")
-                && (lower.contains("block.timestamp") || lower.contains("require(deadline"));
+        if contract_lower.contains("permit(") {
+            let has_deadline_check = contract_lower.contains("deadline")
+                && (contract_lower.contains("block.timestamp")
+                    || contract_lower.contains("require(deadline"));
 
-            let has_max_deadline =
-                lower.contains("max_deadline") || lower.contains("deadline_limit");
+            let has_max_deadline = contract_lower.contains("max_deadline")
+                || contract_lower.contains("deadline_limit");
 
             if has_deadline_check && !has_max_deadline {
                 let finding = self.base.create_finding(
@@ -148,8 +211,9 @@ impl Detector for TokenPermitFrontRunningDetector {
         }
 
         // Pattern 4: Permit signature reuse protection missing
-        if uses_permit {
-            let has_nonce_tracking = lower.contains("nonce") || lower.contains("nonces(");
+        if has_permit_function || has_permit_call {
+            let has_nonce_tracking =
+                contract_lower.contains("nonce") || contract_lower.contains("nonces(");
 
             if !has_nonce_tracking {
                 let finding = self.base.create_finding(
@@ -168,9 +232,10 @@ impl Detector for TokenPermitFrontRunningDetector {
         }
 
         // Pattern 5: Permit used in critical path without backup
-        if lower.contains("permit(") {
-            let has_alternative =
-                lower.contains("approve") || lower.contains("else") || lower.contains("fallback");
+        if contract_lower.contains("permit(") {
+            let has_alternative = contract_lower.contains("approve")
+                || contract_lower.contains("else")
+                || contract_lower.contains("fallback");
 
             if !has_alternative {
                 let finding = self.base.create_finding(

@@ -77,21 +77,51 @@ impl Detector for HookReentrancyEnhancedDetector {
 
         let lower = ctx.source_code.to_lowercase();
 
-        // Check for Uniswap V4 hook functions with external calls
-        let is_before_hook = lower.contains("beforeswap")
-            || lower.contains("beforeaddliquidity")
-            || lower.contains("beforeremoveliquidity");
+        // FP Reduction: Only analyze contracts whose own functions include hooks or
+        // DeFi callback patterns susceptible to hook reentrancy
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let contract_has_hook_fn = contract_func_names.iter().any(|n| {
+            n.contains("beforeswap")
+                || n.contains("afterswap")
+                || n.contains("beforeadd")
+                || n.contains("afteradd")
+                || n.contains("beforeremove")
+                || n.contains("afterremove")
+                || n.contains("addliquidity")
+                || n.contains("removeliquidity")
+                || n.contains("callback")
+                || n.contains("receive")
+                || n.contains("virtual_price")
+                || n.contains("virtualprice")
+                || n.contains("swap")
+                || n.contains("deposit")
+                || n.contains("withdraw")
+        });
+        if !contract_has_hook_fn {
+            return Ok(findings);
+        }
 
-        let is_after_hook = lower.contains("afterswap")
-            || lower.contains("afteraddliquidity")
-            || lower.contains("afterremoveliquidity");
+        // Check for Uniswap V4 hook functions with external calls
+        // Require "function" prefix to avoid matching comments/events/variables
+        let is_before_hook = lower.contains("function beforeswap")
+            || lower.contains("function beforeaddliquidity")
+            || lower.contains("function beforeremoveliquidity");
+
+        let is_after_hook = lower.contains("function afterswap")
+            || lower.contains("function afteraddliquidity")
+            || lower.contains("function afterremoveliquidity");
 
         if is_before_hook || is_after_hook {
-            // Check for external calls in hooks
+            // Check for external calls in hooks — only flag actual low-level calls
             let has_external_call = lower.contains(".call{")
-                || lower.contains(".transfer(")
+                || (lower.contains(".transfer(") && !lower.contains("safetransfer"))
                 || lower.contains(".send(")
-                || lower.contains("delegatecall");
+                || lower.contains("delegatecall(");
 
             if has_external_call {
                 // Check for reentrancy guards
@@ -119,23 +149,35 @@ impl Detector for HookReentrancyEnhancedDetector {
         }
 
         // Check for callback functions that can be re-entered
-        let is_callback = lower.contains("callback")
-            || lower.contains("onswap")
-            || lower.contains("onerc")
-            || lower.contains("tokensreceived");
+        // FP Reduction: Only match hook-specific callbacks, not generic ERC receiver functions
+        // Skip ERC-3156 flash loan providers and ERC-777 token receivers
+        let is_hook_callback = lower.contains("onswap")
+            || (lower.contains("tokensreceived")
+                && !lower.contains("erc777")
+                && !lower.contains("erc-777"))
+            || (lower.contains("callback")
+                && (lower.contains("pool") || lower.contains("hook"))
+                && !lower.contains("erc3156")
+                && !lower.contains("flashlender"));
 
-        if is_callback {
+        if is_hook_callback {
+            // FP Reduction: Require actual low-level calls, not safe transfers
             let has_external_call = lower.contains(".call{")
-                || lower.contains("external")
-                || lower.contains("this.")
-                || lower.contains("address(");
+                || lower.contains(".call(")
+                || (lower.contains(".transfer(") && !lower.contains("safetransfer"))
+                || lower.contains(".send(")
+                || lower.contains("delegatecall(");
 
             if has_external_call {
-                // Check for callback validation
+                // Check for callback validation — expanded patterns
                 let has_callback_validation = lower.contains("require(msg.sender")
                     || lower.contains("onlypool")
                     || lower.contains("onlyhook")
-                    || lower.contains("authorized");
+                    || lower.contains("onlylender")
+                    || lower.contains("authorized")
+                    || lower.contains("msg.sender ==")
+                    || lower.contains("msg.sender!=")
+                    || (lower.contains("msg.sender") && lower.contains("revert"));
 
                 if !has_callback_validation {
                     let finding = self.base.create_finding(

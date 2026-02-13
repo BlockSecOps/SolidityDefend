@@ -62,19 +62,50 @@ impl ClassicReentrancyDetector {
         false
     }
 
+    /// Known external call method names that can transfer control flow
+    const EXTERNAL_CALL_METHODS: &'static [&'static str] = &[
+        "call",
+        "delegatecall",
+        "staticcall",
+        "transfer",
+        "send",
+        "safeTransfer",
+        "safeTransferFrom",
+        "safeMint",
+        "onFlashLoan",
+        "onERC721Received",
+        "onERC1155Received",
+    ];
+
+    fn is_known_call_method(member_name: &str) -> bool {
+        Self::EXTERNAL_CALL_METHODS
+            .iter()
+            .any(|&m| member_name == m)
+    }
+
+    /// Check if the expression is `this.something()` — any call via `this.` is external
+    fn is_this_call(expression: &ast::Expression<'_>) -> bool {
+        matches!(expression, ast::Expression::Identifier(id) if id.name == "this")
+    }
+
     fn is_external_call(&self, expr: &ast::Expression<'_>) -> bool {
         match expr {
             ast::Expression::FunctionCall { function, .. } => {
                 match function {
                     // Direct member access pattern: obj.method()
-                    ast::Expression::MemberAccess { .. } => true,
+                    // FP Reduction: Only flag known external call methods, not any member access
+                    // Exception: this.method() is always an external call
+                    ast::Expression::MemberAccess {
+                        member, expression, ..
+                    } => Self::is_known_call_method(&member.name) || Self::is_this_call(expression),
                     // Nested function call pattern: obj.method{options}()
                     ast::Expression::FunctionCall {
                         function: inner_function,
                         ..
                     } => {
-                        // Check if the inner function is a MemberAccess (e.g., msg.sender.call)
-                        matches!(inner_function, ast::Expression::MemberAccess { .. })
+                        // Check if the inner function is a MemberAccess with a known call method
+                        matches!(inner_function, ast::Expression::MemberAccess { member, .. }
+                            if Self::is_known_call_method(&member.name))
                     }
                     _ => false,
                 }
@@ -1024,7 +1055,7 @@ impl Detector for ReadOnlyReentrancyDetector {
 
         // Phase 15 FP Reduction: Skip contracts with reentrancy protection
         // If contract has ReentrancyGuard, readonly reentrancy is mitigated
-        let source_lower = ctx.source_code.to_lowercase();
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
         if source_lower.contains("reentrancyguard")
             || source_lower.contains("nonreentrant")
             || source_lower.contains("modifier lock")

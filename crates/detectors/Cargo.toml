@@ -22,3 +22,6 @@ thiserror = "1.0"
 regex.workspace = true
 log = "0.4"
 bumpalo = "3.16"
+
+[dev-dependencies]
+parser = { path = "../parser" }

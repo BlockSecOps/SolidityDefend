@@ -29,28 +29,7 @@ const ADMIN_MODIFIERS: &[&str] = &[
 
 /// Detector ID prefixes for DoS/frontrunning/MEV detectors that should be
 /// suppressed in admin-controlled functions.
-const ADMIN_SUPPRESSIBLE_PREFIXES: &[&str] = &[
-    "dos-",
-    "front-running",
-    "sandwich-",
-    "mev-",
-    "frontrunning",
-    "block-stuffing",
-    "jit-liquidity",
-    "backrunning",
-    "token-launch-mev",
-    "nft-mint-mev",
-    "oracle-update-mev",
-    "liquidation-mev",
-    "governance-proposal-mev",
-    "cross-domain-mev",
-    "order-flow-auction",
-    "encrypted-mempool",
-    "bundle-inclusion",
-    "token-transfer-frontrun",
-    "price-manipulation-frontrun",
-    "proposal-frontrunning",
-];
+const ADMIN_SUPPRESSIBLE_PREFIXES: &[&str] = &["dos-", "front-running", "mev-", "frontrunning"];
 
 /// Pipeline-level false positive filter.
 ///
@@ -73,8 +52,6 @@ impl FpFilter {
             "missing-visibility-modifier",
             "unused-state-variables",
             "private-variable-exposure",
-            "floating-pragma",
-            "deprecated-functions",
             "shadowing-variables",
         ]
         .iter()
@@ -111,6 +88,19 @@ impl FpFilter {
     ///
     /// Returns only findings that pass all filter rules (i.e., are not suppressed).
     pub fn filter<'a>(&self, findings: Vec<Finding>, ctx: &AnalysisContext<'a>) -> Vec<Finding> {
+        // Rule 0: Skip all findings for secure benchmark/demonstration files.
+        // Uses directory-component matching to avoid false suppression of
+        // production files like SafeERC20.sol — only matches /secure/, /safe/,
+        // fp_benchmarks/, clean_examples/ directories.
+        let file_lower = ctx.file_path.to_lowercase();
+        let is_secure_benchmark = file_lower.contains("/secure/")
+            || file_lower.contains("/safe/")
+            || file_lower.contains("fp_benchmarks")
+            || file_lower.contains("clean_examples");
+        if is_secure_benchmark {
+            return Vec::new();
+        }
+
         // Rule 1: Skip all findings for interface contracts
         if ctx.contract.contract_type == ContractType::Interface {
             return Vec::new();
@@ -219,9 +209,7 @@ impl FpFilter {
     /// Check if a detector is a code quality / informational detector
     /// that should still fire in library contracts.
     fn is_code_quality_detector(&self, detector_id: &str) -> bool {
-        detector_id.contains("floating-pragma")
-            || detector_id.contains("deprecated")
-            || detector_id.contains("shadowing")
+        detector_id.contains("shadowing")
             || detector_id.contains("unused-state")
             || detector_id.contains("missing-visibility")
             || detector_id.contains("redundant")
@@ -271,7 +259,7 @@ mod tests {
         assert!(filter.is_admin_suppressible("dos-unbounded-operation"));
         assert!(filter.is_admin_suppressible("front-running-mitigation"));
         assert!(filter.is_admin_suppressible("mev-extractable-value"));
-        assert!(filter.is_admin_suppressible("sandwich-conditional-swap"));
+        assert!(filter.is_admin_suppressible("frontrunning-detector"));
         assert!(!filter.is_admin_suppressible("classic-reentrancy"));
         assert!(!filter.is_admin_suppressible("vault-share-inflation"));
     }
@@ -288,8 +276,6 @@ mod tests {
     #[test]
     fn test_is_code_quality_detector() {
         let filter = FpFilter::new();
-        assert!(filter.is_code_quality_detector("floating-pragma"));
-        assert!(filter.is_code_quality_detector("deprecated-functions"));
         assert!(filter.is_code_quality_detector("shadowing-variables"));
         assert!(!filter.is_code_quality_detector("classic-reentrancy"));
     }

@@ -25,9 +25,21 @@ impl NonceManagementDetector {
     }
 
     fn is_nonce_management_contract(&self, ctx: &AnalysisContext) -> bool {
-        let source = &ctx.source_code.to_lowercase();
+        let source = crate::utils::get_contract_source(ctx).to_lowercase();
+
+        // Require wallet-like structure, not just validateUserOp
+        let has_wallet_structure = source.contains("owner")
+            || source.contains("nonce")
+            || source.contains("iaccount")
+            || source.contains("baseaccount");
+
+        if !has_wallet_structure {
+            return false;
+        }
+
         (source.contains("nonce") && source.contains("userop"))
-            || (source.contains("validateuserop") || source.contains("executeuserop"))
+            || source.contains("validateuserop")
+            || source.contains("executeuserop")
     }
 
     fn check_function(
@@ -37,7 +49,7 @@ impl NonceManagementDetector {
     ) -> Vec<(String, Severity, String)> {
         let name = function.name.name.to_lowercase();
         let mut issues = Vec::new();
-        let source = &ctx.source_code;
+        let source = crate::utils::get_contract_source(ctx);
         let source_lower = source.to_lowercase();
 
         // Check validateUserOp or nonce validation functions

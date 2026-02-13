@@ -67,6 +67,28 @@ impl Detector for SelfdestructAbuseDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Only analyze contracts with selfdestruct-related functions
+        if !ctx.contract.functions.is_empty() {
+            let contract_func_names: Vec<String> = ctx
+                .contract
+                .functions
+                .iter()
+                .map(|f| f.name.name.to_lowercase())
+                .collect();
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            let contract_has_relevant_fn = contract_func_names.iter().any(|n| {
+                n.contains("selfdestruct")
+                    || n.contains("destroy")
+                    || n.contains("kill")
+                    || n.contains("suicide")
+            }) || contract_name_lower.contains("destroy")
+                || contract_name_lower.contains("selfdestruct")
+                || contract_name_lower.contains("kill");
+            if !contract_has_relevant_fn {
+                return Ok(findings);
+            }
+        }
+
         for function in ctx.get_functions() {
             if let Some(selfdestruct_issue) = self.has_selfdestruct_abuse(function, ctx) {
                 let message = format!(
