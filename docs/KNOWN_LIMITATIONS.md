@@ -1,6 +1,6 @@
 # Known Limitations
 
-**Version:** v1.10.23
+**Version:** v1.10.24
 **Last Updated:** 2026-02-13
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
@@ -9,7 +9,7 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.10.23 has **67 precision-tuned security detectors**, all enabled by default. 178 low-precision detectors were removed across v13-v15 (post-EVM-change dead code, compiler-superseded checks, keyword-matching-only MEV, redundant proxy/upgrade, zero-TP detectors). The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **77 expected true positives** across 26 vulnerability categories. Current precision is **18.4%** (competitive with Slither/Aderyn) with **100% recall**.
+SolidityDefend v1.10.24 has **67 precision-tuned security detectors**, all enabled by default. 178 low-precision detectors were removed across v13-v15 (post-EVM-change dead code, compiler-superseded checks, keyword-matching-only MEV, redundant proxy/upgrade, zero-TP detectors). The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **77 expected true positives** across 26 vulnerability categories. Current precision is **18.4%** (competitive with Slither/Aderyn) with **100% recall**.
 
 **v1.10.21 Improvements:** Precision audit, FP reduction, and detector cleanup (Feb 12, 2026):
 - **90 obsolete detectors removed** — high false positive rate with zero validated true positives, including post-EVM-change dead detectors, compiler-superseded checks, and keyword-matching-only MEV detectors
