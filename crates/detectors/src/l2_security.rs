@@ -205,7 +205,7 @@ impl Detector for L2MsgValueInLoopDetector {
                          require(remaining >= amount, \"Insufficient\");\n\
                          remaining -= amount;\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -478,7 +478,8 @@ impl L2GasPriceDependencyDetector {
             }
 
             let has_gasprice = trimmed.contains("tx.gasprice") || trimmed.contains("tx.gasPrice");
-            let has_basefee = trimmed.contains("block.basefee") || trimmed.contains("block.baseFee");
+            let has_basefee =
+                trimmed.contains("block.basefee") || trimmed.contains("block.baseFee");
 
             if !has_gasprice && !has_basefee {
                 continue;
@@ -730,7 +731,9 @@ impl L2Push0CrossDeployDetector {
         let rest = &s[2..];
 
         // Parse major (single or multi digit)
-        let major_end = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+        let major_end = rest
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(rest.len());
         if major_end == 0 {
             return None;
         }
@@ -1019,10 +1022,7 @@ contract MainnetGovernance {
 }
 "#;
         let findings = detector.find_block_number_timing(source);
-        assert!(
-            findings.is_empty(),
-            "L1-only contracts should be skipped"
-        );
+        assert!(findings.is_empty(), "L1-only contracts should be skipped");
     }
 
     #[test]
@@ -1063,17 +1063,39 @@ contract FeeCalculator {
     #[test]
     fn test_push0_pragma_detected() {
         let detector = L2Push0CrossDeployDetector::new();
-        assert!(detector.has_push0_pragma("pragma solidity ^0.8.20;").is_some());
-        assert!(detector.has_push0_pragma("pragma solidity >=0.8.24;").is_some());
-        assert!(detector.has_push0_pragma("pragma solidity 0.8.25;").is_some());
-        assert!(detector.has_push0_pragma("pragma solidity ^0.8.19;").is_none());
-        assert!(detector.has_push0_pragma("pragma solidity >=0.8.0 <0.8.20;").is_none());
+        assert!(
+            detector
+                .has_push0_pragma("pragma solidity ^0.8.20;")
+                .is_some()
+        );
+        assert!(
+            detector
+                .has_push0_pragma("pragma solidity >=0.8.24;")
+                .is_some()
+        );
+        assert!(
+            detector
+                .has_push0_pragma("pragma solidity 0.8.25;")
+                .is_some()
+        );
+        assert!(
+            detector
+                .has_push0_pragma("pragma solidity ^0.8.19;")
+                .is_none()
+        );
+        assert!(
+            detector
+                .has_push0_pragma("pragma solidity >=0.8.0 <0.8.20;")
+                .is_none()
+        );
     }
 
     #[test]
     fn test_cross_chain_keywords_detected() {
         let detector = L2Push0CrossDeployDetector::new();
-        assert!(detector.has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum"));
+        assert!(
+            detector.has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum")
+        );
         assert!(detector.has_cross_chain_keywords("/// @notice Cross-chain bridge"));
         assert!(!detector.has_cross_chain_keywords("// Simple ERC20 token"));
     }

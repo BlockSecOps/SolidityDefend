@@ -1152,9 +1152,7 @@ impl CliApp {
                 .iter()
                 .filter_map(|fp| {
                     let file_str = fp.to_string_lossy().to_string();
-                    std::fs::read_to_string(fp)
-                        .ok()
-                        .map(|src| (file_str, src))
+                    std::fs::read_to_string(fp).ok().map(|src| (file_str, src))
                 })
                 .collect();
 
@@ -1761,11 +1759,8 @@ impl CliApp {
             // Collect function analyses for this contract from the engine result
             let function_analyses = match &engine_result {
                 Ok(result) => {
-                    let contract_fn_names: Vec<&str> = contract
-                        .functions
-                        .iter()
-                        .map(|f| f.name.name)
-                        .collect();
+                    let contract_fn_names: Vec<&str> =
+                        contract.functions.iter().map(|f| f.name.name).collect();
                     result
                         .function_analyses
                         .iter()

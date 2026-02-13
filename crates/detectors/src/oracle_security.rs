@@ -382,9 +382,7 @@ impl OracleSingleSourceDetector {
             "consultoracle",
         ];
 
-        let has_oracle_call = oracle_patterns
-            .iter()
-            .any(|pat| lower_source.contains(pat));
+        let has_oracle_call = oracle_patterns.iter().any(|pat| lower_source.contains(pat));
 
         if !has_oracle_call {
             return Vec::new();
@@ -504,7 +502,7 @@ impl Detector for OracleSingleSourceDetector {
                          // Fallback to secondary oracle\n\
                          return secondaryOracle.getPrice();\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -600,9 +598,7 @@ impl TwapManipulationWindowDetector {
             let lower_line = trimmed.to_lowercase();
 
             // Check if this line defines a TWAP-related variable/constant
-            let is_twap_definition = twap_var_patterns
-                .iter()
-                .any(|pat| lower_line.contains(pat));
+            let is_twap_definition = twap_var_patterns.iter().any(|pat| lower_line.contains(pat));
 
             if !is_twap_definition {
                 continue;
@@ -774,8 +770,8 @@ impl OracleDecimalMismatchDetector {
         let lower_source = source.to_lowercase();
 
         // Must use some Chainlink price feed call
-        let has_price_feed = lower_source.contains("latestrounddata")
-            || lower_source.contains("latestanswer");
+        let has_price_feed =
+            lower_source.contains("latestrounddata") || lower_source.contains("latestanswer");
 
         if !has_price_feed {
             return Vec::new();
@@ -913,7 +909,7 @@ impl Detector for OracleDecimalMismatchDetector {
                      } else if (feedDecimals > 18) {\n\
                          price = price / 10 ** (feedDecimals - 18);\n\
                      }"
-                        .to_string(),
+                    .to_string(),
                 );
 
             findings.push(finding);
@@ -960,7 +956,10 @@ contract PriceConsumer {
 }
 "#;
         let issues = detector.find_stale_price_issues(source);
-        assert!(!issues.is_empty(), "Should flag latestRoundData without staleness check");
+        assert!(
+            !issues.is_empty(),
+            "Should flag latestRoundData without staleness check"
+        );
     }
 
     #[test]
@@ -977,7 +976,10 @@ contract SafePriceConsumer {
 }
 "#;
         let issues = detector.find_stale_price_issues(source);
-        assert!(issues.is_empty(), "Should not flag when staleness check is present");
+        assert!(
+            issues.is_empty(),
+            "Should not flag when staleness check is present"
+        );
     }
 
     // -- ChainlinkSequencerCheckDetector --
@@ -1006,7 +1008,10 @@ contract ArbitrumPriceConsumer {
 }
 "#;
         let issues = detector.find_missing_sequencer_checks(source);
-        assert!(!issues.is_empty(), "Should flag L2 usage without sequencer check");
+        assert!(
+            !issues.is_empty(),
+            "Should flag L2 usage without sequencer check"
+        );
     }
 
     #[test]
@@ -1026,7 +1031,10 @@ contract SafeArbitrumConsumer {
 }
 "#;
         let issues = detector.find_missing_sequencer_checks(source);
-        assert!(issues.is_empty(), "Should not flag when sequencer check is present");
+        assert!(
+            issues.is_empty(),
+            "Should not flag when sequencer check is present"
+        );
     }
 
     // -- OracleSingleSourceDetector --
@@ -1053,7 +1061,10 @@ contract Vault {
 }
 "#;
         let issues = detector.find_single_source_issues(source);
-        assert!(!issues.is_empty(), "Should flag single oracle without fallback");
+        assert!(
+            !issues.is_empty(),
+            "Should flag single oracle without fallback"
+        );
     }
 
     #[test]
@@ -1071,7 +1082,10 @@ contract RobustVault {
 }
 "#;
         let issues = detector.find_single_source_issues(source);
-        assert!(issues.is_empty(), "Should not flag when fallback logic is present");
+        assert!(
+            issues.is_empty(),
+            "Should not flag when fallback logic is present"
+        );
     }
 
     // -- TwapManipulationWindowDetector --
@@ -1115,7 +1129,10 @@ contract SafeTwapOracle {
 }
 "#;
         let issues = detector.find_short_twap_windows(source);
-        assert!(issues.is_empty(), "Should not flag TWAP period of 3600 seconds");
+        assert!(
+            issues.is_empty(),
+            "Should not flag TWAP period of 3600 seconds"
+        );
     }
 
     #[test]
@@ -1160,7 +1177,10 @@ contract Vault {
 }
 "#;
         let issues = detector.find_decimal_mismatch_issues(source);
-        assert!(!issues.is_empty(), "Should flag price arithmetic without decimals()");
+        assert!(
+            !issues.is_empty(),
+            "Should flag price arithmetic without decimals()"
+        );
     }
 
     #[test]
@@ -1177,6 +1197,9 @@ contract SafeVault {
 }
 "#;
         let issues = detector.find_decimal_mismatch_issues(source);
-        assert!(issues.is_empty(), "Should not flag when .decimals() is used");
+        assert!(
+            issues.is_empty(),
+            "Should not flag when .decimals() is used"
+        );
     }
 }
