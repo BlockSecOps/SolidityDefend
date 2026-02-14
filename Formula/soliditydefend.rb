@@ -8,22 +8,22 @@ class Soliditydefend < Formula
   on_macos do
     on_arm do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v2.0.1/soliditydefend-v2.0.1-macos-aarch64.tar.gz"
-      sha256 "9c71c38a37ec856194af498519122a1a9d5e0dadfea7e5488857573202597fbb"
+      sha256 "55f85ee2294a485eb7d0bb48d9ab505d702a5055a2e4268c330e5cb435758714"
     end
     on_intel do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v2.0.1/soliditydefend-v2.0.1-macos-x86_64.tar.gz"
-      sha256 "fa187b7d2f39392847343265c7aa850aefe0fc1d6b9143af21234adf8d7d2eed"
+      sha256 "320f4fd56f36e1d76bb2e32c18bb2cd1d63a9c12b81147e092425d486fda76a1"
     end
   end
 
   on_linux do
     on_intel do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v2.0.1/soliditydefend-v2.0.1-linux-x86_64.tar.gz"
-      sha256 "13b980eecfe4369b0a154609092347bda5b700b9c535b4b92fb4c86830090df8"
+      sha256 "d36ad8c83e9508a5050d6a755dfddc1ffffb0beacf7a12a8208e93913610fd71"
     end
     on_arm do
       url "https://github.com/BlockSecOps/SolidityDefend/releases/download/v2.0.1/soliditydefend-v2.0.1-linux-aarch64.tar.gz"
-      sha256 "026175b6024cd381b6b55632daf9e6c32acb90db0419cbb640600fe612a76094"
+      sha256 "578cbb4d25dd61ad2abfed80d771e96aead09e3812243d33b497b6abb953bc47"
     end
   end
 
