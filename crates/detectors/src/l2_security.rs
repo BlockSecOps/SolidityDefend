@@ -303,9 +303,7 @@ impl L2BlockNumberAssumptionDetector {
             "cross-chain",
         ];
 
-        let has_l2_context = l2_indicators
-            .iter()
-            .any(|ind| clean_lower.contains(ind))
+        let has_l2_context = l2_indicators.iter().any(|ind| clean_lower.contains(ind))
             || (clean_lower.contains("block.chainid")
                 && [
                     "arbitrum", "optimism", "polygon", "zksync", "linea", "mantle", "scroll",
@@ -1356,8 +1354,7 @@ contract FeeCalculator {
         assert!(!detector.has_cross_chain_keywords("address crossChainBridge = 0x123;"));
         // Keywords only in comments should NOT match
         assert!(
-            !detector
-                .has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum")
+            !detector.has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum")
         );
         assert!(!detector.has_cross_chain_keywords("// Simple ERC20 token"));
     }

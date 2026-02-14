@@ -672,7 +672,6 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::lint::MagicNumberDetector::new()));
         self.register(Arc::new(crate::lint::FunctionTooLongDetector::new()));
         self.register(Arc::new(crate::lint::ExcessiveInheritanceDetector::new()));
-
     }
 }
 

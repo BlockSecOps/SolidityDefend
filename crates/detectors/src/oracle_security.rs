@@ -471,10 +471,7 @@ impl OracleSingleSourceDetector {
         // Find actual oracle call lines
         for (idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
-            if trimmed.starts_with("//")
-                || trimmed.starts_with("*")
-                || trimmed.starts_with("/*")
-            {
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
                 continue;
             }
 
@@ -518,8 +515,10 @@ impl OracleSingleSourceDetector {
                 let end = (i + 5).min(lines.len()).min(line_num + 1);
                 for j in i..end {
                     let lower_line = lines[j].to_lowercase();
-                    if lower_line.contains(" view") || lower_line.contains(" pure")
-                        || lower_line.contains(")view") || lower_line.contains(")pure")
+                    if lower_line.contains(" view")
+                        || lower_line.contains(" pure")
+                        || lower_line.contains(")view")
+                        || lower_line.contains(")pure")
                     {
                         return true;
                     }
