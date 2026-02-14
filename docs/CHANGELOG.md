@@ -5,6 +5,25 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.1 (2026-02-13)
+
+### Fixed
+
+#### Re-enabled 3 Disabled Detectors (215 FPs → 0)
+
+Three detectors added in v2.0.0 were disabled by default due to excessive false positives. All three have been tightened and re-enabled with 0 FPs:
+
+- **`oracle-single-source`** (145 FPs → 0) — Added Chainlink-specific infrastructure gate (requires `AggregatorV3Interface`, `latestrounddata`, etc.), integrated Safe Patterns Library (`has_multi_oracle_validation`, `is_safe_oracle_consumer`, `has_twap_oracle`), added view/pure function filtering, expanded fallback indicator recognition
+- **`l2-block-number-assumption`** (30 FPs → 0) — Added L2 context gate (requires L2-specific interfaces like `IArbSys`/`L1Block` or `block.chainid` with L2 chain names), governance snapshot whitelist, simple `block.number` assignment skip, defensive zero-check skip, governance contract name exclusion
+- **`l2-push0-cross-deploy`** (40 FPs → 0) — Comment stripping via `clean_source_for_search()` before keyword matching, requires `block.chainid` evidence for all cross-chain signals, per-contract body extraction for multi-contract files, removed overly broad keywords (`blast`, `scroll`, `base chain`)
+
+**Validation Results:**
+- 77/77 TPs (100% recall) — unchanged
+- Precision: 18.4% — maintained
+- All 81 detectors now active (0 disabled)
+
+---
+
 ## v2.0.0 (2026-02-13)
 
 ### Added

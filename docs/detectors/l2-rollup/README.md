@@ -1,8 +1,8 @@
 # L2/Rollup & Cross-Chain Advanced Detectors
 
 **Category:** L2 Security, Cross-Chain Bridges, Data Availability
-**Detectors:** 10
-**Added:** v1.8.5 (Phase 48)
+**Detectors:** 14
+**Added:** v1.8.5 (Phase 48), expanded v2.0.0
 
 ---
 
@@ -33,11 +33,20 @@ These detectors identify vulnerabilities specific to Layer 2 solutions, rollups,
 | `cross-rollup-state-mismatch` | State inconsistency across rollups | CWE-662 |
 | `blob-data-manipulation` | EIP-4844 blob data tampering without KZG verification | CWE-20 |
 
-### Medium Severity (1)
+### Medium Severity (5)
 
 | Detector ID | Description | CWE |
 |-------------|-------------|-----|
 | `optimistic-inference-attack` | State inference from partial commits in optimistic rollups | CWE-200 |
+| `l2-block-number-assumption` | `block.number` used for timing assumptions unreliable on L2 rollups | — |
+| `l2-gas-price-dependency` | `tx.gasprice`/`block.basefee` in logic where L2 gas models differ | — |
+| `l2-push0-cross-deploy` | PUSH0 opcode targeting chains that may not support it | — |
+
+### High Severity — L2 Suite (1)
+
+| Detector ID | Description | CWE |
+|-------------|-------------|-----|
+| `l2-msg-value-in-loop` | `msg.value` inside loops on L2 (common Arbitrum issue) | — |
 
 ---
 
@@ -163,6 +172,82 @@ function processBlob(
     processData(hash);
 }
 ```
+
+---
+
+### l2-block-number-assumption
+
+**Severity:** Medium
+**Categories:** L2, Logic
+**Added:** v2.0.0, precision-tuned v2.0.1
+
+Detects `block.number` used for timing assumptions that are unreliable on L2 rollups. On L2s like Arbitrum and Optimism, `block.number` may represent L1 block numbers, have irregular intervals, or behave differently than on Ethereum mainnet.
+
+**Precision Gates:**
+- Requires L2 context (L2-specific interfaces like `IArbSys`, `L1Block`, or `block.chainid` with L2 chain names)
+- Whitelists governance snapshot patterns (`snapshot`, `proposal`, `vote`)
+- Skips simple assignments (`lastBlock = block.number`)
+- Skips defensive zero checks (`block.number == 0`)
+
+**Vulnerable Pattern:**
+```solidity
+// On L2, block.number may not increment every second
+function isExpired(uint256 deadline) external view returns (bool) {
+    return block.number > deadline + 100; // 100 blocks != consistent time on L2
+}
+```
+
+**Secure Pattern:**
+```solidity
+// Use block.timestamp for time-based logic on L2
+function isExpired(uint256 deadline) external view returns (bool) {
+    return block.timestamp > deadline + 1 hours;
+}
+```
+
+**Source:** `crates/detectors/src/l2_security.rs`
+
+---
+
+### l2-push0-cross-deploy
+
+**Severity:** Medium
+**Categories:** L2, Deployment
+**Added:** v2.0.0, precision-tuned v2.0.1
+
+Detects contracts compiled with Solidity >= 0.8.20 (which uses the PUSH0 opcode by default) that target chains which may not support PUSH0. Deploying PUSH0-compiled bytecode on chains without EIP-3855 support causes deployment failures.
+
+**Precision Gates:**
+- Comment stripping before keyword matching (prevents FPs from documentation references)
+- Requires `block.chainid` evidence of cross-chain deployment intent
+- Per-contract body extraction for multi-contract files
+- EVM version override check (`evm_version = "paris"`)
+
+**Vulnerable Pattern:**
+```solidity
+// pragma solidity ^0.8.20; implies PUSH0 opcode
+// Deploying to Arbitrum/zkSync without evm_version override will fail
+pragma solidity ^0.8.20;
+
+contract CrossChainToken {
+    function deploy(uint256 chainId) external {
+        if (block.chainid == 42161) { // Arbitrum
+            // This contract's bytecode contains PUSH0 — may not deploy
+        }
+    }
+}
+```
+
+**Secure Pattern:**
+```solidity
+// Option 1: Set EVM version to paris in foundry.toml
+// evm_version = "paris"
+
+// Option 2: Use Solidity < 0.8.20
+pragma solidity ^0.8.19;
+```
+
+**Source:** `crates/detectors/src/l2_security.rs`
 
 ---
 

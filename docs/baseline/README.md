@@ -121,7 +121,8 @@ done
 ## Baselines
 
 See individual baseline files:
-- [v1.10.23-v15-baseline.md](v1.10.23-v15-baseline.md) — **Current baseline** (v15, 67 detectors, 18.4% precision)
+- [v2.0.1-v16-baseline.md](v2.0.1-v16-baseline.md) — **Current baseline** (v16, 81 detectors all active, 18.4% precision, 0 disabled)
+- [v1.10.23-v15-baseline.md](v1.10.23-v15-baseline.md) — v15 baseline (67 detectors, 18.4% precision)
 - [v1.10.22-v14-baseline.md](v1.10.22-v14-baseline.md) — Phase 1 baseline (v14, 174 zero-TP detectors removed)
 - [v1.10.21-v13-baseline.md](v1.10.21-v13-baseline.md) — v13 baseline (90 obsolete detectors removed)
 - [v1.10.20-v12-baseline.md](v1.10.20-v12-baseline.md) — v12 baseline (after precision audit)
@@ -147,3 +148,4 @@ See individual baseline files:
 | v1.10.21 | v13 | 90 removed | 649 | 440 | 0 | 77/77 |
 | v1.10.22 | v14 | 174 removed | 1,568 | 1,142 | 0 | 77/77 |
 | v1.10.23 | v15 | 20+ tightened | 724 | 418 | 0 | 77/77 |
+| v2.0.1 | v16 | 3 re-enabled | 215 | 418 | 0 | 77/77 |
