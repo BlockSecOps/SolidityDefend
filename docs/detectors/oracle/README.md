@@ -239,20 +239,72 @@ Detects missing staleness checks on oracle price feeds that could lead to using 
 
 ---
 
-## Single Oracle Source
+## Oracle Single Source Reliance
 
-**ID:** `single-oracle-source`  
-**Severity:** High  
-**Categories:** Oracle  
-**CWE:** CWE-693  
+**ID:** `oracle-single-source`
+**Severity:** Medium
+**Categories:** Oracle, DeFi
 
 ### Description
 
-Contract relies on a single oracle source for critical price data
+Detects contracts that rely on a single oracle source for critical price data without a fallback mechanism. A single oracle dependency creates a single point of failure — if the oracle goes down, returns stale data, or is manipulated, the entire protocol is affected.
+
+### Safe Pattern Detection
+
+This detector integrates with the Safe Patterns Library to reduce false positives:
+
+| Pattern | Effect |
+|---------|--------|
+| `has_multi_oracle_validation()` | Skips contracts with fallback oracles |
+| `is_safe_oracle_consumer()` | Skips contracts with try/catch + zero check + staleness |
+| `has_twap_oracle()` | Skips contracts using TWAP (inherently manipulation-resistant) |
+| Chainlink + staleness check | Recognized as adequately protected |
+| Deviation bounds check | Recognized as adequately protected |
+| Configurable oracle address | Recognized as allowing fallback configuration |
+| View/pure functions only | Skipped (no exploit path in read-only context) |
+
+### Vulnerable Pattern
+
+```solidity
+contract VulnerableOracle {
+    AggregatorV3Interface public priceFeed;
+
+    function getPrice() public returns (uint256) {
+        (, int256 answer,,,) = priceFeed.latestRoundData();
+        // No fallback, no staleness check, no deviation bounds
+        return uint256(answer);
+    }
+}
+```
+
+### Secure Pattern
+
+```solidity
+contract SecureOracle {
+    AggregatorV3Interface public primaryFeed;
+    AggregatorV3Interface public secondaryFeed;
+    uint256 public constant MAX_STALENESS = 3600;
+    uint256 public constant MAX_DEVIATION = 500; // 5%
+
+    function getPrice() public view returns (uint256) {
+        try primaryFeed.latestRoundData() returns (
+            uint80, int256 answer, uint256, uint256 updatedAt, uint80
+        ) {
+            require(block.timestamp - updatedAt <= MAX_STALENESS, "Stale");
+            require(answer > 0, "Invalid");
+            return uint256(answer);
+        } catch {
+            // Fallback to secondary oracle
+            (, int256 answer,,,) = secondaryFeed.latestRoundData();
+            return uint256(answer);
+        }
+    }
+}
+```
 
 ### Source
 
-`src/oracle.rs`
+`crates/detectors/src/oracle_security.rs`
 
 ---
 

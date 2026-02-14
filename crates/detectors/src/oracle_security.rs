@@ -2,6 +2,7 @@ use anyhow::Result;
 use std::any::Any;
 
 use crate::detector::{BaseDetector, Detector, DetectorCategory};
+use crate::safe_patterns::oracle_patterns;
 use crate::types::{AnalysisContext, Confidence, DetectorId, Finding, Severity};
 use crate::utils;
 
@@ -373,7 +374,7 @@ impl OracleSingleSourceDetector {
         let lower_source = source.to_lowercase();
 
         // Must use some kind of price oracle call
-        let oracle_patterns = [
+        let oracle_call_patterns = [
             "getprice",
             "latestanswer",
             "latestrounddata",
@@ -382,13 +383,35 @@ impl OracleSingleSourceDetector {
             "consultoracle",
         ];
 
-        let has_oracle_call = oracle_patterns.iter().any(|pat| lower_source.contains(pat));
+        let has_oracle_call = oracle_call_patterns
+            .iter()
+            .any(|pat| lower_source.contains(pat));
 
         if !has_oracle_call {
             return Vec::new();
         }
 
-        // Check whether the contract has fallback / redundancy patterns
+        // Gate 1: Require actual oracle infrastructure — plain getPrice() function
+        // names alone are not enough evidence of oracle dependency. Require
+        // well-known oracle interfaces or Chainlink-specific call patterns.
+        let oracle_infra = [
+            "aggregatorv3interface",
+            "aggregatorinterface",
+            "ipricefeed",
+            "ioracle",
+            "ichainlinkoracle",
+            "chainlinkfeed",
+            "priceconsumer",
+            "latestrounddata",
+            "latestanswer",
+        ];
+
+        let has_infra = oracle_infra.iter().any(|pat| lower_source.contains(pat));
+        if !has_infra {
+            return Vec::new();
+        }
+
+        // Gate 3: Check whether the contract has fallback / redundancy patterns (expanded)
         let fallback_indicators = [
             "fallback",
             "fallbackoracle",
@@ -407,6 +430,15 @@ impl OracleSingleSourceDetector {
             "primary_oracle",
             "oraclefallback",
             "oracle_fallback",
+            // Configurable oracle patterns (can add fallback later)
+            "oracleaddress",
+            "priceoracle",
+            "setoracle",
+            "updateoracle",
+            "setoraclesource",
+            // Array-based multi-source patterns
+            "pricefeeds[",
+            "oracles[",
         ];
 
         let has_fallback = fallback_indicators
@@ -417,19 +449,51 @@ impl OracleSingleSourceDetector {
             return Vec::new();
         }
 
+        // Chainlink + staleness validation is safe enough
+        if (lower_source.contains("chainlink") || lower_source.contains("aggregatorv3"))
+            && (lower_source.contains("staleness")
+                || lower_source.contains("heartbeat")
+                || lower_source.contains("updatedat")
+                || lower_source.contains("stale"))
+        {
+            return Vec::new();
+        }
+
+        // Deviation bounds near oracle/price = safety check
+        if lower_source.contains("deviation")
+            && (lower_source.contains("oracle") || lower_source.contains("price"))
+        {
+            return Vec::new();
+        }
+
         let mut findings = Vec::new();
 
         // Find actual oracle call lines
         for (idx, line) in lines.iter().enumerate() {
             let trimmed = line.trim();
-            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+            if trimmed.starts_with("//")
+                || trimmed.starts_with("*")
+                || trimmed.starts_with("/*")
+            {
                 continue;
             }
 
             let lower_line = trimmed.to_lowercase();
-            let has_call = oracle_patterns.iter().any(|pat| lower_line.contains(pat));
+            let has_call = oracle_call_patterns
+                .iter()
+                .any(|pat| lower_line.contains(pat));
 
             if has_call {
+                // Skip function declarations — we want actual call sites, not definitions
+                if lower_line.contains("function ") {
+                    continue;
+                }
+
+                // Gate 4: Skip oracle calls in view/pure functions (read-only = no exploit path)
+                if Self::is_in_view_or_pure_function(&lines, idx) {
+                    continue;
+                }
+
                 findings.push((
                     (idx + 1) as u32,
                     format!(
@@ -443,6 +507,38 @@ impl OracleSingleSourceDetector {
         }
 
         findings
+    }
+
+    /// Check if a given line is inside a view or pure function.
+    fn is_in_view_or_pure_function(lines: &[&str], line_num: usize) -> bool {
+        for i in (0..line_num).rev() {
+            let trimmed = lines[i].trim();
+            if trimmed.contains("function ") {
+                // Check the function signature lines for view/pure modifiers
+                let end = (i + 5).min(lines.len()).min(line_num + 1);
+                for j in i..end {
+                    let lower_line = lines[j].to_lowercase();
+                    if lower_line.contains(" view") || lower_line.contains(" pure")
+                        || lower_line.contains(")view") || lower_line.contains(")pure")
+                    {
+                        return true;
+                    }
+                    // Stop at function body start (but not on the same line as function keyword)
+                    if j > i && lines[j].contains('{') {
+                        break;
+                    }
+                }
+                return false;
+            }
+            // Stop at contract/interface boundary
+            if trimmed.starts_with("contract ")
+                || trimmed.starts_with("interface ")
+                || trimmed.starts_with("library ")
+            {
+                break;
+            }
+        }
+        false
     }
 }
 
@@ -478,6 +574,17 @@ impl Detector for OracleSingleSourceDetector {
             return Ok(findings);
         }
         if utils::is_test_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // Gate 2: Use safe_patterns library — skip if contract already has safe oracle patterns
+        if oracle_patterns::has_multi_oracle_validation(ctx) {
+            return Ok(findings);
+        }
+        if oracle_patterns::is_safe_oracle_consumer(ctx) {
+            return Ok(findings);
+        }
+        if oracle_patterns::has_twap_oracle(ctx) {
             return Ok(findings);
         }
 
@@ -1054,9 +1161,10 @@ contract SafeArbitrumConsumer {
         let detector = OracleSingleSourceDetector::new();
         let source = r#"
 contract Vault {
-    function getValue() public view returns (uint256) {
-        int256 price = oracle.getPrice(token);
-        return uint256(price) * amount / 1e18;
+    AggregatorV3Interface internal priceFeed;
+    function getValue(uint256 amount) public returns (uint256) {
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        return uint256(answer) * amount / 1e18;
     }
 }
 "#;
@@ -1064,6 +1172,62 @@ contract Vault {
         assert!(
             !issues.is_empty(),
             "Should flag single oracle without fallback"
+        );
+    }
+
+    #[test]
+    fn test_oracle_single_source_skips_view_only() {
+        let detector = OracleSingleSourceDetector::new();
+        let source = r#"
+contract Vault {
+    AggregatorV3Interface internal priceFeed;
+    function getPrice() public view returns (uint256) {
+        (, int256 answer, , , ) = priceFeed.latestRoundData();
+        return uint256(answer);
+    }
+}
+"#;
+        let issues = detector.find_single_source_issues(source);
+        assert!(
+            issues.is_empty(),
+            "Should not flag oracle calls in view-only functions"
+        );
+    }
+
+    #[test]
+    fn test_oracle_single_source_skips_no_infra() {
+        let detector = OracleSingleSourceDetector::new();
+        let source = r#"
+contract Token {
+    function getPrice() public returns (uint256) {
+        return _calculatePrice();
+    }
+}
+"#;
+        let issues = detector.find_single_source_issues(source);
+        assert!(
+            issues.is_empty(),
+            "Should not flag contracts without oracle infrastructure"
+        );
+    }
+
+    #[test]
+    fn test_oracle_single_source_skips_with_staleness() {
+        let detector = OracleSingleSourceDetector::new();
+        let source = r#"
+contract Vault {
+    AggregatorV3Interface internal priceFeed;
+    // Uses Chainlink with staleness check
+    function getValue(uint256 amount) public returns (uint256) {
+        (, int256 answer, , uint256 updatedAt, ) = priceFeed.latestRoundData();
+        return uint256(answer) * amount / 1e18;
+    }
+}
+"#;
+        let issues = detector.find_single_source_issues(source);
+        assert!(
+            issues.is_empty(),
+            "Should not flag Chainlink with staleness validation"
         );
     }
 

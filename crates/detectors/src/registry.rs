@@ -673,11 +673,6 @@ impl DetectorRegistry {
         self.register(Arc::new(crate::lint::FunctionTooLongDetector::new()));
         self.register(Arc::new(crate::lint::ExcessiveInheritanceDetector::new()));
 
-        // Disable high-FP detectors by default until validated against ground truth.
-        // These can be re-enabled via config: enabled_detectors: [oracle-single-source, ...]
-        self.disable_detector(&DetectorId("oracle-single-source".to_string()));
-        self.disable_detector(&DetectorId("l2-push0-cross-deploy".to_string()));
-        self.disable_detector(&DetectorId("l2-block-number-assumption".to_string()));
     }
 }
 

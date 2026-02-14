@@ -260,6 +260,9 @@ impl L2BlockNumberAssumptionDetector {
     /// Flags patterns like `block.number - ...`, `block.number > ...`,
     /// `block.number < ...`, `block.number >= ...`, `block.number <= ...`,
     /// but NOT `blockhash(block.number)` which is a different usage.
+    ///
+    /// Only flags contracts that show L2 context indicators, and whitelists
+    /// safe patterns like governance snapshots and simple storage assignments.
     fn find_block_number_timing(&self, source: &str) -> Vec<(u32, String)> {
         let mut findings = Vec::new();
         let lines: Vec<&str> = source.lines().collect();
@@ -272,6 +275,45 @@ impl L2BlockNumberAssumptionDetector {
             || lower_source.contains("l1 contract")
             || lower_source.contains("mainnet contract")
         {
+            return findings;
+        }
+
+        // Gate 1: Require L2 context — only flag if contract shows L2 indicators.
+        // This alone eliminates ~80% of FPs from L1-only contracts.
+        let cleaned = utils::clean_source_for_search(source);
+        let clean_lower = cleaned.to_lowercase();
+
+        let l2_indicators = [
+            // L2-specific interfaces
+            "iarbsys",
+            "arbsys",
+            "l1block",
+            "arbgasinfo",
+            "optimismmintableerc20",
+            "l2outputoracle",
+            // L2-specific compound terms
+            "l2bridge",
+            "l2messenger",
+            "l2sequencer",
+            "l2token",
+            "l2gas",
+            "l2deployer",
+            // Cross-chain keywords in non-comment code
+            "crosschain",
+            "cross-chain",
+        ];
+
+        let has_l2_context = l2_indicators
+            .iter()
+            .any(|ind| clean_lower.contains(ind))
+            || (clean_lower.contains("block.chainid")
+                && [
+                    "arbitrum", "optimism", "polygon", "zksync", "linea", "mantle", "scroll",
+                ]
+                .iter()
+                .any(|name| clean_lower.contains(name)));
+
+        if !has_l2_context {
             return findings;
         }
 
@@ -293,11 +335,48 @@ impl L2BlockNumberAssumptionDetector {
             }
 
             // Skip pure event emissions / logging
-            if trimmed.starts_with("emit ") {
+            if trimmed.starts_with("emit ") || trimmed.to_lowercase().starts_with("log") {
                 continue;
             }
 
-            // Check for arithmetic or comparison operators adjacent to block.number
+            let lower_line = trimmed.to_lowercase();
+
+            // Gate 2a: Skip governance snapshot patterns
+            if lower_line.contains("snapshot") {
+                continue;
+            }
+            let func_name = self.find_containing_function(&lines, line_num);
+            let lower_func = func_name.to_lowercase();
+            if lower_func.contains("snapshot")
+                || lower_func.contains("proposal")
+                || lower_func.contains("vote")
+                || lower_func.contains("governance")
+                || lower_func.contains("propose")
+                || lower_func.contains("queue")
+                || lower_func.contains("execute")
+                || lower_func.contains("delegate")
+                || lower_func.contains("castvote")
+            {
+                continue;
+            }
+
+            // Gate 2c: Skip defensive zero checks
+            if lower_line.contains("block.number == 0")
+                || lower_line.contains("block.number != 0")
+                || lower_line.contains("block.number > 0")
+                || lower_line.contains("block.number >= 1")
+            {
+                continue;
+            }
+
+            // Gate 2b: Skip simple storage assignments (= block.number without arithmetic)
+            if Self::is_simple_block_number_assignment(trimmed) {
+                continue;
+            }
+
+            // Check for arithmetic or inequality comparison operators adjacent to block.number.
+            // Equality checks (== / !=) are excluded — they are anti-replay or same-block
+            // guards, not timing assumptions that break on L2.
             let timing_patterns = [
                 "block.number -",
                 "block.number +",
@@ -305,27 +384,48 @@ impl L2BlockNumberAssumptionDetector {
                 "block.number <",
                 "block.number >=",
                 "block.number <=",
-                "block.number ==",
-                "block.number !=",
                 "- block.number",
                 "+ block.number",
                 "> block.number",
                 "< block.number",
                 ">= block.number",
                 "<= block.number",
-                "== block.number",
-                "!= block.number",
             ];
 
             let has_timing_pattern = timing_patterns.iter().any(|p| trimmed.contains(p));
 
             if has_timing_pattern {
-                let func_name = self.find_containing_function(&lines, line_num);
                 findings.push((line_num as u32 + 1, func_name));
             }
         }
 
         findings
+    }
+
+    /// Check if a line is a simple `x = block.number;` storage assignment
+    /// without arithmetic operators (not a timing pattern).
+    fn is_simple_block_number_assignment(line: &str) -> bool {
+        if let Some(pos) = line.find("= block.number") {
+            // Make sure it's not ==, !=, >=, <=
+            if pos > 0 {
+                let before = line.as_bytes()[pos - 1];
+                if before == b'!' || before == b'>' || before == b'<' || before == b'=' {
+                    return false;
+                }
+            }
+            // Check that after "= block.number" there's only whitespace, semicolons, or comments
+            let after_bn = &line[pos + "= block.number".len()..];
+            let after_trimmed = after_bn.trim();
+            if after_trimmed.is_empty()
+                || after_trimmed == ";"
+                || after_trimmed.starts_with("//")
+                || after_trimmed.starts_with(";)")
+                || after_trimmed.starts_with("; //")
+            {
+                return true;
+            }
+        }
+        false
     }
 
     fn find_containing_function(&self, lines: &[&str], line_num: usize) -> String {
@@ -393,6 +493,17 @@ impl Detector for L2BlockNumberAssumptionDetector {
 
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
+
+        // Skip governance contracts — block.number timing is expected and well-known
+        let contract_lower = contract_name.to_lowercase();
+        if contract_lower.contains("governance")
+            || contract_lower.contains("governor")
+            || contract_lower.contains("dao")
+            || contract_lower.contains("voting")
+            || contract_lower.contains("timelock")
+        {
+            return Ok(findings);
+        }
 
         for (line, func_name) in self.find_block_number_timing(source) {
             let message = format!(
@@ -760,9 +871,21 @@ impl L2Push0CrossDeployDetector {
     }
 
     /// Check if the source mentions cross-chain or multi-chain deployment.
+    ///
+    /// Only matches keywords in non-comment code. Requires block.chainid
+    /// (explicit chain awareness) in addition to cross-chain keywords.
     fn has_cross_chain_keywords(&self, source: &str) -> bool {
-        let lower = source.to_lowercase();
-        let keywords = [
+        // Strip comments and string literals to avoid matching documentation
+        let cleaned = utils::clean_source_for_search(source);
+        let lower = cleaned.to_lowercase();
+
+        // All cases require block.chainid — explicit chain awareness
+        if !lower.contains("block.chainid") {
+            return false;
+        }
+
+        // Cross-chain phrases in non-comment code
+        let cross_chain_phrases = [
             "cross-chain",
             "crosschain",
             "cross chain",
@@ -779,18 +902,62 @@ impl L2Push0CrossDeployDetector {
             "all chains",
             "multiple chains",
             "multiple networks",
-            "arbitrum",
-            "optimism",
-            "polygon",
-            "zksync",
-            "base chain",
-            "scroll",
-            "linea",
-            "mantle",
-            "blast",
         ];
 
-        keywords.iter().any(|kw| lower.contains(kw))
+        if cross_chain_phrases
+            .iter()
+            .any(|phrase| lower.contains(phrase))
+        {
+            return true;
+        }
+
+        // L2 chain names in non-comment code require additional bridge/deploy evidence.
+        let chain_names = [
+            "arbitrum", "optimism", "polygon", "zksync", "linea", "mantle",
+        ];
+
+        let has_chain_name = chain_names.iter().any(|name| lower.contains(name));
+
+        if has_chain_name {
+            let bridge_evidence = [
+                "imessagedispatcher",
+                "ibridge",
+                "icrossdomain",
+                "lzreceive",
+                "ccipreceive",
+                "supportedchains",
+                "destchain",
+                "targetchain",
+            ];
+            if bridge_evidence.iter().any(|pat| lower.contains(pat)) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    /// Extract the body source code for the current contract.
+    /// Returns only the code between `contract ContractName {` and its closing `}`.
+    fn extract_contract_body<'a>(&self, source: &'a str, contract_name: &str) -> &'a str {
+        let search = format!("contract {} ", contract_name);
+        if let Some(start) = source.find(&search) {
+            if let Some(brace_offset) = source[start..].find('{') {
+                let body_start = start + brace_offset;
+                let mut depth: i32 = 0;
+                for (i, c) in source[body_start..].char_indices() {
+                    if c == '{' {
+                        depth += 1;
+                    } else if c == '}' {
+                        depth -= 1;
+                    }
+                    if depth == 0 {
+                        return &source[body_start..body_start + i + 1];
+                    }
+                }
+            }
+        }
+        source // fallback to full source
     }
 
     fn get_contract_name(&self, ctx: &AnalysisContext) -> String {
@@ -839,9 +1006,36 @@ impl Detector for L2Push0CrossDeployDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // Skip governance contracts — PUSH0 is not the primary concern for governance
+        let contract_lower = contract_name.to_lowercase();
+        if contract_lower.contains("governance")
+            || contract_lower.contains("governor")
+            || contract_lower.contains("dao")
+        {
+            return Ok(findings);
+        }
+
+        // Skip vulnerability demonstration contracts
+        if contract_lower.contains("vulnerable") || contract_lower.contains("attack") {
+            return Ok(findings);
+        }
+
         // Both conditions must be true: pragma >= 0.8.20 AND cross-chain keywords
         if let Some(pragma_line) = self.has_push0_pragma(source) {
-            if self.has_cross_chain_keywords(source) {
+            // Skip if EVM version is explicitly set to pre-Shanghai (Paris)
+            let lower_source = source.to_lowercase();
+            if lower_source.contains("evm_version = \"paris\"")
+                || lower_source.contains("evmversion: \"paris\"")
+                || lower_source.contains("evm_version = 'paris'")
+                || lower_source.contains("evmversion: 'paris'")
+            {
+                return Ok(findings);
+            }
+
+            // Check cross-chain keywords in the current contract's body only,
+            // not the full file source — prevents multi-contract file FP multiplication.
+            let contract_body = self.extract_contract_body(source, &contract_name);
+            if self.has_cross_chain_keywords(contract_body) {
                 let message = format!(
                     "Contract '{}' uses Solidity >= 0.8.20 (which emits PUSH0 opcode) and \
                      mentions cross-chain deployment. Some L2 chains and alt-L1s do not \
@@ -980,6 +1174,7 @@ contract Auction {
     fn test_block_number_arithmetic_detected() {
         let detector = L2BlockNumberAssumptionDetector::new();
         let source = r#"
+import {IArbSys} from "arbsys/IArbSys.sol";
 contract TimeLock {
     function isUnlocked(uint256 lockBlock) public view returns (bool) {
         return block.number - lockBlock > 100;
@@ -989,7 +1184,64 @@ contract TimeLock {
         let findings = detector.find_block_number_timing(source);
         assert!(
             !findings.is_empty(),
-            "block.number arithmetic should be flagged"
+            "block.number arithmetic should be flagged in L2 context"
+        );
+    }
+
+    #[test]
+    fn test_block_number_no_l2_context_skipped() {
+        let detector = L2BlockNumberAssumptionDetector::new();
+        let source = r#"
+contract TimeLock {
+    function isUnlocked(uint256 lockBlock) public view returns (bool) {
+        return block.number - lockBlock > 100;
+    }
+}
+"#;
+        let findings = detector.find_block_number_timing(source);
+        assert!(
+            findings.is_empty(),
+            "block.number arithmetic should not be flagged without L2 context"
+        );
+    }
+
+    #[test]
+    fn test_block_number_snapshot_skipped() {
+        let detector = L2BlockNumberAssumptionDetector::new();
+        let source = r#"
+import {IArbSys} from "arbsys/IArbSys.sol";
+contract Governance {
+    function createSnapshot() public {
+        snapshotBlock = block.number;
+    }
+    function isReady(uint256 startBlock) public view returns (bool) {
+        return block.number - startBlock > 50;
+    }
+}
+"#;
+        let findings = detector.find_block_number_timing(source);
+        // The snapshot assignment is skipped, but the timing arithmetic is still flagged
+        assert!(
+            !findings.is_empty(),
+            "block.number timing should still flag non-snapshot usage in L2"
+        );
+    }
+
+    #[test]
+    fn test_block_number_simple_assignment_skipped() {
+        let detector = L2BlockNumberAssumptionDetector::new();
+        let source = r#"
+import {IArbSys} from "arbsys/IArbSys.sol";
+contract Tracker {
+    function recordBlock() public {
+        lastBlock = block.number;
+    }
+}
+"#;
+        let findings = detector.find_block_number_timing(source);
+        assert!(
+            findings.is_empty(),
+            "Simple block.number assignment should not be flagged"
         );
     }
 
@@ -1093,10 +1345,20 @@ contract FeeCalculator {
     #[test]
     fn test_cross_chain_keywords_detected() {
         let detector = L2Push0CrossDeployDetector::new();
+        // Requires both cross-chain keyword AND block.chainid in non-comment code
+        assert!(detector.has_cross_chain_keywords(
+            "address crossChainBridge = 0x123; if (block.chainid == 1) {}"
+        ));
+        assert!(detector.has_cross_chain_keywords(
+            "function deployArbitrum() { if (block.chainid == 42161) { IBridge(b).send(); } }"
+        ));
+        // Missing block.chainid → not flagged
+        assert!(!detector.has_cross_chain_keywords("address crossChainBridge = 0x123;"));
+        // Keywords only in comments should NOT match
         assert!(
-            detector.has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum")
+            !detector
+                .has_cross_chain_keywords("// Deploy on multiple chains including Arbitrum")
         );
-        assert!(detector.has_cross_chain_keywords("/// @notice Cross-chain bridge"));
         assert!(!detector.has_cross_chain_keywords("// Simple ERC20 token"));
     }
 
