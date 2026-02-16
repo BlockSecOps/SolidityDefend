@@ -3,7 +3,7 @@
 Complete reference for all security detectors in SolidityDefend v2.0.3.
 
 **Last Updated:** 2026-02-16
-**Version:** v2.0.5
+**Version:** v2.0.6
 **Total Detectors:** 81
 **Categories:** 30
 

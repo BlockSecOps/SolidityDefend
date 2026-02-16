@@ -5,6 +5,24 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.6 (2026-02-16)
+
+### Fixed
+
+#### FP Reduction Phase 6 — Additional Domain Filtering (3 FPs eliminated)
+
+Path-based domain filtering for 3 additional detectors with zero TPs in ground truth:
+
+- **`tx-origin-authentication`** (1 FP → 0) — Skip EIP-7702 delegation files (tx.origin semantics differ)
+- **`unprotected-initializer`** (1 FP → 0) — Skip delegatecall test files (covered by delegatecall detectors)
+- **`missing-zero-address-check`** (1 FP → 0) — Skip EIP-7702 delegation files
+
+**Validation Results:**
+- 103/103 TPs (100% recall) — unchanged
+- 50 FPs (was 53) — 3 eliminated, precision: 67.3%
+
+---
+
 ## v2.0.5 (2026-02-16)
 
 ### Fixed

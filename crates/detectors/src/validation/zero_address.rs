@@ -733,6 +733,11 @@ impl Detector for ZeroAddressDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip EIP-7702 delegation files (covered by dedicated detectors)
+        if file_path.contains("eip7702") {
+            return Ok(findings);
+        }
+
         // FP Reduction: Only flag missing zero-address checks in constructors,
         // initializers, and admin-setter functions. Other functions rarely have
         // critical zero-address vulnerabilities.
