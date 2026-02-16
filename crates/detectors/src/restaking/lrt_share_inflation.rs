@@ -468,17 +468,44 @@ impl Detector for LRTShareInflationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all checks into 1 finding per contract
+        let mut all_sub_findings: Vec<Finding> = Vec::new();
+
         // Check each deposit function for vulnerabilities (LRT-only contracts)
         for function in ctx.get_functions() {
-            findings.extend(self.check_initial_share_lock(function, ctx));
-            findings.extend(self.check_minimum_shares(function, ctx));
-            findings.extend(self.check_donation_detection(function, ctx));
+            all_sub_findings.extend(self.check_initial_share_lock(function, ctx));
+            all_sub_findings.extend(self.check_minimum_shares(function, ctx));
+            all_sub_findings.extend(self.check_donation_detection(function, ctx));
         }
 
         // Contract-level checks
-        findings.extend(self.check_total_assets_implementation(ctx));
-        findings.extend(self.check_tracked_assets_storage(ctx));
-        findings.extend(self.check_minimum_deposit(ctx));
+        all_sub_findings.extend(self.check_total_assets_implementation(ctx));
+        all_sub_findings.extend(self.check_tracked_assets_storage(ctx));
+        all_sub_findings.extend(self.check_minimum_deposit(ctx));
+
+        if !all_sub_findings.is_empty() {
+            let sub_messages: Vec<String> =
+                all_sub_findings.iter().map(|f| f.message.clone()).collect();
+            let first = all_sub_findings.into_iter().next().unwrap();
+            let consolidated_msg = format!(
+                "LRT contract '{}' has {} share inflation issues: {}",
+                ctx.contract.name.name,
+                sub_messages.len(),
+                sub_messages.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first.primary_location.line,
+                    0,
+                    20,
+                    first.severity,
+                )
+                .with_fix_suggestion(first.fix_suggestion.unwrap_or_default());
+            findings.push(finding);
+        }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)

@@ -39,10 +39,12 @@ When tightening detectors to reduce false positives, we need to verify:
 | Total contracts | 117 |
 | Clean/secure contracts | 43 |
 | Vulnerable contracts | 74 |
-| Expected true positives | 78 |
+| Expected true positives | 103 |
 | Parse error contracts | 0 |
 | Vulnerability categories | 26 |
-| Validated recall | 100% (78/78) |
+| Validated recall | 100% (103/103) |
+| False positives | 65 |
+| Precision | 61.3% |
 
 Contains labeled vulnerability data:
 - **Expected findings**: Known vulnerabilities that detectors should report (78 TPs, aligned to actual detector IDs)

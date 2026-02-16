@@ -320,25 +320,52 @@ impl Detector for SocialRecoveryDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut all_issues: Vec<(String, Severity, String)> = Vec::new();
+        let mut first_line: u32 = 1;
+
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        format!("{} in '{}'", message, function.name.name),
-                        function.name.location.start().line() as u32,
-                        0,
-                        20,
-                        severity,
-                    )
-                    .with_cwe(287) // CWE-287: Improper Authentication
-                    .with_cwe(285) // CWE-285: Improper Authorization
-                    .with_fix_suggestion(remediation);
-
-                findings.push(finding);
+                if first_line == 1 {
+                    first_line = function.name.location.start().line() as u32;
+                }
+                all_issues.push((
+                    format!("{} in '{}'", message, function.name.name),
+                    severity,
+                    remediation,
+                ));
             }
+        }
+
+        if !all_issues.is_empty() {
+            let max_severity = all_issues
+                .iter()
+                .map(|(_, s, _)| *s)
+                .max()
+                .unwrap_or(Severity::Medium);
+            let issue_titles: Vec<&str> = all_issues.iter().map(|(t, _, _)| t.as_str()).collect();
+            let consolidated_msg = format!(
+                "Social recovery contract '{}' has {} issues: {}",
+                ctx.contract.name.name,
+                all_issues.len(),
+                issue_titles.join("; ")
+            );
+            let remediations: Vec<&str> = all_issues.iter().map(|(_, _, r)| r.as_str()).collect();
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first_line,
+                    0,
+                    20,
+                    max_severity,
+                )
+                .with_cwe(287)
+                .with_cwe(285)
+                .with_fix_suggestion(remediations.join("\n\n"));
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

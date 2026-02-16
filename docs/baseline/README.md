@@ -9,9 +9,11 @@ This directory contains baseline measurements for the SolidityDefend false posit
 | Total contracts in ground truth | 117 |
 | Clean/secure contracts | 43 |
 | Vulnerable contracts | 74 |
-| Expected true positives | 77 |
+| Expected true positives | 103 |
 | Parse error contracts | 0 |
-| Validated recall | 100% (77/77) |
+| Validated recall | 100% (103/103) |
+| False positives | 65 |
+| Precision | 61.3% |
 | Coverage | **100%** of test corpus |
 
 See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the complete dataset.

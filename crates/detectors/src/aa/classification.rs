@@ -28,7 +28,7 @@ fn get_function_source<'a>(function: &ast::Function, ctx: &'a AnalysisContext) -
 
 /// Checks if contract is an ERC-4337 Account (implements IAccount)
 pub fn is_aa_account(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Explicit IAccount interface — strong signal
     if source_lower.contains("iaccount") {
@@ -51,7 +51,7 @@ pub fn is_aa_account(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract is an ERC-4337 Paymaster (implements IPaymaster)
 pub fn is_paymaster_contract(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check for IPaymaster interface
     source_lower.contains("ipaymaster") ||
@@ -61,7 +61,7 @@ pub fn is_paymaster_contract(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract uses signature aggregation
 pub fn uses_signature_aggregation(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("iaggregator")
         || ctx.get_functions().iter().any(|f| {
@@ -76,7 +76,7 @@ pub fn uses_signature_aggregation(ctx: &AnalysisContext) -> bool {
 
 /// Checks if function has replay protection (usedHashes tracking)
 pub fn has_replay_protection(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 
@@ -94,7 +94,7 @@ pub fn has_replay_protection(function: &ast::Function, ctx: &AnalysisContext) ->
 
 /// Checks if paymaster has spending limits
 pub fn has_spending_limits(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 
@@ -115,7 +115,7 @@ pub fn has_spending_limits(function: &ast::Function, ctx: &AnalysisContext) -> b
 
 /// Checks if paymaster validates target addresses
 pub fn has_target_validation(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 
@@ -132,7 +132,7 @@ pub fn has_target_validation(function: &ast::Function, ctx: &AnalysisContext) ->
 
 /// Checks if paymaster enforces gas limits
 pub fn has_gas_limits(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 
@@ -178,7 +178,7 @@ pub fn uses_fixed_nonce_key(function: &ast::Function, ctx: &AnalysisContext) -> 
 
 /// Checks if contract has session key nonce isolation
 pub fn has_session_key_nonce_isolation(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("sessionnoncekey")
         || (source_lower.contains("session")
@@ -193,13 +193,13 @@ pub fn has_session_key_nonce_isolation(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract has session keys
 pub fn has_session_keys(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     source_lower.contains("sessionkey")
 }
 
 /// Checks if session keys have restrictions (not unlimited access)
 pub fn has_session_key_restrictions(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check for SessionKeyData struct with restriction fields
     source_lower.contains("sessionkey")
@@ -210,7 +210,7 @@ pub fn has_session_key_restrictions(ctx: &AnalysisContext) -> bool {
 
 /// Checks if session keys have expiration time
 pub fn has_session_expiration(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("sessionkey")
         && (source_lower.contains("validuntil")
@@ -220,7 +220,7 @@ pub fn has_session_expiration(ctx: &AnalysisContext) -> bool {
 
 /// Checks if session keys have target restrictions
 pub fn has_target_restrictions(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("sessionkey")
         && (source_lower.contains("allowedtarget") || source_lower.contains("whitelist"))
@@ -228,7 +228,7 @@ pub fn has_target_restrictions(ctx: &AnalysisContext) -> bool {
 
 /// Checks if session keys have function selector restrictions
 pub fn has_selector_restrictions(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("sessionkey")
         && (source_lower.contains("allowedselector") || source_lower.contains("selector"))
@@ -236,7 +236,7 @@ pub fn has_selector_restrictions(ctx: &AnalysisContext) -> bool {
 
 /// Checks if session keys have period-based spending limits
 pub fn has_period_based_limits(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("sessionkey")
         && source_lower.contains("period")
@@ -245,7 +245,7 @@ pub fn has_period_based_limits(ctx: &AnalysisContext) -> bool {
 
 /// Checks if session keys have emergency pause mechanism
 pub fn has_emergency_pause(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check struct has paused field and pause function exists
     source_lower.contains("sessionkey")
@@ -262,14 +262,14 @@ pub fn has_emergency_pause(ctx: &AnalysisContext) -> bool {
 
 /// Checks if contract has social recovery mechanism
 pub fn has_social_recovery(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     source_lower.contains("recovery") || source_lower.contains("guardian")
 }
 
 /// Checks if recovery mechanism has time delay
 pub fn has_recovery_delay(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check for RECOVERY_DELAY constant
     let has_delay_constant = source_lower.contains("recovery") && source_lower.contains("delay");
@@ -290,7 +290,7 @@ pub fn has_recovery_delay(ctx: &AnalysisContext) -> bool {
 
 /// Checks if recovery has sufficient guardian threshold
 pub fn has_sufficient_threshold(ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
     // Check for threshold > 1 (not 1-of-N)
     // Look for patterns like "THRESHOLD = 2", "THRESHOLD = 3", etc.
@@ -338,7 +338,7 @@ pub fn has_storage_writes(function: &ast::Function, ctx: &AnalysisContext) -> bo
 
 /// Checks if function validates aggregator address
 pub fn validates_aggregator(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 
@@ -354,7 +354,7 @@ pub fn validates_aggregator(function: &ast::Function, ctx: &AnalysisContext) -> 
 
 /// Checks if function validates signature count against threshold
 pub fn checks_signature_count(function: &ast::Function, ctx: &AnalysisContext) -> bool {
-    let source_lower = ctx.source_code.to_lowercase();
+    let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
     let func_source = get_function_source(function, ctx);
     let func_lower = func_source.to_lowercase();
 

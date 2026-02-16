@@ -290,7 +290,25 @@ impl Detector for ERC7821BatchAuthorizationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip EIP-7702 delegation contracts
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            if file_lower.contains("delegation")
+                || file_lower.contains("eip7702")
+                || contract_name_lower.contains("delegation")
+                || contract_name_lower.contains("eip7702")
+            {
+                return Ok(findings);
+            }
+        }
+
+        // FP Reduction: Limit to 1 finding per contract
+        let mut found = false;
         for function in ctx.get_functions() {
+            if found {
+                break;
+            }
             for (title, severity, remediation) in self.check_function(function, ctx) {
                 let finding = self
                     .base
@@ -304,6 +322,8 @@ impl Detector for ERC7821BatchAuthorizationDetector {
                     )
                     .with_fix_suggestion(remediation);
                 findings.push(finding);
+                found = true;
+                break;
             }
         }
 

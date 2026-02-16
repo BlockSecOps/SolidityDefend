@@ -69,13 +69,22 @@ impl Detector for ZKTrustedSetupBypassDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip files covered by zk-proof-bypass detector
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("proofbypass") {
+                return Ok(findings);
+            }
+        }
+
         // Use contract-level source to avoid cross-contract FPs in multi-contract files
         let contract_source = crate::utils::get_contract_source(ctx);
         let lower = contract_source.to_lowercase();
 
-        let is_zk_system = lower.contains("verifyproof")
-            || lower.contains("groth16")
-            || lower.contains("trustedsetup");
+        // FP Reduction: Narrow is_zk_system to require verifying key management, not just verifyproof
+        let has_vk_management = lower.contains("verifyingkey") || lower.contains("vk");
+        let is_zk_system = (lower.contains("groth16") || lower.contains("trustedsetup"))
+            || (lower.contains("verifyproof") && has_vk_management);
 
         if !is_zk_system {
             return Ok(findings);

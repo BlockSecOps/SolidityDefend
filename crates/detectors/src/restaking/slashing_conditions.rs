@@ -536,16 +536,37 @@ impl Detector for RestakingSlashingConditionsDetector {
             return Ok(findings);
         }
 
-        // Check each function for slashing vulnerabilities
+        // FP Reduction: Consolidate ALL sub-findings into a single finding per contract
+        let mut all_issues: Vec<Finding> = Vec::new();
         for function in ctx.get_functions() {
-            findings.extend(self.check_evidence_validation(function, ctx));
-            findings.extend(self.check_slashing_delay(function, ctx));
-            findings.extend(self.check_compound_slashing(function, ctx));
-            findings.extend(self.check_max_slashing_policy(function, ctx));
+            all_issues.extend(self.check_evidence_validation(function, ctx));
+            all_issues.extend(self.check_slashing_delay(function, ctx));
+            all_issues.extend(self.check_compound_slashing(function, ctx));
+            all_issues.extend(self.check_max_slashing_policy(function, ctx));
         }
+        all_issues.extend(self.check_max_slash_constant(ctx));
 
-        // Contract-level checks
-        findings.extend(self.check_max_slash_constant(ctx));
+        if !all_issues.is_empty() {
+            let issue_messages: Vec<String> =
+                all_issues.iter().map(|f| f.message.clone()).collect();
+            let consolidated_msg = format!(
+                "Restaking contract '{}' has {} slashing issues: {}",
+                ctx.contract.name.name,
+                issue_messages.len(),
+                issue_messages.join("; ")
+            );
+            let fix_suggestions: Vec<String> = all_issues
+                .iter()
+                .filter_map(|f| f.fix_suggestion.clone())
+                .collect();
+            let consolidated_fix = fix_suggestions.join("\n\n---\n\n");
+
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, 1, 0, 20)
+                .with_fix_suggestion(consolidated_fix);
+            findings.push(finding);
+        }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);
         Ok(findings)

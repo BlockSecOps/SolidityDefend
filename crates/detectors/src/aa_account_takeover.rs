@@ -112,144 +112,68 @@ impl Detector for AaAccountTakeoverDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all pattern checks into 1 finding per contract
+        let mut sub_issues: Vec<(u32, String)> = Vec::new();
+
         // Pattern 1: Unprotected EntryPoint replacement
         if let Some(replacement_issues) = self.check_entrypoint_replacement(contract_source) {
             for (line, issue) in replacement_issues {
-                let message = format!(
-                    "EntryPoint can be replaced allowing account takeover. {} \
-                    Attackers can replace the trusted EntryPoint with malicious contract to execute arbitrary operations and drain account.",
-                    issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(ctx, message, line, 0, 40)
-                    .with_cwe(284) // CWE-284: Improper Access Control
-                    .with_cwe(639) // CWE-639: Authorization Bypass Through User-Controlled Key
-                    .with_fix_suggestion(
-                        "Prevent EntryPoint replacement: \
-                    (1) Make EntryPoint immutable if possible, \
-                    (2) Add strict access control (multi-sig required), \
-                    (3) Implement time-lock for EntryPoint updates, \
-                    (4) Require user signature for changes, \
-                    (5) Emit EntryPointChanged event for monitoring."
-                            .to_string(),
-                    );
-
-                findings.push(finding);
+                sub_issues.push((line, format!("EntryPoint replacement: {}", issue)));
             }
         }
 
         // Pattern 2: Module system vulnerabilities
         if let Some(module_issues) = self.check_module_vulnerabilities(contract_source) {
             for (line, issue) in module_issues {
-                let message = format!(
-                    "Module system allows unauthorized privilege escalation. {} \
-                    Malicious modules can be added to gain full account control and execute unauthorized operations.",
-                    issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(ctx, message, line, 0, 40)
-                    .with_cwe(269) // CWE-269: Improper Privilege Management
-                    .with_cwe(862) // CWE-862: Missing Authorization
-                    .with_fix_suggestion(
-                        "Secure module system: \
-                    (1) Validate module addresses before adding, \
-                    (2) Implement module whitelist/registry, \
-                    (3) Require user signature for module changes, \
-                    (4) Add time-lock for module additions, \
-                    (5) Emit ModuleAdded/ModuleRemoved events."
-                            .to_string(),
-                    );
-
-                findings.push(finding);
+                sub_issues.push((line, format!("Module system: {}", issue)));
             }
         }
 
         // Pattern 3: Signature validation bypass
         if let Some(sig_issues) = self.check_signature_bypass(contract_source) {
             for (line, issue) in sig_issues {
-                let message = format!(
-                    "Signature validation can be bypassed in validateUserOp. {} \
-                    Bypass allows attackers to execute operations without valid signatures, leading to unauthorized access.",
-                    issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(ctx, message, line, 0, 40)
-                    .with_cwe(345) // CWE-345: Insufficient Verification of Data Authenticity
-                    .with_cwe(290) // CWE-290: Authentication Bypass by Spoofing
-                    .with_fix_suggestion(
-                        "Enforce signature validation: \
-                    (1) Always validate signature in validateUserOp, \
-                    (2) Use proper signature recovery (ecrecover or ECDSA), \
-                    (3) Validate signer matches account owner, \
-                    (4) Include nonce in signed message, \
-                    (5) Follow ERC-4337 signature requirements."
-                            .to_string(),
-                    );
-
-                findings.push(finding);
+                sub_issues.push((line, format!("Signature bypass: {}", issue)));
             }
         }
 
         // Pattern 4: Fallback function takeover
         if let Some(fallback_issues) = self.check_fallback_vulnerabilities(contract_source) {
             for (line, issue) in fallback_issues {
-                let message = format!(
-                    "Fallback/receive function allows unauthorized execution. {} \
-                    Unrestricted fallback functions can be exploited to bypass normal execution flow and access control.",
-                    issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(ctx, message, line, 0, 40)
-                    .with_cwe(749) // CWE-749: Exposed Dangerous Method or Function
-                    .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
-                    .with_fix_suggestion(
-                        "Secure fallback functions: \
-                    (1) Add onlyEntryPoint modifier to fallback, \
-                    (2) Validate msg.sender in fallback/receive, \
-                    (3) Limit fallback functionality, \
-                    (4) Log fallback calls for monitoring, \
-                    (5) Consider removing fallback if not needed."
-                            .to_string(),
-                    );
-
-                findings.push(finding);
+                sub_issues.push((line, format!("Fallback takeover: {}", issue)));
             }
         }
 
         // Pattern 5: Upgradeable implementation vulnerabilities
         if let Some(upgrade_issues) = self.check_upgrade_vulnerabilities(contract_source) {
             for (line, issue) in upgrade_issues {
-                let message = format!(
-                    "Upgradeable account vulnerable to implementation takeover. {} \
-                    Unprotected upgrades allow attackers to replace logic contract with malicious implementation.",
-                    issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(ctx, message, line, 0, 40)
-                    .with_cwe(913) // CWE-913: Improper Control of Dynamically-Managed Code Resources
-                    .with_cwe(494) // CWE-494: Download of Code Without Integrity Check
-                    .with_fix_suggestion(
-                        "Protect upgrade mechanism: \
-                    (1) Require multi-sig for upgrades, \
-                    (2) Implement time-lock delay, \
-                    (3) Validate new implementation interface, \
-                    (4) Add upgrade proposal/voting system, \
-                    (5) Emit ImplementationUpgraded event."
-                            .to_string(),
-                    );
-
-                findings.push(finding);
+                sub_issues.push((line, format!("Upgrade vulnerability: {}", issue)));
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].0;
+            let issue_descriptions: Vec<&str> =
+                sub_issues.iter().map(|(_, d)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Account '{}' has {} takeover vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                issue_descriptions.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(284)
+                .with_cwe(345)
+                .with_fix_suggestion(
+                    "Secure ERC-4337 account: \
+                    (1) Make EntryPoint immutable or add time-lock for updates, \
+                    (2) Always validate signatures in validateUserOp, \
+                    (3) Add access control to fallback/module/upgrade functions, \
+                    (4) Use multi-sig for critical operations."
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

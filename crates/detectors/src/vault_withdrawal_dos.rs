@@ -125,6 +125,9 @@ impl Detector for VaultWithdrawalDosDetector {
             protection_score += 1;
         }
 
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             // Phase 6: Skip view/pure functions -- they cannot modify state
             // and therefore cannot cause withdrawal DOS
@@ -135,66 +138,59 @@ impl Detector for VaultWithdrawalDosDetector {
             }
 
             if let Some(dos_issue) = self.check_withdrawal_dos(function, ctx, is_vault) {
-                let message = format!(
-                    "Function '{}' may be vulnerable to withdrawal DOS attack. {} \
-                    Attacker can block withdrawals, causing funds to be locked indefinitely.",
-                    function.name.name, dos_issue
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, dos_issue),
+                    function.name.location.start().line() as u32,
+                ));
+            }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let issue_descriptions: Vec<&str> =
+                sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} withdrawal DOS vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                issue_descriptions.join("; ")
+            );
+
+            let confidence = if protection_score == 0 {
+                if is_vault {
+                    Confidence::High
+                } else {
+                    Confidence::Medium
+                }
+            } else if protection_score <= 2 {
+                Confidence::Medium
+            } else {
+                Confidence::Low
+            };
+
+            let severity = if is_vault {
+                Severity::High
+            } else {
+                Severity::Medium
+            };
+
+            let finding = self
+                .base
+                .create_finding_with_severity(ctx, consolidated_msg, first_line, 0, 40, severity)
+                .with_cwe(400)
+                .with_cwe(770)
+                .with_confidence(confidence)
+                .with_fix_suggestion(
+                    "Protect from withdrawal DOS: \
+                    (1) Implement withdrawal limits/caps, \
+                    (2) Add circuit breakers (OpenZeppelin Pausable), \
+                    (3) Avoid unbounded loops (add MAX_ITERATIONS), \
+                    (4) Use pull-over-push pattern for failed withdrawals, \
+                    (5) Add emergency pause mechanism."
+                        .to_string(),
                 );
 
-                // Phase 2: Dynamic confidence scoring based on detected patterns
-                // Phase 5: Reduce confidence for non-vaults
-                let confidence = if protection_score == 0 {
-                    if is_vault {
-                        Confidence::High
-                    } else {
-                        Confidence::Medium // Lower confidence for non-vault contracts
-                    }
-                } else if protection_score <= 2 {
-                    // Minimal protection
-                    Confidence::Medium
-                } else if protection_score <= 4 {
-                    // Some protections
-                    Confidence::Low
-                } else {
-                    // Multiple strong protections - likely safe
-                    Confidence::Low
-                };
-
-                // Phase 5: Use Medium severity for non-vault contracts
-                let severity = if is_vault {
-                    Severity::High
-                } else {
-                    Severity::Medium
-                };
-
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                        severity,
-                    )
-                    .with_cwe(400) // CWE-400: Uncontrolled Resource Consumption
-                    .with_cwe(770) // CWE-770: Allocation of Resources Without Limits
-                    .with_confidence(confidence)
-                    .with_fix_suggestion(format!(
-                        "Protect '{}' from withdrawal DOS. \
-                    Solutions: (1) Implement withdrawal limits/caps per transaction (e.g., maxWithdrawal), \
-                    (2) Add circuit breakers for emergency withdrawals (OpenZeppelin Pausable), \
-                    (3) Avoid unbounded loops in withdrawal queue processing (add MAX_ITERATIONS), \
-                    (4) Implement partial withdrawal support for queue processing, \
-                    (5) Use pull-over-push pattern for failed withdrawals (mapping-based claims), \
-                    (6) Consider EigenLayer-style withdrawal queue with delay mechanisms, \
-                    (7) Add emergency pause mechanism for DOS situations, \
-                    (8) Implement timelock for critical parameter changes.",
-                        function.name.name
-                    ));
-
-                findings.push(finding);
-            }
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

@@ -266,96 +266,74 @@ impl Detector for Eip1153TransientReentrancyDetector {
             return Ok(findings);
         }
 
-        let source = &ctx.source_code;
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let source = &contract_source;
         let contract_name = self.get_contract_name(ctx);
 
-        // Find transient storage used as reentrancy guard
-        let guards = self.find_transient_guard(source);
-        for (line, func_name) in &guards {
-            let message = format!(
-                "Function '{}' in contract '{}' uses transient storage (TSTORE/TLOAD) as a \
-                 reentrancy guard. While transient storage resets after each transaction, \
-                 it persists across internal calls within a transaction, making it suitable \
-                 for reentrancy guards. However, ensure the guard is properly implemented.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, *line, 1, 50)
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_confidence(Confidence::Medium)
-                .with_fix_suggestion(
-                    "Verify transient reentrancy guard implementation:\n\n\
-                     assembly {\n\
-                         if tload(LOCK_SLOT) { revert(0, 0) }\n\
-                         tstore(LOCK_SLOT, 1)\n\
-                     }\n\
-                     // ... function body with external calls\n\
-                     assembly {\n\
-                         tstore(LOCK_SLOT, 0)\n\
-                     }\n\n\
-                     Or use OpenZeppelin's ReentrancyGuardTransient."
-                        .to_string(),
-                );
-
-            findings.push(finding);
+        // FP Reduction: Only flag contracts that contain actual tstore/tload in their own code
+        let source_lower = source.to_lowercase();
+        if !source_lower.contains("tstore") && !source_lower.contains("tload") && !source_lower.contains("transient ") {
+            return Ok(findings);
         }
 
-        // Find external calls after tstore
+        // FP Reduction: Consolidate all sub-findings into 1 finding per contract
+        let guards = self.find_transient_guard(source);
         let calls_after = self.find_call_after_tstore(source);
-        for (line, func_name) in calls_after {
-            if guards.iter().any(|(l, _)| *l == line) {
+        let balances = self.find_transient_balance(source);
+
+        let mut sub_issues: Vec<String> = Vec::new();
+        let mut first_line: u32 = 1;
+
+        for (line, func_name) in &guards {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!(
+                "'{}' uses transient storage as reentrancy guard (verify implementation)",
+                func_name
+            ));
+        }
+
+        for (line, func_name) in &calls_after {
+            if guards.iter().any(|(l, _)| *l == *line) {
                 continue;
             }
-
-            let message = format!(
-                "Function '{}' in contract '{}' makes external calls after writing to \
-                 transient storage. Ensure state updates in persistent storage happen \
-                 before external calls to prevent reentrancy.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Follow checks-effects-interactions pattern:\n\n\
-                     1. Perform all checks\n\
-                     2. Update persistent storage (SSTORE)\n\
-                     3. Update transient storage (TSTORE) if needed\n\
-                     4. Make external calls last\n\n\
-                     Remember: transient storage clears after transaction."
-                        .to_string(),
-                );
-
-            findings.push(finding);
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!(
+                "'{}' makes external calls after TSTORE (reentrancy risk)",
+                func_name
+            ));
         }
 
-        // Find transient balance tracking
-        let balances = self.find_transient_balance(source);
-        for (line, func_name) in balances {
-            let message = format!(
-                "Function '{}' in contract '{}' appears to track balances or amounts in \
-                 transient storage. Transient storage clears after each transaction - \
-                 balance data stored here will be lost. Use persistent storage for balances.",
-                func_name, contract_name
+        for (line, func_name) in &balances {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!(
+                "'{}' tracks balances in transient storage (data loss risk)",
+                func_name
+            ));
+        }
+
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "Contract '{}' has {} transient storage reentrancy issues: {}",
+                contract_name,
+                sub_issues.len(),
+                sub_issues.join("; ")
             );
 
             let finding = self
                 .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
+                .create_finding(ctx, consolidated_msg, first_line, 1, 50)
+                .with_cwe(841)
                 .with_confidence(Confidence::High)
                 .with_fix_suggestion(
-                    "Use persistent storage for balance tracking:\n\n\
-                     // BAD: transient balance (clears after tx)\n\
-                     assembly { tstore(slot, balance) }\n\n\
-                     // GOOD: persistent balance\n\
-                     balances[user] = amount;  // Uses SSTORE\n\n\
-                     Only use transient storage for within-transaction state like locks."
+                    "Follow checks-effects-interactions pattern with transient storage. \
+                     Use persistent storage for balances. Verify reentrancy guards or use \
+                     OpenZeppelin's ReentrancyGuardTransient."
                         .to_string(),
                 );
 

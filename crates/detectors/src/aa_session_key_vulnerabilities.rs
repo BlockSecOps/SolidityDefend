@@ -46,7 +46,7 @@ impl SessionKeyVulnerabilitiesDetector {
 
     /// Check if the contract's own source (not the entire file) contains session key state
     fn contract_source_contains_session_keys(&self, ctx: &AnalysisContext) -> bool {
-        let source_lower = ctx.source_code.to_lowercase();
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // Look for session key storage patterns
         (source_lower.contains("sessionkeys") || source_lower.contains("sessionkey"))
@@ -119,8 +119,8 @@ impl SessionKeyVulnerabilitiesDetector {
 
         // Use contract-level source for checking security features, since session key
         // protections may be spread across multiple functions in the same contract
-        let source = &ctx.source_code;
-        let source_lower = source.to_lowercase();
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let source_lower = contract_source.to_lowercase();
 
         // Check session key validation functions
         if name.contains("validate") && name.contains("session") {
@@ -283,6 +283,8 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
 
         // Phase 2 Enhancement: Safe pattern detection for comprehensive session key implementations
 
+        // For safe-pattern early exit, check the full source code — this is conservative
+        // (wider scope means we're MORE likely to detect safety features, reducing false positives)
         let source_lower = ctx.source_code.to_lowercase();
 
         // Check for comprehensive session key protection (all critical features)
@@ -313,26 +315,53 @@ impl Detector for SessionKeyVulnerabilitiesDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut all_issues: Vec<(String, Severity, String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             let issues = self.check_function(function, ctx);
             for (message, severity, remediation) in issues {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        format!("{} in '{}'", message, function.name.name),
-                        function.name.location.start().line() as u32,
-                        0,
-                        20,
-                        severity,
-                    )
-                    .with_cwe(613) // CWE-613: Insufficient Session Expiration
-                    .with_cwe(269) // CWE-269: Improper Privilege Management
-                    .with_cwe(284) // CWE-284: Improper Access Control
-                    .with_fix_suggestion(remediation);
-
-                findings.push(finding);
+                all_issues.push((
+                    format!("{} in '{}'", message, function.name.name),
+                    severity,
+                    remediation,
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !all_issues.is_empty() {
+            let first_line = all_issues[0].3;
+            let max_severity = all_issues
+                .iter()
+                .map(|(_, s, _, _)| *s)
+                .max()
+                .unwrap_or(Severity::High);
+            let issue_titles: Vec<&str> =
+                all_issues.iter().map(|(t, _, _, _)| t.as_str()).collect();
+            let consolidated_msg = format!(
+                "Session key contract '{}' has {} issues: {}",
+                ctx.contract.name.name,
+                all_issues.len(),
+                issue_titles.join("; ")
+            );
+            let remediations: Vec<&str> =
+                all_issues.iter().map(|(_, _, r, _)| r.as_str()).collect();
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first_line,
+                    0,
+                    20,
+                    max_severity,
+                )
+                .with_cwe(613)
+                .with_cwe(269)
+                .with_cwe(284)
+                .with_fix_suggestion(remediations.join("\n\n"));
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

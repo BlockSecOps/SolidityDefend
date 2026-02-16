@@ -87,14 +87,9 @@ impl Detector for TokenPermitFrontRunningDetector {
             .iter()
             .map(|f| f.name.name.to_lowercase())
             .collect();
-        let contract_has_permit_fn = contract_func_names.iter().any(|n| {
-            n.contains("permit")
-                || n.contains("transferfrom")
-                || n.contains("approve")
-                || n.contains("deposit")
-                || n.contains("swap")
-                || n.contains("spend")
-        });
+        let contract_has_permit_fn = contract_func_names
+            .iter()
+            .any(|n| n.contains("permit") || n.contains("transferfrom") || n.contains("spend"));
         if !contract_has_permit_fn {
             return Ok(findings);
         }
@@ -159,25 +154,16 @@ impl Detector for TokenPermitFrontRunningDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all sub-pattern findings into 1 finding per contract
+        let mut sub_issues: Vec<String> = Vec::new();
+
         // Pattern 1: permit() followed by transferFrom without try-catch
         if contract_lower.contains("permit(") {
             let has_transferfrom = contract_lower.contains("transferfrom");
             let has_error_handling =
                 contract_lower.contains("try") || contract_lower.contains("catch");
-
             if has_transferfrom && !has_error_handling {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "permit() without error handling - front-runner can grief by using permit first, causing revert".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Use try-catch: try token.permit(...) {} catch {} or check allowance before permit".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("permit() without error handling (front-run griefing)".to_string());
             }
         }
 
@@ -185,20 +171,8 @@ impl Detector for TokenPermitFrontRunningDetector {
         if !is_permit_implementer && (has_permit_function || has_permit_call) {
             let checks_allowance = contract_lower.contains("allowance(")
                 || contract_lower.contains("currentallowance");
-
             if !checks_allowance {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "No allowance check before permit - can revert if allowance already set, causing DOS".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Check allowance first: if (token.allowance(owner, spender) < amount) token.permit(...)".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("no allowance check before permit (DOS risk)".to_string());
             }
         }
 
@@ -207,23 +181,10 @@ impl Detector for TokenPermitFrontRunningDetector {
             let has_deadline_check = contract_lower.contains("deadline")
                 && (contract_lower.contains("block.timestamp")
                     || contract_lower.contains("require(deadline"));
-
             let has_max_deadline = contract_lower.contains("max_deadline")
                 || contract_lower.contains("deadline_limit");
-
             if has_deadline_check && !has_max_deadline {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Permit deadline not bounded - signatures valid indefinitely create security risk".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Enforce maximum deadline: require(deadline <= block.timestamp + MAX_DEADLINE, \"Deadline too far\")".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("permit deadline not bounded".to_string());
             }
         }
 
@@ -231,20 +192,8 @@ impl Detector for TokenPermitFrontRunningDetector {
         if !is_permit_implementer && (has_permit_function || has_permit_call) {
             let has_nonce_tracking =
                 contract_lower.contains("nonce") || contract_lower.contains("nonces(");
-
             if !has_nonce_tracking {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "No nonce validation in permit usage - signature replay possible".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "ERC-2612 includes nonces by default, but verify it's used: uint256 nonce = token.nonces(owner)".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("no nonce validation in permit usage".to_string());
             }
         }
 
@@ -253,20 +202,8 @@ impl Detector for TokenPermitFrontRunningDetector {
             let has_alternative = contract_lower.contains("approve")
                 || contract_lower.contains("else")
                 || contract_lower.contains("fallback");
-
             if !has_alternative {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Permit in critical path without fallback - DOS if permit fails (e.g., already used)".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Provide approve() fallback: try permit(...) catch { require(approve successful) }".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("permit in critical path without fallback".to_string());
             }
         }
 
@@ -279,21 +216,26 @@ impl Detector for TokenPermitFrontRunningDetector {
                 || contract_lower.contains(">= deadline")
                 || contract_lower.contains("block.timestamp <= ")
                 || contract_lower.contains("block.timestamp >= ");
-
             if !enforces_deadline {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Permit implementation missing deadline enforcement - signatures never expire".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Add deadline validation: require(block.timestamp <= deadline, \"Permit expired\")".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("permit implementation missing deadline enforcement".to_string());
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "Permit front-running risks in '{}': {}",
+                ctx.contract.name.name,
+                sub_issues.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, 1, 1, 20)
+                .with_fix_suggestion(
+                    "Use try-catch for permit calls, check allowance before permit, \
+                     bound deadlines, verify nonce usage, and provide approve() fallback"
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

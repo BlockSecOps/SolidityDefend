@@ -262,9 +262,10 @@ impl Detector for Push0StackAssumptionDetector {
         // findings should only be in THIS contract.
         let contract_source = crate::utils::get_contract_source(ctx);
 
-        // Check for cross-chain deployment issues
+        // FP Reduction: Deduplicate — emit at most 1 finding per category
+        // Take only first match from each category
         let cross_chain_issues = self.find_cross_chain_issues(&contract_source);
-        for (line, issue) in cross_chain_issues {
+        for (line, issue) in cross_chain_issues.into_iter().take(1) {
             let message = format!(
                 "PUSH0 compatibility issue in contract '{}': {}. \
                  PUSH0 (EIP-3855) is only available post-Shanghai (March 2023). \
@@ -293,7 +294,7 @@ impl Detector for Push0StackAssumptionDetector {
 
         // Check for assembly issues
         let assembly_issues = self.find_assembly_issues(&contract_source);
-        for (line, issue) in assembly_issues {
+        for (line, issue) in assembly_issues.into_iter().take(1) {
             let message = format!(
                 "Potential PUSH0 assembly issue in contract '{}': {}.",
                 contract_name, issue
@@ -315,7 +316,7 @@ impl Detector for Push0StackAssumptionDetector {
 
         // Check for EVM version issues
         let evm_issues = self.find_evm_version_issues(&contract_source);
-        for (line, issue) in evm_issues {
+        for (line, issue) in evm_issues.into_iter().take(1) {
             let message = format!(
                 "EVM version consideration in contract '{}': {}.",
                 contract_name, issue

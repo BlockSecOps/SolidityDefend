@@ -309,71 +309,56 @@ impl Detector for Create2SaltFrontrunningDetector {
             return Ok(findings);
         }
 
-        for (line, func_name) in self.find_predictable_salt(&contract_source) {
-            let message = format!(
-                "Function '{}' in contract '{}' uses predictable values for CREATE2 salt. \
-                 Attackers can front-run to deploy at the expected address first.",
-                func_name, contract_name
+        // FP Reduction: Consolidate all CREATE2 issues into 1 finding per contract
+        let predictable = self.find_predictable_salt(&contract_source);
+        let deterministic = self.find_deterministic_salt(&contract_source);
+        let public_create2 = self.find_public_create2(&contract_source);
+
+        let mut sub_issues: Vec<String> = Vec::new();
+        let mut first_line: u32 = 1;
+
+        for (line, func_name) in &predictable {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!("'{}' uses predictable salt values", func_name));
+        }
+        for (line, func_name) in &deterministic {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!(
+                "'{}' uses CREATE2 without secret/random salt",
+                func_name
+            ));
+        }
+        for (line, func_name) in &public_create2 {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!(
+                "'{}' exposes public CREATE2 without access control",
+                func_name
+            ));
+        }
+
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "CREATE2 front-running risks in contract '{}': {}",
+                contract_name,
+                sub_issues.join("; ")
             );
 
             let finding = self
                 .base
-                .create_finding(ctx, message, line, 1, 50)
+                .create_finding(ctx, consolidated_msg, first_line, 1, 50)
                 .with_cwe(330)
                 .with_confidence(Confidence::High)
                 .with_fix_suggestion(
-                    "Use unpredictable salt for CREATE2:\n\n\
-                     1. Include a secret/commitment in salt:\n\
-                     bytes32 salt = keccak256(abi.encode(msg.sender, secret, nonce));\n\n\
-                     2. Use commit-reveal for deployment\n\
-                     3. Add access control to deployment function"
-                        .to_string(),
-                );
-
-            findings.push(finding);
-        }
-
-        for (line, func_name) in self.find_deterministic_salt(&contract_source) {
-            let message = format!(
-                "Function '{}' in contract '{}' uses CREATE2 without secret/random salt component. \
-                 The deployment address is fully predictable.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(330)
-                .with_confidence(Confidence::Medium)
-                .with_fix_suggestion(
-                    "Add unpredictability to CREATE2 salt:\n\n\
-                     1. Include user-provided secret in salt\n\
+                    "Protect CREATE2 deployments:\n\
+                     1. Include secret/commitment in salt\n\
                      2. Use commit-reveal scheme\n\
-                     3. Restrict deployment to authorized addresses"
-                        .to_string(),
-                );
-
-            findings.push(finding);
-        }
-
-        for (line, func_name) in self.find_public_create2(&contract_source) {
-            let message = format!(
-                "Function '{}' in contract '{}' exposes public CREATE2 deployment without \
-                 access control. Anyone can deploy at predictable addresses.",
-                func_name, contract_name
-            );
-
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(330)
-                .with_confidence(Confidence::High)
-                .with_fix_suggestion(
-                    "Add access control to CREATE2 deployment:\n\n\
-                     function deploy(bytes32 salt) external onlyOwner {\n\
-                         // CREATE2 deployment\n\
-                     }\n\n\
-                     Or use commit-reveal to prevent front-running."
+                     3. Add access control to deployment functions"
                         .to_string(),
                 );
 

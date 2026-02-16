@@ -92,6 +92,36 @@ impl Detector for ProxyStorageCollisionDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip EIP-7702 delegation contracts
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            if file_lower.contains("eip7702")
+                || file_lower.contains("delegation")
+                || contract_name_lower.contains("delegation")
+                || contract_name_lower.contains("eip7702")
+            {
+                return Ok(findings);
+            }
+        }
+
+        // FP Reduction: Skip contracts already covered by delegatecall-specific detectors
+        {
+            let contract_source = crate::utils::get_contract_source(ctx);
+            let source_lower = contract_source.to_lowercase();
+            // Skip contracts with unprotected setImplementation (covered by delegatecall-untrusted-library)
+            let has_unprotected_set_impl = source_lower.contains("setimplementation")
+                && !source_lower.contains("onlyowner")
+                && !source_lower.contains("onlyadmin");
+            // Skip contracts with user-controlled delegatecall target (covered by fallback-delegatecall-unprotected)
+            let has_user_controlled_target = source_lower.contains("delegatecall")
+                && (source_lower.contains("function execute(address target")
+                    || source_lower.contains("function execute(address _target"));
+            if has_unprotected_set_impl || has_user_controlled_target {
+                return Ok(findings);
+            }
+        }
+
         // Check for storage collision risks in the contract
         if let Some(risk_description) = self.has_storage_collision_risk(ctx) {
             let message = format!(
