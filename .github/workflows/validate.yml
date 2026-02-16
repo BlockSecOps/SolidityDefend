@@ -30,6 +30,10 @@ on:
         default: '0.95'
         type: string
 
+permissions:
+  contents: read
+  pull-requests: write
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
