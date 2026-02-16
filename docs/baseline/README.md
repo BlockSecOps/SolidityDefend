@@ -1,6 +1,6 @@
 # Ground Truth Baseline Documentation
 
-This directory contains baseline measurements for the SolidityDefend false positive reduction process. These baselines track findings across 18 test targets (117 individual contracts) and are used to measure the effectiveness of each FP reduction round.
+This directory contains baseline measurements for the SolidityDefend false positive reduction process. These baselines track findings across 18 test targets (122 individual contracts) and are used to measure the effectiveness of each FP reduction round.
 
 ## Ground Truth Coverage
 

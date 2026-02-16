@@ -36,9 +36,9 @@ When tightening detectors to reduce false positives, we need to verify:
 
 | Metric | Count |
 |--------|-------|
-| Total contracts | 117 |
+| Total contracts | 122 |
 | Clean/secure contracts | 43 |
-| Vulnerable contracts | 74 |
+| Vulnerable contracts | 79 |
 | Expected true positives | 149 |
 | Parse error contracts | 0 |
 | Vulnerability categories | 26 |

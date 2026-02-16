@@ -1,6 +1,6 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all security detectors in SolidityDefend v2.0.3.
+Complete reference for all security detectors in SolidityDefend v2.0.8.
 
 **Last Updated:** 2026-02-16
 **Version:** v2.0.8
