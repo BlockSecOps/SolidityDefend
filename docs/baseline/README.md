@@ -123,7 +123,7 @@ done
 ## Baselines
 
 See individual baseline files:
-- [v2.0.1-v16-baseline.md](v2.0.1-v16-baseline.md) — **Current baseline** (v16, 81 detectors all active, 18.4% precision, 0 disabled)
+- [v2.0.1-v16-baseline.md](v2.0.1-v16-baseline.md) — v16 baseline (81 detectors all active, 18.4% precision, 0 disabled)
 - [v1.10.23-v15-baseline.md](v1.10.23-v15-baseline.md) — v15 baseline (67 detectors, 18.4% precision)
 - [v1.10.22-v14-baseline.md](v1.10.22-v14-baseline.md) — Phase 1 baseline (v14, 174 zero-TP detectors removed)
 - [v1.10.21-v13-baseline.md](v1.10.21-v13-baseline.md) — v13 baseline (90 obsolete detectors removed)
