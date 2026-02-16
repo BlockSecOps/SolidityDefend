@@ -2443,7 +2443,6 @@ impl CliApp {
 
                     if !is_known_fp {
                         false_positives += 1;
-                        // FP tracked via detector_stats below
                         let stats = detector_stats
                             .entry(actual.detector_id.clone())
                             .or_insert((0, 0, 0));

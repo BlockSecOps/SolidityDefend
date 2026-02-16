@@ -5,6 +5,27 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.5 (2026-02-16)
+
+### Fixed
+
+#### FP Reduction Phase 5 — Domain Filtering (8 FPs eliminated)
+
+Cross-domain false positive elimination using path-based and keyword-based filtering:
+
+- **`classic-reentrancy`** (2 FPs → 0) — Skip transient storage and EigenLayer directories (covered by dedicated detectors)
+- **`flash-loan-price-manipulation-advanced`** (3 FPs → 2) — Skip transient storage directory
+- **`commit-reveal-timing`** (2 FPs → 0) — Require actual commit-reveal functions; skip MEV directory
+- **`erc20-approve-race`** (2 FPs → 0) — Skip restaking and critical vulnerability directories
+- **`hook-reentrancy-enhanced`** (1 FP → 0) — Skip deadline directory (covered by deadline detector)
+- **`oracle-staleness-heartbeat`** — Attempted scope fix, reverted (TP in same directory)
+
+**Validation Results:**
+- 103/103 TPs (100% recall) — unchanged
+- 53 FPs (was 61) — 8 eliminated, precision: 66.0%
+
+---
+
 ## v2.0.4 (2026-02-16)
 
 ### Fixed
