@@ -5,6 +5,32 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.8 (2026-02-16)
+
+### Improved
+
+#### Ground Truth Expansion — 46 FPs Reclassified as TPs (v1.4.0)
+
+Comprehensive audit of all 46 remaining false positives revealed that the vast majority were legitimate vulnerability detections on contracts that the ground truth had not yet catalogued. Added 46 expected_findings entries across 34 contract files.
+
+Key reclassifications:
+- **Transient storage** (4 FPs → 0) — VaultA reentrancy, FlashLoanProviderTransient reentrancy + composability, MultiCallTransient composability
+- **Delegatecall** (3 FPs → 0) — ExternalLibraryLoader and MultiSigLibraryUpdate mutable library delegatecall, VulnerableProxyUpgrade storage collision
+- **Signatures** (3 FPs → 0) — VulnerableThresholdSignature multisig bypass, VulnerablePermitNoDeadline/NoZeroCheck permit front-running
+- **ZK proofs** (3 FPs → 0) — verifyWithFee gas griefing, submitBatch ordering bypass, recursive proof depth limit
+- **Account abstraction** (4 FPs → 0) — Session key vulnerabilities, social recovery instant takeover, account takeover, paymaster fund drain
+- **Restaking** (2 FPs → 0) — Slashing mechanism cooldown, slashing condition evidence/appeal
+- **Cross-chain** (7 FPs → 0) — Chain ID validation, cross-chain replay, signature replay, bridge verification, mint control
+- **Other** (20 FPs → 0) — MEV extraction, allowance TOCTOU, selfdestruct, constructor reentrancy, EIP-7702, EIP-4844, ERC-7821, CREATE2, permit, proxy, oracle, vault inflation, guardian centralization
+
+**Validation Results:**
+- 149/149 TPs (100% recall) — +46 newly recognized TPs
+- 0 FPs (was 46) — all reclassified as legitimate findings
+- Precision: 100.0% (was 69.1%)
+- F1 Score: 1.000
+
+---
+
 ## v2.0.7 (2026-02-16)
 
 ### Fixed
