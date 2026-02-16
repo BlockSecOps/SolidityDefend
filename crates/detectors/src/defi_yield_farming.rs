@@ -219,7 +219,15 @@ impl YieldFarmingDetector {
         // FP Reduction: Use contract source instead of file source to prevent
         // cross-contract FPs in multi-contract files where sibling contracts
         // have "vault"/"shares"/"deposit" keywords.
-        let source = &crate::utils::get_contract_source(ctx).to_lowercase();
+        // Fall back to full source when contract source extraction returns very little
+        // (e.g., test contexts where AST location spans a single line).
+        let contract_source = crate::utils::get_contract_source(ctx).to_lowercase();
+        let source_owned = if contract_source.len() < 20 {
+            ctx.source_code.to_lowercase()
+        } else {
+            contract_source
+        };
+        let source = &source_owned;
 
         // Strong signals - any of these is definitive
         // Fix: parenthesize the OR properly so "vault && shares" is grouped
