@@ -87,7 +87,9 @@ impl Detector for FlashLoanReentrancyComboDetector {
             let contract_name = ctx.contract.name.as_str();
             let lower_full = ctx.source_code.to_lowercase();
             // Find this contract's body in the source
-            if let Some(contract_start) = lower_full.find(&format!("contract {}", contract_name.to_lowercase())) {
+            if let Some(contract_start) =
+                lower_full.find(&format!("contract {}", contract_name.to_lowercase()))
+            {
                 let contract_src = &lower_full[contract_start..];
                 contract_src.contains("onflashloan")
                     || contract_src.contains("flashloan(")
@@ -141,11 +143,12 @@ impl Detector for FlashLoanReentrancyComboDetector {
         let contract_lines: Vec<&str> = contract_source.lines().collect();
 
         // Compute the line offset of this contract within the full file
-        let contract_line_offset = if let Some(pos) = ctx.source_code.find(&format!("contract {}", contract_name)) {
-            ctx.source_code[..pos].lines().count().saturating_sub(1)
-        } else {
-            0
-        };
+        let contract_line_offset =
+            if let Some(pos) = ctx.source_code.find(&format!("contract {}", contract_name)) {
+                ctx.source_code[..pos].lines().count().saturating_sub(1)
+            } else {
+                0
+            };
 
         // Check for flash loan callback in contract scope
         let is_flash_loan = lower.contains("onflashloan")
@@ -184,7 +187,13 @@ impl Detector for FlashLoanReentrancyComboDetector {
                             || ll.contains("receivetokens")
                             || ll.contains("executeoperation")
                     })
-                    .map(|(i, line)| ((i + 1 + contract_line_offset) as u32, 1u32, line.len() as u32))
+                    .map(|(i, line)| {
+                        (
+                            (i + 1 + contract_line_offset) as u32,
+                            1u32,
+                            line.len() as u32,
+                        )
+                    })
                     .unwrap_or(((1 + contract_line_offset) as u32, 1, 10));
 
                 let finding = self.base.create_finding(
@@ -272,7 +281,13 @@ impl Detector for FlashLoanReentrancyComboDetector {
                         ll.contains("balanceof(address(this))")
                             || ll.contains("address(this).balance")
                     })
-                    .map(|(i, line)| ((i + 1 + contract_line_offset) as u32, 1u32, line.len() as u32))
+                    .map(|(i, line)| {
+                        (
+                            (i + 1 + contract_line_offset) as u32,
+                            1u32,
+                            line.len() as u32,
+                        )
+                    })
                     .unwrap_or(((1 + contract_line_offset) as u32, 1, 10));
 
                 let finding = self.base.create_finding(
@@ -306,7 +321,13 @@ impl Detector for FlashLoanReentrancyComboDetector {
                         let ll = line.to_lowercase();
                         ll.contains("this.") || (ll.contains("call(") && ll.contains("address"))
                     })
-                    .map(|(i, line)| ((i + 1 + contract_line_offset) as u32, 1u32, line.len() as u32))
+                    .map(|(i, line)| {
+                        (
+                            (i + 1 + contract_line_offset) as u32,
+                            1u32,
+                            line.len() as u32,
+                        )
+                    })
                     .unwrap_or(((1 + contract_line_offset) as u32, 1, 10));
 
                 let finding = self.base.create_finding(
@@ -341,7 +362,13 @@ impl Detector for FlashLoanReentrancyComboDetector {
                             || ll.contains("flashborrow")
                             || ll.contains("borrow")
                     })
-                    .map(|(i, line)| ((i + 1 + contract_line_offset) as u32, 1u32, line.len() as u32))
+                    .map(|(i, line)| {
+                        (
+                            (i + 1 + contract_line_offset) as u32,
+                            1u32,
+                            line.len() as u32,
+                        )
+                    })
                     .unwrap_or(((1 + contract_line_offset) as u32, 1, 10));
 
                 let finding = self.base.create_finding(

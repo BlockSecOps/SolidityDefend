@@ -81,7 +81,10 @@ impl TransientStorageComposabilityDetector {
             .filter_map(|line| {
                 let trimmed = line.trim();
                 // Skip pure comment lines
-                if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                if trimmed.starts_with("//")
+                    || trimmed.starts_with("*")
+                    || trimmed.starts_with("/*")
+                {
                     return None;
                 }
                 let lower = trimmed.to_lowercase();
@@ -89,7 +92,11 @@ impl TransientStorageComposabilityDetector {
                 if !lower.contains("transient") {
                     return None;
                 }
-                if !(lower.contains("uint") || lower.contains("mapping") || lower.contains("bool") || lower.contains("address")) {
+                if !(lower.contains("uint")
+                    || lower.contains("mapping")
+                    || lower.contains("bool")
+                    || lower.contains("address"))
+                {
                     return None;
                 }
                 // Extract variable name: last identifier before `;` or `=`
@@ -126,21 +133,25 @@ impl TransientStorageComposabilityDetector {
             let has_asm_transient = func_lower.contains("tstore") || func_lower.contains("tload");
             let has_keyword_transient = func_text.lines().any(|line| {
                 let trimmed = line.trim();
-                if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                if trimmed.starts_with("//")
+                    || trimmed.starts_with("*")
+                    || trimmed.starts_with("/*")
+                {
                     return false;
                 }
                 trimmed.to_lowercase().contains("transient")
             });
 
-            let has_transient_ref = uses_transient_var || has_asm_transient || has_keyword_transient;
+            let has_transient_ref =
+                uses_transient_var || has_asm_transient || has_keyword_transient;
 
             let has_write = has_transient_ref
                 && (func_text.contains("=")
                     || func_text.contains("++")
                     || func_text.contains("--"));
 
-            let has_read = has_transient_ref
-                && (func_text.contains("require(") || func_text.contains("if ("));
+            let has_read =
+                has_transient_ref && (func_text.contains("require(") || func_text.contains("if ("));
 
             if has_write {
                 writers.push((

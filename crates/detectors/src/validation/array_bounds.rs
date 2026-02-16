@@ -154,9 +154,16 @@ impl ArrayBoundsDetector {
                                 let array_lower = array_name.to_lowercase();
 
                                 // Match patterns like: require(_pid < poolinfo.length
-                                if mod_source.contains(&format!("{} < {}.length", param_lower, array_lower))
-                                    || mod_source.contains(&format!("{}< {}.length", param_lower, array_lower))
-                                    || mod_source.contains(&format!("{} <{}.length", param_lower, array_lower))
+                                if mod_source
+                                    .contains(&format!("{} < {}.length", param_lower, array_lower))
+                                    || mod_source.contains(&format!(
+                                        "{}< {}.length",
+                                        param_lower, array_lower
+                                    ))
+                                    || mod_source.contains(&format!(
+                                        "{} <{}.length",
+                                        param_lower, array_lower
+                                    ))
                                 {
                                     bounded.insert(param_name.name.to_string(), array_name.clone());
                                 }
@@ -576,7 +583,12 @@ impl ArrayBoundsDetector {
             }
             // Simple arithmetic on bounded variables (i + 1, i - 1) where i < arr.length
             // Note: i + 1 could still overflow at arr.length - 1, but this is much less common
-            ast::Expression::BinaryOperation { operator, left, right, .. } => {
+            ast::Expression::BinaryOperation {
+                operator,
+                left,
+                right,
+                ..
+            } => {
                 // FP Reduction Pattern A: Modulo by array.length guarantees in-bounds
                 // e.g., hash % participants.length is always < participants.length
                 if matches!(operator, ast::BinaryOperator::Mod) {
@@ -879,7 +891,9 @@ impl ArrayBoundsDetector {
             // the caller already knows its length, making runtime mismatch less likely.
             // Change from .all() to .any() to reduce false positives.
             if array_params.iter().any(|(name, _)| {
-                arrays.get(name.as_str()).map_or(false, |info| !info.is_dynamic)
+                arrays
+                    .get(name.as_str())
+                    .map_or(false, |info| !info.is_dynamic)
             }) {
                 return findings;
             }
@@ -1135,7 +1149,10 @@ impl Detector for ArrayBoundsDetector {
         }
 
         // Phase 10: Skip test contracts, secure examples, and attack helpers
-        if is_test_contract(ctx) || is_secure_example_file(ctx) || crate::utils::is_attack_contract(ctx) {
+        if is_test_contract(ctx)
+            || is_secure_example_file(ctx)
+            || crate::utils::is_attack_contract(ctx)
+        {
             return Ok(findings);
         }
 
@@ -1155,9 +1172,7 @@ impl Detector for ArrayBoundsDetector {
         if is_solidity_08_plus {
             // Remove single-index "may be out of bounds" findings since the
             // compiler inserts bounds checks. Keep multi-array length mismatch findings.
-            findings.retain(|f| {
-                !f.message.contains("may be out of bounds")
-            });
+            findings.retain(|f| !f.message.contains("may be out of bounds"));
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

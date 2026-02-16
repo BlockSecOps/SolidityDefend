@@ -81,7 +81,8 @@ impl Detector for VaultShareInflationDetector {
         // Hook reentrancy and read-only reentrancy are separate vulnerability classes
         // with their own dedicated detectors.
         let contract_name_lower = ctx.contract.name.name.to_lowercase();
-        if contract_name_lower.contains("reentrancy") || contract_name_lower.contains("reentrancy") {
+        if contract_name_lower.contains("reentrancy") || contract_name_lower.contains("reentrancy")
+        {
             return Ok(findings);
         }
         let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();

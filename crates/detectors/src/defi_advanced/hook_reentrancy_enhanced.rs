@@ -165,7 +165,10 @@ impl Detector for HookReentrancyEnhancedDetector {
             || contract_name_lower.contains("amm")
             || contract_name_lower.contains("curve");
         let is_hook_callback = has_hook_callback_fn
-            || (is_pool_contract && contract_func_names.iter().any(|n| n.contains("removeliquidity") || n.contains("remove_liquidity")))
+            || (is_pool_contract
+                && contract_func_names
+                    .iter()
+                    .any(|n| n.contains("removeliquidity") || n.contains("remove_liquidity")))
             || lower.contains("function onswap")
             || lower.contains("function tokensreceived")
             || lower.contains("function onflashloan");

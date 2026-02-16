@@ -131,8 +131,10 @@ impl YieldFarmingDetector {
         // Restaking contracts have dedicated detectors (restaking-withdrawal-delays,
         // lrt-share-inflation). "restaking" contains "staking" as a substring,
         // causing false matches on the staking+reward strong signal path.
-        if contract_name.contains("restake") || contract_name.contains("restaking")
-            || contract_source.contains("restake") || contract_source.contains("restaking")
+        if contract_name.contains("restake")
+            || contract_name.contains("restaking")
+            || contract_source.contains("restake")
+            || contract_source.contains("restaking")
         {
             return true;
         }

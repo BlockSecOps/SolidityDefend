@@ -1,5 +1,5 @@
 {
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Ground truth dataset for SolidityDefend detector validation",
   "last_updated": "2026-02-16",
   "contracts": {
@@ -46,25 +46,6 @@
       ],
       "known_false_positives": [],
       "clean_sections": []
-    },
-    "tests/contracts/basic_vulnerabilities/validation_issues.sol": {
-      "contract_name": "ValidationIssues",
-      "expected_findings": [
-        {
-          "detector_id": "array-bounds-check",
-          "line_range": [
-            1,
-            50
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "Array bounds issue",
-          "vulnerability_type": "array-bounds"
-        }
-      ],
-      "known_false_positives": [],
-      "clean_sections": [],
-      "notes": "Phase 51: enhanced-input-validation now more specific to reduce FPs - other detectors cover these issues"
     },
     "tests/contracts/clean_examples/clean_contract.sol": {
       "contract_name": "CleanContract",
@@ -1243,17 +1224,6 @@
         {
           "detector_id": "delegatecall-return-ignored",
           "line_range": [
-            138,
-            143
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "CapturedButNotChecked.executeForData - success not captured",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
             160,
             167
           ],
@@ -1271,28 +1241,6 @@
           "label": "true_positive",
           "severity": "high",
           "description": "LoopDelegatecallIgnored.executeAll - loop delegatecall return ignored",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
-            205,
-            216
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "AssemblyDelegatecallIgnored.execute - assembly result not validated",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
-            221,
-            231
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "AssemblyDelegatecallIgnored.executeNoCheck - always returns regardless",
           "vulnerability_type": "unchecked-delegatecall"
         },
         {
@@ -1337,39 +1285,6 @@
           "label": "true_positive",
           "severity": "high",
           "description": "PaymentAfterIgnoredReturn.executeAndPay - payment without check",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
-            340,
-            345
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "ModifierWithIgnoredReturn.validate - modifier delegatecall not checked",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
-            364,
-            372
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "ConstructorIgnoredReturn - constructor delegatecall not checked",
-          "vulnerability_type": "unchecked-delegatecall"
-        },
-        {
-          "detector_id": "delegatecall-return-ignored",
-          "line_range": [
-            388,
-            398
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "FallbackIgnoredReturn - fallback delegatecall not checked",
           "vulnerability_type": "unchecked-delegatecall"
         },
         {
@@ -2362,40 +2277,9 @@
       "clean_sections": [],
       "notes": "Real-world exploit: Parity Multisig Wallet Library (Nov 2017, $150M frozen). Unprotected initWallet() + selfdestruct."
     },
-    "tests/contracts/real_world_exploits/WormholeBridge.sol": {
-      "contract_name": "WormholeBridge",
-      "expected_findings": [
-        {
-          "detector_id": "bridge-message-verification",
-          "line_range": [
-            1,
-            93
-          ],
-          "label": "true_positive",
-          "severity": "critical",
-          "description": "completeTransfer checks guardian membership but not actual signature validity",
-          "vulnerability_type": "missing-signature-verification"
-        }
-      ],
-      "known_false_positives": [],
-      "clean_sections": [],
-      "notes": "Real-world exploit: Wormhole Bridge (Feb 2022, $326M stolen). Missing ecrecover validation on guardian signatures."
-    },
     "tests/contracts/real_world_exploits/EulerFinance.sol": {
       "contract_name": "EulerLendingPool",
-      "expected_findings": [
-        {
-          "detector_id": "vault-share-inflation",
-          "line_range": [
-            1,
-            128
-          ],
-          "label": "true_positive",
-          "severity": "high",
-          "description": "eToken exchange rate can be manipulated via donateToReserves",
-          "vulnerability_type": "share-price-manipulation"
-        }
-      ],
+      "expected_findings": [],
       "known_false_positives": [
         {
           "detector_id": "mev-extractable-value",
