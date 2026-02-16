@@ -143,7 +143,8 @@ impl ProxyStorageCollisionDetector {
         let source_lower = contract_source.to_lowercase();
         if (source_lower.contains("@openzeppelin/contracts-upgradeable")
             || source_lower.contains("openzeppelin-contracts-upgradeable")
-            || (source_lower.contains("initializable") && source_lower.contains("__gap"))) {
+            || (source_lower.contains("initializable") && source_lower.contains("__gap")))
+        {
             return None;
         }
 
@@ -214,8 +215,8 @@ impl ProxyStorageCollisionDetector {
 
         // FP Reduction: Check for delegatecall in actual code (not comments)
         // and exclude staticcall-only contracts (read-only delegation)
-        let has_delegatecall = self.has_in_code(source, "delegatecall")
-            && !self.is_staticcall_only(source);
+        let has_delegatecall =
+            self.has_in_code(source, "delegatecall") && !self.is_staticcall_only(source);
 
         // A contract is a proxy if:
         // 1. It has proxy in name AND delegatecall, OR

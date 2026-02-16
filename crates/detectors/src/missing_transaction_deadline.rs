@@ -189,26 +189,39 @@ impl MissingTransactionDeadlineDetector {
         }
 
         // Uniswap V4 hooks are callbacks, not user-initiated - no deadline needed
-        if func_name.contains("beforeswap") || func_name.contains("afterswap")
-            || func_name.contains("beforeadd") || func_name.contains("afteradd")
-            || func_name.contains("beforeremove") || func_name.contains("afterremove")
+        if func_name.contains("beforeswap")
+            || func_name.contains("afterswap")
+            || func_name.contains("beforeadd")
+            || func_name.contains("afteradd")
+            || func_name.contains("beforeremove")
+            || func_name.contains("afterremove")
         {
             return false;
         }
 
         // ERC-7683 cross-chain intent functions - deadlines managed by intent protocol
-        if func_name.contains("openorder") || func_name.contains("fillorder")
-            || func_name.contains("resolveorder") || func_name.contains("settleorder")
+        if func_name.contains("openorder")
+            || func_name.contains("fillorder")
+            || func_name.contains("resolveorder")
+            || func_name.contains("settleorder")
         {
-            if source.contains("CrossChain") || source.contains("Intent") || source.contains("Permit2") {
+            if source.contains("CrossChain")
+                || source.contains("Intent")
+                || source.contains("Permit2")
+            {
                 return false;
             }
         }
 
         // Cross-chain bridge operations - timing managed by bridge protocol
-        if (func_name.contains("bridge") || func_name.contains("relay") || func_name.contains("finalize"))
-            && (source.contains("L1") || source.contains("L2") || source.contains("messenger")
-                || source.contains("crossDomain") || source.contains("bridge"))
+        if (func_name.contains("bridge")
+            || func_name.contains("relay")
+            || func_name.contains("finalize"))
+            && (source.contains("L1")
+                || source.contains("L2")
+                || source.contains("messenger")
+                || source.contains("crossDomain")
+                || source.contains("bridge"))
         {
             return false;
         }
@@ -371,13 +384,17 @@ impl MissingTransactionDeadlineDetector {
         // (not calling an external router) manage deadlines at the router level
         let is_direct_swap_impl = func_name.contains("swap")
             && (source.contains("reserve") || source.contains("balanceOf(address(this))"))
-            && (source.contains("amountOut") || source.contains("getAmountOut") || source.contains("k ="))
+            && (source.contains("amountOut")
+                || source.contains("getAmountOut")
+                || source.contains("k ="))
             && !source.contains("IUniswap")
             && !source.contains("IPancake")
             && !source.contains("router");
 
         // Must match multiple pool indicators to avoid false matches
-        (has_k_invariant && has_lock) || (has_pool_patterns && has_pool_lifecycle) || is_direct_swap_impl
+        (has_k_invariant && has_lock)
+            || (has_pool_patterns && has_pool_lifecycle)
+            || is_direct_swap_impl
     }
 
     /// Checks if the function has alternative timing/price protection mechanisms

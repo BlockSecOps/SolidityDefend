@@ -486,7 +486,7 @@ impl RestakingWithdrawalDelaysDetector {
             || func_source.contains("delegationmanager")
             || func_source.contains("restake")
             || func_source.contains(".deposit(")  // calling external deposit
-            || func_source.contains(".stake(");    // calling external stake
+            || func_source.contains(".stake("); // calling external stake
         if !forwards_to_external {
             return findings;
         }

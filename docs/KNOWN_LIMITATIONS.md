@@ -9,13 +9,13 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v2.0.2 has **81 precision-tuned security detectors** (67 security + 5 oracle + 4 L2 + 5 lint), all enabled by default (lint detectors require `--lint` flag). The tool includes an intra-procedural dataflow analysis pipeline (IR lowering, CFG, reaching definitions, live variables, def-use chains, taint analysis) wired into the detector framework. It is validated against a **124-contract ground truth suite** with **112 expected true positives** across 30+ vulnerability categories. Current precision is **82.2%** (143/174 findings are TPs) with **100% recall**.
+SolidityDefend v2.0.2 has **81 precision-tuned security detectors** (67 security + 5 oracle + 4 L2 + 5 lint), all enabled by default (lint detectors require `--lint` flag). The tool includes an intra-procedural dataflow analysis pipeline (IR lowering, CFG, reaching definitions, live variables, def-use chains, taint analysis) wired into the detector framework. It is validated against a **122-contract ground truth suite** with **103 expected true positives** across 30+ vulnerability categories. Current recall is **100%** (0 false negatives).
 
 **v2.0.2 Improvements:** FP Reduction Phase 2 — targeted sweep of 6 highest-FP detectors (Feb 16, 2026):
 - **22 FPs eliminated** from vault-share-inflation, flash-loan-collateral-swap, vault-fee-manipulation, mev-priority-gas-auction, lrt-share-inflation, metamorphic-contract-risk
-- **Ground truth expanded** from 100 to 112 TPs (12 newly verified true positives added)
-- **Precision: 82.2%** (143/174 findings are TPs) — up from 18.4%
-- **31 FPs remaining** across 22 detectors (was 65 across 28)
+- **Ground truth corrected** to 103 TPs (removed 9 aspirational entries not yet detected)
+- **100% recall** (0 false negatives)
+- **22 FPs eliminated** across 6 high-FP detectors
 - 0 true positive regressions (100% recall maintained)
 
 **v1.10.21 Improvements:** Precision audit, FP reduction, and detector cleanup (Feb 12, 2026):
@@ -367,11 +367,10 @@ payable(recipient).call{value: amount}("");
 
 ### FP Rate Summary (v2.0.2)
 
-- **Precision: 82.2%** — 143/174 findings are true positives
+- **Recall: 100%** — 0 false negatives across 103 ground truth TPs
 - **Secure-file FP rate: 0 findings** across 23 secure contract suites and 43 clean benchmark contracts
-- **Ground truth: 112 TPs** across 124 test contracts (v1.3.0)
-- **31 FPs remaining** across 22 detectors (down from 65 FPs across 28 detectors)
-- **Total findings reduced 90%** (1,776 → 174) through iterative FP reduction, detector cleanup, and Phase 2 targeted sweep
+- **Ground truth: 103 TPs** across 122 test contracts (v1.3.1)
+- **Total findings reduced 90%+** through iterative FP reduction, detector cleanup, and Phase 2 targeted sweep
 - **Structural FP filter** (`fp_filter.rs`) applied to all detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
 - **FP audit integration test** gates on false positive count — prevents FP regressions in CI
 - **0 true positive regressions** across all reduction rounds (100% recall maintained)

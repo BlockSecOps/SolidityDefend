@@ -136,8 +136,8 @@ impl Detector for TokenPermitFrontRunningDetector {
 
         // Permit implementers: tokens with function permit() + ecrecover.
         // These are only vulnerable if they lack deadline enforcement.
-        let is_permit_implementer = contract_lower.contains("function permit(")
-            && contract_lower.contains("ecrecover");
+        let is_permit_implementer =
+            contract_lower.contains("function permit(") && contract_lower.contains("ecrecover");
 
         // FP Reduction: Exempt OZ ERC20Permit consumers — contracts that simply
         // call permit() on an external token. If they use try-catch or allowance checks they're safe.

@@ -87,8 +87,8 @@ impl Detector for ZKProofMalleabilityDetector {
         // not malleability. Flagging them here produces cross-detector FPs.
         {
             let file_lower = ctx.file_path.to_lowercase();
-            let is_other_zk_vuln = file_lower.contains("proofbypass")
-                || file_lower.contains("underconstrained");
+            let is_other_zk_vuln =
+                file_lower.contains("proofbypass") || file_lower.contains("underconstrained");
             if is_other_zk_vuln {
                 return Ok(findings);
             }

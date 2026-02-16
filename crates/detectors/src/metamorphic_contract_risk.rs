@@ -294,8 +294,10 @@ impl Detector for MetamorphicContractRiskDetector {
             return Ok(findings);
         }
         let source_lower = ctx.source_code.to_lowercase();
-        if source_lower.contains("post-cancun") || source_lower.contains("post cancun")
-            || source_lower.contains("eip-6780") || source_lower.contains("dencun")
+        if source_lower.contains("post-cancun")
+            || source_lower.contains("post cancun")
+            || source_lower.contains("eip-6780")
+            || source_lower.contains("dencun")
         {
             return Ok(findings);
         }

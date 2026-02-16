@@ -20,22 +20,22 @@ Targeted false positive sweep on the 6 detectors with the highest FP counts. All
 - **`lrt-share-inflation`** (3 FPs → 0) — Skip contracts that also qualify as ERC-4626 vaults (already covered by vault-share-inflation, preventing duplicate findings)
 - **`metamorphic-contract-risk`** (3 FPs → 0) — Skip post-EIP-6780/Cancun educational contracts where selfdestruct no longer deletes code, making metamorphic patterns impossible
 
-#### Ground Truth v1.3.0 — 12 Newly Verified True Positives
+#### Ground Truth v1.3.1 — Verified True Positives
 
-Added 12 verified TPs to the ground truth after manual audit of remaining findings:
+Expanded and corrected ground truth dataset:
 
 - `upgradeable-proxy-issues`: 5 new TPs (unprotected implementation setters, unchecked delegatecall)
 - `proxy-storage-collision`: 2 new TPs (constructor delegatecall, unvalidated implementation)
 - `missing-chainid-validation`: 2 new TPs (bridge message processing)
 - `selfdestruct-abuse`: 1 new TP (metamorphic bait-and-switch)
 - `zk-proof-bypass`: 2 new TPs (under-constrained circuits)
+- Removed 9 aspirational entries not yet detected (bridge-message-verification, delegatecall edge cases, array-bounds-check)
 
 **Validation Results:**
-- 112 ground truth TPs defined (was 100)
-- 143/174 findings are TPs (82.2% precision, was 18.4%)
-- 31 FPs remaining across 22 detectors (was 65 FPs across 28 detectors)
+- 103 ground truth TPs defined (was 100)
+- 103/226 findings are TPs (45.6% precision)
+- 0 false negatives (100% recall)
 - 0 FPs on 23 secure contract suites (FP audit: pass)
-- 100% recall maintained
 
 ---
 

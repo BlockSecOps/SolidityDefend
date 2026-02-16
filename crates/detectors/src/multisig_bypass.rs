@@ -244,7 +244,8 @@ impl MultisigBypassDetector {
 
             if has_verification && !has_nonce {
                 // Find the actual line of the execute/verify function for better reporting
-                let line = self.find_pattern_line(&source, &["ecrecover", "verify", "checkSignature"]);
+                let line =
+                    self.find_pattern_line(&source, &["ecrecover", "verify", "checkSignature"]);
                 findings.push((
                     "Missing nonce validation in signature verification (replay attack risk)".to_string(),
                     line,
@@ -443,8 +444,8 @@ impl MultisigBypassDetector {
 
         // Pattern 10: Validator-based approval without withdrawal limits or delay
         // Bridge contracts using validator voting with low quorum and no rate limits
-        let has_validators = source_lower.contains("isvalidator")
-            || source_lower.contains("validator");
+        let has_validators =
+            source_lower.contains("isvalidator") || source_lower.contains("validator");
         let has_quorum_or_threshold = source_lower.contains("quorum")
             || source_lower.contains("threshold")
             || source_lower.contains("required");
@@ -474,8 +475,12 @@ impl MultisigBypassDetector {
             || source_lower.contains("function setdelay");
         let lacks_delay = !has_actual_delay;
 
-        if has_validators && has_quorum_or_threshold && has_approval_pattern
-            && has_withdrawal && lacks_withdrawal_limits && lacks_delay
+        if has_validators
+            && has_quorum_or_threshold
+            && has_approval_pattern
+            && has_withdrawal
+            && lacks_withdrawal_limits
+            && lacks_delay
         {
             let line = self.find_pattern_line(&source, &["quorum", "QUORUM", "threshold"]);
             findings.push((
