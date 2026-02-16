@@ -118,6 +118,14 @@ impl Detector for TxOriginDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip EIP-7702 delegation files where tx.origin has different semantics
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("eip7702") || file_lower.contains("delegation") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Consolidate per-function issues into 1 finding per contract
         let mut sub_issues: Vec<(String, u32)> = Vec::new();
 

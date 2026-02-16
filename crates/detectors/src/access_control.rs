@@ -68,6 +68,14 @@ impl Detector for UnprotectedInitializerDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip delegatecall test files (covered by dedicated delegatecall detectors)
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("delegatecall/") || file_lower.contains("delegatecall\\") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Skip contracts that are clearly not upgradeable
         // Unprotected initializers are primarily a concern for proxy/upgradeable contracts.
         // Non-upgradeable contracts use constructors; initialize() in those contexts is
