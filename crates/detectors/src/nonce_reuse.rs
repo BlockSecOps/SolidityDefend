@@ -66,6 +66,11 @@ impl Detector for NonceReuseDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
         // Contract-level early exit: skip contracts that have no nonce-related state
         // or code at all. This avoids scanning vaults, AMMs, staking contracts, etc.
         if !self.contract_has_nonce_context(&ctx.source_code) {
@@ -332,7 +337,9 @@ impl NonceReuseDetector {
         let skip_cancellation = is_permit_context
             || has_used_nonce_tracking
             || func_name_lower.contains("reveal")
-            || func_name_lower.contains("commit");
+            || func_name_lower.contains("commit")
+            || func_name_lower.contains("execute")
+            || func_name_lower.contains("validate");
 
         if has_sequential_nonce && !contract_has_cancellation && !skip_cancellation {
             return Some(

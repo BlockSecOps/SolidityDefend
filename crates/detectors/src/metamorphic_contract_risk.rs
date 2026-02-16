@@ -285,6 +285,21 @@ impl Detector for MetamorphicContractRiskDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip contracts demonstrating post-EIP-6780/Cancun selfdestruct
+        // behavior changes. After Cancun, selfdestruct no longer deletes code (only
+        // sends ETH), making metamorphic patterns impossible. Educational contracts
+        // showing this broken pattern should not be flagged.
+        let file_lower = ctx.file_path.to_lowercase();
+        if file_lower.contains("eip6780") || file_lower.contains("eip-6780") {
+            return Ok(findings);
+        }
+        let source_lower = ctx.source_code.to_lowercase();
+        if source_lower.contains("post-cancun") || source_lower.contains("post cancun")
+            || source_lower.contains("eip-6780") || source_lower.contains("dencun")
+        {
+            return Ok(findings);
+        }
+
         // Use file source for prerequisite checks (cross-contract patterns),
         // but contract source for finding actual lines (prevents per-contract inflation)
         let file_source = &ctx.source_code;

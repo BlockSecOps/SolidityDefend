@@ -5,13 +5,34 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.1] - 2026-02-13
+## [2.0.1] - 2026-02-15
 
 ### Fixed
+- **Flash loan reentrancy combo multi-contract scoping** — `flash-loan-reentrancy-combo` was triggering on unrelated contracts in multi-contract files (e.g., flagging an AA bundler DoS contract because `executeOperation` existed in a sibling contract). Added contract function scoping gate and contract source extraction to scope all 5 patterns to the contract being analyzed. Improved location reporting to point at actual vulnerable lines instead of line 1.
 - **Re-enabled 3 disabled detectors** — `oracle-single-source`, `l2-block-number-assumption`, and `l2-push0-cross-deploy` were disabled in v2.0.0 due to excessive false positives. Tightened detection logic to achieve 0 FPs while maintaining 100% recall.
   - `oracle-single-source` (145 FPs → 0): Added Chainlink infrastructure gate, safe patterns library integration (multi-oracle, TWAP, staleness), view/pure function filtering, expanded fallback recognition
   - `l2-block-number-assumption` (30 FPs → 0): Added L2 context gate requiring L2-specific interfaces/chain IDs, governance snapshot whitelist, simple assignment skip, defensive zero-check skip
   - `l2-push0-cross-deploy` (40 FPs → 0): Comment stripping for keyword matching, require `block.chainid` evidence, per-contract body extraction, removed overly broad keywords (blast, scroll, base chain)
+- **FP reduction across 17 additional detectors** — Broad false positive sweep targeting secure example contracts, attack/exploit contracts, empty function bodies, cross-contract scoping, and domain-specific safe patterns:
+  - `aa-account-takeover`: Skip empty/trivial fallback/receive; require dangerous operations (delegatecall, execute, call)
+  - `access-control`: Skip attack/exploit contracts; skip empty function bodies
+  - `array-bounds`: Modifier-based bounds check recognition; `x % array.length` always in-bounds; Solidity 0.8+ compiler bounds check awareness; fixed-size array skip; attack contract skip
+  - `bridge-token-minting`: Skip owner/admin direct mint functions (not bridge callbacks)
+  - `create2-salt-frontrunning`: Skip secure example contracts
+  - `defi-yield-farming`: Skip secure example contracts
+  - `delegatecall-return-ignored`: Recognize standard proxy `returndatacopy` + `return()` forwarding pattern
+  - `eip7702`: Per-contract source scoping to prevent cross-contract FPs
+  - `governance`: Skip delegatecall-focused contracts; skip access-control-only and restaking/slashing contracts
+  - `l2-gas-price-dependency`: Require explicit L2 deployment context (Arbitrum, Optimism, zkSync, etc.)
+  - `mev-extractable-value`: Skip Uniswap V4 hook callbacks; skip cancel/pause/emergency functions; tighten arbitrage detection; narrow buy/sell to DEX contexts
+  - `missing-transaction-deadline`: Skip cancel/pause/stop functions; require token transfer logic for swap-named functions; exclude V4 hooks, ERC-7683, bridge relays; recognize direct AMM pool implementations
+  - `multisig-bypass`: Per-contract source scoping; recognize txhash/transactionhash as nonce tracking
+  - `nonce-reuse`: Skip secure example contracts; expand cancellation-skip for AA patterns
+  - `proxy-storage-collision`: Skip OZ Upgradeable base contracts; ignore delegatecall in comments; exclude staticcall-only contracts
+  - `restaking-withdrawal-delays`: Only flag deposits forwarded to external protocols; skip redundant contract-level findings
+  - `upgradeable-proxy-issues`: Skip empty function bodies and fallback/receive; recognize onlyRole/hasRole access control
+  - `vault-withdrawal-dos`: Skip admin-only, internal, and private withdrawal functions
+- **New shared utility** — `is_attack_contract()` helper for consistent attack/exploit contract detection across detectors
 - **Precision maintained at 18.4%** — 77/77 TPs, 0 FPs on re-enabled detectors
 
 ## [1.10.24] - 2026-02-13

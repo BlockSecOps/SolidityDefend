@@ -354,6 +354,42 @@ impl VaultWithdrawalDosDetector {
             return None;
         }
 
+        // FP Reduction: Skip admin-only withdrawal functions.
+        // Functions with access control modifiers (onlyOwner, onlyAdmin, etc.)
+        // are not vulnerable to DOS by external attackers.
+        let has_access_modifier = function.modifiers.iter().any(|m| {
+            let name_lower = m.name.name.to_lowercase();
+            name_lower.contains("only")
+                || name_lower.contains("admin")
+                || name_lower.contains("owner")
+                || name_lower.contains("auth")
+                || name_lower.contains("governance")
+        });
+        if has_access_modifier {
+            return None;
+        }
+
+        // FP Reduction: Also skip functions with inline access control checks.
+        // Functions like emergencyWithdraw that have require(msg.sender == admin)
+        // are admin-only and not vulnerable to external DOS.
+        let func_lower = func_source.to_lowercase();
+        if (func_lower.contains("require(msg.sender == admin")
+            || func_lower.contains("require(msg.sender == owner")
+            || func_lower.contains("msg.sender == admin")
+            || func_lower.contains("msg.sender == owner"))
+            && (function.name.name.to_lowercase().contains("emergency")
+                || function.name.name.to_lowercase().contains("admin"))
+        {
+            return None;
+        }
+
+        // FP Reduction: Skip internal/private withdrawal helpers
+        if function.visibility == ast::Visibility::Internal
+            || function.visibility == ast::Visibility::Private
+        {
+            return None;
+        }
+
         // Pattern 1: Unbounded withdrawal queue processing
         let has_unbounded_loop = (func_source.contains("for (") || func_source.contains("while ("))
             && (func_source.contains("withdrawalQueue")

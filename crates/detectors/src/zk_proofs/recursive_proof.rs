@@ -69,26 +69,64 @@ impl Detector for ZKRecursiveProofValidationDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // FP Reduction: Use per-contract source, not full-file source.
+        // In multi-contract files, ctx.source_code is the full file, so ALL contracts
+        // would match if ANY contract has ZK keywords.
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let lower = contract_source.to_lowercase();
 
-        // FP Reduction: Require ZK/proof context — "aggregate" alone is too generic
-        // (matches DeFi batch operations). Only trigger when aggregate is near proof keywords.
-        let has_zk_context = lower.contains("proof")
-            || lower.contains("verify")
-            || lower.contains("snark")
+        // Require strong ZK proof context.
+        // "aggregate" + "verify" is too generic — matches DeFi oracle aggregation,
+        // signature aggregation, batch operations. Require ZK-specific keywords.
+        let has_strong_zk_context = lower.contains("snark")
             || lower.contains("groth16")
             || lower.contains("plonk")
-            || lower.contains("circuit");
-        let is_recursive = lower.contains("recursiveproof")
-            || (lower.contains("aggregate") && has_zk_context)
-            || lower.contains("batchverify");
+            || lower.contains("circuit")
+            || lower.contains("zkproof")
+            || lower.contains("zk_proof")
+            || lower.contains("zk proof");
+
+        // "aggregate" only counts as ZK if combined with strong ZK context
+        let has_proof_aggregate = lower.contains("aggregate")
+            && has_strong_zk_context
+            && !lower.contains("aggregatedprice")
+            && !lower.contains("aggregatesignature")
+            && !lower.contains("aggregateslippage");
+
+        // Function-level check: require ZK proof function names IN THIS contract
+        let contract_func_names: Vec<String> = ctx
+            .contract
+            .functions
+            .iter()
+            .map(|f| f.name.name.to_lowercase())
+            .collect();
+        let has_zk_proof_fn = contract_func_names.iter().any(|n| {
+            n.contains("verifyproof")
+                || n.contains("verify_proof")
+                || n.contains("batchverify")
+                || n.contains("recursiveproof")
+                || n.contains("recursive_proof")
+                || n.contains("aggregateproof")
+                || n.contains("aggregate_proof")
+                || n.contains("verifyrecursive")
+                || n.contains("verify_recursive")
+        });
+
+        let is_recursive = (lower.contains("recursiveproof") || lower.contains("recursive_proof"))
+            || (has_proof_aggregate && has_zk_proof_fn)
+            || (lower.contains("batchverify") && has_zk_proof_fn);
+
+        // Require at least one ZK-related function in THIS contract
+        if !has_zk_proof_fn {
+            return Ok(findings);
+        }
 
         if !is_recursive {
             return Ok(findings);
         }
 
         // Pattern 1: Batch proof verification without individual validation
-        if lower.contains("batchverify") || (lower.contains("aggregate") && has_zk_context) {
+        if lower.contains("batchverify") || has_proof_aggregate {
             let validates_each = lower.contains("for (") || lower.contains("while");
 
             if !validates_each {

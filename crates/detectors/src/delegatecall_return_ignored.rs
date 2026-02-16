@@ -259,6 +259,14 @@ impl DelegatecallReturnIgnoredDetector {
             return false;
         }
 
+        // FP Reduction: Standard proxy forwarding pattern uses returndatacopy + return
+        // This IS handling the delegatecall result by forwarding it to the caller
+        let has_return_forwarding = source.contains("returndatacopy")
+            && source.contains("return(");
+        if has_return_forwarding {
+            return false;
+        }
+
         // If switch exists but no case 0 (failure case)
         if has_switch_check && !has_case_zero {
             return true;

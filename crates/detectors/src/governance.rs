@@ -90,6 +90,11 @@ impl Detector for GovernanceDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
         // Run all governance vulnerability detection methods
         findings.extend(self.detect_flash_loan_governance_attacks(ctx)?);
         findings.extend(self.detect_missing_snapshot_protection(ctx)?);
@@ -155,6 +160,39 @@ impl GovernanceDetector {
             || (lower.contains("delegation") && lower.contains("extcodesize"));
 
         if is_eip7702 {
+            return true;
+        }
+
+        // Delegatecall-focused contracts (proxy libraries, delegatecall examples)
+        // These use "delegate" in the context of delegatecall, not governance delegation
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        if (contract_name_lower.contains("delegatecall")
+            || contract_name_lower.contains("delegate_call")
+            || contract_name_lower.contains("delegation")
+            || (lower.contains("delegatecall") && !lower.contains("vote")))
+            && !lower.contains("vote")
+            && !lower.contains("governance")
+        {
+            return true;
+        }
+
+        // Contracts focused on access control / authorization patterns (not governance)
+        if (contract_name_lower.contains("access")
+            || contract_name_lower.contains("auth")
+            || contract_name_lower.contains("permission"))
+            && !lower.contains("vote")
+            && !lower.contains("governance")
+            && !lower.contains("proposal")
+        {
+            return true;
+        }
+
+        // Restaking/slashing contracts without governance context
+        if (lower.contains("slashing") || lower.contains("restaking"))
+            && !lower.contains("vote")
+            && !lower.contains("governance")
+            && !lower.contains("proposal")
+        {
             return true;
         }
 

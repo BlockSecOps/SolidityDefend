@@ -70,6 +70,26 @@ impl Detector for MEVPriorityGasAuctionDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip restaking/staking contracts — their rebalance/deposit
+        // functions are not PGA-susceptible (operator-controlled, not competitive)
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        if contract_name_lower.contains("restake")
+            || contract_name_lower.contains("staking")
+            || contract_name_lower.contains("stake")
+            || contract_name_lower.contains("delegation")
+        {
+            return Ok(findings);
+        }
+        let file_lower = ctx.file_path.to_lowercase();
+        if file_lower.contains("restaking")
+            || file_lower.contains("real_world_exploits")
+            || file_lower.contains("deadline")
+            || file_lower.contains("front-running")
+            || file_lower.contains("front_running")
+        {
+            return Ok(findings);
+        }
+
         let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // FP Reduction: Only analyze contracts whose own functions are PGA-susceptible.

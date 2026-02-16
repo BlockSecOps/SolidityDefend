@@ -70,6 +70,16 @@ impl Detector for TokenPermitFrontRunningDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // FP Reduction: Only analyze contracts with permit-related functions
         let contract_func_names: Vec<String> = ctx
             .contract
@@ -116,11 +126,18 @@ impl Detector for TokenPermitFrontRunningDetector {
         let has_deadline_or_replay_protection = contract_lower.contains("require(deadline")
             || contract_lower.contains("deadline <=")
             || contract_lower.contains("deadline >=")
+            || contract_lower.contains("<= deadline")
+            || contract_lower.contains(">= deadline")
             || contract_lower.contains("usedsignatures")
             || contract_lower.contains("safepermit");
         if is_secure_permit_impl && has_deadline_or_replay_protection {
             return Ok(findings);
         }
+
+        // Permit implementers: tokens with function permit() + ecrecover.
+        // These are only vulnerable if they lack deadline enforcement.
+        let is_permit_implementer = contract_lower.contains("function permit(")
+            && contract_lower.contains("ecrecover");
 
         // FP Reduction: Exempt OZ ERC20Permit consumers — contracts that simply
         // call permit() on an external token. If they use try-catch or allowance checks they're safe.
@@ -164,8 +181,8 @@ impl Detector for TokenPermitFrontRunningDetector {
             }
         }
 
-        // Pattern 2: No allowance check before permit
-        if has_permit_function || has_permit_call {
+        // Pattern 2: No allowance check before permit (consumer-only concern)
+        if !is_permit_implementer && (has_permit_function || has_permit_call) {
             let checks_allowance = contract_lower.contains("allowance(")
                 || contract_lower.contains("currentallowance");
 
@@ -210,8 +227,8 @@ impl Detector for TokenPermitFrontRunningDetector {
             }
         }
 
-        // Pattern 4: Permit signature reuse protection missing
-        if has_permit_function || has_permit_call {
+        // Pattern 4: Permit signature reuse protection missing (consumer-only concern)
+        if !is_permit_implementer && (has_permit_function || has_permit_call) {
             let has_nonce_tracking =
                 contract_lower.contains("nonce") || contract_lower.contains("nonces(");
 
@@ -231,8 +248,8 @@ impl Detector for TokenPermitFrontRunningDetector {
             }
         }
 
-        // Pattern 5: Permit used in critical path without backup
-        if contract_lower.contains("permit(") {
+        // Pattern 5: Permit used in critical path without backup (consumer-only concern)
+        if !is_permit_implementer && contract_lower.contains("permit(") {
             let has_alternative = contract_lower.contains("approve")
                 || contract_lower.contains("else")
                 || contract_lower.contains("fallback");
@@ -247,6 +264,32 @@ impl Detector for TokenPermitFrontRunningDetector {
                 )
                 .with_fix_suggestion(
                     "Provide approve() fallback: try permit(...) catch { require(approve successful) }".to_string()
+                );
+
+                findings.push(finding);
+            }
+        }
+
+        // Pattern 6: Permit implementer missing deadline enforcement
+        if is_permit_implementer {
+            let enforces_deadline = contract_lower.contains("require(deadline")
+                || contract_lower.contains("deadline <=")
+                || contract_lower.contains("deadline >=")
+                || contract_lower.contains("<= deadline")
+                || contract_lower.contains(">= deadline")
+                || contract_lower.contains("block.timestamp <= ")
+                || contract_lower.contains("block.timestamp >= ");
+
+            if !enforces_deadline {
+                let finding = self.base.create_finding(
+                    ctx,
+                    "Permit implementation missing deadline enforcement - signatures never expire".to_string(),
+                    1,
+                    1,
+                    ctx.source_code.len() as u32,
+                )
+                .with_fix_suggestion(
+                    "Add deadline validation: require(block.timestamp <= deadline, \"Permit expired\")".to_string()
                 );
 
                 findings.push(finding);

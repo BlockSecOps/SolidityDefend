@@ -1,9 +1,9 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all security detectors in SolidityDefend v2.0.1.
+Complete reference for all security detectors in SolidityDefend v2.0.2.
 
-**Last Updated:** 2026-02-13
-**Version:** v2.0.1
+**Last Updated:** 2026-02-16
+**Version:** v2.0.2
 **Total Detectors:** 81
 **Categories:** 30
 
@@ -192,6 +192,6 @@ soliditydefend --list-detectors
 ---
 
 **Maintained by:** Advanced Blockchain Security
-**Generated:** 2026-02-13
+**Generated:** 2026-02-16
 **Total Detectors:** 81
 **Metadata File:** [all_detectors.json](all_detectors.json) - Machine-readable detector catalog

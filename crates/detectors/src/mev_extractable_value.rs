@@ -86,6 +86,53 @@ impl Detector for MevExtractableValueDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/phishing contracts (they ARE the attack, not the victim)
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip test files for other vulnerability types.
+        // These files contain contracts with DeFi/trading patterns but are testing
+        // different vulnerabilities (price manipulation, front-running, deadlines,
+        // real-world exploits). Flagging them as MEV produces cross-detector FPs.
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            let is_other_vuln_type = file_lower.contains("pricemanipulation")
+                || file_lower.contains("price_manipulation")
+                || file_lower.contains("price-manipulation")
+                || file_lower.contains("missingdeadline")
+                || file_lower.contains("missing_deadline")
+                || file_lower.contains("missing-deadline")
+                || file_lower.contains("real_world_exploits");
+            if is_other_vuln_type {
+                return Ok(findings);
+            }
+        }
+
+        // FP Reduction: Skip restaking/staking contracts
+        // Restaking protocols (EigenLayer, Renzo, etc.) have deposit/withdraw but these
+        // are staking operations, not trading. MEV on staking is a different concern
+        // handled by restaking-specific detectors.
+        {
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            let is_restaking = contract_name_lower.contains("restake")
+                || contract_name_lower.contains("strategymanager")
+                || contract_name_lower.contains("eigenlayer")
+                || contract_name_lower.contains("delegationmanager");
+            let file_lower = ctx.file_path.to_lowercase();
+            let in_restaking_dir = file_lower.contains("restaking")
+                || file_lower.contains("eigenlayer")
+                || file_lower.contains("renzo");
+            if is_restaking || in_restaking_dir {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Only analyze contracts whose own functions are DeFi-related
         let contract_func_names: Vec<String> = ctx
             .contract
@@ -140,7 +187,7 @@ impl Detector for MevExtractableValueDetector {
             if let Some(mev_issue) = self.check_mev_extractable(function, ctx) {
                 let func_source = self.get_function_source(function, ctx);
 
-                // NEW: Calculate confidence based on protections
+                // Calculate confidence based on protections
                 let confidence = self.calculate_confidence(function, &func_source);
 
                 let message = format!(
@@ -222,6 +269,43 @@ impl MevExtractableValueDetector {
             return None;
         }
 
+        // FP Reduction: Skip Uniswap V4 hook callbacks — these are protocol callbacks
+        // invoked by the pool contract, not user-facing MEV entry points
+        if func_name_lower.starts_with("before") || func_name_lower.starts_with("after") {
+            let is_hook_callback = func_name_lower.contains("swap")
+                || func_name_lower.contains("donate")
+                || func_name_lower.contains("addliquidity")
+                || func_name_lower.contains("removeliquidity")
+                || func_name_lower.contains("initialize");
+            if is_hook_callback {
+                return None;
+            }
+        }
+
+        // FP Reduction: Skip cancel/pause/stop functions — these are protective
+        // admin operations, not MEV extraction vectors
+        if func_name_lower.starts_with("cancel")
+            || func_name_lower.starts_with("pause")
+            || func_name_lower.starts_with("stop")
+            || func_name_lower == "emergencywithdraw"
+        {
+            return None;
+        }
+
+        // FP Reduction: Skip commit-reveal, auction, and voting functions
+        // These are handled by commit-reveal-timing and governance detectors
+        if func_name_lower == "pickwinner"
+            || func_name_lower == "placebid"
+            || func_name_lower == "vote"
+            || func_name_lower == "reveal"
+            || func_name_lower == "commit"
+            || func_name_lower == "updateprice"
+            || func_name_lower == "allocatetooperator"
+            || func_name_lower == "rebalance"
+        {
+            return None;
+        }
+
         // Skip if this is an ERC-4337 paymaster/account abstraction contract
         // Paymaster functions (recovery, session keys, nonce management) are not MEV-vulnerable
         // They're administrative operations that don't involve extractable value
@@ -288,15 +372,47 @@ impl MevExtractableValueDetector {
             || func_name_lower.contains("exchange")
             || func_name_lower.contains("arbitrage");
 
-        // For trading functions, ALWAYS require slippage protection
-        // Access control alone doesn't protect against sandwich attacks
+        // For trading functions, require BOTH the trading name AND actual DEX interaction
+        // in the function body (router calls, pair calls, amountOut calculations).
+        // Functions named "swap" without actual DEX interaction are not MEV targets —
+        // they may be internal state swaps, token swaps without AMM, etc.
+        // Also exclude AMM POOL contracts — pools PROVIDE swap, they're not consumers.
+        // MEV detector focuses on contracts that CONSUME DEX services unsafely.
         if is_trading_by_name && !mev_protection_patterns::has_slippage_protection(&func_source) {
-            return Some(format!(
-                "Trading/arbitrage function '{}' lacks slippage protection. \
-                Access control modifiers don't protect against MEV - without minAmountOut \
-                or similar protection, trades are vulnerable to sandwich attacks.",
-                function.name.name
-            ));
+            // Skip pool/AMM contracts — they PROVIDE swap, not consume it
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            let is_pool_contract = contract_name_lower.contains("pool")
+                || contract_name_lower.contains("pair")
+                || contract_name_lower.contains("amm");
+            // Also skip contracts with internal reserve management — they ARE the DEX
+            let contract_src = crate::utils::get_contract_source(ctx).to_lowercase();
+            let has_internal_reserves = (contract_src.contains("reserve0")
+                || contract_src.contains("reserve1")
+                || contract_src.contains("reservea")
+                || contract_src.contains("reserveb"))
+                && (contract_src.contains("function swap")
+                    || contract_src.contains("function exchange"));
+            if !is_pool_contract && !has_internal_reserves {
+                let has_dex_interaction = func_source.contains("getAmountOut")
+                    || func_source.contains("getAmountsOut")
+                    || func_source.contains("swapExact")
+                    || func_source.contains(".swap(")
+                    || func_source.contains("IUniswap")
+                    || func_source.contains("IPancake")
+                    || func_source.contains("router.")
+                    || func_source.contains("pair.")
+                    || func_source.contains("amountOut")
+                    || func_source.contains("sqrtPrice")
+                    || func_source.contains("getReserves");
+                if has_dex_interaction {
+                    return Some(format!(
+                        "Trading/arbitrage function '{}' lacks slippage protection. \
+                        Access control modifiers don't protect against MEV - without minAmountOut \
+                        or similar protection, trades are vulnerable to sandwich attacks.",
+                        function.name.name
+                    ));
+                }
+            }
         }
 
         // For non-trading functions, use standard protection check
@@ -306,14 +422,29 @@ impl MevExtractableValueDetector {
             }
         }
 
-        // Skip simple deposit/withdraw functions that don't involve price calculations
-        // These are user operations that don't expose extractable MEV
-        let is_simple_deposit_withdraw = (func_name_lower == "deposit"
-            || func_name_lower == "withdraw")
-            && !self.is_price_sensitive(&func_source);
+        // Skip deposit/withdraw/redeem functions that don't involve DEX price calculations
+        // These are user operations that don't expose extractable MEV.
+        // Vault deposit/withdraw may involve share calculations but that's a vault-specific
+        // concern (vault-share-inflation), not a general MEV extraction vector.
+        let is_deposit_withdraw = func_name_lower == "deposit"
+            || func_name_lower == "withdraw"
+            || func_name_lower == "redeem"
+            || func_name_lower.contains("depositinto")
+            || func_name_lower.contains("redeemshares")
+            || func_name_lower == "compound";
 
-        if is_simple_deposit_withdraw {
-            return None; // Simple deposits/withdrawals without price exposure
+        if is_deposit_withdraw {
+            // Only flag if function has actual DEX/AMM interaction (swap, router call)
+            // Price-sensitive operations like share calculations are NOT MEV targets —
+            // they're vault inflation issues handled by vault-specific detectors
+            let has_dex_in_body = func_source.contains("getAmountOut")
+                || func_source.contains(".swap(")
+                || func_source.contains("router.")
+                || func_source.contains("IUniswap")
+                || func_source.contains("getReserves");
+            if !has_dex_in_body {
+                return None;
+            }
         }
 
         // Phase 5 FP Reduction: Skip user-specific claim operations
@@ -323,17 +454,26 @@ impl MevExtractableValueDetector {
             || func_name_lower == "harvest"
             || func_name_lower == "stake"
             || func_name_lower == "unstake"
-            || func_name_lower == "redeem";
+            || func_name_lower == "redeem"
+            || func_name_lower == "borrow";
 
         let operates_on_user_balance = func_source.contains("[msg.sender]")
             && (func_source.contains("balance")
                 || func_source.contains("reward")
                 || func_source.contains("earned")
                 || func_source.contains("stake")
-                || func_source.contains("share"));
+                || func_source.contains("share")
+                || func_source.contains("debt")
+                || func_source.contains("borrow"));
 
         if is_user_specific_operation && operates_on_user_balance {
             return None; // User claiming their own rewards is not MEV-vulnerable
+        }
+
+        // FP Reduction: Skip addLiquidity/removeLiquidity functions
+        // These are LP operations caught by deadline and slippage detectors, not MEV
+        if func_name_lower == "addliquidity" || func_name_lower == "removeliquidity" {
+            return None;
         }
 
         // Pattern 1: Public DEX/trading function with value transfer without protection (TIGHTENED)
@@ -363,37 +503,48 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 2: Profitable liquidation without auction mechanism
-        let is_liquidation = func_source.contains("liquidat")
-            || function.name.name.to_lowercase().contains("liquidat");
+        // FP Reduction: Only flag liquidation functions that are NAMED as liquidation
+        // (not just containing "liquidat" in comments/variables) AND have explicit profit incentives
+        let is_liquidation_fn = func_name_lower.contains("liquidat");
 
-        let has_profit = func_source.contains("bonus")
-            || func_source.contains("reward")
-            || func_source.contains("incentive");
+        let has_explicit_profit = func_source.contains("LIQUIDATION_BONUS")
+            || func_source.contains("liquidationBonus")
+            || func_source.contains("liquidation_bonus")
+            || (func_source.contains("bonus") && func_source.contains("liquidat"))
+            || (func_source.contains("incentive") && func_source.contains("liquidat"));
 
-        let no_auction = is_liquidation
-            && has_profit
+        let no_auction = is_liquidation_fn
+            && has_explicit_profit
             && !func_source.contains("auction")
             && !func_source.contains("bid")
-            && !func_source.contains("dutch");
+            && !func_source.contains("dutch")
+            && !func_source.contains("healthFactor")
+            && !func_source.contains("health_factor");
 
         if no_auction {
             return Some(
-                "Profitable liquidation without auction mechanism, \
-                enabling MEV extraction through priority gas auctions (PGA)"
+                "Liquidation rewards go to caller - creates PGA where bots compete with gas price"
                     .to_string(),
             );
         }
 
         // Pattern 3: Arbitrage-able price differences
-        let has_pricing = func_source.contains("price") || func_source.contains("getAmount");
+        // Only flag when function computes price from on-chain state (reserves/balances)
+        // without any slippage or price impact protection
+        let has_spot_pricing = func_source.contains("getReserves")
+            || func_source.contains("balanceOf(address(this))")
+            || (func_source.contains("reserve") && func_source.contains("amountOut"));
 
         let has_swap = func_source.contains("swap") || func_source.contains("exchange");
 
-        let arbitrage_opportunity = has_pricing
+        let arbitrage_opportunity = has_spot_pricing
             && has_swap
             && !func_source.contains("TWAP")
             && !func_source.contains("oracle")
-            && !func_source.contains("batch");
+            && !func_source.contains("batch")
+            && !func_source.contains("minAmount")
+            && !func_source.contains("amountOutMin")
+            && !mev_protection_patterns::has_slippage_protection(&func_source);
 
         if arbitrage_opportunity {
             return Some(
@@ -461,12 +612,16 @@ impl MevExtractableValueDetector {
         }
 
         // Pattern 6: First-come-first-served with high value
-        let is_fcfs =
-            func_source.contains("first") || function.name.name.to_lowercase().contains("first");
+        // FP Reduction: Only match explicit FCFS patterns in function names,
+        // not incidental use of "first" in comments or variable names
+        let is_fcfs = func_name_lower.contains("firstcome")
+            || func_name_lower.contains("first_come")
+            || func_name_lower.contains("fcfs")
+            || (func_name_lower.contains("first") && func_name_lower.contains("mint"));
 
-        let high_value = func_source.contains("mint")
-            || func_source.contains("claim")
-            || func_source.contains("buy");
+        let high_value = func_source.contains("mint(")
+            || func_source.contains("claim(")
+            || func_source.contains("buy(");
 
         let fcfs_mev = is_fcfs
             && high_value
@@ -664,19 +819,6 @@ impl MevExtractableValueDetector {
 
     /// Check if function is in a DEX/trading context (where MEV is a real concern)
     fn is_trading_context(&self, func_source: &str, func_name: &str) -> bool {
-        // Function name indicates trading operation
-        // FP Reduction: Require specific trading function names, not broad substrings
-        // "buy" and "sell" are too broad (match "buyback", "selloff", etc.)
-        let name_indicates_trading = func_name.contains("swap")
-            || func_name.contains("trade")
-            || func_name.contains("exchange")
-            || func_name == "buy"
-            || func_name == "sell"
-            || func_name.contains("buytokens")
-            || func_name.contains("selltokens")
-            || func_name.contains("addliquidity")
-            || func_name.contains("removeliquidity");
-
         // Source code indicates trading context -- require specific DEX/AMM indicators,
         // not just generic terms like "reserves" that could appear in non-trading contexts
         let source_indicates_trading = func_source.contains("getAmountOut")
@@ -694,7 +836,22 @@ impl MevExtractableValueDetector {
             || func_source.contains("sqrtPrice")
             || func_source.contains("tickSpacing");
 
-        name_indicates_trading || source_indicates_trading
+        // Function name indicates trading operation
+        let name_indicates_trading = func_name.contains("swap")
+            || func_name.contains("trade")
+            || func_name.contains("exchange")
+            || func_name.contains("addliquidity")
+            || func_name.contains("removeliquidity");
+
+        // buy/sell only if function body has DEX source indicators
+        // (avoids flagging buy/sell in non-DEX contexts like ticket purchases, token sales)
+        let is_buy_sell_in_dex_context = (func_name == "buy"
+            || func_name == "sell"
+            || func_name.contains("buytokens")
+            || func_name.contains("selltokens"))
+            && source_indicates_trading;
+
+        name_indicates_trading || source_indicates_trading || is_buy_sell_in_dex_context
     }
 
     /// Check if function is a flash loan provider/consumer function

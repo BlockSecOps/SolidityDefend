@@ -82,6 +82,16 @@ impl Detector for ProxyStorageCollisionDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Check for storage collision risks in the contract
         if let Some(risk_description) = self.has_storage_collision_risk(ctx) {
             let message = format!(
@@ -128,6 +138,14 @@ impl ProxyStorageCollisionDetector {
         // cross-contract FPs in multi-contract files
         let contract_source_owned = crate::utils::get_contract_source(ctx);
         let contract_source = &contract_source_owned;
+
+        // FP Reduction: Skip OZ Upgradeable base contracts (properly managed storage)
+        let source_lower = contract_source.to_lowercase();
+        if (source_lower.contains("@openzeppelin/contracts-upgradeable")
+            || source_lower.contains("openzeppelin-contracts-upgradeable")
+            || (source_lower.contains("initializable") && source_lower.contains("__gap"))) {
+            return None;
+        }
 
         // Check if this looks like a proxy contract
         let is_proxy = self.is_proxy_contract(ctx, contract_source);
@@ -183,18 +201,21 @@ impl ProxyStorageCollisionDetector {
             || name_lower == "transparentupgradeableproxy";
 
         // Strong proxy signals (EIP-1967 or explicit proxy patterns)
+        // FP Reduction: Require function-like patterns (_fallback(), _delegate())
+        // not just variable names containing "_fallback"
         let has_proxy_patterns = source.contains("IMPLEMENTATION_SLOT")
             || source.contains("_IMPLEMENTATION_SLOT")
             || source.contains("_ADMIN_SLOT")
             || source.contains("eip1967")
             || source.contains("EIP1967")
-            || source.contains("_fallback")
-            || source.contains("_delegate")
+            || source.contains("_fallback()")
+            || source.contains("_delegate(")
             || (source.contains("implementation()") && source.contains("delegatecall"));
 
-        // Must have both delegatecall AND proxy-specific patterns
-        // Just having delegatecall doesn't make something a proxy
-        let has_delegatecall = source.contains("delegatecall");
+        // FP Reduction: Check for delegatecall in actual code (not comments)
+        // and exclude staticcall-only contracts (read-only delegation)
+        let has_delegatecall = self.has_in_code(source, "delegatecall")
+            && !self.is_staticcall_only(source);
 
         // A contract is a proxy if:
         // 1. It has proxy in name AND delegatecall, OR
@@ -331,8 +352,39 @@ impl ProxyStorageCollisionDetector {
         false
     }
 
+    /// Check if keyword appears in code (not comments)
+    fn has_in_code(&self, source: &str, keyword: &str) -> bool {
+        for line in source.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                continue;
+            }
+            let code_part = if let Some(idx) = trimmed.find("//") {
+                &trimmed[..idx]
+            } else {
+                trimmed
+            };
+            if code_part.contains(keyword) {
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Check if contract uses only staticcall (not delegatecall)
+    /// staticcall is read-only and cannot cause storage collision
+    fn is_staticcall_only(&self, source: &str) -> bool {
+        self.has_in_code(source, "staticcall") && !self.has_in_code(source, "delegatecall")
+    }
+
     /// Check if upgradeable contract is missing storage gap
     fn missing_storage_gap(&self, ctx: &AnalysisContext, source: &str) -> bool {
+        // FP Reduction: Skip if contract has no state variables (no storage to collide)
+        let has_state_vars = !ctx.contract.state_variables.is_empty();
+        if !has_state_vars {
+            return false;
+        }
+
         // Check if this is upgradeable
         let is_upgradeable = source.contains("upgrade")
             || source.contains("Upgradeable")

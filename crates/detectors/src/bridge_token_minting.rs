@@ -81,11 +81,24 @@ impl TokenMintingDetector {
         }
 
         if has_access && !validates_message {
-            issues.push((
-                format!("Missing message validation before minting in '{}'", function.name.name),
-                Severity::Critical,
-                "Add: require(verifyMessage(hash, proof)); require(!processed[hash]); processed[hash] = true;".to_string()
-            ));
+            // FP Reduction: Skip owner-only direct mint functions that aren't bridge callbacks.
+            // Functions like ownerMint/adminMint are owner-controlled supply management,
+            // not bridge-triggered minting — message validation isn't applicable.
+            let is_owner_direct_mint = name.contains("owner")
+                || name.contains("admin")
+                || name.contains("manual")
+                || (func_source.contains("msg.sender == owner")
+                    || func_source.contains("msg.sender == admin"))
+                    && !name.contains("bridge")
+                    && !name.contains("relay")
+                    && !name.contains("receive");
+            if !is_owner_direct_mint {
+                issues.push((
+                    format!("Missing message validation before minting in '{}'", function.name.name),
+                    Severity::Critical,
+                    "Add: require(verifyMessage(hash, proof)); require(!processed[hash]); processed[hash] = true;".to_string()
+                ));
+            }
         }
 
         if has_access && validates_message && !has_limits {
