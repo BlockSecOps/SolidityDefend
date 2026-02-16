@@ -66,33 +66,38 @@ impl Detector for SlashingMechanismDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             if let Some(slashing_issue) = self.check_slashing_vulnerability(function, ctx) {
-                let message = format!(
-                    "Function '{}' has slashing mechanism vulnerability. {} \
-                    Improper slashing logic can lead to validator griefing, unfair penalties, or loss of staked funds.",
-                    function.name.name, slashing_issue
-                );
-
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, slashing_issue),
                     function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
-                .with_fix_suggestion(format!(
-                    "Fix slashing mechanism in '{}'. \
-                    Implement cooldown periods between slashings, add maximum slashing limits per period, \
-                    require evidence verification with dispute periods, implement progressive penalties, \
-                    add multi-signature requirements for large slashings, and protect against double-slashing.",
-                    function.name.name
                 ));
-
-                findings.push(finding);
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let descriptions: Vec<&str> = sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} slashing mechanism vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                descriptions.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(841)
+                .with_cwe(670)
+                .with_fix_suggestion(
+                    "Add cooldown periods, maximum slashing limits, evidence verification, \
+                    progressive penalties, and multi-sig for large slashings."
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

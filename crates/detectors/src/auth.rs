@@ -118,7 +118,9 @@ impl Detector for TxOriginDetector {
             return Ok(findings);
         }
 
-        // Check all functions
+        // FP Reduction: Consolidate per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             if function.body.is_none() {
                 continue;
@@ -127,35 +129,34 @@ impl Detector for TxOriginDetector {
             let func_source = self.get_function_source(function, ctx);
 
             if self.check_function_for_tx_origin(&func_source, function.name.name) {
-                let message = format!(
-                    "Function '{}' uses tx.origin for authentication/authorization. \
-                    This is vulnerable to phishing attacks where a malicious contract \
-                    can call this function while tx.origin remains the victim's address. \
-                    Use msg.sender instead for access control.",
-                    function.name.name
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(477) // CWE-477: Use of Obsolete Function
-                    .with_cwe(284) // CWE-284: Improper Access Control
-                    .with_swc("SWC-115") // SWC-115: Authorization through tx.origin
-                    .with_fix_suggestion(format!(
-                        "Replace 'tx.origin' with 'msg.sender' in function '{}'. \
-                    If you need to track the original sender across multiple calls, \
-                    pass the address as a function parameter or use a trusted registry.",
-                        function.name.name
-                    ));
-
-                findings.push(finding);
+                sub_issues.push((
+                    function.name.name.to_string(),
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let func_names: Vec<&str> = sub_issues.iter().map(|(n, _)| n.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' uses tx.origin for authentication in {} functions: {}. \
+                Vulnerable to phishing attacks. Use msg.sender instead.",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                func_names.join(", ")
+            );
+
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(477)
+                .with_cwe(284)
+                .with_swc("SWC-115")
+                .with_fix_suggestion(
+                    "Replace tx.origin with msg.sender for access control.".to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

@@ -12,8 +12,8 @@ This directory contains baseline measurements for the SolidityDefend false posit
 | Expected true positives | 103 |
 | Parse error contracts | 0 |
 | Validated recall | 100% (103/103) |
-| False positives | 65 |
-| Precision | 61.3% |
+| False positives | 61 |
+| Precision | 62.8% |
 | Coverage | **100%** of test corpus |
 
 See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the complete dataset.

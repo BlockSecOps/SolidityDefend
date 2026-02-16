@@ -252,16 +252,16 @@ impl Detector for VaultHookReentrancyDetector {
             protection_score += 1;
         }
 
+        // FP Reduction: Consolidate per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
-            // FP Reduction: Skip view/pure functions -- they cannot modify state
             if matches!(
                 function.mutability,
                 ast::StateMutability::View | ast::StateMutability::Pure
             ) {
                 continue;
             }
-
-            // FP Reduction: Skip internal/private functions -- cannot be entry points
             if matches!(
                 function.visibility,
                 ast::Visibility::Internal | ast::Visibility::Private
@@ -270,50 +270,43 @@ impl Detector for VaultHookReentrancyDetector {
             }
 
             if let Some(reentrancy_issue) = self.check_hook_reentrancy(function, ctx) {
-                let message = format!(
-                    "Function '{}' may be vulnerable to hook reentrancy attack. {} \
-                    ERC-777/ERC-1363 token callbacks can re-enter and manipulate vault state.",
-                    function.name.name, reentrancy_issue
-                );
-
-                // Phase 2: Dynamic confidence scoring based on detected patterns
-                let confidence = if protection_score == 0 {
-                    // No protections detected - high confidence vulnerability
-                    Confidence::High
-                } else if protection_score == 1 {
-                    // Minimal protections - medium confidence
-                    Confidence::Medium
-                } else {
-                    // CEI pattern followed - low confidence (likely safe)
-                    Confidence::Low
-                };
-
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(841) // CWE-841: Improper Enforcement of Behavioral Workflow
-                    .with_cwe(362) // CWE-362: Race Condition
-                    .with_confidence(confidence)
-                    .with_fix_suggestion(format!(
-                        "Protect '{}' from hook reentrancy. \
-                    Solutions: (1) Add nonReentrant modifier from OpenZeppelin ReentrancyGuard, \
-                    (2) Follow checks-effects-interactions (CEI) pattern strictly, \
-                    (3) Update state BEFORE external calls with callbacks, \
-                    (4) Validate token doesn't implement hooks (ERC-777/ERC-1363/callbacks), \
-                    (5) Use reentrancy guard on all vault entry points, \
-                    (6) Consider EIP-1153 transient storage for gas-efficient protection (Solidity 0.8.24+), \
-                    (7) Use SafeERC20 wrapper library for token operations.",
-                        function.name.name
-                    ));
-
-                findings.push(finding);
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, reentrancy_issue),
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let descriptions: Vec<&str> = sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} hook reentrancy vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                descriptions.join("; ")
+            );
+
+            let confidence = if protection_score == 0 {
+                Confidence::High
+            } else if protection_score == 1 {
+                Confidence::Medium
+            } else {
+                Confidence::Low
+            };
+
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(841)
+                .with_cwe(362)
+                .with_confidence(confidence)
+                .with_fix_suggestion(
+                    "Add nonReentrant modifier, follow CEI pattern, \
+                    update state before external calls, use SafeERC20."
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);
