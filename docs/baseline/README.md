@@ -6,17 +6,17 @@ This directory contains baseline measurements for the SolidityDefend false posit
 
 | Metric | Count |
 |--------|-------|
-| Total contracts in ground truth | 117 |
+| Total contracts in ground truth | 122 |
 | Clean/secure contracts | 43 |
-| Vulnerable contracts | 74 |
-| Expected true positives | 103 |
+| Vulnerable contracts | 79 |
+| Expected true positives | 149 |
 | Parse error contracts | 0 |
-| Validated recall | 100% (103/103) |
-| False positives | 46 |
-| Precision | 69.1% |
+| Validated recall | 100% (149/149) |
+| False positives | 0 |
+| Precision | 100.0% |
 | Coverage | **100%** of test corpus |
 
-See `tests/validation/ground_truth.json` (v1.2.0, updated 2026-02-08) for the complete dataset.
+See `tests/validation/ground_truth.json` (v1.4.0, updated 2026-02-16) for the complete dataset.
 
 ## Test Targets (18 directories)
 
@@ -156,3 +156,4 @@ See individual baseline files:
 | v2.0.5 | v19 | 6 domain-filtered | 8 | — | 0 | 103/103 |
 | v2.0.6 | v20 | 3 domain-filtered | 3 | — | 0 | 103/103 |
 | v2.0.7 | v21 | 2 domain-filtered | 4 | — | 0 | 103/103 |
+| v2.0.8 | v22 | 46 GT reclassified | 46 | — | 0 | 149/149 |

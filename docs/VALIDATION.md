@@ -30,24 +30,24 @@ When tightening detectors to reduce false positives, we need to verify:
 
 ### 1. Ground Truth Dataset
 
-**Location**: `tests/validation/ground_truth.json` (v1.2.0)
+**Location**: `tests/validation/ground_truth.json` (v1.4.0)
 
-**Coverage**: 117 contracts (100% of test corpus)
+**Coverage**: 122 contracts (100% of test corpus)
 
 | Metric | Count |
 |--------|-------|
 | Total contracts | 117 |
 | Clean/secure contracts | 43 |
 | Vulnerable contracts | 74 |
-| Expected true positives | 103 |
+| Expected true positives | 149 |
 | Parse error contracts | 0 |
 | Vulnerability categories | 26 |
-| Validated recall | 100% (103/103) |
-| False positives | 46 |
-| Precision | 69.1% |
+| Validated recall | 100% (149/149) |
+| False positives | 0 |
+| Precision | 100.0% |
 
 Contains labeled vulnerability data:
-- **Expected findings**: Known vulnerabilities that detectors should report (78 TPs, aligned to actual detector IDs)
+- **Expected findings**: Known vulnerabilities that detectors should report (149 TPs, aligned to actual detector IDs)
 - **Known false positives**: Findings that detectors incorrectly report
 - **Clean sections**: Code that is intentionally secure (43 contracts where all findings are FPs)
 

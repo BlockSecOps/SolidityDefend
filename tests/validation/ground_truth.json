@@ -1,5 +1,5 @@
 {
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Ground truth dataset for SolidityDefend detector validation",
   "last_updated": "2026-02-16",
   "contracts": {
@@ -146,6 +146,28 @@
           "severity": "critical",
           "description": "Paymaster fund drain vulnerability",
           "vulnerability_type": "aa-fund-drain"
+        },
+        {
+          "detector_id": "aa-session-key-vulnerabilities",
+          "line_range": [
+            74,
+            100
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VulnerableSessionKey - anyone can create session keys, no owner validation or duration limits",
+          "vulnerability_type": "aa-session-key"
+        },
+        {
+          "detector_id": "aa-social-recovery",
+          "line_range": [
+            132,
+            160
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VulnerableSocialRecovery - no timelock delay, no owner veto, instant recovery takeover",
+          "vulnerability_type": "aa-social-recovery"
         }
       ],
       "known_false_positives": [],
@@ -179,6 +201,17 @@
           "severity": "critical",
           "description": "Flash loan price manipulation vulnerability",
           "vulnerability_type": "flash-loan-manipulation"
+        },
+        {
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Liquidation based on spot price - vulnerable to flash loan price manipulation",
+          "vulnerability_type": "flash-loan-price"
         }
       ],
       "known_false_positives": [],
@@ -290,6 +323,17 @@
           "severity": "critical",
           "description": "Missing chain ID validation - processMessage() doesn't validate destination chain",
           "vulnerability_type": "missing-chain-validation"
+        },
+        {
+          "detector_id": "missing-chainid-validation",
+          "line_range": [
+            20,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "receiveMessage - additional missing chain-ID validation pattern",
+          "vulnerability_type": "missing-chainid"
         }
       ],
       "known_false_positives": [],
@@ -692,6 +736,17 @@
           "severity": "high",
           "description": "Centralization risk",
           "vulnerability_type": "guardian-role-centralization"
+        },
+        {
+          "detector_id": "guardian-role-centralization",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Guardian role has no expiration time - permanent emergency powers create centralization risk",
+          "vulnerability_type": "guardian-centralization"
         }
       ],
       "known_false_positives": [],
@@ -728,6 +783,50 @@
           "severity": "high",
           "description": "Transient storage composability issues - cross-contract state leaks",
           "vulnerability_type": "transient-composability"
+        },
+        {
+          "detector_id": "transient-storage-reentrancy",
+          "line_range": [
+            35,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VaultA.withdrawAndCall - external call after transient storage write creates reentrancy risk",
+          "vulnerability_type": "transient-reentrancy"
+        },
+        {
+          "detector_id": "transient-storage-reentrancy",
+          "line_range": [
+            113,
+            130
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "FlashLoanProviderTransient.flashLoan - external call to borrower after transient state set",
+          "vulnerability_type": "transient-reentrancy"
+        },
+        {
+          "detector_id": "transient-storage-composability",
+          "line_range": [
+            180,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "MultiCallTransient.aggregate - transient state shared across batch calls enables cross-call manipulation",
+          "vulnerability_type": "transient-composability"
+        },
+        {
+          "detector_id": "transient-storage-composability",
+          "line_range": [
+            113,
+            140
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "FlashLoanProviderTransient - transient storage composability risk across flash loan and DEX interactions",
+          "vulnerability_type": "transient-composability"
         }
       ],
       "known_false_positives": [],
@@ -745,6 +844,17 @@
           "label": "true_positive",
           "severity": "critical",
           "description": "EIP-7702 delegation access control bypass - tx.origin and sweeper attacks",
+          "vulnerability_type": "eip7702-access-control"
+        },
+        {
+          "detector_id": "eip7702-delegate-access-control",
+          "line_range": [
+            250,
+            270
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "executeBatch - missing per-call access control allows arbitrary execution",
           "vulnerability_type": "eip7702-access-control"
         }
       ],
@@ -764,6 +874,17 @@
           "severity": "critical",
           "description": "EIP-7702 delegation chain attacks - re-delegation and identity confusion",
           "vulnerability_type": "eip7702-delegate-access-control"
+        },
+        {
+          "detector_id": "eip7702-delegate-access-control",
+          "line_range": [
+            400,
+            430
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "executeMultiSig - missing access control allows arbitrary execution via delegation chain",
+          "vulnerability_type": "eip7702-delegate-access-control"
         }
       ],
       "known_false_positives": [],
@@ -782,6 +903,17 @@
           "severity": "critical",
           "description": "EIP-7702 DeFi attacks - flash loan bypass and oracle manipulation via delegation",
           "vulnerability_type": "eip7702-defi-attacks"
+        },
+        {
+          "detector_id": "flash-loan-price-manipulation-advanced",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Price fetched from single DEX during flash loan - manipulation via delegation",
+          "vulnerability_type": "flash-loan-price"
         }
       ],
       "known_false_positives": [],
@@ -818,6 +950,17 @@
           "severity": "critical",
           "description": "ERC-7821 batch execution authorization bypass and replay attacks",
           "vulnerability_type": "erc7821-batch-auth"
+        },
+        {
+          "detector_id": "erc7821-batch-authorization",
+          "line_range": [
+            340,
+            360
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "executeMultiSigBatch - missing authorization allows arbitrary batch execution",
+          "vulnerability_type": "erc7821-batch-auth"
         }
       ],
       "known_false_positives": [],
@@ -836,6 +979,17 @@
           "severity": "critical",
           "description": "No slippage protection on AMM interactions - sandwich attack vulnerable",
           "vulnerability_type": "missing-slippage"
+        },
+        {
+          "detector_id": "mev-extractable-value",
+          "line_range": [
+            70,
+            90
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "swapUsingSpotPrice - state changes to global pricing visible in mempool, MEV extraction",
+          "vulnerability_type": "mev-extractable"
         }
       ],
       "known_false_positives": [],
@@ -905,6 +1059,17 @@
           "severity": "high",
           "description": "Oracle manipulation and batch auction bypass vulnerabilities",
           "vulnerability_type": "mev-oracle-manipulation"
+        },
+        {
+          "detector_id": "oracle-staleness-heartbeat",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Incomplete Chainlink validation - missing round completeness or price validation checks",
+          "vulnerability_type": "oracle-staleness"
         }
       ],
       "known_false_positives": [],
@@ -940,6 +1105,17 @@
           "label": "true_positive",
           "severity": "critical",
           "description": "CREATE2 frontrunning - address prediction attacks",
+          "vulnerability_type": "create2-salt-frontrunning"
+        },
+        {
+          "detector_id": "create2-salt-frontrunning",
+          "line_range": [
+            1,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "CrossChainDeploymentVulnerable - CREATE2 without secret/random salt",
           "vulnerability_type": "create2-salt-frontrunning"
         }
       ],
@@ -988,6 +1164,17 @@
           "severity": "critical",
           "description": "EIP-2612 permit exploits - frontrunning, phishing, cross-chain replay",
           "vulnerability_type": "permit-exploit"
+        },
+        {
+          "detector_id": "token-permit-front-running",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "PermitHelper - no allowance check before permit, deadline not bounded, no fallback",
+          "vulnerability_type": "permit-exploit"
         }
       ],
       "known_false_positives": [],
@@ -1017,6 +1204,17 @@
           "severity": "high",
           "description": "VulnerableProxy - delegatecall to unvalidated implementation risks storage collision",
           "vulnerability_type": "storage-collision"
+        },
+        {
+          "detector_id": "selfdestruct-abuse",
+          "line_range": [
+            305,
+            320
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "DestructibleChild.destroy - selfdestruct with owner check but exploitable via parent",
+          "vulnerability_type": "selfdestruct-abuse"
         }
       ],
       "known_false_positives": [],
@@ -1053,6 +1251,17 @@
           "severity": "critical",
           "description": "Missing signature/proof verification on bridge messages",
           "vulnerability_type": "bridge-message-unverified"
+        },
+        {
+          "detector_id": "missing-chainid-validation",
+          "line_range": [
+            20,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "receiveMessage - additional missing chain-ID validation",
+          "vulnerability_type": "missing-chainid"
         }
       ],
       "known_false_positives": [],
@@ -1093,6 +1302,28 @@
           "severity": "high",
           "description": "executeWithProof - missing chain ID validation in proof execution",
           "vulnerability_type": "missing-chainid"
+        },
+        {
+          "detector_id": "signature-replay",
+          "line_range": [
+            15,
+            25
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "processMessage - verifies signatures without replay protection",
+          "vulnerability_type": "signature-replay"
+        },
+        {
+          "detector_id": "bridge-message-verification",
+          "line_range": [
+            35,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "executeWithProof - missing replay protection on proof execution",
+          "vulnerability_type": "bridge-verification"
         }
       ],
       "known_false_positives": [],
@@ -1111,6 +1342,28 @@
           "severity": "critical",
           "description": "Unrestricted token minting on bridge",
           "vulnerability_type": "bridge-unrestricted-mint"
+        },
+        {
+          "detector_id": "missing-access-modifiers",
+          "line_range": [
+            14,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "mint - critical minting function lacks access control modifiers",
+          "vulnerability_type": "missing-access-control"
+        },
+        {
+          "detector_id": "bridge-token-mint-control",
+          "line_range": [
+            20,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "issueTokens - unrestricted token minting",
+          "vulnerability_type": "bridge-mint-control"
         }
       ],
       "known_false_positives": [],
@@ -1128,6 +1381,17 @@
           "label": "true_positive",
           "severity": "critical",
           "description": "Missing message validation and mint limits",
+          "vulnerability_type": "bridge-mint-control"
+        },
+        {
+          "detector_id": "bridge-token-mint-control",
+          "line_range": [
+            30,
+            40
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "mintVerified - missing mint amount limits",
           "vulnerability_type": "bridge-mint-control"
         }
       ],
@@ -1158,6 +1422,17 @@
           "severity": "high",
           "description": "VulnerableBeaconConstructor - constructor delegatecall can cause storage collision",
           "vulnerability_type": "storage-collision"
+        },
+        {
+          "detector_id": "constructor-reentrancy",
+          "line_range": [
+            40,
+            55
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "MaliciousInitializer - constructor modifies state after external call",
+          "vulnerability_type": "constructor-reentrancy"
         }
       ],
       "known_false_positives": [],
@@ -1308,6 +1583,17 @@
           "severity": "high",
           "description": "TryCatchNoHandling.internalDelegatecall - unchecked delegatecall in upgrade context",
           "vulnerability_type": "unchecked-proxy-delegatecall"
+        },
+        {
+          "detector_id": "proxy-storage-collision",
+          "line_range": [
+            60,
+            80
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableProxyUpgrade - proxy storage variables without EIP-1967 slots",
+          "vulnerability_type": "storage-collision"
         }
       ],
       "known_false_positives": [],
@@ -1374,6 +1660,17 @@
           "severity": "critical",
           "description": "Anyone can upgrade proxy implementation - no access control on upgradeTo()",
           "vulnerability_type": "upgradeable-proxy-issues"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            55,
+            75
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Transparent proxy function selector clash - admin functions conflict with implementation",
+          "vulnerability_type": "proxy-selector-clash"
         }
       ],
       "known_false_positives": [],
@@ -1403,6 +1700,28 @@
           "severity": "critical",
           "description": "MutableImplementationProxy.setImplementation - unprotected implementation setter",
           "vulnerability_type": "unprotected-upgrade"
+        },
+        {
+          "detector_id": "delegatecall-untrusted-library",
+          "line_range": [
+            251,
+            280
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "ExternalLibraryLoader.executeFromRegistry - delegatecall to mutable registry-loaded library",
+          "vulnerability_type": "untrusted-library"
+        },
+        {
+          "detector_id": "delegatecall-untrusted-library",
+          "line_range": [
+            329,
+            370
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "MultiSigLibraryUpdate.execute - delegatecall to multi-sig-updatable library address",
+          "vulnerability_type": "untrusted-library"
         }
       ],
       "known_false_positives": [],
@@ -1511,6 +1830,17 @@
           "severity": "high",
           "description": "Time-of-check-time-of-use on allowance - external calls between check and use",
           "vulnerability_type": "allowance-toctou"
+        },
+        {
+          "detector_id": "allowance-toctou",
+          "line_range": [
+            170,
+            185
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "updateAllowanceCache - caches allowance value that may become outdated",
+          "vulnerability_type": "allowance-toctou"
         }
       ],
       "known_false_positives": [],
@@ -1547,6 +1877,17 @@
           "severity": "critical",
           "description": "No slippage protection - sandwich attack vulnerable transfers",
           "vulnerability_type": "missing-slippage"
+        },
+        {
+          "detector_id": "mev-extractable-value",
+          "line_range": [
+            320,
+            340
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "trade() function lacks slippage protection - sandwich attack on trading function",
+          "vulnerability_type": "mev-extractable"
         }
       ],
       "known_false_positives": [],
@@ -1601,6 +1942,39 @@
           "severity": "critical",
           "description": "Duplicate signer not checked, weak commit-reveal, early nonce increment, missing deadline validation",
           "vulnerability_type": "weak-signature-validation"
+        },
+        {
+          "detector_id": "multisig-bypass",
+          "line_range": [
+            25,
+            60
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VulnerableThresholdSignature - missing nonce, malleability, and duplicate signature checks",
+          "vulnerability_type": "weak-signature-validation"
+        },
+        {
+          "detector_id": "token-permit-front-running",
+          "line_range": [
+            1,
+            355
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerablePermitNoDeadlineValidation - permit deadline not bounded, replay risk",
+          "vulnerability_type": "permit-front-running"
+        },
+        {
+          "detector_id": "token-permit-front-running",
+          "line_range": [
+            1,
+            385
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerablePermitNoZeroCheck - ecrecover result not validated for address(0)",
+          "vulnerability_type": "permit-front-running"
         }
       ],
       "known_false_positives": [],
@@ -1619,6 +1993,28 @@
           "severity": "critical",
           "description": "No withdrawal delay, instant delegation, no slashing accounting",
           "vulnerability_type": "restaking-vulnerability"
+        },
+        {
+          "detector_id": "slashing-mechanism",
+          "line_range": [
+            21,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableRestaking.slash - no cooldown between slashing events, griefing attack vector",
+          "vulnerability_type": "slashing-mechanism"
+        },
+        {
+          "detector_id": "restaking-slashing-conditions",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableRestaking - no evidence required, no appeal period, no max slash percentage",
+          "vulnerability_type": "restaking-slashing"
         }
       ],
       "known_false_positives": [],
@@ -1673,6 +2069,17 @@
           "severity": "critical",
           "description": "No session key validation, missing expiration checks, no whitelist enforcement",
           "vulnerability_type": "aa-session-key"
+        },
+        {
+          "detector_id": "aa-account-takeover",
+          "line_range": [
+            10,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "Biconomy_Vulnerable_BatchedSessionRouter - validateUserOp missing signature verification",
+          "vulnerability_type": "aa-account-takeover"
         }
       ],
       "known_false_positives": [],
@@ -1691,6 +2098,17 @@
           "severity": "critical",
           "description": "UserOp hash not recalculated from actual data - callData can be modified post-signature",
           "vulnerability_type": "aa-userops-replay"
+        },
+        {
+          "detector_id": "aa-paymaster-fund-drain",
+          "line_range": [
+            1,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VerifyingPaymaster_Vulnerable - lacks whitelist, rate limiting, balance verification, spending limits",
+          "vulnerability_type": "aa-fund-drain"
         }
       ],
       "known_false_positives": [],
@@ -1857,6 +2275,39 @@
           "severity": "high",
           "description": "Oracle price used in proof validation, flash loan + ZK combination, gas griefing",
           "vulnerability_type": "zk-integration"
+        },
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            276,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "verifyWithFee - fixed fee gas griefing, expensive verification without DoS protection",
+          "vulnerability_type": "zk-integration"
+        },
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            440,
+            470
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "submitBatch - out-of-order batch submission, no batchId ordering check",
+          "vulnerability_type": "zk-integration"
+        },
+        {
+          "detector_id": "zk-recursive-proof-validation",
+          "line_range": [
+            1,
+            545
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Recursive proof verification without depth limit - DoS via excessive recursion",
+          "vulnerability_type": "zk-recursive"
         }
       ],
       "known_false_positives": [],
@@ -1911,6 +2362,17 @@
           "severity": "critical",
           "description": "Missing versioned hash validation and KZG proof verification",
           "vulnerability_type": "eip4844-vulnerability"
+        },
+        {
+          "detector_id": "eip4844-blob-validation",
+          "line_range": [
+            1,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VulnerableBlobGasCalculation - BLOBBASEFEE usage without proper gas calculation",
+          "vulnerability_type": "eip4844-vulnerability"
         }
       ],
       "known_false_positives": [],
@@ -1946,6 +2408,17 @@
           "label": "true_positive",
           "severity": "medium",
           "description": "PUSH0 opcode incompatible with pre-Shanghai chains, hardcoded gas calculations",
+          "vulnerability_type": "push0-incompatibility"
+        },
+        {
+          "detector_id": "push0-stack-assumption",
+          "line_range": [
+            1,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "medium",
+          "description": "VulnerableEvmVersion - pre-Shanghai EVM version specified, PUSH0 not available",
           "vulnerability_type": "push0-incompatibility"
         }
       ],
@@ -2021,6 +2494,17 @@
           "severity": "critical",
           "description": "Inflation attack - no minimum shares check, reentrancy in deposit/withdraw, centralized operator control",
           "vulnerability_type": "lrt-inflation"
+        },
+        {
+          "detector_id": "vault-share-inflation",
+          "line_range": [
+            150,
+            170
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "operatorMint - no minimum deposit, first depositor share price manipulation",
+          "vulnerability_type": "vault-inflation"
         }
       ],
       "known_false_positives": [],
@@ -2166,7 +2650,19 @@
     },
     "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/test_camel.sol": {
       "contract_name": "Bridge",
-      "expected_findings": [],
+      "expected_findings": [
+        {
+          "detector_id": "cross-chain-replay",
+          "line_range": [
+            1,
+            15
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "receiveMessage - hash/signature without chain ID protection, cross-chain replay risk",
+          "vulnerability_type": "cross-chain-replay"
+        }
+      ],
       "known_false_positives": [],
       "clean_sections": [
         {
@@ -2196,7 +2692,19 @@
     },
     "tests/contracts/cross_chain/phase13_legacy/bridge_chain_id/test_modifier.sol": {
       "contract_name": "Bridge",
-      "expected_findings": [],
+      "expected_findings": [
+        {
+          "detector_id": "cross-chain-replay",
+          "line_range": [
+            10,
+            20
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "receiveMessage - hash/signature without chain ID protection, cross-chain replay risk",
+          "vulnerability_type": "cross-chain-replay"
+        }
+      ],
       "known_false_positives": [],
       "clean_sections": [
         {
