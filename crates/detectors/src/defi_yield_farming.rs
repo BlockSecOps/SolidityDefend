@@ -115,6 +115,8 @@ impl YieldFarmingDetector {
         }
 
         let source = &ctx.source_code.to_lowercase();
+        let contract_source = &crate::utils::get_contract_source(ctx).to_lowercase();
+        let contract_name = ctx.contract.name.name.to_lowercase();
 
         // Delegation/operator management contracts (e.g. EigenLayer DelegationManager)
         if source.contains("delegationmanager") || source.contains("delegationdirectory") {
@@ -123,6 +125,37 @@ impl YieldFarmingDetector {
 
         // Strategy management contracts that manage strategy whitelists, not vaults
         if source.contains("strategymanager") && source.contains("whitelisted") {
+            return true;
+        }
+
+        // Restaking contracts have dedicated detectors (restaking-withdrawal-delays,
+        // lrt-share-inflation). "restaking" contains "staking" as a substring,
+        // causing false matches on the staking+reward strong signal path.
+        if contract_name.contains("restake") || contract_name.contains("restaking")
+            || contract_source.contains("restake") || contract_source.contains("restaking")
+        {
+            return true;
+        }
+
+        // Liquid staking token contracts (e.g., ezETH, stETH) have deposit/withdraw/shares
+        // but are token contracts, not yield farming vaults. They have their own detectors.
+        if (contract_name.contains("token") || contract_name.ends_with("eth"))
+            && contract_source.contains("totalsupply")
+            && contract_source.contains("balanceof")
+            && contract_source.contains("transfer")
+            && !contract_source.contains("rewardpertoken")
+            && !contract_source.contains("accrewardpershare")
+        {
+            return true;
+        }
+
+        // Reentrancy demonstration contracts
+        if contract_name.contains("reentrancy") {
+            return true;
+        }
+
+        // Delegation-focused contracts (EIP-7702, etc.)
+        if contract_name.contains("delegation") {
             return true;
         }
 
@@ -195,10 +228,19 @@ impl YieldFarmingDetector {
         }
 
         // Staking + reward is a strong signal, but only if the contract actually
-        // has deposit/stake functions (not just a reward claim contract)
-        if source.contains("staking")
+        // has deposit/stake functions (not just a reward claim contract).
+        // Exclude "restaking"/"unstaking" substrings to avoid cross-domain FPs.
+        let has_standalone_staking = {
+            let cleaned = source.replace("restaking", "").replace("unstaking", "");
+            cleaned.contains("staking")
+        };
+        let has_standalone_stake_fn = {
+            let cleaned = source.replace("unstake(", "");
+            cleaned.contains("stake(")
+        };
+        if has_standalone_staking
             && source.contains("reward")
-            && (source.contains("deposit") || source.contains("stake("))
+            && (source.contains("deposit") || has_standalone_stake_fn)
         {
             return true;
         }
@@ -224,7 +266,12 @@ impl YieldFarmingDetector {
             indicator_count += 1;
         }
 
-        if source.contains("stake(") && source.contains("unstake") {
+        // Require actual "stake(" that isn't just "unstake("
+        let has_stake_fn = {
+            let cleaned = source.replace("unstake(", "");
+            cleaned.contains("stake(")
+        };
+        if has_stake_fn && source.contains("unstake") {
             indicator_count += 1;
         }
 
@@ -739,6 +786,11 @@ impl Detector for YieldFarmingDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip secure example contracts
+        if crate::utils::is_secure_example_file(ctx) {
             return Ok(findings);
         }
 

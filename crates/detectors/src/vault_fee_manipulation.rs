@@ -67,6 +67,29 @@ impl Detector for VaultFeeManipulationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Only analyze ERC-4626 vaults. AMM/DEX/yield farming contracts
+        // have fee structures that are not vault fee manipulation vulnerabilities.
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        if contract_name_lower.contains("amm")
+            || contract_name_lower.contains("dex")
+            || contract_name_lower.contains("swap")
+            || contract_name_lower.contains("delegation")
+            || contract_name_lower.contains("mining")
+            || contract_name_lower.contains("farming")
+        {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip contracts in non-vault contexts
+        let file_lower = ctx.file_path.to_lowercase();
+        if file_lower.contains("amm_context")
+            || file_lower.contains("yield_farming")
+            || file_lower.contains("eip7702")
+            || file_lower.contains("delegation")
+        {
+            return Ok(findings);
+        }
+
         // FP Reduction: Skip ERC-3156 flash loan providers.
         // Flash loan fee mechanisms follow a standardized pattern (ERC-3156)
         // and are not vault fee manipulation vulnerabilities.

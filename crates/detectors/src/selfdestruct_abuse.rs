@@ -67,6 +67,16 @@ impl Detector for SelfdestructAbuseDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // FP Reduction: Only analyze contracts with selfdestruct-related functions
         if !ctx.contract.functions.is_empty() {
             let contract_func_names: Vec<String> = ctx
@@ -179,15 +189,32 @@ impl SelfdestructAbuseDetector {
         }
 
         // Pattern 3: Selfdestruct without time-lock or governance
+        // FP Reduction: Only flag this for contracts that are used as libraries/implementations
+        // for proxies. For standalone contracts, owner-controlled selfdestruct is intentional.
         let has_timelock = func_source.contains("timelock")
             || func_source.contains("delay")
-            || func_source.contains("proposedAt");
+            || func_source.contains("proposedAt")
+            || func_source.contains("block.timestamp")
+            || func_source.contains("pendingDestruction");
 
         let has_governance = func_source.contains("governance")
             || func_source.contains("multisig")
-            || func_source.contains("vote");
+            || func_source.contains("vote")
+            || func_source.contains("quorum");
 
-        if !has_timelock && !has_governance && has_access_control {
+        // Only flag admin-controlled selfdestruct without timelock in high-risk contexts:
+        // proxy implementations (where selfdestruct bricks all proxies), or
+        // metamorphic/CREATE2 patterns, or library contracts
+        let contract_source = crate::utils::get_contract_source(ctx).to_lowercase();
+        let is_high_risk_context = contract_source.contains("implementation")
+            || contract_source.contains("delegatecall")
+            || contract_source.contains("proxy")
+            || contract_source.contains("library")
+            || contract_source.contains("metamorphic")
+            || contract_source.contains("create2")
+            || contract_source.contains("redeploy");
+
+        if !has_timelock && !has_governance && has_access_control && is_high_risk_context {
             return Some(
                 "Selfdestruct can be executed immediately without time-lock or governance delay"
                     .to_string(),

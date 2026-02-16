@@ -69,30 +69,71 @@ pub use misuse::TransientStorageMisuseDetector;
 pub use reentrancy::TransientStorageReentrancyDetector;
 pub use state_leak::TransientStorageStateLeakDetector;
 
-/// Helper function to detect if contract uses transient storage
+/// Helper function to detect if contract uses transient storage.
+///
+/// FP Reduction: Only match actual transient storage usage in code lines,
+/// not just mentions in comments/docstrings. Many non-transient contracts
+/// have comments like "// Simulates transient storage" or "// See EIP-1153".
 pub fn uses_transient_storage(ctx: &crate::types::AnalysisContext) -> bool {
-    let source = &ctx.source_code.to_lowercase();
+    let source = &ctx.source_code;
 
-    // Check for explicit transient keyword (Solidity 0.8.24+)
-    if source.contains("transient") {
+    // Check for inline assembly TSTORE/TLOAD (definitive)
+    let lower = source.to_lowercase();
+    if lower.contains("assembly") && (lower.contains("tstore") || lower.contains("tload")) {
         return true;
     }
 
-    // Check for inline assembly TSTORE/TLOAD
-    if source.contains("assembly") && (source.contains("tstore") || source.contains("tload")) {
-        return true;
+    // Check for "transient" keyword in CODE lines (not comments)
+    for line in source.lines() {
+        let trimmed = line.trim();
+        // Skip comment-only lines
+        if trimmed.starts_with("//")
+            || trimmed.starts_with("*")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with("/**")
+        {
+            continue;
+        }
+        let line_lower = trimmed.to_lowercase();
+        if line_lower.contains("transient") {
+            return true;
+        }
     }
 
     false
 }
 
-/// Helper to detect transient storage declarations
+/// Helper to detect transient storage declarations.
+///
+/// FP Reduction: Only match actual transient variable declarations in code,
+/// not comment mentions.
 pub fn has_transient_storage_declarations(ctx: &crate::types::AnalysisContext) -> bool {
     let source = &ctx.source_code;
 
-    // Match patterns like:
-    // - uint256 transient counter;
-    // - mapping(address => uint256) transient balances;
-    source.contains("transient")
-        && (source.contains("uint") || source.contains("mapping") || source.contains("struct"))
+    // Check non-comment lines for transient + type keyword on the same line
+    for line in source.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("//")
+            || trimmed.starts_with("*")
+            || trimmed.starts_with("/*")
+            || trimmed.starts_with("/**")
+        {
+            continue;
+        }
+        let line_lower = trimmed.to_lowercase();
+        // Match: `uint256 transient foo;` or `mapping(...) transient bar;`
+        if line_lower.contains("transient")
+            && (line_lower.contains("uint")
+                || line_lower.contains("mapping")
+                || line_lower.contains("struct")
+                || line_lower.contains("bool")
+                || line_lower.contains("address"))
+        {
+            return true;
+        }
+    }
+
+    // Also check for TSTORE/TLOAD in assembly
+    let lower = source.to_lowercase();
+    lower.contains("assembly") && (lower.contains("tstore") || lower.contains("tload"))
 }

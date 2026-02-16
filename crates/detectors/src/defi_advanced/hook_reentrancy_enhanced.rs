@@ -75,7 +75,10 @@ impl Detector for HookReentrancyEnhancedDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        // FP Reduction: Use per-contract source to avoid matching keywords from other
+        // contracts in the same file.
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let lower = contract_source.to_lowercase();
 
         // FP Reduction: Only analyze contracts whose own functions include hooks or
         // DeFi callback patterns susceptible to hook reentrancy
@@ -94,13 +97,10 @@ impl Detector for HookReentrancyEnhancedDetector {
                 || n.contains("afterremove")
                 || n.contains("addliquidity")
                 || n.contains("removeliquidity")
-                || n.contains("callback")
-                || n.contains("receive")
+                || n.contains("onswap")
                 || n.contains("virtual_price")
                 || n.contains("virtualprice")
-                || n.contains("swap")
-                || n.contains("deposit")
-                || n.contains("withdraw")
+                || n.contains("tokensreceived")
         });
         if !contract_has_hook_fn {
             return Ok(findings);
@@ -149,16 +149,26 @@ impl Detector for HookReentrancyEnhancedDetector {
         }
 
         // Check for callback functions that can be re-entered
-        // FP Reduction: Only match hook-specific callbacks, not generic ERC receiver functions
-        // Skip ERC-3156 flash loan providers and ERC-777 token receivers
-        let is_hook_callback = lower.contains("onswap")
-            || (lower.contains("tokensreceived")
-                && !lower.contains("erc777")
-                && !lower.contains("erc-777"))
-            || (lower.contains("callback")
-                && (lower.contains("pool") || lower.contains("hook"))
-                && !lower.contains("erc3156")
-                && !lower.contains("flashlender"));
+        // FP Reduction: Only match hook-specific callbacks via function names, not generic mentions
+        // in comments. "pool" in source matches "mempool", "flashLoanProvider", etc.
+        let has_hook_callback_fn = contract_func_names.iter().any(|n| {
+            n.contains("onswap")
+                || n.contains("tokensreceived")
+                || n.contains("onflashloan")
+                || n.contains("hookcallback")
+                || n.contains("poolcallback")
+                || n.contains("removeliquidity")
+        });
+        // Contract name check: "pool" in contract name is meaningful (vs "pool" in comments)
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        let is_pool_contract = contract_name_lower.contains("pool")
+            || contract_name_lower.contains("amm")
+            || contract_name_lower.contains("curve");
+        let is_hook_callback = has_hook_callback_fn
+            || (is_pool_contract && contract_func_names.iter().any(|n| n.contains("removeliquidity") || n.contains("remove_liquidity")))
+            || lower.contains("function onswap")
+            || lower.contains("function tokensreceived")
+            || lower.contains("function onflashloan");
 
         if is_hook_callback {
             // FP Reduction: Require actual low-level calls, not safe transfers

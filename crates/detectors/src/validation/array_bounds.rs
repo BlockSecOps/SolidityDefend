@@ -51,8 +51,17 @@ impl ArrayBoundsDetector {
             // Identify array parameters and variables
             let arrays = self.identify_arrays(function, ctx);
 
+            // FP Reduction Pattern B: Check if function modifiers validate array bounds
+            // e.g., modifier validPool(uint256 _pid) { require(_pid < poolInfo.length); _; }
+            let modifier_bounded = self.get_modifier_bounded_vars(function, &arrays, ctx);
+
             // Check for unchecked array access
-            findings.extend(self.check_unchecked_array_access(body, &arrays, ctx));
+            findings.extend(self.check_unchecked_array_access_with_modifier_bounds(
+                body,
+                &arrays,
+                &modifier_bounded,
+                ctx,
+            ));
 
             // Check for loop bounds issues
             findings.extend(self.check_loop_array_bounds(body, &arrays, ctx));
@@ -116,15 +125,73 @@ impl ArrayBoundsDetector {
         }
     }
 
-    /// Check for unchecked array access patterns
-    fn check_unchecked_array_access(
+    /// FP Reduction Pattern B: Check function modifiers for array bounds validation
+    /// Returns map of param_name -> array_name for modifier-bounded parameters
+    /// e.g., modifier validPool(uint256 _pid) { require(_pid < poolInfo.length); _; }
+    fn get_modifier_bounded_vars(
+        &self,
+        function: &ast::Function<'_>,
+        arrays: &HashMap<String, ArrayInfo>,
+        ctx: &AnalysisContext<'_>,
+    ) -> HashMap<String, String> {
+        let mut bounded = HashMap::new();
+
+        // Check each modifier attached to the function
+        for modifier_ref in &function.modifiers {
+            // Find the modifier definition in the contract
+            for mod_def in &ctx.contract.modifiers {
+                if mod_def.name.name == modifier_ref.name.name {
+                    // Get the modifier source code
+                    let mod_source = self.get_modifier_source(mod_def, ctx).to_lowercase();
+
+                    // Look for require(param < array.length) pattern
+                    for param in &function.parameters {
+                        if let Some(param_name) = &param.name {
+                            let param_lower = param_name.name.to_lowercase();
+
+                            // Check if modifier validates this param against any array
+                            for (array_name, _) in arrays.iter() {
+                                let array_lower = array_name.to_lowercase();
+
+                                // Match patterns like: require(_pid < poolinfo.length
+                                if mod_source.contains(&format!("{} < {}.length", param_lower, array_lower))
+                                    || mod_source.contains(&format!("{}< {}.length", param_lower, array_lower))
+                                    || mod_source.contains(&format!("{} <{}.length", param_lower, array_lower))
+                                {
+                                    bounded.insert(param_name.name.to_string(), array_name.clone());
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        bounded
+    }
+
+    /// Get modifier source code for analysis
+    fn get_modifier_source(&self, modifier: &ast::Modifier<'_>, ctx: &AnalysisContext) -> String {
+        let start = modifier.location.start().line();
+        let end = modifier.location.end().line();
+
+        let source_lines: Vec<&str> = ctx.source_code.lines().collect();
+        if start < source_lines.len() && end < source_lines.len() {
+            source_lines[start..=end].join("\n")
+        } else {
+            String::new()
+        }
+    }
+
+    /// Check for unchecked array access patterns (with modifier bounds)
+    fn check_unchecked_array_access_with_modifier_bounds(
         &self,
         block: &ast::Block<'_>,
         arrays: &HashMap<String, ArrayInfo>,
+        modifier_bounded: &HashMap<String, String>,
         ctx: &AnalysisContext<'_>,
     ) -> Vec<Finding> {
         let mut findings = Vec::new();
-        let bounded_vars: HashMap<String, String> = HashMap::new();
 
         for stmt in &block.statements {
             self.check_statement_for_unchecked_access(
@@ -132,11 +199,22 @@ impl ArrayBoundsDetector {
                 arrays,
                 &mut findings,
                 ctx,
-                &bounded_vars,
+                modifier_bounded,
             );
         }
 
         findings
+    }
+
+    /// Check for unchecked array access patterns (legacy method)
+    fn check_unchecked_array_access(
+        &self,
+        block: &ast::Block<'_>,
+        arrays: &HashMap<String, ArrayInfo>,
+        ctx: &AnalysisContext<'_>,
+    ) -> Vec<Finding> {
+        let bounded_vars: HashMap<String, String> = HashMap::new();
+        self.check_unchecked_array_access_with_modifier_bounds(block, arrays, &bounded_vars, ctx)
     }
 
     /// Extract loop variable bounds from a for loop condition
@@ -498,7 +576,18 @@ impl ArrayBoundsDetector {
             }
             // Simple arithmetic on bounded variables (i + 1, i - 1) where i < arr.length
             // Note: i + 1 could still overflow at arr.length - 1, but this is much less common
-            ast::Expression::BinaryOperation { operator, left, .. } => {
+            ast::Expression::BinaryOperation { operator, left, right, .. } => {
+                // FP Reduction Pattern A: Modulo by array.length guarantees in-bounds
+                // e.g., hash % participants.length is always < participants.length
+                if matches!(operator, ast::BinaryOperator::Mod) {
+                    if let ast::Expression::MemberAccess { member, .. } = right {
+                        if member.name == "length" {
+                            // x % *.length is always bounded by the array length
+                            return true;
+                        }
+                    }
+                }
+
                 if matches!(
                     operator,
                     ast::BinaryOperator::Add | ast::BinaryOperator::Sub
@@ -784,6 +873,16 @@ impl ArrayBoundsDetector {
         // Phase 6: Skip single array parameter functions (no length mismatch possible)
         // Only flag if there are 2+ array parameters that need matching lengths
         if array_params.len() >= 2 {
+            // FP Reduction Pattern D: Skip if ANY array parameter is fixed-size.
+            // Fixed-size arrays (e.g., uint256[8], bytes32[4]) have their length
+            // enforced by the ABI at compile time. When one array is fixed-size,
+            // the caller already knows its length, making runtime mismatch less likely.
+            // Change from .all() to .any() to reduce false positives.
+            if array_params.iter().any(|(name, _)| {
+                arrays.get(name.as_str()).map_or(false, |info| !info.is_dynamic)
+            }) {
+                return findings;
+            }
             // Phase 10: Check if function body already has length validation
             let func_source = self.get_function_source(function, ctx);
             if self.has_length_validation(&func_source, &array_params) {
@@ -1035,14 +1134,30 @@ impl Detector for ArrayBoundsDetector {
             return Ok(findings);
         }
 
-        // Phase 10: Skip test contracts and secure examples
-        if is_test_contract(ctx) || is_secure_example_file(ctx) {
+        // Phase 10: Skip test contracts, secure examples, and attack helpers
+        if is_test_contract(ctx) || is_secure_example_file(ctx) || crate::utils::is_attack_contract(ctx) {
             return Ok(findings);
         }
+
+        // FP Reduction Pattern C: For Solidity 0.8+, single-index array access automatically
+        // reverts on out-of-bounds (compiler inserts bounds check). Only flag
+        // multi-array length mismatch issues which the compiler doesn't catch.
+        let is_solidity_08_plus = ctx.source_code.contains("pragma solidity ^0.8")
+            || ctx.source_code.contains("pragma solidity >=0.8")
+            || ctx.source_code.contains("pragma solidity 0.8");
 
         // Analyze all functions in the contract
         for function in ctx.get_functions() {
             findings.extend(self.analyze_function(function, ctx)?);
+        }
+
+        // Filter out single-index findings for Solidity 0.8+ contracts
+        if is_solidity_08_plus {
+            // Remove single-index "may be out of bounds" findings since the
+            // compiler inserts bounds checks. Keep multi-array length mismatch findings.
+            findings.retain(|f| {
+                !f.message.contains("may be out of bounds")
+            });
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

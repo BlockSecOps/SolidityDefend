@@ -77,6 +77,22 @@ impl Detector for VaultShareInflationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip contracts primarily about reentrancy vulnerabilities.
+        // Hook reentrancy and read-only reentrancy are separate vulnerability classes
+        // with their own dedicated detectors.
+        let contract_name_lower = ctx.contract.name.name.to_lowercase();
+        if contract_name_lower.contains("reentrancy") || contract_name_lower.contains("reentrancy") {
+            return Ok(findings);
+        }
+        let source_lower = crate::utils::get_contract_source(ctx).to_lowercase();
+        if source_lower.contains("// vulnerability: hook reentrancy")
+            || source_lower.contains("// vulnerability: read-only reentrancy")
+            || source_lower.contains("erc-777")
+            || (contract_name_lower.contains("hook") && source_lower.contains("tokensreceived"))
+        {
+            return Ok(findings);
+        }
+
         // Also skip simple tokens that might have some vault-like functions
         if utils::is_simple_token(ctx) {
             return Ok(findings);

@@ -21,7 +21,7 @@ soliditydefend contract.sol
 - **Oracle Security Suite** - Chainlink stale price, sequencer uptime, single-source reliance, TWAP manipulation windows, decimal mismatch detection
 - **L2/Rollup Security Suite** - `msg.value` in loops, `block.number` timing assumptions, gas price dependency, PUSH0 cross-chain deployment risks
 - **Lint Mode** - `--lint` flag enables code quality detectors: missing NatSpec, unused imports, magic numbers, function length, excessive inheritance
-- **Context-Aware Analysis** - Structural FP filter across all detectors plus Safe Patterns Library with 56+ categories. Zero false positives on secure benchmarks (0 FPs on 23 secure contract suites). Recognizes ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, proxy patterns, access control, and more
+- **Context-Aware Analysis** - Structural FP filter across all detectors plus Safe Patterns Library with 56+ categories. Zero false positives on 23 secure contract suites. Recognizes ReentrancyGuard, SafeERC20, OpenZeppelin/Aave/Compound/Uniswap protocols, proxy patterns, access control, and more
 - **Modern EIP Coverage** - EIP-7702, EIP-1153, ERC-7683, ERC-7821, ERC-4337
 - **Project-Aware Scanning** - True project understanding with dependency graph, cross-contract taint tracking, and smart file ordering
 - **Test-Aware Analysis** - Automatically excludes Foundry/Hardhat test files; use `--include-tests` to analyze test contracts
@@ -29,7 +29,7 @@ soliditydefend contract.sol
 - **Cross-Contract Taint Tracking** - Full inter-contract taint analysis with `--cross-contract`
 - **Lightning Fast** - 30-180ms analysis time, built in Rust
 - **CI/CD Ready** - JSON/SARIF output, exit codes, severity filtering
-- **100% Recall** - Validated against 117-contract ground truth suite (77/77 TPs, 0 parse errors, 0 false negatives)
+- **82% Precision, 100% Recall** - Validated against 124-contract ground truth suite (143/174 findings are true positives, 112 ground truth TPs, 0 false negatives)
 
 See [docs/detectors/](docs/detectors/README.md) for the complete detector list.
 

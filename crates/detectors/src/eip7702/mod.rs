@@ -128,11 +128,14 @@ pub fn is_eip7702_delegate(ctx: &crate::types::AnalysisContext) -> bool {
     // For contracts without explicit 7702 reference, require BOTH:
     // 1. delegatecall pattern AND
     // 2. Account abstraction / EOA pattern (not just regular proxy)
-    let has_delegatecall = source.contains("delegatecall");
-    let has_aa_pattern = source.contains("account abstraction")
-        || source.contains("smart account")
-        || source.contains("eoa")
-        || (source.contains("execute") && source.contains("authorization"));
+    //
+    // Use per-contract source to avoid cross-contract FPs in multi-contract files.
+    let contract_source = crate::utils::get_contract_source(ctx).to_lowercase();
+    let has_delegatecall = contract_source.contains("delegatecall");
+    let has_aa_pattern = contract_source.contains("account abstraction")
+        || contract_source.contains("smart account")
+        || contract_source.contains("eoa")
+        || (contract_source.contains("execute") && contract_source.contains("authorization"));
 
     has_delegatecall && has_aa_pattern
 }

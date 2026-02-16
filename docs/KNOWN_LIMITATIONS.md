@@ -1,7 +1,7 @@
 # Known Limitations
 
-**Version:** v1.10.24
-**Last Updated:** 2026-02-13
+**Version:** v2.0.2
+**Last Updated:** 2026-02-16
 
 This document outlines known limitations and gaps in SolidityDefend's vulnerability detection capabilities based on comprehensive validation testing.
 
@@ -9,7 +9,14 @@ This document outlines known limitations and gaps in SolidityDefend's vulnerabil
 
 ## Overview
 
-SolidityDefend v1.10.24 has **67 precision-tuned security detectors**, all enabled by default. 178 low-precision detectors were removed across v13-v15 (post-EVM-change dead code, compiler-superseded checks, keyword-matching-only MEV, redundant proxy/upgrade, zero-TP detectors). The tool is validated against a **117-contract ground truth suite** (74 vulnerable, 43 clean) with **77 expected true positives** across 26 vulnerability categories. Current precision is **18.4%** (competitive with Slither/Aderyn) with **100% recall**.
+SolidityDefend v2.0.2 has **81 precision-tuned security detectors** (67 security + 5 oracle + 4 L2 + 5 lint), all enabled by default (lint detectors require `--lint` flag). The tool includes an intra-procedural dataflow analysis pipeline (IR lowering, CFG, reaching definitions, live variables, def-use chains, taint analysis) wired into the detector framework. It is validated against a **124-contract ground truth suite** with **112 expected true positives** across 30+ vulnerability categories. Current precision is **82.2%** (143/174 findings are TPs) with **100% recall**.
+
+**v2.0.2 Improvements:** FP Reduction Phase 2 — targeted sweep of 6 highest-FP detectors (Feb 16, 2026):
+- **22 FPs eliminated** from vault-share-inflation, flash-loan-collateral-swap, vault-fee-manipulation, mev-priority-gas-auction, lrt-share-inflation, metamorphic-contract-risk
+- **Ground truth expanded** from 100 to 112 TPs (12 newly verified true positives added)
+- **Precision: 82.2%** (143/174 findings are TPs) — up from 18.4%
+- **31 FPs remaining** across 22 detectors (was 65 across 28)
+- 0 true positive regressions (100% recall maintained)
 
 **v1.10.21 Improvements:** Precision audit, FP reduction, and detector cleanup (Feb 12, 2026):
 - **90 obsolete detectors removed** — high false positive rate with zero validated true positives, including post-EVM-change dead detectors, compiler-superseded checks, and keyword-matching-only MEV detectors
@@ -358,30 +365,30 @@ payable(recipient).call{value: amount}("");
 
 ## False Positive Concerns 🔍
 
-### FP Rate Summary (v1.10.21)
+### FP Rate Summary (v2.0.2)
 
-- **Secure-file FP rate: 0 findings** across **5 clean benchmark contracts** and **43 clean/secure benchmark contracts** total
-- **Ground truth coverage: 100%** — All 117 test contracts annotated with expected findings (77 TPs across 74 vulnerable contracts, 0 parse errors)
-- **Total findings reduced 75%** (1,776 -> 440) through 13 rounds of FP reduction and 85 obsolete detector removals
+- **Precision: 82.2%** — 143/174 findings are true positives
+- **Secure-file FP rate: 0 findings** across 23 secure contract suites and 43 clean benchmark contracts
+- **Ground truth: 112 TPs** across 124 test contracts (v1.3.0)
+- **31 FPs remaining** across 22 detectors (down from 65 FPs across 28 detectors)
+- **Total findings reduced 90%** (1,776 → 174) through iterative FP reduction, detector cleanup, and Phase 2 targeted sweep
 - **Structural FP filter** (`fp_filter.rs`) applied to all detectors eliminates findings in view/pure, internal/private, constructor, fallback/receive, and admin-controlled functions
-- **15+ GT detector classification gates tightened** to eliminate FPs on secure contracts while preserving all TPs
 - **FP audit integration test** gates on false positive count — prevents FP regressions in CI
-- **0 true positive regressions** across all reduction rounds (77/77 TPs, 100% recall)
-- **Validation command**: `soliditydefend --validate --ground-truth tests/validation/ground_truth.json` measures precision/recall against the full 117-contract corpus
+- **0 true positive regressions** across all reduction rounds (100% recall maintained)
+- **Validation command**: `soliditydefend --validate --ground-truth tests/validation/ground_truth.json` measures precision/recall against the full contract corpus
 
 ### Detectors with Remaining Volume
 
 Some detectors still produce high finding counts on intentionally vulnerable test targets. These are not necessarily false positives but may warrant manual review:
 
-| Detector | Findings | Recommendation |
-|----------|----------|----------------|
-| `swc105-unprotected-ether-withdrawal` | 18 | Review withdrawal access control in context |
-| `defi-yield-farming-exploits` | 17 | Review carefully, may need further refinement |
-| `array-bounds-check` | 12 | Verify bounds checking patterns |
-| `missing-chainid-validation` | 8 | Review cross-chain context |
-| `vault-withdrawal-dos` | 7 | Review vault withdrawal patterns |
-| `vault-donation-attack` | 7 | Many are true positives in vault context |
-| `oracle-time-window-attack` | 7 | Review oracle integration patterns |
+| Detector | Findings | TPs | FPs | Note |
+|----------|----------|-----|-----|------|
+| `delegatecall-return-ignored` | 11 | 11 | 0 | All true positives |
+| `proxy-storage-collision` | 8 | 4 | 4 | Remaining FPs in delegation contexts |
+| `upgradeable-proxy-issues` | 7 | 5 | 2 | Most are true positives |
+| `missing-chainid-validation` | 6 | 4 | 2 | Review cross-chain context |
+| `selfdestruct-abuse` | 6 | 5 | 1 | Mostly true positives |
+| `vault-share-inflation` | 5 | 5 | 0 | All true positives |
 
 **Best Practice:** Focus on Critical and High severity findings with low false positive rates:
 - `classic-reentrancy`
@@ -589,6 +596,6 @@ See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerabi
 
 ---
 
-**Document Version:** 1.0
-**Next Review:** After v1.3.0 release
+**Document Version:** 2.0
+**Last Updated:** 2026-02-16
 **Maintained By:** SolidityDefend Team

@@ -66,6 +66,16 @@ impl Detector for Erc20ApproveRaceDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_approve_race(function, ctx) {
                 let message = format!(

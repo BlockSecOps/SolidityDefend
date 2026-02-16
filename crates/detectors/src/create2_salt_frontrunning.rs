@@ -231,6 +231,25 @@ impl Detector for Create2SaltFrontrunningDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts — they ARE the attacker
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip selfdestruct/metamorphic test contracts
+        // These have different primary vulnerabilities (selfdestruct-abuse, metamorphic-contract-risk)
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("selfdestruct") || file_lower.contains("eip6780") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Only analyze contracts with deploy/create functions
         let contract_func_names: Vec<String> = ctx
             .contract

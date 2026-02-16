@@ -1,7 +1,7 @@
 {
-  "version": "1.1.0",
+  "version": "1.3.0",
   "description": "Ground truth dataset for SolidityDefend detector validation",
-  "last_updated": "2026-02-08",
+  "last_updated": "2026-02-16",
   "contracts": {
     "tests/contracts/basic_vulnerabilities/access_control_issues.sol": {
       "contract_name": "AccessControlIssues",
@@ -371,6 +371,17 @@
           "severity": "critical",
           "description": "User-controlled delegatecall target allows arbitrary code execution",
           "vulnerability_type": "user-controlled-delegatecall"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            230,
+            245
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "VulnerableProxyPattern.setImplementation - user-controlled implementation setter",
+          "vulnerability_type": "unprotected-upgrade"
         }
       ],
       "known_false_positives": [],
@@ -967,6 +978,17 @@
           "severity": "critical",
           "description": "Metamorphic contract attacks - bait-and-switch code swapping",
           "vulnerability_type": "metamorphic-attack"
+        },
+        {
+          "detector_id": "selfdestruct-abuse",
+          "line_range": [
+            140,
+            155
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "MetamorphicChild.destroy - selfdestruct enabling metamorphic bait-and-switch",
+          "vulnerability_type": "selfdestruct-abuse"
         }
       ],
       "known_false_positives": [],
@@ -1003,6 +1025,17 @@
           "severity": "critical",
           "description": "Selfdestruct abuse - library destruction, proxy bricking, rug pulls",
           "vulnerability_type": "selfdestruct-abuse"
+        },
+        {
+          "detector_id": "proxy-storage-collision",
+          "line_range": [
+            90,
+            110
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableProxy - delegatecall to unvalidated implementation risks storage collision",
+          "vulnerability_type": "storage-collision"
         }
       ],
       "known_false_positives": [],
@@ -1057,6 +1090,28 @@
           "severity": "critical",
           "description": "Signature verification without replay protection",
           "vulnerability_type": "bridge-message-replay"
+        },
+        {
+          "detector_id": "missing-chainid-validation",
+          "line_range": [
+            15,
+            30
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "processMessage - missing chain ID validation in bridge message processing",
+          "vulnerability_type": "missing-chainid"
+        },
+        {
+          "detector_id": "missing-chainid-validation",
+          "line_range": [
+            38,
+            50
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "executeWithProof - missing chain ID validation in proof execution",
+          "vulnerability_type": "missing-chainid"
         }
       ],
       "known_false_positives": [],
@@ -1111,6 +1166,17 @@
           "severity": "critical",
           "description": "Delegatecall in constructor - storage corruption and reentrancy during construction",
           "vulnerability_type": "constructor-delegatecall"
+        },
+        {
+          "detector_id": "proxy-storage-collision",
+          "line_range": [
+            380,
+            400
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableBeaconConstructor - constructor delegatecall can cause storage collision",
+          "vulnerability_type": "storage-collision"
         }
       ],
       "known_false_positives": [],
@@ -1122,17 +1188,216 @@
         {
           "detector_id": "delegatecall-return-ignored",
           "line_range": [
-            1,
-            500
+            49,
+            53
           ],
           "label": "true_positive",
           "severity": "high",
-          "description": "Unchecked delegatecall return values - silent failures",
+          "description": "IgnoredReturnDelegatecall.execute - statement delegatecall return ignored",
           "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            59,
+            62
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "IgnoredReturnDelegatecall.executeStatement - statement delegatecall return ignored",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            79,
+            89
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "VulnerableProxyUpgrade.upgrade - init delegatecall return ignored",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            105,
+            112
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "BatchDelegatecallIgnored.batchExecute - batch delegatecall return ignored",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            128,
+            133
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "CapturedButNotChecked.execute - return captured but not validated",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            138,
+            143
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "CapturedButNotChecked.executeForData - success not captured",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            160,
+            167
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "ConditionalDelegatecallIgnored.executeWhenActive - return not checked",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            183,
+            189
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "LoopDelegatecallIgnored.executeAll - loop delegatecall return ignored",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            205,
+            216
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "AssemblyDelegatecallIgnored.execute - assembly result not validated",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            221,
+            231
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "AssemblyDelegatecallIgnored.executeNoCheck - always returns regardless",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            247,
+            258
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "TryCatchNoHandling - try-catch with empty catch",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            276,
+            282
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "EventEmittedWithoutCheck.execute - event emitted without check",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            299,
+            305
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "StateChangeAfterIgnoredReturn.execute - state updated without check",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            322,
+            328
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "PaymentAfterIgnoredReturn.executeAndPay - payment without check",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            340,
+            345
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "ModifierWithIgnoredReturn.validate - modifier delegatecall not checked",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            364,
+            372
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "ConstructorIgnoredReturn - constructor delegatecall not checked",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "delegatecall-return-ignored",
+          "line_range": [
+            388,
+            398
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "FallbackIgnoredReturn - fallback delegatecall not checked",
+          "vulnerability_type": "unchecked-delegatecall"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            183,
+            200
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "LoopDelegatecallIgnored.executeAll - unchecked delegatecall in upgrade context",
+          "vulnerability_type": "unchecked-proxy-delegatecall"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            256,
+            270
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "TryCatchNoHandling.internalDelegatecall - unchecked delegatecall in upgrade context",
+          "vulnerability_type": "unchecked-proxy-delegatecall"
         }
       ],
       "known_false_positives": [],
-      "clean_sections": []
+      "clean_sections": [],
+      "notes": "All contracts in this file have genuine delegatecall-return-ignored vulnerabilities. Multiple TPs expected."
     },
     "tests/contracts/delegatecall/vulnerable/FallbackShadowing.sol": {
       "contract_name": "VulnerableProxyWithShadowing",
@@ -1165,6 +1430,17 @@
           "severity": "critical",
           "description": "Unprotected delegatecall in fallback/receive - no access control",
           "vulnerability_type": "unprotected-fallback-delegatecall"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            290,
+            300
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "NoImplementationValidation.setImplementation - unprotected implementation setter",
+          "vulnerability_type": "unprotected-upgrade"
         }
       ],
       "known_false_positives": [],
@@ -1201,6 +1477,17 @@
           "severity": "critical",
           "description": "Mutable library addresses - delegatecall to storage-based addresses without integrity checks",
           "vulnerability_type": "untrusted-library"
+        },
+        {
+          "detector_id": "upgradeable-proxy-issues",
+          "line_range": [
+            140,
+            155
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "MutableImplementationProxy.setImplementation - unprotected implementation setter",
+          "vulnerability_type": "unprotected-upgrade"
         }
       ],
       "known_false_positives": [],
@@ -1615,6 +1902,28 @@
           "severity": "high",
           "description": "Missing range checks on public inputs, unconstrained intermediate values",
           "vulnerability_type": "zk-underconstrained"
+        },
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            210,
+            225
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "submitBatch - under-constrained circuit, missing state transition proof",
+          "vulnerability_type": "zk-proof-bypass"
+        },
+        {
+          "detector_id": "zk-proof-bypass",
+          "line_range": [
+            235,
+            245
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "submitBatchWithBalance - under-constrained circuit, missing balance conservation constraint",
+          "vulnerability_type": "zk-proof-bypass"
         }
       ],
       "known_false_positives": [],
@@ -2022,6 +2331,160 @@
       "known_false_positives": [],
       "clean_sections": [],
       "notes": "Detector test fixture - empty modifier provides no access control"
+    },
+    "tests/contracts/real_world_exploits/ParityMultisigWallet.sol": {
+      "contract_name": "WalletLibrary",
+      "expected_findings": [
+        {
+          "detector_id": "selfdestruct-abuse",
+          "line_range": [
+            37,
+            40
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "kill() allows selfdestruct by anyone who calls initWallet()",
+          "vulnerability_type": "selfdestruct-unprotected"
+        },
+        {
+          "detector_id": "fallback-delegatecall-unprotected",
+          "line_range": [
+            65,
+            75
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Fallback function delegates all calls to library without access control",
+          "vulnerability_type": "delegatecall-unprotected-fallback"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Parity Multisig Wallet Library (Nov 2017, $150M frozen). Unprotected initWallet() + selfdestruct."
+    },
+    "tests/contracts/real_world_exploits/WormholeBridge.sol": {
+      "contract_name": "WormholeBridge",
+      "expected_findings": [
+        {
+          "detector_id": "bridge-message-verification",
+          "line_range": [
+            1,
+            93
+          ],
+          "label": "true_positive",
+          "severity": "critical",
+          "description": "completeTransfer checks guardian membership but not actual signature validity",
+          "vulnerability_type": "missing-signature-verification"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Wormhole Bridge (Feb 2022, $326M stolen). Missing ecrecover validation on guardian signatures."
+    },
+    "tests/contracts/real_world_exploits/EulerFinance.sol": {
+      "contract_name": "EulerLendingPool",
+      "expected_findings": [
+        {
+          "detector_id": "vault-share-inflation",
+          "line_range": [
+            1,
+            128
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "eToken exchange rate can be manipulated via donateToReserves",
+          "vulnerability_type": "share-price-manipulation"
+        }
+      ],
+      "known_false_positives": [
+        {
+          "detector_id": "mev-extractable-value",
+          "line": 1
+        },
+        {
+          "detector_id": "mev-priority-gas-auction",
+          "line": 1
+        }
+      ],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Euler Finance (Mar 2023, $197M stolen). Flash loan + donateToReserves inflates eToken value."
+    },
+    "tests/contracts/real_world_exploits/CreamFinance.sol": {
+      "contract_name": "CreamLendingPool",
+      "expected_findings": [
+        {
+          "detector_id": "flash-loan-collateral-swap",
+          "line_range": [
+            1,
+            10
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Borrow function uses manipulable spot oracle price for collateral valuation",
+          "vulnerability_type": "oracle-price-manipulation"
+        }
+      ],
+      "known_false_positives": [
+        {
+          "detector_id": "mev-extractable-value",
+          "line": 1
+        }
+      ],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Cream Finance V2 (Oct 2021, $130M stolen). Flash loan + spot price oracle manipulation."
+    },
+    "tests/contracts/real_world_exploits/BeanstalkGovernance.sol": {
+      "contract_name": "BeanstalkGovernance",
+      "expected_findings": [
+        {
+          "detector_id": "test-governance",
+          "line_range": [
+            88,
+            110
+          ],
+          "label": "true_positive",
+          "severity": "medium",
+          "description": "Voting power based on current balance, no time-lock on execution - vulnerable to flash loan governance attack",
+          "vulnerability_type": "flash-loan-governance"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Beanstalk Farms (Apr 2022, $182M stolen). Flash loan + instant governance execution."
+    },
+    "tests/contracts/real_world_exploits/RoninBridge.sol": {
+      "contract_name": "RoninBridge",
+      "expected_findings": [
+        {
+          "detector_id": "multisig-bypass",
+          "line_range": [
+            1,
+            120
+          ],
+          "label": "true_positive",
+          "severity": "high",
+          "description": "Low quorum (5/9), no withdrawal limits or time delay - compromised validators can drain bridge",
+          "vulnerability_type": "multisig-low-quorum"
+        }
+      ],
+      "known_false_positives": [],
+      "clean_sections": [],
+      "notes": "Real-world exploit: Ronin Bridge (Mar 2022, $625M stolen). 5 compromised validator keys with low quorum."
+    },
+    "tests/contracts/real_world_exploits/UniswapV2Pair_Safe.sol": {
+      "contract_name": "UniswapV2Pair_Safe",
+      "expected_findings": [],
+      "known_false_positives": [],
+      "clean_sections": [
+        {
+          "line_range": [
+            1,
+            200
+          ],
+          "description": "Well-audited Uniswap V2 pair with reentrancy guard, access control, TWAP oracle, slippage protection"
+        }
+      ],
+      "notes": "Secure reference: Simplified Uniswap V2 Pair. No vulnerabilities expected - any findings are FPs."
     }
   },
   "metadata": {

@@ -478,6 +478,19 @@ impl RestakingWithdrawalDelaysDetector {
             return findings;
         }
 
+        // FP Reduction: Skip if deposits stay in the contract (contract IS the reserve)
+        // Only flag if deposits are forwarded to an external restaking protocol
+        let func_source = get_function_source(function, ctx).to_lowercase();
+        let forwards_to_external = func_source.contains("eigenlayer")
+            || func_source.contains("strategymanager")
+            || func_source.contains("delegationmanager")
+            || func_source.contains("restake")
+            || func_source.contains(".deposit(")  // calling external deposit
+            || func_source.contains(".stake(");    // calling external stake
+        if !forwards_to_external {
+            return findings;
+        }
+
         let func_name_lower = function.name.name.to_lowercase();
 
         // Only check deposit/stake functions
@@ -735,6 +748,16 @@ impl Detector for RestakingWithdrawalDelaysDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // FP Reduction: Only analyze contracts with withdrawal/staking functions
         let contract_func_names: Vec<String> = ctx
             .contract
@@ -763,6 +786,23 @@ impl Detector for RestakingWithdrawalDelaysDetector {
         // Only run on restaking/LRT contracts
         if !is_restaking_contract(ctx) && !is_lrt_contract(ctx) {
             return Ok(findings);
+        }
+
+        // FP Reduction: Skip slashing-focused contracts.
+        // Contracts named Slasher or *_Slasher test slashing conditions, not
+        // withdrawal delays. They may have withdraw/stake functions but the
+        // primary vulnerability is in slashing logic, not delay enforcement.
+        {
+            let name_lower = ctx.contract.name.name.to_lowercase();
+            if name_lower.contains("slasher") || name_lower == "slasher" {
+                return Ok(findings);
+            }
+            // Skip pure token contracts (e.g., EzEthToken) — these are
+            // restaking receipt tokens, not withdrawal-handling contracts.
+            // The token itself doesn't handle withdrawal delays.
+            if name_lower.ends_with("token") && !name_lower.contains("vault") {
+                return Ok(findings);
+            }
         }
 
         // FP Reduction: Skip non-restaking contexts that may have matched keywords
@@ -805,8 +845,11 @@ impl Detector for RestakingWithdrawalDelaysDetector {
             findings.extend(self.check_instant_withdrawal(function, ctx));
         }
 
-        // Contract-level checks
-        findings.extend(self.check_two_step_withdrawal(ctx));
+        // Contract-level checks — skip two-step check if per-function findings already
+        // flag withdrawal issues (avoid redundant contract-level + function-level findings)
+        if findings.is_empty() {
+            findings.extend(self.check_two_step_withdrawal(ctx));
+        }
         findings.extend(self.check_withdrawal_delay_constant(ctx));
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

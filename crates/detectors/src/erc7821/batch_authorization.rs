@@ -256,6 +256,16 @@ impl Detector for ERC7821BatchAuthorizationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         if !is_erc7821_executor(ctx) {
             return Ok(findings);
         }

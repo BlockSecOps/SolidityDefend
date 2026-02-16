@@ -73,6 +73,37 @@ impl TransientStorageComposabilityDetector {
 
         let source = &ctx.source_code;
 
+        // Extract names of variables annotated as transient storage.
+        // Matches lines like: `uint256 private operationLock; // Simulates transient storage`
+        // or actual `uint256 transient counter;`
+        let transient_var_names: Vec<String> = source
+            .lines()
+            .filter_map(|line| {
+                let trimmed = line.trim();
+                // Skip pure comment lines
+                if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                    return None;
+                }
+                let lower = trimmed.to_lowercase();
+                // Line must mention "transient" (in code or trailing comment) and declare a variable
+                if !lower.contains("transient") {
+                    return None;
+                }
+                if !(lower.contains("uint") || lower.contains("mapping") || lower.contains("bool") || lower.contains("address")) {
+                    return None;
+                }
+                // Extract variable name: last identifier before `;` or `=`
+                let code_part = if let Some(idx) = trimmed.find("//") {
+                    &trimmed[..idx]
+                } else {
+                    trimmed
+                };
+                let code_part = code_part.trim().trim_end_matches(';').trim();
+                // Get the last word (variable name)
+                code_part.split_whitespace().last().map(|s| s.to_string())
+            })
+            .collect();
+
         // Find all function pairs where one writes and another reads transient storage
         let functions = ctx.get_functions();
         let mut writers = Vec::new();
@@ -85,12 +116,30 @@ impl TransientStorageComposabilityDetector {
                 continue;
             };
 
-            let has_write = func_text.contains("transient")
+            // FP Reduction: Check for actual transient storage references.
+            // Either: actual `transient` keyword/tstore in code lines, OR
+            // usage of a variable that was declared with transient annotation.
+            let func_lower = func_text.to_lowercase();
+            let uses_transient_var = transient_var_names
+                .iter()
+                .any(|name| func_lower.contains(&name.to_lowercase()));
+            let has_asm_transient = func_lower.contains("tstore") || func_lower.contains("tload");
+            let has_keyword_transient = func_text.lines().any(|line| {
+                let trimmed = line.trim();
+                if trimmed.starts_with("//") || trimmed.starts_with("*") || trimmed.starts_with("/*") {
+                    return false;
+                }
+                trimmed.to_lowercase().contains("transient")
+            });
+
+            let has_transient_ref = uses_transient_var || has_asm_transient || has_keyword_transient;
+
+            let has_write = has_transient_ref
                 && (func_text.contains("=")
                     || func_text.contains("++")
                     || func_text.contains("--"));
 
-            let has_read = func_text.contains("transient")
+            let has_read = has_transient_ref
                 && (func_text.contains("require(") || func_text.contains("if ("));
 
             if has_write {
@@ -220,6 +269,16 @@ impl Detector for TransientStorageComposabilityDetector {
 
         // FP Reduction: Skip library contracts (cannot hold state or receive Ether)
         if crate::utils::is_library_contract(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
             return Ok(findings);
         }
 

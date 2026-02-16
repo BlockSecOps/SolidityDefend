@@ -700,6 +700,30 @@ impl Detector for L2GasPriceDependencyDetector {
         let source = &ctx.source_code;
         let contract_name = self.get_contract_name(ctx);
 
+        // FP Reduction: Only flag contracts that show L2 deployment context.
+        // Contracts without L2 indicators are likely L1-only and tx.gasprice/block.basefee
+        // behave as expected on L1.
+        let source_lower = source.to_lowercase();
+        let has_l2_context = source_lower.contains("arbitrum")
+            || source_lower.contains("optimism")
+            || source_lower.contains("zksync")
+            || source_lower.contains("linea")
+            || source_lower.contains("mantle")
+            || source_lower.contains("polygon")
+            || source_lower.contains("iarbsys")
+            || source_lower.contains("arbgasinfo")
+            || source_lower.contains("l1block")
+            || source_lower.contains("l2")
+            || source_lower.contains("rollup")
+            || source_lower.contains("crosschain")
+            || source_lower.contains("cross-chain")
+            || source_lower.contains("sequencer")
+            || source_lower.contains("block.chainid");
+
+        if !has_l2_context {
+            return Ok(findings);
+        }
+
         for (line, func_name, keyword) in self.find_gas_price_dependencies(source) {
             let message = format!(
                 "Function '{}' in contract '{}' uses {} in logic. \

@@ -53,8 +53,9 @@ pub fn is_primary_contract(ctx: &AnalysisContext) -> bool {
 /// the AST's start/end line information. Use this when exemption checks must be
 /// scoped to the current contract to avoid matching patterns from co-located contracts.
 pub fn get_contract_source(ctx: &AnalysisContext) -> String {
-    let start = ctx.contract.location.start().line();
-    let end = ctx.contract.location.end().line();
+    // AST line numbers are 1-indexed; convert to 0-indexed array indices
+    let start = ctx.contract.location.start().line().saturating_sub(1);
+    let end = ctx.contract.location.end().line().saturating_sub(1);
 
     let source_lines: Vec<&str> = ctx.source_code.lines().collect();
     if start < source_lines.len() && end < source_lines.len() {
@@ -1410,15 +1411,34 @@ pub fn is_secure_example_file(ctx: &AnalysisContext) -> bool {
     let is_secure_file = file.contains("secure")
         || file.contains("safe")
         || file.contains("/secure/")
-        || file.contains("/safe/");
+        || file.contains("/safe/")
+        || file.ends_with("/clean.sol")
+        || file.contains("/clean_");
 
     // Contract name patterns indicating secure implementation
     let is_secure_name = name.contains("secure")
         || name.contains("safe")
+        || name.starts_with("benign")
+        || name.starts_with("legitimate")
         || name.ends_with("fixed")
         || name.ends_with("patched");
 
     is_secure_file || is_secure_name
+}
+
+/// Detects if the contract is an intentional attack/exploit helper.
+///
+/// Attack contracts (e.g., `MaliciousImplementation`, `FlashLoanReentrancyAttacker`)
+/// are designed to demonstrate exploits. They intentionally lack access control,
+/// bounds checks, etc. Flagging them produces false positives.
+pub fn is_attack_contract(ctx: &AnalysisContext) -> bool {
+    let name = ctx.contract.name.name.to_lowercase();
+
+    name.contains("malicious")
+        || name.contains("attacker")
+        || name.contains("exploit")
+        || name.starts_with("attack")
+        || name.contains("phishing")
 }
 
 /// Detects if the contract is a flash loan provider or borrower

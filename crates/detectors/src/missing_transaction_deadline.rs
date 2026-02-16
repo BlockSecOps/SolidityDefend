@@ -124,6 +124,12 @@ impl MissingTransactionDeadlineDetector {
             return None;
         }
 
+        // FP Reduction: Only flag contracts that manage their own liquidity reserves.
+        // Consumer/wrapper contracts delegate to external DEX which enforces its own deadlines.
+        if !self.manages_own_liquidity(ctx) {
+            return None;
+        }
+
         // Check for deadline protection (including alternative mechanisms)
         let has_deadline = self.has_deadline_parameter(function)
             || self.has_deadline_validation(&func_source)
@@ -147,11 +153,65 @@ impl MissingTransactionDeadlineDetector {
     /// Only DEX/trading operations are truly time-sensitive
     /// Simple withdraw/deposit/claim operations do NOT need deadlines
     fn is_time_sensitive(&self, source: &str, func_name: &str) -> bool {
+        // FP Reduction: Cancel/pause/stop functions are not time-sensitive trading ops
+        if func_name.starts_with("cancel")
+            || func_name.starts_with("pause")
+            || func_name.starts_with("stop")
+            || func_name == "emergencywithdraw"
+        {
+            return false;
+        }
+
         // DEX/Trading function names - THESE need deadlines
         let is_trading_function = func_name.contains("swap")
             || func_name.contains("trade")
             || func_name.contains("exchange")
             || func_name.contains("fill"); // Order fill
+
+        // FP Reduction: Trading functions by name must actually handle token transfers
+        // to be time-sensitive. Functions named "swap" that only modify address variables
+        // (e.g., library replacement, proxy upgrade) are not DeFi swaps.
+        if is_trading_function {
+            let has_value_flow = source.contains("transfer")
+                || source.contains("transferFrom")
+                || source.contains("safeTransfer")
+                || source.contains("call{value:")
+                || source.contains(".swap(")
+                || source.contains("swapExact")
+                || source.contains("getAmountOut")
+                || source.contains("amountOut")
+                || source.contains("IUniswap")
+                || source.contains("IPancake")
+                || source.contains("msg.value");
+            if !has_value_flow {
+                return false;
+            }
+        }
+
+        // Uniswap V4 hooks are callbacks, not user-initiated - no deadline needed
+        if func_name.contains("beforeswap") || func_name.contains("afterswap")
+            || func_name.contains("beforeadd") || func_name.contains("afteradd")
+            || func_name.contains("beforeremove") || func_name.contains("afterremove")
+        {
+            return false;
+        }
+
+        // ERC-7683 cross-chain intent functions - deadlines managed by intent protocol
+        if func_name.contains("openorder") || func_name.contains("fillorder")
+            || func_name.contains("resolveorder") || func_name.contains("settleorder")
+        {
+            if source.contains("CrossChain") || source.contains("Intent") || source.contains("Permit2") {
+                return false;
+            }
+        }
+
+        // Cross-chain bridge operations - timing managed by bridge protocol
+        if (func_name.contains("bridge") || func_name.contains("relay") || func_name.contains("finalize"))
+            && (source.contains("L1") || source.contains("L2") || source.contains("messenger")
+                || source.contains("crossDomain") || source.contains("bridge"))
+        {
+            return false;
+        }
 
         // Buy/sell only if price-sensitive (DEX context), not ticket/NFT purchases
         let is_price_sensitive_buy_sell = (func_name.contains("buy") || func_name.contains("sell"))
@@ -171,10 +231,6 @@ impl MissingTransactionDeadlineDetector {
             || self.has_keyword_in_code(source, "amountOutMin")
             || self.has_keyword_in_code(source, "amountInMax")
             || self.has_keyword_in_code(source, "sqrtPriceLimit");
-
-        // Liquidation functions need deadlines (price-dependent)
-        let is_liquidation = func_name.contains("liquidat")
-            && (source.contains("price") || source.contains("collateral"));
 
         // Execute/redeem only if they're order/swap execution in a DEX context,
         // not general multisig execute, allowance-based order systems, or vault redemptions.
@@ -202,7 +258,6 @@ impl MissingTransactionDeadlineDetector {
         is_trading_function
             || is_price_sensitive_buy_sell
             || source_indicates_trading
-            || is_liquidation
             || is_order_execution
     }
 
@@ -229,7 +284,10 @@ impl MissingTransactionDeadlineDetector {
         let has_fixed_price_constant = source.contains("ticketPrice")
             || source.contains("mintPrice")
             || source.contains("msg.value == ticketPrice")
-            || source.contains("msg.value == mintPrice");
+            || source.contains("msg.value == mintPrice")
+            || source.contains("PRICE")  // Named constant price
+            || source.contains("cost =")  // Fixed cost variable
+            || (source.contains("msg.value") && source.contains("==") && !source.contains("getPrice"));
 
         // participants.push pattern (lottery)
         let is_lottery = source.contains("participants.push");
@@ -268,6 +326,19 @@ impl MissingTransactionDeadlineDetector {
         is_multisig || is_allowance_order || is_generic_execute
     }
 
+    /// Checks if the contract manages its own liquidity (has reserve state variables).
+    /// Only contracts with their own AMM reserves need deadline protection.
+    /// Consumer/wrapper contracts delegate to external DEX which has its own deadlines.
+    fn manages_own_liquidity(&self, ctx: &AnalysisContext) -> bool {
+        for var in ctx.contract.state_variables.iter() {
+            let name = var.name.name.to_lowercase();
+            if name.contains("reserve") {
+                return true;
+            }
+        }
+        false
+    }
+
     /// Checks if this is an AMM pair/pool-level swap function
     /// Pool-level swap functions intentionally do NOT have deadlines;
     /// deadlines are enforced at the router level.
@@ -296,8 +367,17 @@ impl MissingTransactionDeadlineDetector {
             || (contract_source.contains("function burn")
                 && contract_source.contains("function sync"));
 
+        // FP Reduction: Contracts that directly implement swap logic with reserves
+        // (not calling an external router) manage deadlines at the router level
+        let is_direct_swap_impl = func_name.contains("swap")
+            && (source.contains("reserve") || source.contains("balanceOf(address(this))"))
+            && (source.contains("amountOut") || source.contains("getAmountOut") || source.contains("k ="))
+            && !source.contains("IUniswap")
+            && !source.contains("IPancake")
+            && !source.contains("router");
+
         // Must match multiple pool indicators to avoid false matches
-        (has_k_invariant && has_lock) || (has_pool_patterns && has_pool_lifecycle)
+        (has_k_invariant && has_lock) || (has_pool_patterns && has_pool_lifecycle) || is_direct_swap_impl
     }
 
     /// Checks if the function has alternative timing/price protection mechanisms
@@ -477,6 +557,16 @@ impl Detector for MissingTransactionDeadlineDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/phishing contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // FP Reduction: Only analyze contracts with trading/swap functions.
         // deposit/withdraw/redeem are NOT time-sensitive by default (no deadline needed),
         // so exclude them from the gate to reduce FPs on vault/staking contracts.
@@ -492,7 +582,6 @@ impl Detector for MissingTransactionDeadlineDetector {
                 || n.contains("trade")
                 || n.contains("exchange")
                 || n.contains("fill")
-                || n.contains("liquidat")
                 || n.contains("buy")
                 || n.contains("sell")
                 || n.contains("addliquidity")

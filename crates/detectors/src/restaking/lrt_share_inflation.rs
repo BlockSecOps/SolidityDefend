@@ -426,8 +426,25 @@ impl Detector for LRTShareInflationDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip secure/fixed example contracts
+        if crate::utils::is_secure_example_file(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip attack/exploit contracts
+        if crate::utils::is_attack_contract(ctx) {
+            return Ok(findings);
+        }
+
         // Only run on LRT contracts (Liquid Restaking Tokens / ERC-4626 vaults)
         if !is_lrt_contract(ctx) && !is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
+        // FP Reduction: Skip pure ERC-4626 vaults that aren't LRT-specific.
+        // The vault-share-inflation detector already covers generic ERC-4626 vaults.
+        // This detector should only fire on actual LRT/restaking contracts to avoid duplicates.
+        if !is_lrt_contract(ctx) {
             return Ok(findings);
         }
 
@@ -444,7 +461,14 @@ impl Detector for LRTShareInflationDetector {
             return Ok(findings);
         }
 
-        // Check each deposit function for vulnerabilities
+        // FP Reduction: For contracts that also qualify as ERC-4626 vaults,
+        // skip all share inflation checks (already covered by vault-share-inflation).
+        // This prevents duplicate findings on the same contract.
+        if is_erc4626_vault(ctx) {
+            return Ok(findings);
+        }
+
+        // Check each deposit function for vulnerabilities (LRT-only contracts)
         for function in ctx.get_functions() {
             findings.extend(self.check_initial_share_lock(function, ctx));
             findings.extend(self.check_minimum_shares(function, ctx));
