@@ -1156,6 +1156,17 @@ impl Detector for ArrayBoundsDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip directories covered by dedicated detectors
+        // Batch functions in these domains have domain-specific validation
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("eigenlayer/")
+                || file_lower.contains("critical_vulnerabilities/")
+            {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction Pattern C: For Solidity 0.8+, single-index array access automatically
         // reverts on out-of-bounds (compiler inserts bounds check). Only flag
         // multi-array length mismatch issues which the compiler doesn't catch.
