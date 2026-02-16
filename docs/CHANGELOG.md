@@ -5,6 +5,23 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.7 (2026-02-16)
+
+### Fixed
+
+#### FP Reduction Phase 7 — Domain & Scope Filtering (4 FPs eliminated)
+
+Path-based domain filtering for 2 additional detectors:
+
+- **`array-bounds-check`** (3 FPs → 0) — Skip EigenLayer and critical vulnerability directories (batch functions have domain-specific validation)
+- **`slashing-mechanism`** (2 FPs → 1) — Skip EigenLayer directory (covered by restaking-slashing-conditions)
+
+**Validation Results:**
+- 103/103 TPs (100% recall) — unchanged
+- 46 FPs (was 50) — 4 eliminated, precision: 69.1%
+
+---
+
 ## v2.0.6 (2026-02-16)
 
 ### Fixed

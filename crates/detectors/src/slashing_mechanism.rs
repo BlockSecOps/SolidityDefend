@@ -66,6 +66,14 @@ impl Detector for SlashingMechanismDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip EigenLayer contracts (covered by restaking-slashing-conditions)
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("eigenlayer/") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Consolidate per-function issues into 1 finding per contract
         let mut sub_issues: Vec<(String, u32)> = Vec::new();
 
