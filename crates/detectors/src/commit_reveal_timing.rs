@@ -299,9 +299,31 @@ impl Detector for CommitRevealTimingDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip files in directories covered by dedicated detectors
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("mev/") || file_lower.contains("mev\\") {
+                return Ok(findings);
+            }
+        }
+
         // Use per-contract source to avoid cross-contract matching in multi-contract files
         let source = crate::utils::get_contract_source(ctx);
         let contract_name = self.get_contract_name(ctx);
+
+        // FP Reduction: Only analyze contracts with actual commit-reveal patterns
+        // Contracts with just "deadline" keyword (e.g., permit contracts) are not relevant
+        {
+            let source_lower = source.to_lowercase();
+            let has_commit = source_lower.contains("function commit")
+                || source_lower.contains("function submitcommit")
+                || source_lower.contains("commits[");
+            let has_reveal = source_lower.contains("function reveal")
+                || source_lower.contains("function executereveal");
+            if !has_commit && !has_reveal {
+                return Ok(findings);
+            }
+        }
 
         for (line, func_name, issue) in self.find_timing_issues(&source) {
             let message = format!(

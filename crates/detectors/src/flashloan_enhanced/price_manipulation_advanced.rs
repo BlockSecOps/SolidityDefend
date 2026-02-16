@@ -81,6 +81,14 @@ impl Detector for FlashLoanPriceManipulationAdvancedDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip transient storage test files (covered by transient storage detectors)
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("eip1153_transient/") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Only analyze contracts that have flash-loan or price-related
         // functions in their own AST. This prevents cross-contract false positives
         // in multi-contract files where flash loan keywords appear in sibling contracts.

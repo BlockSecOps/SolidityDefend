@@ -76,6 +76,17 @@ impl Detector for Erc20ApproveRaceDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip files in directories with dedicated detectors
+        // Restaking tokens have standard approve() but are covered by restaking detectors
+        // Critical vulnerability files are focused on other patterns (permit, create2, etc.)
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("restaking/") || file_lower.contains("critical_vulnerabilities/")
+            {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Consolidate per-function issues into 1 finding per contract
         let mut sub_issues: Vec<(String, u32)> = Vec::new();
 

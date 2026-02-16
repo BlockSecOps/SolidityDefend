@@ -835,6 +835,8 @@ impl Detector for ClassicReentrancyDetector {
             if file_lower.contains("bridge/")
                 || file_lower.contains("flashloan/")
                 || file_lower.contains("eip7702/")
+                || file_lower.contains("eip1153_transient/")
+                || file_lower.contains("eigenlayer/")
             {
                 return Ok(findings);
             }

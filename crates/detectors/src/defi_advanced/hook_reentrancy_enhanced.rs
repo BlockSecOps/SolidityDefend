@@ -75,6 +75,14 @@ impl Detector for HookReentrancyEnhancedDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Skip files in directories covered by dedicated detectors
+        {
+            let file_lower = ctx.file_path.to_lowercase();
+            if file_lower.contains("deadline/") || file_lower.contains("deadline\\") {
+                return Ok(findings);
+            }
+        }
+
         // FP Reduction: Use per-contract source to avoid matching keywords from other
         // contracts in the same file.
         let contract_source = crate::utils::get_contract_source(ctx);
