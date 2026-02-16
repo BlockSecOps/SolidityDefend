@@ -99,36 +99,38 @@ impl Detector for SelfdestructAbuseDetector {
             }
         }
 
+        // FP Reduction: Consolidate per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             if let Some(selfdestruct_issue) = self.has_selfdestruct_abuse(function, ctx) {
-                let message = format!(
-                    "Function '{}' contains selfdestruct abuse vulnerability. {} \
-                    Selfdestruct permanently destroys the contract and can force-send ether \
-                    to any address, bypassing fallback functions and breaking assumptions.",
-                    function.name.name, selfdestruct_issue
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(670) // CWE-670: Always-Incorrect Control Flow Implementation
-                    .with_cwe(404) // CWE-404: Improper Resource Shutdown or Release
-                    .with_fix_suggestion(format!(
-                        "Restrict or remove selfdestruct in '{}'. \
-                    Add access control (onlyOwner), implement time-lock, \
-                    or use withdraw pattern instead of selfdestruct. \
-                    Consider that contracts expecting ether may not have payable fallback.",
-                        function.name.name
-                    ));
-
-                findings.push(finding);
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, selfdestruct_issue),
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let descriptions: Vec<&str> = sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} selfdestruct vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                descriptions.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(670)
+                .with_cwe(404)
+                .with_fix_suggestion(
+                    "Add access control (onlyOwner), implement time-lock, \
+                    or use withdraw pattern instead of selfdestruct."
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         // Note: Forced ether vulnerability check requires full contract analysis

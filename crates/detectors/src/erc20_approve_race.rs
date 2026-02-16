@@ -76,30 +76,37 @@ impl Detector for Erc20ApproveRaceDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             if let Some(issue) = self.check_approve_race(function, ctx) {
-                let message = format!(
-                    "Function '{}' has approve race condition vulnerability. {} \
-                    Vulnerable to front-running attack (SWC-114).",
-                    function.name.name, issue
-                );
-
-                let finding = self.base.create_finding(
-                    ctx,
-                    message,
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, issue),
                     function.name.location.start().line() as u32,
-                    function.name.location.start().column() as u32,
-                    function.name.name.len() as u32,
-                )
-                .with_cwe(362) // CWE-362: Race Condition
-                .with_fix_suggestion(format!(
-                    "Fix '{}' race condition. Solutions: (1) Require current allowance == 0 before changes, \
-                    (2) Use increaseAllowance/decreaseAllowance pattern, (3) Add expectedCurrentValue parameter",
-                    function.name.name
                 ));
-
-                findings.push(finding);
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let descriptions: Vec<&str> = sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} approve race condition vulnerabilities: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                descriptions.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(362)
+                .with_fix_suggestion(
+                    "Use increaseAllowance/decreaseAllowance pattern, \
+                    or require current allowance == 0 before changes."
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

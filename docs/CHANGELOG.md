@@ -5,6 +5,26 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.4 (2026-02-16)
+
+### Fixed
+
+#### FP Reduction Phase 4 — 6 Detectors (4 FPs eliminated)
+
+Per-function finding consolidation for 6 additional detectors:
+
+- **`vault-hook-reentrancy`** (2 FPs → 1) — Consolidate per-function into 1 per contract
+- **`tx-origin-authentication`** (2 FPs → 1) — Consolidate per-function into 1 per contract
+- **`selfdestruct-abuse`** (2 → 2) — Consolidate per-function (future-proofing, no current reduction)
+- **`slashing-mechanism`** (2 → 2) — Consolidate per-function (future-proofing)
+- **`erc20-approve-race`** (2 → 2) — Consolidate per-function (future-proofing)
+
+**Validation Results:**
+- 103/103 TPs (100% recall) — unchanged
+- 61 FPs (was 65) — 4 eliminated, precision: 62.8%
+
+---
+
 ## v2.0.3 (2026-02-16)
 
 ### Fixed
