@@ -819,6 +819,9 @@ impl Detector for YieldFarmingDetector {
         let skip_inflation_checks =
             has_inflation_protection || has_dead_shares || has_virtual_shares;
 
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut all_issues: Vec<(String, Severity, String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             // Skip internal/private functions
             if function.visibility == ast::Visibility::Internal
@@ -852,22 +855,44 @@ impl Detector for YieldFarmingDetector {
 
             let issues = self.check_function(function, ctx, skip_inflation_checks, has_min_deposit);
             for (message, severity, remediation) in issues {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        format!("{} in '{}'", message, function.name.name),
-                        function.name.location.start().line() as u32,
-                        0,
-                        20,
-                        severity,
-                    )
-                    .with_cwe(682) // CWE-682: Incorrect Calculation
-                    .with_cwe(191) // CWE-191: Integer Underflow
-                    .with_fix_suggestion(remediation);
-
-                findings.push(finding);
+                all_issues.push((
+                    format!("{} in '{}'", message, function.name.name),
+                    severity,
+                    remediation,
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !all_issues.is_empty() {
+            let first_line = all_issues[0].3;
+            let max_severity = all_issues
+                .iter()
+                .map(|(_, s, _, _)| *s)
+                .max()
+                .unwrap_or(Severity::High);
+            let issue_titles: Vec<&str> =
+                all_issues.iter().map(|(t, _, _, _)| t.as_str()).collect();
+            let consolidated_msg = format!(
+                "Yield farming contract '{}' has {} issues: {}",
+                ctx.contract.name.name,
+                all_issues.len(),
+                issue_titles.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first_line,
+                    0,
+                    20,
+                    max_severity,
+                )
+                .with_cwe(682)
+                .with_cwe(191)
+                .with_fix_suggestion(all_issues[0].2.clone());
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

@@ -600,25 +600,43 @@ impl Detector for MultisigBypassDetector {
 
         let issues = self.check_multisig_patterns(ctx);
 
-        for (message, line_offset, remediation) in issues {
-            let severity = if message.contains("threshold bypass")
-                || message.contains("without signature verification")
-                || message.contains("replay attack risk")
-            {
+        // FP Reduction: Consolidate all sub-pattern findings into 1 finding per contract
+        if !issues.is_empty() {
+            let first_line = issues
+                .iter()
+                .map(|(_, l, _)| *l)
+                .find(|l| *l > 0)
+                .unwrap_or(1);
+            let issue_messages: Vec<&str> = issues.iter().map(|(m, _, _)| m.as_str()).collect();
+            let remediations: Vec<&str> = issues.iter().map(|(_, _, r)| r.as_str()).collect();
+
+            // Use the highest severity among all sub-findings
+            let severity = if issue_messages.iter().any(|m| {
+                m.contains("threshold bypass")
+                    || m.contains("without signature verification")
+                    || m.contains("replay attack risk")
+            }) {
                 Severity::Critical
-            } else if message.contains("duplicate")
-                || message.contains("malleability")
-                || message.contains("zero address")
-            {
+            } else if issue_messages.iter().any(|m| {
+                m.contains("duplicate") || m.contains("malleability") || m.contains("zero address")
+            }) {
                 Severity::High
             } else {
                 Severity::Medium
             };
 
+            let consolidated_msg = format!(
+                "Multisig contract '{}' has {} issues: {}",
+                ctx.contract.name.name,
+                issue_messages.len(),
+                issue_messages.join("; ")
+            );
+            let consolidated_fix = remediations.join("\n\n---\n\n");
+
             let finding = self
                 .base
-                .create_finding_with_severity(ctx, message, line_offset, 0, 20, severity)
-                .with_fix_suggestion(remediation)
+                .create_finding_with_severity(ctx, consolidated_msg, first_line, 0, 20, severity)
+                .with_fix_suggestion(consolidated_fix)
                 .with_cwe(347); // CWE-347: Improper Verification of Cryptographic Signature
 
             findings.push(finding);
@@ -1173,11 +1191,16 @@ mod tests {
             !result.is_empty(),
             "Real multisig contracts with vulnerabilities should still be detected"
         );
-        // Should find multiple issues: missing nonce, missing deadline, threshold issues, etc.
-        assert!(
-            result.len() >= 2,
-            "Expected multiple findings for vulnerable multisig, got {}",
+        // Findings are consolidated into 1 per contract, but the message should mention multiple issues
+        assert_eq!(
+            result.len(),
+            1,
+            "Expected 1 consolidated finding for vulnerable multisig, got {}",
             result.len()
+        );
+        assert!(
+            result[0].message.contains("issues:"),
+            "Consolidated finding should mention multiple issues"
         );
     }
 

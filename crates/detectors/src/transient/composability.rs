@@ -71,7 +71,8 @@ impl TransientStorageComposabilityDetector {
             return issues;
         }
 
-        let source = &ctx.source_code;
+        let contract_source = crate::utils::get_contract_source(ctx);
+        let source = &contract_source;
 
         // Extract names of variables annotated as transient storage.
         // Matches lines like: `uint256 private operationLock; // Simulates transient storage`
@@ -117,8 +118,14 @@ impl TransientStorageComposabilityDetector {
         let mut readers = Vec::new();
 
         for function in functions {
+            // Use ctx.source_code for offset-based extraction (offsets are into full file)
             let func_text = if let Some(body) = &function.body {
-                source[body.location.start().offset()..body.location.end().offset()].to_string()
+                let start = body.location.start().offset();
+                let end = body.location.end().offset();
+                if end <= start || start >= ctx.source_code.len() {
+                    continue;
+                }
+                ctx.source_code[start..end.min(ctx.source_code.len())].to_string()
             } else {
                 continue;
             };
@@ -215,7 +222,9 @@ impl TransientStorageComposabilityDetector {
         }
 
         // Check for explicit cleanup patterns
-        let has_cleanup = source.to_lowercase().contains("delete") && source.contains("transient");
+        let source_lower = source.to_lowercase();
+        let has_cleanup = (source_lower.contains("delete") || source_lower.contains("= 0"))
+            && source_lower.contains("transient");
 
         if !has_cleanup && !writers.is_empty() {
             issues.push((
@@ -297,12 +306,33 @@ impl Detector for TransientStorageComposabilityDetector {
             return Ok(findings);
         }
 
-        for (title, line, severity, remediation) in self.check_contract(ctx) {
+        // FP Reduction: Consolidate all sub-findings into 1 finding per contract
+        let issues = self.check_contract(ctx);
+        if !issues.is_empty() {
+            let first_line = issues[0].1;
+            let max_severity = issues
+                .iter()
+                .map(|(_, _, s, _)| *s)
+                .max()
+                .unwrap_or(Severity::Medium);
+            let issue_titles: Vec<&str> = issues.iter().map(|(t, _, _, _)| t.as_str()).collect();
+            let consolidated_msg = format!(
+                "Transient storage composability issues in '{}': {}",
+                ctx.contract.name.name,
+                issue_titles.join("; ")
+            );
+            let remediations: Vec<&str> = issues.iter().map(|(_, _, _, r)| r.as_str()).collect();
             let finding = self
                 .base
-                .create_finding_with_severity(ctx, title, line, 0, 20, severity)
-                .with_fix_suggestion(remediation);
-
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first_line,
+                    0,
+                    20,
+                    max_severity,
+                )
+                .with_fix_suggestion(remediations.join("\n\n---\n\n"));
             findings.push(finding);
         }
 

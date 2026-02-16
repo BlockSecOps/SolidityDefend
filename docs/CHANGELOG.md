@@ -5,6 +5,48 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.3 (2026-02-16)
+
+### Fixed
+
+#### FP Reduction Phase 3 — 22 Detectors (58 FPs eliminated)
+
+Systematic FP sweep targeting three root causes: scope leakage (detectors matching full-file source instead of contract-scoped), over-reporting (multiple sub-findings where ground truth expects 1), and overly broad matching.
+
+**Scope Leakage Fixes (Category A):**
+- **`aa-social-recovery`** (5 FPs → 1) — Contract-scoped source in all 20 classification functions; consolidated sub-checks into single finding
+- **`aa-paymaster-fund-drain`** (5 FPs → 1) — Contract-scoped source; consolidated 6 drain patterns into single finding per contract
+- **`transient-storage-composability`** (6 FPs → 2) — Contract-scoped source for pattern matching; expanded cleanup recognition; consolidated into 1 finding per contract
+- **`eip1153-transient-reentrancy`** (4 FPs → 2) — Contract-scoped source; early exit for contracts without tstore/tload; consolidated into 1 finding per contract
+- **`classic-reentrancy`** (4 FPs → 2) — Skip bridge/, flashloan/, eip7702/ directories; skip dedicated detector contract names
+- **`aa-session-key-vulnerabilities`** (3 FPs → 1) — Contract-scoped source in 3 functions; consolidated per-function issues into 1 per contract
+
+**Finding Consolidation (Category B):**
+- **`restaking-slashing-conditions`** (5 FPs → 1) — Per-contract consolidation of evidence/delay/compound/max-slash sub-checks
+- **`multisig-bypass`** (5 FPs → 1) — All sub-pattern findings consolidated into 1 finding per contract
+- **`push0-stack-assumption`** (4 FPs → 1) — Deduplicated to at most 1 finding per category
+- **`erc7821-batch-authorization`** (4 FPs → 1) — Limited to 1 finding per contract; skip EIP-7702 delegation contracts
+- **`erc4337-paymaster-abuse`** (4 FPs → 0) — Consolidated 5 sub-checks into single finding per validatePaymasterUserOp
+- **`aa-account-takeover`** (3 FPs → 2) — Consolidated 5 pattern checks (entrypoint/module/signature/fallback/upgrade) into 1 finding per contract
+- **`eip4844-blob-validation`** (3 FPs → 1) — Consolidated blob + rollup issues into 1 finding per contract
+- **`create2-salt-frontrunning`** (3 FPs → 1) — Consolidated 3 categories into 1 finding per contract
+- **`transient-storage-reentrancy`** (4 FPs → 2) — Consolidated per-function findings into 1 per contract
+- **`defi-yield-farming-exploits`** (2 FPs → 1) — Consolidated per-function issues into 1 per contract
+- **`delegatecall-untrusted-library`** (2 FPs → 1) — Consolidated per-function issues into 1 per contract
+- **`vault-withdrawal-dos`** (2 FPs → 1) — Consolidated per-function issues into 1 per contract
+- **`lrt-share-inflation`** (2 FPs → 1) — Consolidated all sub-checks into 1 per contract
+
+**Narrow Matching (Category C):**
+- **`token-permit-front-running`** (6 FPs → 3) — Removed overly broad function filter terms; consolidated into 1 finding per contract
+- **`proxy-storage-collision`** (4 FPs → 1) — Skip EIP-7702 delegation contracts; skip contracts covered by delegatecall-untrusted-library
+- **`zk-trusted-setup-bypass`** (4 FPs → 0) — Skip ProofBypass files; narrow is_zk_system to require verifying key management
+
+**Validation Results:**
+- 103/103 TPs (100% recall) — unchanged
+- 65 FPs (was 123) — 58 eliminated, precision: 61.3%
+
+---
+
 ## v2.0.2 (2026-02-16)
 
 ### Fixed

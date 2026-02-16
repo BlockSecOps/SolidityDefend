@@ -71,7 +71,7 @@ impl Detector for AAPaymasterFundDrainDetector {
             return Ok(findings);
         }
 
-        let lower = ctx.source_code.to_lowercase();
+        let lower = crate::utils::get_contract_source(ctx).to_lowercase();
 
         // FP Reduction: Only analyze contracts that implement paymaster functions
         let contract_func_names: Vec<String> = ctx
@@ -101,27 +101,18 @@ impl Detector for AAPaymasterFundDrainDetector {
             return Ok(findings);
         }
 
-        // Pattern 1: No gas limit cap on sponsored operations
+        // FP Reduction: Consolidate all sub-pattern findings into 1 finding per contract
         let has_validate_paymaster = lower.contains("validatepaymasteruserop");
+        let mut sub_issues: Vec<String> = Vec::new();
+
+        // Pattern 1: No gas limit cap
         if has_validate_paymaster {
             let has_gas_limit_check = lower.contains("maxgaslimit")
                 || lower.contains("gaslimit <=")
                 || lower.contains("gaslimit <")
                 || (lower.contains("require") && lower.contains("gaslimit"));
-
             if !has_gas_limit_check {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Paymaster lacks gas limit validation - attacker can sponsor unlimited gas consumption".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Implement max gas limit per operation (e.g., require(userOp.callGasLimit <= MAX_GAS_LIMIT))".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("lacks gas limit validation".to_string());
             }
         }
 
@@ -130,52 +121,26 @@ impl Detector for AAPaymasterFundDrainDetector {
             let has_whitelist = lower.contains("whitelist")
                 || lower.contains("allowedusers")
                 || lower.contains("isallowed");
-
             let has_rate_limit = lower.contains("ratelimit")
                 || lower.contains("lastused")
                 || lower.contains("cooldown")
                 || lower.contains("requestcount");
-
             if !has_whitelist && !has_rate_limit {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Paymaster lacks user whitelist and rate limiting - anyone can drain funds via repeated operations".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Implement either user whitelist OR rate limiting (requests per user per time period)".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("lacks user whitelist and rate limiting".to_string());
             }
         }
 
-        // Pattern 3: Paymaster balance not checked before sponsorship
+        // Pattern 3: Balance not checked
         if has_validate_paymaster {
             let checks_balance = lower.contains("address(this).balance")
                 || lower.contains("getdeposit()")
                 || lower.contains("balanceof(address(this))");
-
             let has_balance_require = checks_balance
                 && (lower.contains("require")
                     || lower.contains("if (")
                     || lower.contains("revert"));
-
             if !has_balance_require {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Paymaster doesn't verify sufficient balance before sponsoring - can lead to failed operations".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Check paymaster balance before accepting sponsorship: require(getDeposit() >= estimatedCost)".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("doesn't verify balance before sponsoring".to_string());
             }
         }
 
@@ -185,45 +150,20 @@ impl Detector for AAPaymasterFundDrainDetector {
                 || lower.contains("spendinglimit")
                 || lower.contains("allowance[")
                 || lower.contains("userlimit");
-
             if !has_per_user_limit {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Paymaster lacks per-user spending limits - single user can drain all funds".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Implement per-user spending limits: mapping(address => uint256) public userSpent; enforce daily/weekly caps".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("lacks per-user spending limits".to_string());
             }
         }
 
-        // Pattern 5: Paymaster accepts any signature without validation
+        // Pattern 5: No signature validation
         if has_validate_paymaster {
             let has_signature_validation = lower.contains("ecrecover")
                 || lower.contains("verifysignature")
                 || lower.contains("signature");
-
             let has_nonce_check = lower.contains("nonce");
-
-            // If no signature validation and no nonce check, it's very dangerous
             if !has_signature_validation && !has_nonce_check {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "Paymaster accepts operations without signature or nonce validation - replay and unauthorized sponsorship possible".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Validate paymaster-specific data signature and implement nonce to prevent replay attacks".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues
+                    .push("accepts operations without signature or nonce validation".to_string());
             }
         }
 
@@ -233,21 +173,27 @@ impl Detector for AAPaymasterFundDrainDetector {
             let has_refund_limit = lower.contains("maxrefund")
                 || lower.contains("refundlimit")
                 || (lower.contains("refund") && lower.contains("min("));
-
             if !has_refund_limit {
-                let finding = self.base.create_finding(
-                    ctx,
-                    "postOp function lacks refund limit - can drain paymaster via inflated gas costs".to_string(),
-                    1,
-                    1,
-                    ctx.source_code.len() as u32,
-                )
-                .with_fix_suggestion(
-                    "Cap refund amount: uint256 refund = Math.min(actualGasCost, maxRefund)".to_string()
-                );
-
-                findings.push(finding);
+                sub_issues.push("postOp lacks refund limit".to_string());
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "Paymaster '{}' has {} fund drain risks: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                sub_issues.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, 1, 1, 20)
+                .with_fix_suggestion(
+                    "Implement gas limits, user whitelist/rate limiting, balance checks, \
+                     per-user spending limits, signature validation, and postOp refund caps"
+                        .to_string(),
+                );
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

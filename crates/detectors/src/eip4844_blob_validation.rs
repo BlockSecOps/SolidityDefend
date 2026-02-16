@@ -277,54 +277,44 @@ impl Detector for Eip4844BlobValidationDetector {
         let source = &contract_source;
         let contract_name = self.get_contract_name(ctx);
 
-        // Check for blob validation issues
+        // FP Reduction: Consolidate all blob issues into 1 finding per contract
         let blob_issues = self.find_blob_validation_issues(source);
-        for (line, context, issue) in blob_issues {
-            let message = format!(
-                "EIP-4844 blob validation issue in contract '{}': {} - {}. \
-                 Improper blob validation can allow data availability attacks \
-                 or incorrect L2 state transitions.",
-                contract_name, context, issue
-            );
+        let rollup_issues = self.find_rollup_blob_issues(source);
 
-            let finding = self
-                .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(20) // CWE-20: Improper Input Validation
-                .with_confidence(Confidence::Medium)
-                .with_fix_suggestion(
-                    "Properly validate EIP-4844 blob data:\n\n\
-                     1. Verify versioned hash prefix (0x01):\n\
-                        require(versionedHash >> 248 == 0x01, \"Invalid version\");\n\n\
-                     2. Use point_evaluation_precompile (0x0a) for KZG proofs:\n\
-                        (bool success, ) = address(0x0a).staticcall(\n\
-                            abi.encode(versionedHash, z, y, commitment, proof)\n\
-                        );\n\n\
-                     3. Verify blobhash matches expected:\n\
-                        require(blobhash(index) == expectedHash, \"Hash mismatch\");"
-                        .to_string(),
-                );
+        let mut sub_issues: Vec<String> = Vec::new();
+        let mut first_line: u32 = 1;
 
-            findings.push(finding);
+        for (line, context, issue) in &blob_issues {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(format!("{} - {}", context, issue));
+        }
+        for (line, issue) in &rollup_issues {
+            if first_line == 1 {
+                first_line = *line;
+            }
+            sub_issues.push(issue.clone());
         }
 
-        // Check for rollup-specific issues
-        let rollup_issues = self.find_rollup_blob_issues(source);
-        for (line, issue) in rollup_issues {
-            let message = format!(
-                "L2 rollup blob issue in contract '{}': {}. \
-                 This could allow invalid state transitions or data availability attacks.",
-                contract_name, issue
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "EIP-4844 blob validation issues in contract '{}': {}",
+                contract_name,
+                sub_issues.join("; ")
             );
 
             let finding = self
                 .base
-                .create_finding(ctx, message, line, 1, 50)
-                .with_cwe(20) // CWE-20: Improper Input Validation
+                .create_finding(ctx, consolidated_msg, first_line, 1, 50)
+                .with_cwe(20)
                 .with_confidence(Confidence::Medium)
                 .with_fix_suggestion(
-                    "Ensure batch submissions verify blob data via BLOBHASH opcode \
-                     and KZG proofs before accepting state updates."
+                    "Properly validate EIP-4844 blob data:\n\
+                     1. Verify versioned hash prefix (0x01)\n\
+                     2. Use point_evaluation_precompile (0x0a) for KZG proofs\n\
+                     3. Verify blobhash matches expected\n\
+                     4. Ensure batch submissions verify blob data via BLOBHASH opcode"
                         .to_string(),
                 );
 

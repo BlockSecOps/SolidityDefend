@@ -258,22 +258,47 @@ impl Detector for TransientStorageReentrancyDetector {
             return Ok(findings);
         }
 
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut all_issues: Vec<(String, Severity, String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             for (title, severity, remediation) in self.check_function(function, ctx) {
-                let finding = self
-                    .base
-                    .create_finding_with_severity(
-                        ctx,
-                        title,
-                        function.name.location.start().line() as u32,
-                        0,
-                        20,
-                        severity,
-                    )
-                    .with_fix_suggestion(remediation);
-
-                findings.push(finding);
+                all_issues.push((
+                    title,
+                    severity,
+                    remediation,
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !all_issues.is_empty() {
+            let first_line = all_issues[0].3;
+            let max_severity = all_issues
+                .iter()
+                .map(|(_, s, _, _)| *s)
+                .max()
+                .unwrap_or(Severity::Critical);
+            let issue_titles: Vec<&str> =
+                all_issues.iter().map(|(t, _, _, _)| t.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} transient storage reentrancy issues: {}",
+                ctx.contract.name.name,
+                all_issues.len(),
+                issue_titles.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding_with_severity(
+                    ctx,
+                    consolidated_msg,
+                    first_line,
+                    0,
+                    20,
+                    max_severity,
+                )
+                .with_fix_suggestion(all_issues[0].2.clone());
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

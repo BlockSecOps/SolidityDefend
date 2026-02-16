@@ -77,58 +77,35 @@ impl Detector for AASocialRecoveryDetector {
             return Ok(findings);
         }
 
-        // Check 1: Recovery delay
+        // FP Reduction: Consolidate all sub-check failures into single finding per contract
+        let mut sub_issues: Vec<String> = Vec::new();
+
         if !has_recovery_delay(ctx) {
-            findings.push(
-                self.base
-                    .create_finding_with_severity(
-                        ctx,
-                        "No recovery delay - instant account takeover possible".to_string(),
-                        1,
-                        0,
-                        20,
-                        Severity::High,
-                    )
-                    .with_fix_suggestion(
-                        "Add 24-48 hour delay between initiateRecovery and executeRecovery"
-                            .to_string(),
-                    ),
-            );
+            sub_issues.push("no recovery delay (instant account takeover possible)".to_string());
         }
-
-        // Check 2: Guardian threshold
         if !has_sufficient_threshold(ctx) {
-            findings.push(
-                self.base
-                    .create_finding_with_severity(
-                        ctx,
-                        "Weak guardian threshold - 1-of-N or too low".to_string(),
-                        1,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
-                    .with_fix_suggestion(
-                        "Use threshold >= 50% of guardians (e.g., 3-of-5)".to_string(),
-                    ),
+            sub_issues.push("weak guardian threshold (1-of-N or too low)".to_string());
+        }
+        if !has_recovery_cancellation(ctx) {
+            sub_issues.push(
+                "no recovery cancellation (owner can't abort malicious recovery)".to_string(),
             );
         }
 
-        // Check 3: Recovery cancellation
-        if !has_recovery_cancellation(ctx) {
+        if !sub_issues.is_empty() {
+            let consolidated_msg = format!(
+                "Social recovery in '{}' has {} issues: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                sub_issues.join("; ")
+            );
             findings.push(
                 self.base
-                    .create_finding_with_severity(
-                        ctx,
-                        "No recovery cancellation - owner can't abort malicious recovery"
-                            .to_string(),
-                        1,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
+                    .create_finding_with_severity(ctx, consolidated_msg, 1, 0, 20, Severity::High)
                     .with_fix_suggestion(
-                        "Add cancelRecovery function callable by current owner".to_string(),
+                        "Add 24-48 hour recovery delay, use threshold >= 50% of guardians, \
+                         and add cancelRecovery function callable by current owner"
+                            .to_string(),
                     ),
             );
         }

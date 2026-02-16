@@ -831,6 +831,25 @@ impl Detector for ClassicReentrancyDetector {
             if file_lower.contains("delegatecall/") || file_lower.contains("delegatecall\\") {
                 return Ok(findings);
             }
+            // FP Reduction: Skip files in directories covered by dedicated detectors
+            if file_lower.contains("bridge/")
+                || file_lower.contains("flashloan/")
+                || file_lower.contains("eip7702/")
+            {
+                return Ok(findings);
+            }
+        }
+
+        // FP Reduction: Skip contracts covered by dedicated detectors
+        {
+            let contract_name_lower = ctx.contract.name.name.to_lowercase();
+            if contract_name_lower.contains("bridge")
+                || contract_name_lower.contains("flashloan")
+                || contract_name_lower.contains("proxy")
+                || contract_name_lower.contains("delegation")
+            {
+                return Ok(findings);
+            }
         }
 
         for function in ctx.get_functions() {

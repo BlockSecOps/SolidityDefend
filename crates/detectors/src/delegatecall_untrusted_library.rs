@@ -512,7 +512,9 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
         // Get contract source for state variable analysis
         let contract_source = self.get_state_variables(ctx);
 
-        // Check all functions for delegatecall to mutable libraries
+        // FP Reduction: Consolidate all per-function issues into 1 finding per contract
+        let mut sub_issues: Vec<(String, u32)> = Vec::new();
+
         for function in ctx.get_functions() {
             // Try dataflow-enhanced check first, fall back to pattern matching
             let reason = if ctx.has_dataflow() {
@@ -523,25 +525,29 @@ impl Detector for DelegatecallUntrustedLibraryDetector {
             };
 
             if let Some(reason) = reason {
-                let message = format!(
-                    "Function '{}' uses delegatecall to mutable library address. {}",
-                    function.name.name, reason
-                );
-
-                let finding = self
-                    .base
-                    .create_finding(
-                        ctx,
-                        message,
-                        function.name.location.start().line() as u32,
-                        function.name.location.start().column() as u32,
-                        function.name.name.len() as u32,
-                    )
-                    .with_cwe(494)
-                    .with_swc("SWC-112"); // SWC-112: Delegatecall to Untrusted Callee
-
-                findings.push(finding);
+                sub_issues.push((
+                    format!("'{}': {}", function.name.name, reason),
+                    function.name.location.start().line() as u32,
+                ));
             }
+        }
+
+        if !sub_issues.is_empty() {
+            let first_line = sub_issues[0].1;
+            let issue_descriptions: Vec<&str> =
+                sub_issues.iter().map(|(d, _)| d.as_str()).collect();
+            let consolidated_msg = format!(
+                "Contract '{}' has {} delegatecall to mutable library issues: {}",
+                ctx.contract.name.name,
+                sub_issues.len(),
+                issue_descriptions.join("; ")
+            );
+            let finding = self
+                .base
+                .create_finding(ctx, consolidated_msg, first_line, 0, 40)
+                .with_cwe(494)
+                .with_swc("SWC-112");
+            findings.push(finding);
         }
 
         let findings = crate::utils::filter_fp_findings(findings, ctx);

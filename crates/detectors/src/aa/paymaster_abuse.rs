@@ -89,170 +89,53 @@ impl Detector for ERC4337PaymasterAbuseDetector {
         }
 
         // Find validatePaymasterUserOp function
+        // FP Reduction: Consolidate all sub-check failures into single finding per function
         for function in ctx.get_functions() {
             if function.name.name == "validatePaymasterUserOp" {
                 let line = function.name.location.start().line() as u32;
+                let mut sub_issues: Vec<String> = Vec::new();
 
-                // Check 1: Replay protection
                 if !has_replay_protection(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "No replay protection in paymaster - vulnerable to nonce bypass (Biconomy exploit)".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::Critical,
-                    )
-                    .with_fix_suggestion(
-                        "Add hash tracking to prevent replay attacks:\n\
-                         \n\
-                         mapping(bytes32 => bool) public usedHashes;\n\
-                         \n\
-                         function validatePaymasterUserOp(...) external {\n\
-                             require(!usedHashes[userOpHash], \"Already executed\");\n\
-                             usedHashes[userOpHash] = true;\n\
-                             \n\
-                             // ... signature validation\n\
-                         }\n\
-                         \n\
-                         This prevents attacker from reusing same signature repeatedly.\n\
-                         \n\
-                         Reference: Biconomy nonce bypass (2024) - attacker drained paymaster via replay".to_string()
-                    );
-
-                    findings.push(finding);
+                    sub_issues
+                        .push("no replay protection (Biconomy nonce bypass risk)".to_string());
                 }
-
-                // Check 2: Spending limits
                 if !has_spending_limits(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "No spending limits - sponsor funds can be drained".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::High,
-                    )
-                    .with_fix_suggestion(
-                        "Implement per-account spending limits:\n\
-                         \n\
-                         mapping(address => uint256) public accountSpent;\n\
-                         uint256 public constant MAX_PER_ACCOUNT = 0.1 ether;\n\
-                         \n\
-                         function validatePaymasterUserOp(..., uint256 maxCost) external {\n\
-                             require(\n\
-                                 accountSpent[userOp.sender] + maxCost <= MAX_PER_ACCOUNT,\n\
-                                 \"Account limit exceeded\"\n\
-                             );\n\
-                             \n\
-                             accountSpent[userOp.sender] += maxCost;\n\
-                             // ... validation logic\n\
-                         }\n\
-                         \n\
-                         function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external {\n\
-                             // Refund unused gas\n\
-                             (address sender, uint256 maxCost) = abi.decode(context, (address, uint256));\n\
-                             accountSpent[sender] -= (maxCost - actualGasCost);\n\
-                         }".to_string()
-                    );
-
-                    findings.push(finding);
+                    sub_issues.push("no spending limits (sponsor fund draining)".to_string());
+                }
+                if !has_target_validation(function, ctx) {
+                    sub_issues.push("no target whitelist (arbitrary sponsorship)".to_string());
+                }
+                if !has_gas_limits(function, ctx) {
+                    sub_issues.push("no gas limits (gas griefing risk)".to_string());
+                }
+                if !validates_chain_id(function, ctx) {
+                    sub_issues
+                        .push("signature not bound to chain ID (cross-chain replay)".to_string());
                 }
 
-                // Check 3: Target validation
-                if !has_target_validation(function, ctx) {
+                if !sub_issues.is_empty() {
+                    let consolidated_msg = format!(
+                        "validatePaymasterUserOp has {} issues: {}",
+                        sub_issues.len(),
+                        sub_issues.join("; ")
+                    );
+
                     let finding = self
                         .base
                         .create_finding_with_severity(
                             ctx,
-                            "No target whitelist - arbitrary transactions can be sponsored"
-                                .to_string(),
+                            consolidated_msg,
                             line,
                             0,
                             20,
-                            Severity::High,
+                            Severity::Critical,
                         )
                         .with_fix_suggestion(
-                            "Add target contract whitelist:\n\
-                         \n\
-                         mapping(address => bool) public allowedTargets;\n\
-                         \n\
-                         function validatePaymasterUserOp(...) external {\n\
-                             // Extract target from callData\n\
-                             address target = address(bytes20(userOp.callData[16:36]));\n\
-                             \n\
-                             require(allowedTargets[target], \"Target not allowed\");\n\
-                             \n\
-                             // ... rest of validation\n\
-                         }\n\
-                         \n\
-                         function addAllowedTarget(address target) external onlyOwner {\n\
-                             allowedTargets[target] = true;\n\
-                         }"
-                            .to_string(),
+                            "Add replay protection (usedHashes mapping), per-account spending limits, \
+                             target whitelist, gas limits (MAX_GAS_PER_OP), and include block.chainid \
+                             in signature hash to prevent cross-chain replay."
+                                .to_string(),
                         );
-
-                    findings.push(finding);
-                }
-
-                // Check 4: Gas limits
-                if !has_gas_limits(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "No gas limits - vulnerable to gas griefing (~0.05 ETH per exploit)".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::Medium,
-                    )
-                    .with_fix_suggestion(
-                        "Enforce maximum gas per operation:\n\
-                         \n\
-                         uint256 public constant MAX_GAS_PER_OP = 500_000;\n\
-                         \n\
-                         function validatePaymasterUserOp(...) external {\n\
-                             require(\n\
-                                 userOp.callGasLimit + userOp.verificationGasLimit <= MAX_GAS_PER_OP,\n\
-                                 \"Gas limit too high\"\n\
-                             );\n\
-                             \n\
-                             // ... validation logic\n\
-                         }\n\
-                         \n\
-                         This prevents attacker from specifying excessive gas to grief bundler.".to_string()
-                    );
-
-                    findings.push(finding);
-                }
-
-                // Check 5: Chain ID validation
-                if !validates_chain_id(function, ctx) {
-                    let finding = self.base.create_finding_with_severity(
-                        ctx,
-                        "Signature not bound to chain ID - cross-chain replay possible".to_string(),
-                        line,
-                        0,
-                        20,
-                        Severity::High,
-                    )
-                    .with_fix_suggestion(
-                        "Include block.chainid in signature hash:\n\
-                         \n\
-                         function validatePaymasterUserOp(...) external {\n\
-                             bytes32 hash = keccak256(abi.encode(\n\
-                                 userOp.sender,\n\
-                                 userOp.nonce,\n\
-                                 userOp.callData,\n\
-                                 block.chainid,        // ✅ Chain ID\n\
-                                 address(this)         // ✅ Paymaster address\n\
-                             ));\n\
-                             \n\
-                             address signer = hash.toEthSignedMessageHash().recover(userOp.signature);\n\
-                             require(signer == owner, \"Invalid signature\");\n\
-                         }\n\
-                         \n\
-                         This prevents signature replay across chains.".to_string()
-                    );
 
                     findings.push(finding);
                 }
