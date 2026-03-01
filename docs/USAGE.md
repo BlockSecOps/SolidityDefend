@@ -363,7 +363,7 @@ soliditydefend MyContract.sol
 **Example Output:**
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+🔒 0xApogee.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Found 2 issues in 1 file:
@@ -395,7 +395,7 @@ Found 2 issues in 1 file:
 └─────────────────┴───────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+🔒 0xApogee.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 

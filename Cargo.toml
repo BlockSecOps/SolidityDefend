@@ -25,12 +25,12 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "2.0.8"
+version = "2.0.9"
 edition = "2021"
 authors = ["SolidityDefend Team"]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/BlockSecOps/SolidityDefend"
-homepage = "https://github.com/BlockSecOps/SolidityDefend"
+repository = "https://github.com/AdvancedBlockchainSecurity/SolidityDefend"
+homepage = "https://github.com/AdvancedBlockchainSecurity/SolidityDefend"
 description = "A static analysis security tool for Solidity smart contracts"
 keywords = ["solidity", "security", "static-analysis", "blockchain", "smart-contracts"]
 categories = ["development-tools", "command-line-utilities"]
