@@ -182,4 +182,4 @@ Copyright 2024-2026 [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecur
 
 ---
 
-**[Apogee](https://0xApogee.com)** — Unified Scanner DevSecOps Platform by [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecurity.com)
+**[Apogee](https://0xApogee.com)** — Unified Scanner DevSecOps Platform by [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecurity.com) | [𝕏 @0xApogee](https://x.com/0xApogee)
