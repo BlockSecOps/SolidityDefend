@@ -505,7 +505,7 @@ See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerabi
 
 1. Check if it's in the known limitations above
 2. Verify the finding is actually incorrect (not just unexpected)
-3. Report at: https://github.com/BlockSecOps/SolidityDefend/issues
+3. Report at: https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues
 4. Include:
    - Contract code snippet
    - Detector ID
@@ -516,7 +516,7 @@ See [vulnerability-gap-remediation-plan.md](../TaskDocs-SolidityDefend/vulnerabi
 
 1. Check if the vulnerability is in known limitations above
 2. Create a minimal test case
-3. Report at: https://github.com/BlockSecOps/SolidityDefend/issues
+3. Report at: https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues
 4. Include:
    - Vulnerable contract code
    - Expected detector to trigger

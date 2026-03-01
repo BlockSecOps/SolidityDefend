@@ -41,7 +41,7 @@ The console format provides human-readable output with colors, code snippets, an
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+🔒 0xApogee.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Found 3 issues in 1 file:
@@ -79,7 +79,7 @@ Found 3 issues in 1 file:
 └─────────────────┴───────┘
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
+🔒 0xApogee.com - Enterprise-Grade DevSecOps Platform for Smart Contracts
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
@@ -168,8 +168,8 @@ The JSON format provides structured data for programmatic processing and integra
     "language": "solidity",
     "rules_version": "1.3.6",
     "branding": {
-      "name": "BlockSecOps",
-      "url": "https://BlockSecOps.com",
+      "name": "Apogee",
+      "url": "https://0xApogee.com",
       "description": "Enterprise-Grade DevSecOps Platform for Smart Contracts"
     }
   },
@@ -218,8 +218,8 @@ The JSON format provides structured data for programmatic processing and integra
 - `language`: Target language (solidity)
 - `rules_version`: Version of detection rules
 - `branding`: Enterprise platform information
-  - `name`: Platform name (BlockSecOps)
-  - `url`: Platform URL (https://BlockSecOps.com)
+  - `name`: Platform name (Apogee)
+  - `url`: Platform URL (https://0xApogee.com)
   - `description`: Platform description
 
 #### Statistics Object

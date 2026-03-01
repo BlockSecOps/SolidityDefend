@@ -68,15 +68,15 @@ impl ConsoleFormatter {
 
         let mut output = Vec::new();
 
-        // Add BlockSecOps branding at the beginning
-        output.push(self.format_blocksecops_branding());
+        // Add branding at the beginning
+        output.push(self.format_branding());
         output.push(String::new());
 
         if filtered_findings.is_empty() {
             output.push(self.format_no_issues_message());
             output.push(String::new());
             // Add branding at the end even when no issues found
-            output.push(self.format_blocksecops_branding());
+            output.push(self.format_branding());
             return Ok(output.join("\n"));
         }
 
@@ -89,9 +89,9 @@ impl ConsoleFormatter {
 
         output.push(self.format_summary(&filtered_findings));
 
-        // Add BlockSecOps branding at the end
+        // Add branding at the end
         output.push(String::new());
-        output.push(self.format_blocksecops_branding());
+        output.push(self.format_branding());
 
         Ok(output.join("\n"))
     }
@@ -106,15 +106,15 @@ impl ConsoleFormatter {
 
         let mut output = Vec::new();
 
-        // Add BlockSecOps branding at the beginning
-        output.push(self.format_blocksecops_branding());
+        // Add branding at the beginning
+        output.push(self.format_branding());
         output.push(String::new());
 
         if filtered_findings.is_empty() {
             output.push(self.format_no_issues_message());
             output.push(String::new());
             // Add branding at the end even when no issues found
-            output.push(self.format_blocksecops_branding());
+            output.push(self.format_branding());
             return Ok(output.join("\n"));
         }
 
@@ -127,8 +127,8 @@ impl ConsoleFormatter {
             output.push(String::new()); // Empty line between findings
         }
 
-        // Add BlockSecOps branding at the end
-        output.push(self.format_blocksecops_branding());
+        // Add branding at the end
+        output.push(self.format_branding());
 
         Ok(output.join("\n"))
     }
@@ -618,11 +618,10 @@ impl ConsoleFormatter {
         }
     }
 
-    /// Format BlockSecOps branding banner
-    fn format_blocksecops_branding(&self) -> String {
+    /// Format branding banner
+    fn format_branding(&self) -> String {
         let separator = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
-        let branding_text =
-            "🔒 BlockSecOps.com - Enterprise-Grade DevSecOps Platform for Smart Contracts";
+        let branding_text = "🔒 0xApogee.com - Enterprise-Grade Smart Contract Security Platform";
 
         if self.should_use_colors() {
             format!(

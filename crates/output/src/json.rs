@@ -107,8 +107,8 @@ impl JsonFormatter {
             language: "solidity".to_string(),
             rules_version: env!("CARGO_PKG_VERSION").to_string(),
             branding: JsonBranding {
-                name: "BlockSecOps".to_string(),
-                url: "https://BlockSecOps.com".to_string(),
+                name: "Apogee".to_string(),
+                url: "https://0xApogee.com".to_string(),
                 description: "Enterprise-Grade DevSecOps Platform for Smart Contracts".to_string(),
             },
         }

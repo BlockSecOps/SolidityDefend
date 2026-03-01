@@ -5,6 +5,30 @@ All notable changes to SolidityDefend will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v2.0.9 (2026-02-28)
+
+### Changed
+
+#### Rebrand to Apogee & Repository Cleanup
+
+- Rebranded from BlockSecOps to **Apogee** (0xApogee.com) across all terminal output, JSON metadata, documentation, and config files
+- GitHub organization moved from `BlockSecOps` to `AdvancedBlockchainSecurity`
+- Docker Hub image renamed from `blocksecops/soliditydefend` to `apogee/soliditydefend`
+- Homebrew tap updated to `AdvancedBlockchainSecurity/tap`
+
+#### Repository Cleanup
+
+- Removed ~33MB of binary artifacts committed to git (`release/`, tarballs)
+- Removed internal task docs (`PHASE*_REPORT.md`, `test-results/`)
+- Removed legacy `src/` directory (superseded by `crates/` workspace)
+- Removed duplicate `github/` directory (should be `.github/`)
+- Removed internal QA reports (`docs/detectors/_reports/`)
+- Removed old version-specific baseline measurements
+- Removed `web/dashboard.html` and `templates/` artifacts
+- Updated `.gitignore` to prevent re-addition of artifacts
+
+---
+
 ## v2.0.8 (2026-02-16)
 
 ### Improved
@@ -2185,7 +2209,7 @@ Added comprehensive test coverage for diverse DeFi protocols:
 - **543 total findings** across all severity levels
 - **0 Phase 3+4 false positives** (100% elimination)
 - **312 unit tests passing** (100%)
-- **Production ready** for BlockSecOps platform integration
+- **Production ready** for Apogee platform integration
 
 ---
 
@@ -2694,7 +2718,7 @@ This release adds 13 new detectors across three cutting-edge security domains:
 - **Modular Blockchain Architecture** (Celestia, Avail, cross-rollup)
 - **AI Agent Security** (Autonomous contracts, LLM integration)
 
-Ready for BlockSecOps integration.
+Ready for Apogee integration.
 
 ---
 
@@ -4488,7 +4512,7 @@ This is a **preview/beta release** of SolidityDefend with 100 functional securit
 ### Feedback Wanted
 
 Please report issues and feedback:
-- **GitHub Issues**: https://github.com/BlockSecOps/SolidityDefend/issues
+- **GitHub Issues**: https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues
 - **False Positives**: Tag with `false-positive` label
 - **Feature Requests**: Tag with `enhancement` label
 
@@ -4504,14 +4528,14 @@ Please report issues and feedback:
 
 **From source:**
 ```bash
-git clone https://github.com/BlockSecOps/SolidityDefend
+git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend
 cd SolidityDefend
 git checkout v0.7.0-beta
 cargo build --release
 ```
 
 **Pre-built binaries:**
-Available on [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/tag/v0.7.0-beta)
+Available on [GitHub Releases](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases/tag/v0.7.0-beta)
 
 ### Thank You
 
@@ -4597,7 +4621,7 @@ For users upgrading from v0.9.0:
 ### Installation
 
 ```bash
-git clone https://github.com/BlockSecOps/SolidityDefend
+git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend
 cd SolidityDefend
 git checkout v1.0.0
 cargo build --release
@@ -4605,7 +4629,7 @@ cargo build --release
 
 Or use the binary from GitHub releases:
 ```bash
-# Download from https://github.com/BlockSecOps/SolidityDefend/releases/tag/v1.0.0
+# Download from https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases/tag/v1.0.0
 ```
 
 ### What's Next
@@ -4904,6 +4928,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development and release procedures.
 
 ## Links
 
-- **Repository**: https://github.com/BlockSecOps/SolidityDefend
-- **Issues**: https://github.com/BlockSecOps/SolidityDefend/issues
-- **Releases**: https://github.com/BlockSecOps/SolidityDefend/releases
+- **Repository**: https://github.com/AdvancedBlockchainSecurity/SolidityDefend
+- **Issues**: https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues
+- **Releases**: https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases

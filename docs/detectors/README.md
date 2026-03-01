@@ -1,9 +1,9 @@
 # SolidityDefend Detector Documentation
 
-Complete reference for all security detectors in SolidityDefend v2.0.8.
+Complete reference for all security detectors in SolidityDefend v2.0.9.
 
-**Last Updated:** 2026-02-16
-**Version:** v2.0.8
+**Last Updated:** 2026-02-28
+**Version:** v2.0.9
 **Total Detectors:** 81
 **Categories:** 30
 
@@ -11,7 +11,7 @@ Complete reference for all security detectors in SolidityDefend v2.0.8.
 
 ## Detector Metadata File
 
-For tool integration (BlockSecOps, CI/CD pipelines, etc.), the complete detector metadata is available in JSON format:
+For tool integration (Apogee, CI/CD pipelines, etc.), the complete detector metadata is available in JSON format:
 
 **File:** [`all_detectors.json`](all_detectors.json)
 

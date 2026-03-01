@@ -9,6 +9,8 @@ Cargo.lock
 
 # Release artifacts (managed by CI/CD)
 /release-binaries/
+/release/
+*.tar.gz
 
 # Act configuration
 .actrc
@@ -44,12 +46,8 @@ releases/
 test-outputs/
 temp/
 
-# Test execution artifacts (timestamped)
-/test-results/individual/
-/test-results/detector_list_*.txt
-/test-results/summary_*.txt
-/test-results/validation_*.log
-/test-results/*-analysis.json
+# Test results
+/test-results/
 
 # Security
 *.pem
@@ -78,9 +76,8 @@ venv/
 *.temp
 .tmp/
 .temp/
-.claude
-debug_test
-debug_test*release/
+.claude/
+debug_test*
 
 # Build/distribution artifacts
 dist/

@@ -32,7 +32,7 @@ This guide provides detailed installation instructions for SolidityDefend on var
 
 Pre-built binaries are automatically compiled, stripped, and published by **GitHub Actions** on every tagged release. Each release includes SHA256 checksums (`SHA256SUMS.txt`) for integrity verification.
 
-Download from the [releases page](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
+Download from the [releases page](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases/latest):
 
 **Available platforms:**
 
@@ -56,7 +56,7 @@ Download from the [releases page](https://github.com/BlockSecOps/SolidityDefend/
 The install script automates the above steps by downloading the latest release from GitHub:
 
 ```bash
-curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/install.sh | bash
+curl -sSfL https://raw.githubusercontent.com/Apogee/SolidityDefend/main/install.sh | bash
 ```
 
 This script will:
@@ -67,14 +67,14 @@ This script will:
 
 **Custom installation directory:**
 ```bash
-curl -sSfL https://raw.githubusercontent.com/BlockSecOps/SolidityDefend/main/install.sh | INSTALL_DIR=/usr/local/bin bash
+curl -sSfL https://raw.githubusercontent.com/Apogee/SolidityDefend/main/install.sh | INSTALL_DIR=/usr/local/bin bash
 ```
 
 ### Using Homebrew (macOS and Linux)
 
 ```bash
 # Add the tap (first time only)
-brew tap BlockSecOps/tap
+brew tap AdvancedBlockchainSecurity/tap
 
 # Install SolidityDefend
 brew install soliditydefend
@@ -110,7 +110,7 @@ Building from source is useful for development or if a pre-built binary is not a
 
 1. **Clone the repository**:
    ```bash
-   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
    cd SolidityDefend
    ```
 
@@ -161,25 +161,25 @@ Multi-platform Docker images (`linux/amd64`, `linux/arm64`) are automatically bu
 1. **Pull the image from Docker Hub**:
    ```bash
    # Latest release
-   docker pull blocksecops/soliditydefend:latest
+   docker pull apogee/soliditydefend:latest
 
    # Specific version
-   docker pull blocksecops/soliditydefend:1.10.15
+   docker pull apogee/soliditydefend:1.10.15
    ```
 
 2. **Run analysis**:
    ```bash
    # Analyze files in current directory
-   docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest /workspace/*.sol
+   docker run --rm -v $(pwd):/workspace apogee/soliditydefend:latest /workspace/*.sol
 
    # With custom output
-   docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest \
+   docker run --rm -v $(pwd):/workspace apogee/soliditydefend:latest \
      -f json -o /workspace/results.json /workspace/contract.sol
    ```
 
 3. **Or build locally from source** (for development):
    ```bash
-   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
    cd SolidityDefend
    docker build -t soliditydefend .
    ```
@@ -191,7 +191,7 @@ Multi-platform Docker images (`linux/amd64`, `linux/arm64`) are automatically bu
 version: '3.8'
 services:
   soliditydefend:
-    image: blocksecops/soliditydefend:latest
+    image: apogee/soliditydefend:latest
     volumes:
       - ./contracts:/workspace
     working_dir: /workspace
@@ -263,7 +263,7 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
    cd SolidityDefend
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
@@ -284,7 +284,7 @@ Expected output should show detected issues.
 
 3. **Build and install**:
    ```bash
-   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
    cd SolidityDefend
    cargo build --release
    sudo cp target/release/soliditydefend /usr/local/bin/
@@ -299,7 +299,7 @@ Expected output should show detected issues.
 
 3. **Open PowerShell or Command Prompt** and run:
    ```cmd
-   git clone https://github.com/BlockSecOps/SolidityDefend.git
+   git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
    cd SolidityDefend
    cargo build --release
    ```
@@ -316,7 +316,7 @@ For better performance and compatibility, consider using WSL:
 # In WSL
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source ~/.cargo/env
-git clone https://github.com/BlockSecOps/SolidityDefend.git
+git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
 cd SolidityDefend
 cargo build --release
 ```
@@ -374,7 +374,7 @@ export PATH="$HOME/.local/bin:$PATH"
 
 If you encounter issues not covered here:
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
+1. **Check existing issues**: [GitHub Issues](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues)
 2. **Create a new issue**: Include system info and error messages
 3. **Community support**: Join our community channels
 4. **Documentation**: Check other docs in the [docs/](.) directory
@@ -444,6 +444,6 @@ rm -rf ~/.cache/soliditydefend
 
 **Docker cleanup**:
 ```bash
-docker rmi blocksecops/soliditydefend:latest
+docker rmi apogee/soliditydefend:latest
 docker system prune  # Remove unused containers and images
 ```

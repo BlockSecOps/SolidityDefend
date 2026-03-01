@@ -25,13 +25,13 @@ Multi-platform Docker images (`linux/amd64`, `linux/arm64`) are automatically bu
 
 ```bash
 # Pull the latest image
-docker pull blocksecops/soliditydefend:latest
+docker pull apogee/soliditydefend:latest
 
 # Pull a specific version
-docker pull blocksecops/soliditydefend:1.10.15
+docker pull apogee/soliditydefend:1.10.15
 
 # Run on a local contract
-docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest contract.sol
+docker run --rm -v $(pwd):/workspace apogee/soliditydefend:latest contract.sol
 ```
 
 ### Build and Run Locally (Development)
@@ -184,7 +184,7 @@ version: '3.8'
 
 services:
   soliditydefend:
-    image: blocksecops/soliditydefend:latest
+    image: apogee/soliditydefend:latest
     volumes:
       - ./contracts:/workspace:ro
       - soliditydefend-cache:/home/soliditydefend/.cache
@@ -203,7 +203,7 @@ version: '3.8'
 
 services:
   soliditydefend-ci:
-    image: blocksecops/soliditydefend:latest
+    image: apogee/soliditydefend:latest
     volumes:
       - ./contracts:/workspace:ro
     environment:
@@ -295,7 +295,7 @@ jobs:
   security:
     runs-on: ubuntu-latest
     container:
-      image: blocksecops/soliditydefend:latest
+      image: apogee/soliditydefend:latest
     steps:
       - uses: actions/checkout@v4
 
@@ -322,7 +322,7 @@ Alternatively, use `docker run` with the published image:
         run: |
           docker run --rm \
             -v ${{ github.workspace }}:/workspace \
-            blocksecops/soliditydefend:latest \
+            apogee/soliditydefend:latest \
             -f json -o security-report.json contracts/
 ```
 
@@ -330,7 +330,7 @@ Alternatively, use `docker run` with the published image:
 
 ```yaml
 security_scan:
-  image: blocksecops/soliditydefend:latest
+  image: apogee/soliditydefend:latest
   script:
     - soliditydefend -f json -o security-report.json contracts/
     - soliditydefend --exit-code-level high contracts/
@@ -345,7 +345,7 @@ security_scan:
 ```groovy
 pipeline {
     agent {
-        docker { image 'blocksecops/soliditydefend:latest' }
+        docker { image 'apogee/soliditydefend:latest' }
     }
     stages {
         stage('Security Scan') {
@@ -604,12 +604,12 @@ See [GITHUB_ACTIONS.md](GITHUB_ACTIONS.md) for full release pipeline details.
 docker login
 
 # Tag
-docker tag soliditydefend:latest blocksecops/soliditydefend:latest
-docker tag soliditydefend:latest blocksecops/soliditydefend:1.10.15
+docker tag soliditydefend:latest apogee/soliditydefend:latest
+docker tag soliditydefend:latest apogee/soliditydefend:1.10.15
 
 # Push
-docker push blocksecops/soliditydefend:latest
-docker push blocksecops/soliditydefend:1.10.15
+docker push apogee/soliditydefend:latest
+docker push apogee/soliditydefend:1.10.15
 ```
 
 ---
@@ -673,7 +673,7 @@ docker build -t soliditydefend:${VERSION} .
 ## Support
 
 For Docker-related issues:
-- Check [GitHub Issues](https://github.com/BlockSecOps/SolidityDefend/issues)
+- Check [GitHub Issues](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/issues)
 - Review [Troubleshooting](#troubleshooting) section above
 - Consult [Docker Documentation](https://docs.docker.com/)
 

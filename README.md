@@ -1,16 +1,16 @@
 # SolidityDefend
 
-[![Version](https://img.shields.io/badge/version-2.0.8-brightgreen.svg)](https://github.com/BlockSecOps/SolidityDefend/releases)
+[![Version](https://img.shields.io/badge/version-2.0.9-brightgreen.svg)](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/License-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 
 > Enterprise-grade static analysis for Solidity smart contracts
 
-**Developed by [BlockSecOps](https://blocksecops.com)** - Smart Contract Security Experts
+**Developed by [Apogee](https://0xApogee.com)** - Smart Contract Security Experts
 
 ## Quick Start
 
 ```bash
-brew tap BlockSecOps/tap && brew install soliditydefend
+brew tap AdvancedBlockchainSecurity/tap && brew install soliditydefend
 soliditydefend contract.sol
 ```
 
@@ -37,12 +37,12 @@ See [docs/detectors/](docs/detectors/README.md) for the complete detector list.
 
 ### Homebrew (macOS)
 ```bash
-brew tap BlockSecOps/tap
+brew tap AdvancedBlockchainSecurity/tap
 brew install soliditydefend
 ```
 
 ### Pre-built Binaries (Recommended)
-Pre-built binaries are automatically built by GitHub Actions on each release. Download from [GitHub Releases](https://github.com/BlockSecOps/SolidityDefend/releases/latest):
+Pre-built binaries are automatically built by GitHub Actions on each release. Download from [GitHub Releases](https://github.com/AdvancedBlockchainSecurity/SolidityDefend/releases/latest):
 
 - Linux x86_64 / aarch64
 - macOS x86_64 / ARM64 (Apple Silicon)
@@ -56,7 +56,7 @@ All binaries are stripped and include SHA256 checksums for verification.
 
 ```bash
 # Clone the repository
-git clone https://github.com/BlockSecOps/SolidityDefend.git
+git clone https://github.com/AdvancedBlockchainSecurity/SolidityDefend.git
 cd SolidityDefend
 
 # Build release binary
@@ -77,10 +77,10 @@ Docker images are automatically built and published to Docker Hub by GitHub Acti
 
 ```bash
 # Pull from Docker Hub (multi-platform: linux/amd64, linux/arm64)
-docker pull blocksecops/soliditydefend:latest
+docker pull apogee/soliditydefend:latest
 
 # Run analysis (mount current directory)
-docker run --rm -v $(pwd):/workspace blocksecops/soliditydefend:latest contract.sol
+docker run --rm -v $(pwd):/workspace apogee/soliditydefend:latest contract.sol
 
 # Or build locally from source
 docker build -t soliditydefend:latest .
@@ -182,4 +182,4 @@ Copyright 2024-2026 Advanced Blockchain Security (ABS). See [NOTICE](NOTICE) for
 
 ---
 
-**[BlockSecOps](https://blocksecops.com)** - Smart Contract Security Audits & Tools
+**[Apogee](https://0xApogee.com)** - Smart Contract Security Audits & Tools
