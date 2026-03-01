@@ -5,7 +5,7 @@
 
 > Enterprise-grade static analysis for Solidity smart contracts
 
-**Developed by [Apogee](https://0xApogee.com)** - Smart Contract Security Experts
+**Part of the [Apogee](https://0xApogee.com) Unified Scanner DevSecOps Platform** — developed by [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecurity.com)
 
 ## Quick Start
 
@@ -178,8 +178,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Dual-licensed under [MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE) at your option.
 
-Copyright 2024-2026 Advanced Blockchain Security (ABS). See [NOTICE](NOTICE) for attribution requirements.
+Copyright 2024-2026 [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecurity.com). See [NOTICE](NOTICE) for attribution requirements.
 
 ---
 
-**[Apogee](https://0xApogee.com)** - Smart Contract Security Audits & Tools
+**[Apogee](https://0xApogee.com)** — Unified Scanner DevSecOps Platform by [AdvancedBlockchainSecurity](https://AdvancedBlockchainSecurity.com)
